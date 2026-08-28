@@ -109,6 +109,34 @@ export default function PublicEventDetail() {
       return;
     }
     setMyTicket(ticket as Ticket);
+
+    // Best-effort: the registration itself has already succeeded regardless
+    // of whether this email actually goes out (e.g. before Gmail secrets
+    // are configured), so failures here are swallowed, not surfaced.
+    const eventDate = event.start_date
+      ? new Date(event.start_date).toLocaleString('en-US', {
+          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+        })
+      : 'Date to be announced';
+    const html = `
+      <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+          <div style="font-size:20px;font-weight:800;">TapIN</div>
+          <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">You're registered</div>
+        </div>
+        ${event.poster_url ? `<img src="${event.poster_url}" style="width:100%;display:block;max-height:200px;object-fit:cover;" />` : ''}
+        <div style="padding:24px;">
+          <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${event.title}</h1>
+          <table style="width:100%;font-size:14px;color:#374151;">
+            <tr><td style="padding:4px 0;color:#6b7280;width:80px;">When</td><td style="padding:4px 0;font-weight:600;">${eventDate}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Where</td><td style="padding:4px 0;font-weight:600;">${event.is_online ? 'Virtual event' : (event.location_name || 'Venue TBD')}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Holder</td><td style="padding:4px 0;font-weight:600;">${user.email}</td></tr>
+          </table>
+        </div>
+      </div>`;
+    supabase.functions
+      .invoke('send-ticket-confirmation', { body: { to: user.email, subject: `You're registered: ${event.title}`, html } })
+      .catch(() => { /* registration already succeeded; email is best-effort */ });
   }
 
   if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
