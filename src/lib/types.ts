@@ -16,6 +16,10 @@ export interface TapEvent {
   max_capacity: number | null;
   status: EventStatus;
   is_recurring: boolean;
+  is_online: boolean;
+  is_featured: boolean;
+  is_seating_enabled: boolean;
+  seating_sections: { price: number }[] | null;
   organizer_id: string;
   organizer_email: string;
   vendor_applications_enabled: boolean;

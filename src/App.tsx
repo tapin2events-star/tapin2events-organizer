@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import EventForm from './pages/EventForm';
 import EventDetail from './pages/EventDetail';
+import Discover from './pages/Discover';
+import PublicEventDetail from './pages/PublicEventDetail';
 
 export default function App() {
   return (
@@ -13,6 +15,8 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/discover" element={<Discover />} />
+          <Route path="/discover/events/:id" element={<PublicEventDetail />} />
           <Route
             element={
               <ProtectedRoute>
