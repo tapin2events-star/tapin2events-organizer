@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DiscoverEventCard from '../components/discover/DiscoverEventCard';
+import PublicHeader from '../components/discover/PublicHeader';
 
 export default function Discover() {
   const { user } = useAuth();
@@ -78,6 +79,7 @@ export default function Discover() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+      <PublicHeader />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <h1 className="font-display text-4xl font-extrabold text-gray-900">Discover Events</h1>
         <p className="mt-1 text-lg text-gray-500">Find amazing events happening near you</p>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { TapEvent } from '../lib/types';
+import PublicHeader from '../components/discover/PublicHeader';
 
 export default function PublicEventDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,11 +28,12 @@ export default function PublicEventDetail() {
     })();
   }, [id]);
 
-  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
-  if (!event) return <div className="p-10 text-center text-magenta">Event not found.</div>;
+  if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
+  if (!event) return (<><PublicHeader /><div className="p-10 text-center text-magenta">Event not found.</div></>);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+      <PublicHeader />
       <div className="mx-auto max-w-4xl px-4 py-10">
         <Link to="/discover" className="text-sm text-marigold hover:underline">&larr; Back to Discover</Link>
 

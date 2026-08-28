@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const NAV_ITEMS = [
@@ -79,6 +79,18 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="border-t border-gray-200 pt-4">
+          <Link
+            to="/discover"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-gray-100 hover:text-bone"
+          >
+            View public site
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M7 13 13 7M8 7h5v5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        </div>
 
         <div className="border-t border-gray-200 pt-4">
           <p className="truncate text-xs text-muted">{user?.email}</p>
