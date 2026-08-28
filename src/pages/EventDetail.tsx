@@ -47,7 +47,7 @@ export default function EventDetail() {
           <h1 className="font-display text-3xl font-extrabold text-bone">{event.title}</h1>
         </div>
         <Link
-          to={`/events/${id}/edit`}
+          to={`/organizer/events/${id}/edit`}
           className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold"
         >
           Edit event

@@ -93,7 +93,7 @@ export default function DiscoverEventCard({
 
       <div className="flex flex-col gap-3 p-5">
         <div>
-          <Link to={`/discover/events/${event.id}`} className="hover:text-marigold">
+          <Link to={`/events/${event.id}`} className="hover:text-marigold">
             <h3 className="line-clamp-2 font-display text-lg font-bold text-gray-900">{event.title}</h3>
           </Link>
           {event.description && (
@@ -128,7 +128,7 @@ export default function DiscoverEventCard({
             <span className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-400">Event ended</span>
           ) : (
             <Link
-              to={`/discover/events/${event.id}`}
+              to={`/events/${event.id}`}
               className="rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
             >
               {event.event_type === 'free' ? 'Register' : 'Get Tickets'}

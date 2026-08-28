@@ -7,12 +7,12 @@ export default function PublicHeader() {
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/discover" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
+        <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           TAP<span className="text-marigold">IN</span>
         </Link>
         {user ? (
           <Link
-            to="/"
+            to="/organizer"
             className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
           >
             Organizer dashboard

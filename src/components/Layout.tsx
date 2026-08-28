@@ -3,8 +3,8 @@ import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Events', end: true },
-  { to: '/new', label: 'Create event' },
+  { to: '/organizer', label: 'Events', end: true },
+  { to: '/organizer/new', label: 'Create event' },
 ];
 
 export default function Layout() {
@@ -82,7 +82,7 @@ export default function Layout() {
 
         <div className="border-t border-gray-200 pt-4">
           <Link
-            to="/discover"
+            to="/"
             className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-gray-100 hover:text-bone"
           >
             View public site

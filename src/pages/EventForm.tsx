@@ -112,7 +112,7 @@ export default function EventForm() {
       setError(error.message);
       return;
     }
-    navigate(`/events/${data.id}`);
+    navigate(`/organizer/events/${data.id}`);
   }
 
   if (loading) return <p className="text-muted">Loading…</p>;

@@ -18,7 +18,7 @@ export default function Login() {
   // magic-link return), leave the login screen — this doesn't happen on
   // its own just because the session state changed underneath it.
   useEffect(() => {
-    if (user) navigate('/', { replace: true });
+    if (user) navigate('/organizer', { replace: true });
   }, [user, navigate]);
 
   async function handlePassword(e: FormEvent) {

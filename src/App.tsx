@@ -15,8 +15,8 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/discover" element={<Discover />} />
-          <Route path="/discover/events/:id" element={<PublicEventDetail />} />
+          <Route path="/" element={<Discover />} />
+          <Route path="/events/:id" element={<PublicEventDetail />} />
           <Route
             element={
               <ProtectedRoute>
@@ -24,10 +24,10 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/new" element={<EventForm />} />
-            <Route path="/events/:id" element={<EventDetail />} />
-            <Route path="/events/:id/edit" element={<EventForm />} />
+            <Route path="/organizer" element={<Dashboard />} />
+            <Route path="/organizer/new" element={<EventForm />} />
+            <Route path="/organizer/events/:id" element={<EventDetail />} />
+            <Route path="/organizer/events/:id/edit" element={<EventForm />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -35,7 +35,7 @@ export default function PublicEventDetail() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <PublicHeader />
       <div className="mx-auto max-w-4xl px-4 py-10">
-        <Link to="/discover" className="text-sm text-marigold hover:underline">&larr; Back to Discover</Link>
+        <Link to="/" className="text-sm text-marigold hover:underline">&larr; Back to Discover</Link>
 
         {event.poster_url ? (
           <div className="mt-4 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-100">

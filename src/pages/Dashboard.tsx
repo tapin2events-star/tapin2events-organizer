@@ -31,7 +31,7 @@ export default function Dashboard() {
           <p className="text-sm text-muted">Everything you're organizing, in one place.</p>
         </div>
         <Link
-          to="/new"
+          to="/organizer/new"
           className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
         >
           + Create event
@@ -45,7 +45,7 @@ export default function Dashboard() {
           <p className="font-display text-xl font-semibold text-bone">No events yet</p>
           <p className="mt-1 text-sm text-muted">Create your first event to start selling tickets.</p>
           <Link
-            to="/new"
+            to="/organizer/new"
             className="mt-4 inline-block rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
           >
             + Create event

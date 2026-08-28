@@ -45,7 +45,7 @@ export default function TicketStubCard({ event }: { event: TapEvent }) {
       <div className="p-5 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
-            <Link to={`/events/${event.id}`} className="hover:underline">
+            <Link to={`/organizer/events/${event.id}`} className="hover:underline">
               <p className="font-bold text-lg leading-snug text-gray-900 break-words">
                 {event.title}
               </p>
@@ -71,7 +71,7 @@ export default function TicketStubCard({ event }: { event: TapEvent }) {
 
         <div className="pt-1">
           <Link
-            to={`/events/${event.id}`}
+            to={`/organizer/events/${event.id}`}
             className="inline-flex items-center justify-center w-full h-10 rounded-xl text-sm font-medium bg-marigold text-white hover:bg-marigold/90 transition"
           >
             View event
