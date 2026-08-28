@@ -1,8 +1,10 @@
-import { useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
+import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { sendCode, verifyCode, signInWithPassword } = useAuth();
+  const { user, sendCode, verifyCode, signInWithPassword } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,6 +13,13 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [resent, setResent] = useState(false);
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
+
+  // Once a session actually exists (password sign-in, OTP verify, or the
+  // magic-link return), leave the login screen — this doesn't happen on
+  // its own just because the session state changed underneath it.
+  useEffect(() => {
+    if (user) navigate('/', { replace: true });
+  }, [user, navigate]);
 
   async function handlePassword(e: FormEvent) {
     e.preventDefault();
