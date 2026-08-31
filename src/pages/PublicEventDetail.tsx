@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
@@ -9,6 +9,7 @@ export default function PublicEventDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [event, setEvent] = useState<TapEvent | null>(null);
   const [organizerName, setOrganizerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,6 +17,7 @@ export default function PublicEventDetail() {
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [registering, setRegistering] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const checkoutStatus = searchParams.get('checkout'); // 'success' | 'cancelled' | null
 
   useEffect(() => {
     if (!id) return;
@@ -36,7 +38,7 @@ export default function PublicEventDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!id || !event || event.event_type !== 'free') return;
+    if (!id || !event) return;
     (async () => {
       // Capacity check (best-effort: not race-condition-proof against
       // simultaneous last-second signups, but sufficient for typical use).
@@ -58,7 +60,7 @@ export default function PublicEventDetail() {
         setMyTicket((existing as Ticket) ?? null);
       }
     })();
-  }, [id, event, user?.email]);
+  }, [id, event, user?.email, checkoutStatus]);
 
   async function handleRegister() {
     if (!id || !event || !user?.email) return;
@@ -111,8 +113,7 @@ export default function PublicEventDetail() {
     setMyTicket(ticket as Ticket);
 
     // Best-effort: the registration itself has already succeeded regardless
-    // of whether this email actually goes out (e.g. before Gmail secrets
-    // are configured), so failures here are swallowed, not surfaced.
+    // of whether this email actually goes out, so failures here are swallowed.
     const eventDate = event.start_date
       ? new Date(event.start_date).toLocaleString('en-US', {
           weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
@@ -139,16 +140,50 @@ export default function PublicEventDetail() {
       .catch(() => { /* registration already succeeded; email is best-effort */ });
   }
 
+  async function handleBuyTicket() {
+    if (!id || !event) return;
+    setRegistering(true);
+    setRegisterError(null);
+
+    const base = window.location.origin + import.meta.env.BASE_URL;
+    const { data, error } = await supabase.functions.invoke('create-stripe-checkout', {
+      body: {
+        event_id: id,
+        successUrl: `${base}events/${id}?checkout=success`,
+        cancelUrl: `${base}events/${id}?checkout=cancelled`,
+      },
+    });
+
+    setRegistering(false);
+    if (error || !data?.url) {
+      setRegisterError('Something went wrong starting checkout. Please try again.');
+      return;
+    }
+    window.location.href = data.url;
+  }
+
   if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
   if (!event) return (<><PublicHeader /><div className="p-10 text-center text-magenta">Event not found.</div></>);
 
   const isFull = !!event.max_capacity && confirmedCount >= event.max_capacity && !myTicket;
+  const isFree = event.event_type === 'free';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <PublicHeader />
       <div className="mx-auto max-w-4xl px-4 py-10">
         <Link to="/" className="text-sm text-marigold hover:underline">&larr; Back to Discover</Link>
+
+        {checkoutStatus === 'success' && (
+          <div className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">
+            ✓ Payment received! Your ticket is confirmed — check your email.
+          </div>
+        )}
+        {checkoutStatus === 'cancelled' && (
+          <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+            Checkout was cancelled — no charge was made.
+          </div>
+        )}
 
         {event.poster_url ? (
           <div className="mt-4 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-100">
@@ -170,7 +205,7 @@ export default function PublicEventDetail() {
               </p>
             )}
           </div>
-          {event.event_type === 'free' ? (
+          {isFree ? (
             <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">Free</span>
           ) : (
             <span className="text-2xl font-bold text-gray-900">${event.ticket_price}</span>
@@ -195,11 +230,7 @@ export default function PublicEventDetail() {
             <p className="text-xs uppercase tracking-widest text-gray-400">Organized by</p>
             <p className="mt-1 font-medium text-gray-900">{organizerName || event.organizer_email}</p>
 
-            {event.event_type !== 'free' ? (
-              <div className="mt-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-                Online ticket purchasing is coming soon. Contact the organizer directly for now.
-              </div>
-            ) : myTicket ? (
+            {myTicket ? (
               <div className="mt-5 rounded-xl bg-green-50 p-4 text-sm text-green-700">
                 ✓ You're registered for this event.
               </div>
@@ -208,18 +239,18 @@ export default function PublicEventDetail() {
                 onClick={() => navigate('/login')}
                 className="mt-5 w-full rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
               >
-                Sign in to register
+                Sign in to {isFree ? 'register' : 'buy a ticket'}
               </button>
             ) : isFull ? (
               <div className="mt-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">This event is full.</div>
             ) : (
               <>
                 <button
-                  onClick={handleRegister}
+                  onClick={isFree ? handleRegister : handleBuyTicket}
                   disabled={registering}
                   className="mt-5 w-full rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {registering ? 'Registering…' : 'Register — Free'}
+                  {registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
                 </button>
                 {registerError && <p className="mt-2 text-sm text-magenta">{registerError}</p>}
               </>
