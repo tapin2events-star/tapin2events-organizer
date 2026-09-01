@@ -46,12 +46,20 @@ export default function EventDetail() {
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>
           <h1 className="font-display text-3xl font-extrabold text-bone">{event.title}</h1>
         </div>
-        <Link
-          to={`/organizer/events/${id}/edit`}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold"
-        >
-          Edit event
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            to={`/organizer/events/${id}/checkin`}
+            className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
+          >
+            Check in guests
+          </Link>
+          <Link
+            to={`/organizer/events/${id}/edit`}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold"
+          >
+            Edit event
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-300">

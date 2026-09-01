@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -9,6 +10,10 @@ import EventDetail from './pages/EventDetail';
 import Discover from './pages/Discover';
 import PublicEventDetail from './pages/PublicEventDetail';
 import TicketPass from './pages/TicketPass';
+
+// Only organizers checking guests in ever need this, and its QR-scanning
+// library is large — code-split it so public visitors never download it.
+const CheckIn = lazy(() => import('./pages/CheckIn'));
 
 export default function App() {
   return (
@@ -29,6 +34,7 @@ export default function App() {
             <Route path="/organizer" element={<Dashboard />} />
             <Route path="/organizer/new" element={<EventForm />} />
             <Route path="/organizer/events/:id" element={<EventDetail />} />
+            <Route path="/organizer/events/:id/checkin" element={<Suspense fallback={<p className="text-muted">Loading scanner…</p>}><CheckIn /></Suspense>} />
             <Route path="/organizer/events/:id/edit" element={<EventForm />} />
           </Route>
         </Routes>
