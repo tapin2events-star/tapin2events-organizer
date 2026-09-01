@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../NotificationBell';
 
 export default function PublicHeader() {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ export default function PublicHeader() {
           <Link to="/activity" className="text-sm font-medium text-gray-700 hover:text-marigold">
             My Activity
           </Link>
+          <NotificationBell />
           {user ? (
             <Link
               to="/organizer"

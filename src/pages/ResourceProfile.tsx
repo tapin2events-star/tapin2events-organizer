@@ -75,9 +75,21 @@ export default function ResourceProfile() {
     }
     setRequestSent(true);
 
-    // Best-effort notification to the resource; the request itself has
-    // already succeeded regardless of whether this email goes out.
     const selectedEvent = myEvents.find((e) => e.id === selectedEventId);
+
+    // In-app notification — more reliable than email right now, since email
+    // to anyone but our own test account isn't deliverable yet (unverified
+    // sending domain). Best-effort: the request itself already succeeded.
+    supabase
+      .from('notifications')
+      .insert({
+        user_email: resource.email,
+        type: 'booking_request',
+        message: `New booking request from ${user.email} for ${selectedEvent?.title ?? 'an event'}`,
+        link: '/resources/dashboard',
+      })
+      .then(() => {});
+
     const html = `
       <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">

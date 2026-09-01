@@ -85,6 +85,16 @@ export default function ResourceDashboard() {
     if (!error) {
       setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status } : b)));
 
+      supabase
+        .from('notifications')
+        .insert({
+          user_email: booking.organizer_email,
+          type: `booking_${status}`,
+          message: `${resource?.display_name} has ${status} your booking request for ${booking.event_title}`,
+          link: '/activity',
+        })
+        .then(() => {});
+
       const html = `
         <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
           <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">

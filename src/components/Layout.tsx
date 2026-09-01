@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const NAV_ITEMS = [
   { to: '/organizer', label: 'Events', end: true },
@@ -18,15 +19,18 @@ export default function Layout() {
         <span className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           TAP<span className="text-marigold">IN</span>
         </span>
-        <button
-          onClick={() => setMenuOpen(true)}
-          aria-label="Open menu"
-          className="rounded-lg p-2 text-muted hover:bg-gray-100"
-        >
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            className="rounded-lg p-2 text-muted hover:bg-gray-100"
+          >
+            <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Backdrop, mobile only, closes the drawer on tap */}
@@ -48,6 +52,9 @@ export default function Layout() {
             <p className="mt-0.5 text-[11px] uppercase tracking-widest text-muted">
               Organizer
             </p>
+          </div>
+          <div className="hidden md:block">
+            <NotificationBell />
           </div>
           <button
             onClick={() => setMenuOpen(false)}
