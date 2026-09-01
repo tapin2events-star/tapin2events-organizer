@@ -11,6 +11,9 @@ export default function PublicHeader() {
           TAP<span className="text-marigold">IN</span>
         </Link>
         <div className="flex items-center gap-3">
+          <Link to="/resources" className="text-sm font-medium text-gray-700 hover:text-marigold">
+            Resources
+          </Link>
           <Link to="/activity" className="text-sm font-medium text-gray-700 hover:text-marigold">
             My Activity
           </Link>

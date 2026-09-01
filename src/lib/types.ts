@@ -86,3 +86,37 @@ export interface VendorApplication {
   status: VendorApplicationStatus;
   created_at: string;
 }
+
+export type PricingType = 'fixed' | 'hourly' | 'contact_quote';
+export type VerificationStatus = 'pending' | 'verified' | 'rejected';
+export type ResourceStatus = 'active' | 'inactive' | 'suspended';
+
+export interface Resource {
+  id: string;
+  display_name: string;
+  email: string;
+  categories: string[];
+  bio: string;
+  location: string | null;
+  city: string | null;
+  state: string | null;
+  profile_image: string | null;
+  pricing_type: PricingType;
+  base_rate: number;
+  pricing_details: string | null;
+  instagram_url: string | null;
+  facebook_url: string | null;
+  youtube_url: string | null;
+  website_url: string | null;
+  total_bookings: number;
+  average_rating: number;
+  review_count: number;
+  verification_status: VerificationStatus;
+  status: ResourceStatus;
+  created_at: string;
+}
+
+export const RESOURCE_CATEGORIES = [
+  'DJ/Music', 'Photography', 'Videography', 'Catering', 'Decor & Design',
+  'Florist', 'Security', 'Transportation', 'Entertainment', 'Venue', 'Rentals', 'Other',
+] as const;
