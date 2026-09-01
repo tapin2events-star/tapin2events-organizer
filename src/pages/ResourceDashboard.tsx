@@ -29,6 +29,7 @@ export default function ResourceDashboard() {
   const [resource, setResource] = useState<Resource | null>(null);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,23 +40,37 @@ export default function ResourceDashboard() {
     }
     if (!user.email) return;
     (async () => {
-      const { data: res } = await supabase.from('resources').select('*').eq('email', user.email).maybeSingle();
+      const { data: res, error: resError } = await supabase.from('resources').select('*').eq('email', user.email).maybeSingle();
+      if (resError) console.error('Failed to load resource profile:', resError);
       setResource((res as Resource) ?? null);
       if (!res) {
         setLoading(false);
         return;
       }
 
-      const { data } = await supabase
+      const { data: bookingRows, error: bookingsError } = await supabase
         .from('resource_bookings')
-        .select('*, events(title, start_date)')
+        .select('*')
         .eq('resource_email', user.email)
         .order('created_at', { ascending: false });
 
-      const mapped = (data ?? []).map((b: any) => ({
+      if (bookingsError) {
+        console.error('Failed to load bookings:', bookingsError);
+        setLoadError('Could not load your booking requests. Please refresh the page.');
+        setLoading(false);
+        return;
+      }
+
+      const eventIds = [...new Set((bookingRows ?? []).map((b) => b.event_id))];
+      const { data: events } = eventIds.length
+        ? await supabase.from('events').select('id, title, start_date').in('id', eventIds)
+        : { data: [] };
+      const eventsById = new Map((events ?? []).map((e) => [e.id, e]));
+
+      const mapped = (bookingRows ?? []).map((b: any) => ({
         ...b,
-        event_title: b.events?.title ?? 'Untitled event',
-        event_start_date: b.events?.start_date ?? null,
+        event_title: eventsById.get(b.event_id)?.title ?? 'Untitled event',
+        event_start_date: eventsById.get(b.event_id)?.start_date ?? null,
         organizer_name: null,
       }));
       setBookings(mapped);
@@ -113,6 +128,8 @@ export default function ResourceDashboard() {
             Edit profile
           </Link>
         </div>
+
+        {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
         {bookings.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">

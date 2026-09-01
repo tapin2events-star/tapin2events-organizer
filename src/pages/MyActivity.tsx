@@ -98,13 +98,25 @@ export default function MyActivity() {
     }
     if (!user.email) return;
     (async () => {
-      const { data } = await supabase
+      const { data: ticketRows, error: ticketsError } = await supabase
         .from('tickets')
-        .select('id, event_id, ticket_type, status, price_paid, quantity, section_name, seat_assignment, attendee_email, events(title, start_date, poster_url, location_name, is_online)')
+        .select('id, event_id, ticket_type, status, price_paid, quantity, section_name, seat_assignment, attendee_email')
         .eq('attendee_email', user.email)
         .order('created_at', { ascending: false });
 
-      const mapped = (data ?? []).map((t: any) => ({
+      if (ticketsError) {
+        console.error('Failed to load tickets:', ticketsError);
+        setLoading(false);
+        return;
+      }
+
+      const eventIds = [...new Set((ticketRows ?? []).map((t) => t.event_id))];
+      const { data: events } = eventIds.length
+        ? await supabase.from('events').select('id, title, start_date, poster_url, location_name, is_online').in('id', eventIds)
+        : { data: [] };
+      const eventsById = new Map((events ?? []).map((e) => [e.id, e]));
+
+      const mapped = (ticketRows ?? []).map((t: any) => ({
         id: t.id,
         event_id: t.event_id,
         ticket_type: t.ticket_type,
@@ -114,11 +126,11 @@ export default function MyActivity() {
         section_name: t.section_name,
         seat_assignment: t.seat_assignment,
         attendee_email: t.attendee_email,
-        event_title: t.events?.title ?? 'Untitled event',
-        event_start_date: t.events?.start_date ?? null,
-        event_poster_url: t.events?.poster_url ?? null,
-        event_location_name: t.events?.location_name ?? null,
-        event_is_online: !!t.events?.is_online,
+        event_title: eventsById.get(t.event_id)?.title ?? 'Untitled event',
+        event_start_date: eventsById.get(t.event_id)?.start_date ?? null,
+        event_poster_url: eventsById.get(t.event_id)?.poster_url ?? null,
+        event_location_name: eventsById.get(t.event_id)?.location_name ?? null,
+        event_is_online: !!eventsById.get(t.event_id)?.is_online,
       }));
       setTickets(mapped);
       setLoading(false);
