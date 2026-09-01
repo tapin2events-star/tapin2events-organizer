@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { RESOURCE_CATEGORIES, type PricingType, type Resource } from '../lib/types';
 import PublicHeader from '../components/discover/PublicHeader';
+import ImageUpload from '../components/ImageUpload';
 
 export default function ResourceSignup() {
   const { user, loading: authLoading } = useAuth();
@@ -159,10 +160,7 @@ export default function ResourceSignup() {
             </label>
           </div>
 
-          <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-            Profile image URL
-            <input value={profileImage} onChange={(e) => setProfileImage(e.target.value)} className={fieldClass} placeholder="Link to a photo of you or your work" />
-          </label>
+          <ImageUpload currentUrl={profileImage || null} onUploaded={setProfileImage} pathPrefix="resources" label="Profile photo" />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
