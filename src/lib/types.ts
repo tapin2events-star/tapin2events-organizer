@@ -120,3 +120,24 @@ export const RESOURCE_CATEGORIES = [
   'DJ/Music', 'Photography', 'Videography', 'Catering', 'Decor & Design',
   'Florist', 'Security', 'Transportation', 'Entertainment', 'Venue', 'Rentals', 'Other',
 ] as const;
+
+export type ResourceBookingStatus = 'pending' | 'accepted' | 'rejected' | 'counter_offered' | 'confirmed' | 'completed' | 'cancelled' | 'deleted';
+
+export interface ResourceBooking {
+  id: string;
+  event_id: string;
+  resource_id: string;
+  organizer_email: string;
+  resource_email: string;
+  booking_details: {
+    service_date?: string;
+    start_time?: string;
+    end_time?: string;
+    special_requirements?: string;
+  };
+  offered_rate: number;
+  message_from_organizer: string | null;
+  response_from_resource: string | null;
+  status: ResourceBookingStatus;
+  created_at: string;
+}

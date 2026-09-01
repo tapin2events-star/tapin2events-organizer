@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import type { Resource } from '../lib/types';
+import { useAuth } from '../context/AuthContext';
+import type { Resource, TapEvent } from '../lib/types';
 import PublicHeader from '../components/discover/PublicHeader';
 
 function pricingLabel(r: Resource) {
@@ -19,8 +20,18 @@ const SOCIAL_LINKS: Array<{ key: keyof Resource; label: string }> = [
 
 export default function ResourceProfile() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
+  const [myEvents, setMyEvents] = useState<TapEvent[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [serviceDate, setServiceDate] = useState('');
+  const [offeredRate, setOfferedRate] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -30,6 +41,64 @@ export default function ResourceProfile() {
       setLoading(false);
     })();
   }, [id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('events')
+      .select('*')
+      .eq('organizer_id', user.id)
+      .order('start_date', { ascending: true })
+      .then(({ data }) => setMyEvents((data ?? []) as TapEvent[]));
+  }, [user?.id]);
+
+  async function handleBookingRequest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user?.email || !resource || !selectedEventId || !offeredRate) return;
+    setSubmitting(true);
+    setBookingError(null);
+
+    const { error } = await supabase.from('resource_bookings').insert({
+      event_id: selectedEventId,
+      resource_id: resource.id,
+      organizer_email: user.email,
+      resource_email: resource.email,
+      offered_rate: parseFloat(offeredRate),
+      message_from_organizer: message || null,
+      booking_details: serviceDate ? { service_date: serviceDate } : {},
+    });
+
+    setSubmitting(false);
+    if (error) {
+      setBookingError('Something went wrong sending your request. Please try again.');
+      return;
+    }
+    setRequestSent(true);
+
+    // Best-effort notification to the resource; the request itself has
+    // already succeeded regardless of whether this email goes out.
+    const selectedEvent = myEvents.find((e) => e.id === selectedEventId);
+    const html = `
+      <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+          <div style="font-size:20px;font-weight:800;">TapIN</div>
+          <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">New booking request</div>
+        </div>
+        <div style="padding:24px;">
+          <p style="margin:0 0 12px;color:#374151;">You've received a new booking request for <strong>${selectedEvent?.title ?? 'an event'}</strong>.</p>
+          <table style="width:100%;font-size:14px;color:#374151;">
+            <tr><td style="padding:4px 0;color:#6b7280;width:100px;">Offered rate</td><td style="padding:4px 0;font-weight:600;">$${offeredRate}</td></tr>
+            ${serviceDate ? `<tr><td style="padding:4px 0;color:#6b7280;">Date</td><td style="padding:4px 0;font-weight:600;">${serviceDate}</td></tr>` : ''}
+            <tr><td style="padding:4px 0;color:#6b7280;">From</td><td style="padding:4px 0;font-weight:600;">${user.email}</td></tr>
+          </table>
+          ${message ? `<p style="margin:16px 0 0;color:#374151;">"${message}"</p>` : ''}
+          <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">Log in to your Resource Dashboard on TapIN to accept or decline.</p>
+        </div>
+      </div>`;
+    supabase.functions
+      .invoke('send-ticket-confirmation', { body: { to: resource.email, subject: `New booking request: ${selectedEvent?.title ?? 'an event'}`, html } })
+      .catch(() => { /* request already succeeded; notification is best-effort */ });
+  }
 
   if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
   if (!resource) return (<><PublicHeader /><div className="p-10 text-center text-magenta">Resource not found.</div></>);
@@ -99,9 +168,60 @@ export default function ResourceProfile() {
               </div>
             )}
 
-            <div className="mt-6 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-              Booking requests aren't available yet — reach out directly using the links above, or contact {resource.email}.
-            </div>
+            {requestSent ? (
+              <div className="mt-6 rounded-xl bg-green-50 p-4 text-sm text-green-700">
+                ✓ Your booking request has been sent to {resource.display_name}. They'll respond soon.
+              </div>
+            ) : !user ? (
+              <div className="mt-6 rounded-xl bg-gray-50 p-4">
+                <p className="text-sm text-gray-500">Sign in to request a booking for one of your events.</p>
+                <button
+                  onClick={() => navigate('/login', { state: { from: `/resources/${id}` } })}
+                  className="mt-3 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
+                >
+                  Sign in
+                </button>
+              </div>
+            ) : myEvents.length === 0 ? (
+              <div className="mt-6 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+                You'll need to <Link to="/organizer/new" className="font-medium text-marigold hover:underline">create an event</Link> before requesting a booking.
+              </div>
+            ) : (
+              <form onSubmit={handleBookingRequest} className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <h2 className="font-display text-base font-semibold text-gray-900">Request to book</h2>
+                <label className="flex flex-col gap-1 text-sm text-gray-700">
+                  For which event?
+                  <select required value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900">
+                    <option value="">Select an event…</option>
+                    {myEvents.map((e) => (
+                      <option key={e.id} value={e.id}>{e.title}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-sm text-gray-700">
+                    Service date
+                    <input type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm text-gray-700">
+                    Offered rate ($)
+                    <input required type="number" min="0" step="0.01" value={offeredRate} onChange={(e) => setOfferedRate(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900" />
+                  </label>
+                </div>
+                <label className="flex flex-col gap-1 text-sm text-gray-700">
+                  Message (optional)
+                  <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900" placeholder="Tell them about your event and what you need" />
+                </label>
+                {bookingError && <p className="text-sm text-magenta">{bookingError}</p>}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {submitting ? 'Sending…' : 'Send booking request'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>

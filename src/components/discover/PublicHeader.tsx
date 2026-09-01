@@ -10,9 +10,12 @@ export default function PublicHeader() {
         <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           TAP<span className="text-marigold">IN</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Link to="/resources" className="text-sm font-medium text-gray-700 hover:text-marigold">
             Resources
+          </Link>
+          <Link to="/resources/dashboard" className="text-sm font-medium text-gray-700 hover:text-marigold">
+            Resource Dashboard
           </Link>
           <Link to="/activity" className="text-sm font-medium text-gray-700 hover:text-marigold">
             My Activity

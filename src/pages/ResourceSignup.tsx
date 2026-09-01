@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { RESOURCE_CATEGORIES, type PricingType, type Resource } from '../lib/types';
@@ -211,6 +211,12 @@ export default function ResourceSignup() {
             {saving ? 'Saving…' : saved ? 'Saved!' : existing ? 'Save changes' : 'Create my profile'}
           </button>
         </form>
+
+        {existing && (
+          <Link to="/resources/dashboard" className="mt-4 inline-block text-sm font-medium text-marigold hover:underline">
+            View your booking requests &rarr;
+          </Link>
+        )}
       </div>
     </div>
   );
