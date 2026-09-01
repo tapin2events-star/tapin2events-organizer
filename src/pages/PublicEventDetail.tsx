@@ -119,6 +119,8 @@ export default function PublicEventDetail() {
           weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
         })
       : 'Date to be announced';
+    const passUrl = `${window.location.origin}${import.meta.env.BASE_URL}pass/${ticket.id}`;
+    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=2`;
     const html = `
       <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
@@ -133,6 +135,11 @@ export default function PublicEventDetail() {
             <tr><td style="padding:4px 0;color:#6b7280;">Where</td><td style="padding:4px 0;font-weight:600;">${event.is_online ? 'Virtual event' : (event.location_name || 'Venue TBD')}</td></tr>
             <tr><td style="padding:4px 0;color:#6b7280;">Holder</td><td style="padding:4px 0;font-weight:600;">${user.email}</td></tr>
           </table>
+          <div style="text-align:center;margin:24px 0 16px;">
+            <img src="${qrUrl}" width="180" height="180" alt="QR code" style="border:1px solid #e5e7eb;border-radius:16px;padding:8px;background:#ffffff;" />
+            <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Scan this code at the entrance</p>
+          </div>
+          <a href="${passUrl}" style="display:block;text-align:center;background:linear-gradient(135deg,#4f46e5,#14b8a6);color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">View Your Ticket Online</a>
         </div>
       </div>`;
     supabase.functions
@@ -232,7 +239,10 @@ export default function PublicEventDetail() {
 
             {myTicket ? (
               <div className="mt-5 rounded-xl bg-green-50 p-4 text-sm text-green-700">
-                ✓ You're registered for this event.
+                <p>✓ You're registered for this event.</p>
+                <Link to={`/pass/${myTicket.id}`} className="mt-2 inline-block font-medium underline">
+                  View your ticket &amp; QR code
+                </Link>
               </div>
             ) : !user ? (
               <button

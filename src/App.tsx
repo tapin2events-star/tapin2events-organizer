@@ -8,6 +8,7 @@ import EventForm from './pages/EventForm';
 import EventDetail from './pages/EventDetail';
 import Discover from './pages/Discover';
 import PublicEventDetail from './pages/PublicEventDetail';
+import TicketPass from './pages/TicketPass';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Discover />} />
           <Route path="/events/:id" element={<PublicEventDetail />} />
+          <Route path="/pass/:ticketId" element={<TicketPass />} />
           <Route
             element={
               <ProtectedRoute>
