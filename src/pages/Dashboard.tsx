@@ -3,12 +3,15 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import TicketStubCard from '../components/TicketStubCard';
+import PayoutsCard from '../components/PayoutsCard';
 import type { TapEvent } from '../lib/types';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [events, setEvents] = useState<TapEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [chargesEnabled, setChargesEnabled] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -19,6 +22,16 @@ export default function Dashboard() {
         .eq('organizer_id', user.id)
         .order('start_date', { ascending: true, nullsFirst: false });
       if (!error && data) setEvents(data as TapEvent[]);
+
+      if (user.email) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('stripe_account_id, stripe_charges_enabled')
+          .eq('email', user.email)
+          .single();
+        setStripeAccountId(profile?.stripe_account_id ?? null);
+        setChargesEnabled(!!profile?.stripe_charges_enabled);
+      }
       setLoading(false);
     })();
   }, [user]);
@@ -37,6 +50,8 @@ export default function Dashboard() {
           + Create event
         </Link>
       </div>
+
+      {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
       {loading ? (
         <p className="text-muted">Loading…</p>
