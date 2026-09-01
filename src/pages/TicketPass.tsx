@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import PublicHeader from '../components/discover/PublicHeader';
 
@@ -28,9 +28,12 @@ interface PassData {
 
 export default function TicketPass() {
   const { ticketId } = useParams<{ ticketId: string }>();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [data, setData] = useState<PassData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'signin_required' | 'error'>('idle');
 
   useEffect(() => {
     if (!ticketId) return;
@@ -47,21 +50,47 @@ export default function TicketPass() {
     })();
   }, [ticketId]);
 
+  // Support a one-click "download" from elsewhere in the app: opening this
+  // page with ?print=1 auto-triggers the browser's print/Save-as-PDF dialog
+  // once the ticket has actually loaded.
+  useEffect(() => {
+    if (!data || searchParams.get('print') !== '1') return;
+    const t = setTimeout(() => window.print(), 500);
+    return () => clearTimeout(t);
+  }, [data, searchParams]);
+
+  async function handleEmailTicket() {
+    if (!ticketId) return;
+    setEmailState('sending');
+    const { data: result, error: fnError } = await supabase.functions.invoke('email-ticket', {
+      body: { ticket_id: ticketId },
+    });
+    if (fnError?.context?.status === 401 || result?.error === 'Unauthorized') {
+      setEmailState('signin_required');
+    } else if (fnError || result?.error) {
+      setEmailState('error');
+    } else {
+      setEmailState('sent');
+    }
+  }
+
   if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
   if (error || !data) return (<><PublicHeader /><div className="p-10 text-center text-magenta">{error || 'Ticket not found.'}</div></>);
 
   const { ticket, event, organizerName } = data;
-  const passUrl = window.location.href;
+  const passUrl = window.location.origin + import.meta.env.BASE_URL + 'pass/' + ticket.id;
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=2`;
   const isCancelled = ticket.status !== 'confirmed';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <PublicHeader />
-      <div className="mx-auto max-w-md px-4 py-10">
-        <Link to={`/events/${ticket.event_id}`} className="text-sm text-marigold hover:underline">&larr; Back to event</Link>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white print:bg-white">
+      <div className="print:hidden">
+        <PublicHeader />
+      </div>
+      <div className="mx-auto max-w-md px-4 py-10 print:py-0">
+        <Link to={`/events/${ticket.event_id}`} className="text-sm text-marigold hover:underline print:hidden">&larr; Back to event</Link>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm print:mt-0 print:shadow-none">
           {event.poster_url && (
             <img src={event.poster_url} alt="" className="h-40 w-full object-cover" />
           )}
@@ -116,6 +145,32 @@ export default function TicketPass() {
             </div>
           </div>
         </div>
+
+        {!isCancelled && (
+          <div className="mt-4 flex gap-2 print:hidden">
+            <button
+              onClick={() => window.print()}
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+            >
+              Download ticket (PDF)
+            </button>
+            <button
+              onClick={handleEmailTicket}
+              disabled={emailState === 'sending'}
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50"
+            >
+              {emailState === 'sending' ? 'Sending…' : emailState === 'sent' ? 'Sent \u2713' : 'Email me this ticket'}
+            </button>
+          </div>
+        )}
+        {emailState === 'signin_required' && (
+          <p className="mt-2 text-center text-sm text-gray-500 print:hidden">
+            <Link to="/login" state={{ from: location.pathname }} className="text-marigold hover:underline">Sign in</Link> to email yourself a copy.
+          </p>
+        )}
+        {emailState === 'error' && (
+          <p className="mt-2 text-center text-sm text-magenta print:hidden">Something went wrong sending that. Please try again.</p>
+        )}
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ interface MyTicket {
   quantity: number;
   section_name: string | null;
   seat_assignment: string | null;
+  attendee_email: string;
   event_title: string;
   event_start_date: string | null;
   event_poster_url: string | null;
@@ -27,13 +28,16 @@ const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-orange-100 text-orange-800',
 };
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
 // A plain <a download> isn't reliably honored across browsers for a
-// cross-origin image URL (some just open it instead of downloading it).
-// Fetching the bytes and downloading from a same-origin blob URL is the
-// robust way to do this; if that ever fails, fall back to just opening it.
-async function downloadQr(qrUrl: string, filename: string) {
+// cross-origin file. Fetching the bytes and downloading from a same-origin
+// blob URL is the robust way to do this; if that ever fails for any reason,
+// fall back to just opening it so the person isn't left with a dead end.
+async function downloadBlob(url: string, filename: string, init?: RequestInit) {
   try {
-    const res = await fetch(qrUrl);
+    const res = await fetch(url, init);
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -44,8 +48,37 @@ async function downloadQr(qrUrl: string, filename: string) {
     document.body.removeChild(a);
     URL.revokeObjectURL(objectUrl);
   } catch {
-    window.open(qrUrl, '_blank');
+    window.open(url, '_blank');
   }
+}
+
+function buildTicketEmailHtml(t: MyTicket, qrUrl: string, passUrl: string) {
+  const eventDate = t.event_start_date
+    ? new Date(t.event_start_date).toLocaleString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+      })
+    : 'Date to be announced';
+  return `
+    <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+        <div style="font-size:20px;font-weight:800;">TapIN</div>
+        <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">Your ticket</div>
+      </div>
+      ${t.event_poster_url ? `<img src="${t.event_poster_url}" style="width:100%;display:block;max-height:200px;object-fit:cover;" />` : ''}
+      <div style="padding:24px;">
+        <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${t.event_title}</h1>
+        <table style="width:100%;font-size:14px;color:#374151;">
+          <tr><td style="padding:4px 0;color:#6b7280;width:80px;">When</td><td style="padding:4px 0;font-weight:600;">${eventDate}</td></tr>
+          <tr><td style="padding:4px 0;color:#6b7280;">Where</td><td style="padding:4px 0;font-weight:600;">${t.event_is_online ? 'Virtual event' : (t.event_location_name || 'Venue TBD')}</td></tr>
+          <tr><td style="padding:4px 0;color:#6b7280;">Holder</td><td style="padding:4px 0;font-weight:600;">${t.attendee_email}</td></tr>
+        </table>
+        <div style="text-align:center;margin:24px 0 16px;">
+          <img src="${qrUrl}" width="180" height="180" alt="QR code" style="border:1px solid #e5e7eb;border-radius:16px;padding:8px;background:#ffffff;" />
+          <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Scan this code at the entrance</p>
+        </div>
+        <a href="${passUrl}" style="display:block;text-align:center;background:linear-gradient(135deg,#4f46e5,#14b8a6);color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">View Your Ticket Online</a>
+      </div>
+    </div>`;
 }
 
 export default function MyActivity() {
@@ -54,6 +87,8 @@ export default function MyActivity() {
   const location = useLocation();
   const [tickets, setTickets] = useState<MyTicket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [emailedId, setEmailedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return; // don't judge auth state until it's actually finished checking
@@ -65,7 +100,7 @@ export default function MyActivity() {
     (async () => {
       const { data } = await supabase
         .from('tickets')
-        .select('id, event_id, ticket_type, status, price_paid, quantity, section_name, seat_assignment, events(title, start_date, poster_url, location_name, is_online)')
+        .select('id, event_id, ticket_type, status, price_paid, quantity, section_name, seat_assignment, attendee_email, events(title, start_date, poster_url, location_name, is_online)')
         .eq('attendee_email', user.email)
         .order('created_at', { ascending: false });
 
@@ -78,6 +113,7 @@ export default function MyActivity() {
         quantity: t.quantity,
         section_name: t.section_name,
         seat_assignment: t.seat_assignment,
+        attendee_email: t.attendee_email,
         event_title: t.events?.title ?? 'Untitled event',
         event_start_date: t.events?.start_date ?? null,
         event_poster_url: t.events?.poster_url ?? null,
@@ -88,6 +124,35 @@ export default function MyActivity() {
       setLoading(false);
     })();
   }, [user, authLoading, navigate, location.pathname]);
+
+  async function handleDownload(t: MyTicket) {
+    setBusyId(t.id);
+    await downloadBlob(
+      `${SUPABASE_URL}/functions/v1/generate-ticket-pdf`,
+      `tapin-ticket-${t.id}.pdf`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ ticket_id: t.id }),
+      }
+    );
+    setBusyId(null);
+  }
+
+  async function handleEmail(t: MyTicket) {
+    setBusyId(t.id);
+    const passUrl = `${window.location.origin}${import.meta.env.BASE_URL}pass/${t.id}`;
+    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=1`;
+    const html = buildTicketEmailHtml(t, qrUrl, passUrl);
+    const { error } = await supabase.functions.invoke('send-ticket-confirmation', {
+      body: { to: t.attendee_email, subject: `Your ticket: ${t.event_title}`, html },
+    });
+    setBusyId(null);
+    if (!error) {
+      setEmailedId(t.id);
+      setTimeout(() => setEmailedId((id) => (id === t.id ? null : id)), 3000);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
@@ -146,12 +211,20 @@ export default function MyActivity() {
 
                     {t.status === 'confirmed' && (
                       <div className="flex shrink-0 flex-col items-center gap-2 border-t border-gray-100 pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
-                        <img src={qrUrl} width={110} height={110} alt="QR code" className="rounded-lg border border-gray-200 p-1" />
+                        <img src={qrUrl} width={100} height={100} alt="QR code" className="rounded-lg border border-gray-200 p-1" />
                         <button
-                          onClick={() => downloadQr(qrUrl, `tapin-ticket-${t.id}.png`)}
-                          className="text-center text-xs font-medium text-marigold hover:underline"
+                          onClick={() => handleDownload(t)}
+                          disabled={busyId === t.id}
+                          className="w-32 rounded-lg bg-marigold px-2 py-1.5 text-center text-xs font-semibold text-ink hover:bg-marigold/90 disabled:opacity-50"
                         >
-                          Download QR
+                          {busyId === t.id ? 'Working…' : 'Download ticket'}
+                        </button>
+                        <button
+                          onClick={() => handleEmail(t)}
+                          disabled={busyId === t.id}
+                          className="w-32 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50"
+                        >
+                          {emailedId === t.id ? 'Sent!' : 'Email ticket'}
                         </button>
                       </div>
                     )}
