@@ -88,26 +88,39 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-lg">
-          <div className="border-b border-gray-100 px-4 py-2 text-sm font-semibold text-gray-900">Notifications</div>
-          {notifications.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-gray-400">Nothing yet</p>
-          ) : (
-            <ul className="max-h-96 overflow-y-auto">
-              {notifications.map((n) => (
-                <li key={n.id}>
-                  <button
-                    onClick={() => handleClick(n)}
-                    className={`block w-full px-4 py-3 text-left text-sm hover:bg-gray-50 ${n.is_read ? 'text-gray-500' : 'font-medium text-gray-900'}`}
-                  >
-                    <p>{n.message}</p>
-                    <p className="mt-0.5 text-xs text-gray-400">{timeAgo(n.created_at)}</p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <>
+          {/* Mobile: full backdrop + near-full-width panel below the header,
+              matching the same drawer pattern used for the sidebar nav.
+              Desktop: reverts to a small dropdown anchored to the bell. */}
+          <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />
+          <div className="fixed inset-x-3 top-16 z-50 max-h-[75vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg md:absolute md:inset-x-auto md:right-0 md:top-auto md:mt-2 md:w-80 md:max-h-none">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <span className="text-sm font-semibold text-gray-900">Notifications</span>
+              <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 md:hidden">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 4l12 12M16 4L4 16" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+            {notifications.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-gray-400">Nothing yet</p>
+            ) : (
+              <ul className="max-h-[calc(75vh-48px)] overflow-y-auto md:max-h-96">
+                {notifications.map((n) => (
+                  <li key={n.id}>
+                    <button
+                      onClick={() => handleClick(n)}
+                      className={`block w-full px-4 py-3.5 text-left text-sm hover:bg-gray-50 ${n.is_read ? 'text-gray-500' : 'font-medium text-gray-900'}`}
+                    >
+                      <p>{n.message}</p>
+                      <p className="mt-0.5 text-xs text-gray-400">{timeAgo(n.created_at)}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
