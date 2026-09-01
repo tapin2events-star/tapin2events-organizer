@@ -6,6 +6,7 @@ import PublicHeader from '../components/discover/PublicHeader';
 interface PassData {
   ticket: {
     id: string;
+    event_id: string;
     ticket_type: string;
     quantity: number;
     price_paid: number;
@@ -58,7 +59,7 @@ export default function TicketPass() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <PublicHeader />
       <div className="mx-auto max-w-md px-4 py-10">
-        <Link to="/" className="text-sm text-marigold hover:underline">&larr; Back to Discover</Link>
+        <Link to={`/events/${ticket.event_id}`} className="text-sm text-marigold hover:underline">&larr; Back to event</Link>
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           {event.poster_url && (

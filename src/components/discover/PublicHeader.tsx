@@ -10,21 +10,26 @@ export default function PublicHeader() {
         <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           TAP<span className="text-marigold">IN</span>
         </Link>
-        {user ? (
-          <Link
-            to="/organizer"
-            className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
-          >
-            Organizer dashboard
+        <div className="flex items-center gap-3">
+          <Link to="/activity" className="text-sm font-medium text-gray-700 hover:text-marigold">
+            My Activity
           </Link>
-        ) : (
-          <Link
-            to="/login"
-            className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
-          >
-            Organizer sign in
-          </Link>
-        )}
+          {user ? (
+            <Link
+              to="/organizer"
+              className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+            >
+              Organizer dashboard
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+            >
+              Organizer sign in
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );
