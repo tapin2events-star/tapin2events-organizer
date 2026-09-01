@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
 import PublicHeader from '../components/discover/PublicHeader';
 
 export default function PublicEventDetail() {
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -246,7 +247,7 @@ export default function PublicEventDetail() {
               </div>
             ) : !user ? (
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/login', { state: { from: location.pathname } })}
                 className="mt-5 w-full rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
               >
                 Sign in to {isFree ? 'register' : 'buy a ticket'}

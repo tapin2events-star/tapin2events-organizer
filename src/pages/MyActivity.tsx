@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import PublicHeader from '../components/discover/PublicHeader';
@@ -16,17 +16,19 @@ interface MyTicket {
 }
 
 export default function MyActivity() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tickets, setTickets] = useState<MyTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user === null) {
-      navigate('/login');
+    if (authLoading) return; // don't judge auth state until it's actually finished checking
+    if (!user) {
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
-    if (!user?.email) return;
+    if (!user.email) return;
     (async () => {
       const { data } = await supabase
         .from('tickets')
@@ -47,7 +49,7 @@ export default function MyActivity() {
       setTickets(mapped);
       setLoading(false);
     })();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const statusStyles: Record<string, string> = {
     confirmed: 'bg-green-100 text-green-800',

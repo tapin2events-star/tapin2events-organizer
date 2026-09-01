@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
@@ -9,6 +9,7 @@ import PublicHeader from '../components/discover/PublicHeader';
 export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [events, setEvents] = useState<TapEvent[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +68,7 @@ export default function Discover() {
 
   async function toggleSave(eventId: string) {
     if (!user?.email) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname + location.search } });
       return;
     }
     const next = savedIds.includes(eventId)
