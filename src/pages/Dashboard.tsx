@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import TicketStubCard from '../components/TicketStubCard';
 import PayoutsCard from '../components/PayoutsCard';
+import MyResourceBookings from '../components/resources/MyResourceBookings';
 import type { TapEvent } from '../lib/types';
 
 export default function Dashboard() {
@@ -73,6 +74,8 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      <MyResourceBookings />
     </div>
   );
 }

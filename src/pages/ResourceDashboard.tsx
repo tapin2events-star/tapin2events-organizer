@@ -113,7 +113,7 @@ export default function ResourceDashboard() {
           user_email: booking.organizer_email,
           type: `booking_${status}`,
           message: `${resource?.display_name} has ${status} your booking request for ${booking.event_title}`,
-          link: `/activity?booking=${booking.id}`,
+          link: `/organizer?booking=${booking.id}`,
         })
         .then(() => {});
 
@@ -160,7 +160,7 @@ export default function ResourceDashboard() {
           user_email: booking.organizer_email,
           type: 'booking_counter_offered',
           message: `${resource?.display_name} proposed $${rate} instead of $${booking.offered_rate} for ${booking.event_title}`,
-          link: `/activity?booking=${booking.id}`,
+          link: `/organizer?booking=${booking.id}`,
         })
         .then(() => {});
     }
