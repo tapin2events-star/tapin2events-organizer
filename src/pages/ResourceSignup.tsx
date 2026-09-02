@@ -140,6 +140,7 @@ export default function ResourceSignup() {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wider text-marigold">Basics</p>
           <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
             Display name
             <input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={fieldClass} placeholder="Your name or business name" />
@@ -168,18 +169,24 @@ export default function ResourceSignup() {
             <textarea required rows={4} value={bio} onChange={(e) => setBio(e.target.value)} className={fieldClass} placeholder="Tell organizers about your services, experience, and style" />
           </label>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-              City
-              <input value={city} onChange={(e) => setCity(e.target.value)} className={fieldClass} />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-              State
-              <input value={state} onChange={(e) => setState(e.target.value)} className={fieldClass} />
-            </label>
+          <div className="border-t border-gray-100 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-marigold">Location</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                City
+                <input value={city} onChange={(e) => setCity(e.target.value)} className={fieldClass} />
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                State
+                <input value={state} onChange={(e) => setState(e.target.value)} className={fieldClass} />
+              </label>
+            </div>
           </div>
 
-          <ImageUpload currentUrl={profileImage || null} onUploaded={setProfileImage} pathPrefix="resources" label="Profile photo" />
+          <div className="border-t border-gray-100 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-marigold">Photos</p>
+            <div className="flex flex-col gap-4">
+              <ImageUpload currentUrl={profileImage || null} onUploaded={setProfileImage} pathPrefix="resources" label="Profile photo" />
 
           {existing && (
             <div>
@@ -205,32 +212,38 @@ export default function ResourceSignup() {
               </div>
             </div>
           )}
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-              Pricing type
-              <select value={pricingType} onChange={(e) => setPricingType(e.target.value as PricingType)} className={fieldClass}>
-                <option value="contact_quote">Contact for quote</option>
-                <option value="fixed">Fixed rate</option>
-                <option value="hourly">Hourly rate</option>
-              </select>
-            </label>
-            {pricingType !== 'contact_quote' && (
-              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-                Rate ($)
-                <input type="number" min="0" step="0.01" value={baseRate} onChange={(e) => setBaseRate(e.target.value)} className={fieldClass} />
-              </label>
-            )}
+          </div>
           </div>
 
-          <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-            Pricing details (optional)
-            <textarea rows={2} value={pricingDetails} onChange={(e) => setPricingDetails(e.target.value)} className={fieldClass} placeholder="Packages, add-ons, travel fees, etc." />
-          </label>
+          <div className="border-t border-gray-100 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-marigold">Pricing</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                Pricing type
+                <select value={pricingType} onChange={(e) => setPricingType(e.target.value as PricingType)} className={fieldClass}>
+                  <option value="contact_quote">Contact for quote</option>
+                  <option value="fixed">Fixed rate</option>
+                  <option value="hourly">Hourly rate</option>
+                </select>
+              </label>
+              {pricingType !== 'contact_quote' && (
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                  Rate ($)
+                  <input type="number" min="0" step="0.01" value={baseRate} onChange={(e) => setBaseRate(e.target.value)} className={fieldClass} />
+                </label>
+              )}
+            </div>
+            <label className="mt-4 flex flex-col gap-1 text-sm font-medium text-gray-700">
+              Pricing details (optional)
+              <textarea rows={2} value={pricingDetails} onChange={(e) => setPricingDetails(e.target.value)} className={fieldClass} placeholder="Packages, add-ons, travel fees, etc." />
+            </label>
+          </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-              Instagram
+          <div className="border-t border-gray-100 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-marigold">Social Links</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                Instagram
               <input value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} className={fieldClass} placeholder="https://" />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
@@ -241,6 +254,7 @@ export default function ResourceSignup() {
               Website
               <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className={fieldClass} placeholder="https://" />
             </label>
+            </div>
           </div>
 
           {error && <p className="text-sm text-magenta">{error}</p>}

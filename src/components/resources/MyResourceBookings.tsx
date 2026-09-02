@@ -21,6 +21,28 @@ const STATUS_STYLES: Record<string, string> = {
   deleted: 'bg-gray-100 text-gray-800',
 };
 
+const STATUS_BORDER: Record<string, string> = {
+  pending: 'border-l-orange-400',
+  accepted: 'border-l-green-500',
+  confirmed: 'border-l-green-500',
+  completed: 'border-l-gray-300',
+  rejected: 'border-l-red-300',
+  cancelled: 'border-l-red-300',
+  counter_offered: 'border-l-blue-400',
+  deleted: 'border-l-gray-300',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  accepted: 'Accepted',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  rejected: 'Declined',
+  cancelled: 'Cancelled',
+  counter_offered: 'Countered',
+  deleted: 'Deleted',
+};
+
 function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   return (
     <div className="flex gap-1">
@@ -168,9 +190,9 @@ export default function MyResourceBookings() {
           <div
             key={b.id}
             ref={(el) => { itemRefs.current[b.id] = el; }}
-            className={`rounded-xl border bg-white p-4 shadow-sm transition-colors ${
+            className={`rounded-xl border border-l-4 bg-white p-4 shadow-sm transition-colors ${STATUS_BORDER[b.status] ?? STATUS_BORDER.pending} ${
               highlightId === b.id ? 'border-marigold ring-2 ring-marigold/40' : 'border-gray-200'
-            }`}
+            } ${b.status === 'counter_offered' ? 'bg-blue-50/30' : ''}`}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
@@ -180,7 +202,7 @@ export default function MyResourceBookings() {
                 <p className="text-sm text-gray-500">For {b.event_title} &middot; Offered ${b.offered_rate}</p>
               </div>
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[b.status] ?? STATUS_STYLES.pending}`}>
-                {b.status}
+                {STATUS_LABELS[b.status] ?? b.status}
               </span>
             </div>
 

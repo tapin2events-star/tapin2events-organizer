@@ -22,6 +22,28 @@ const STATUS_STYLES: Record<string, string> = {
   deleted: 'bg-gray-100 text-gray-800',
 };
 
+const STATUS_BORDER: Record<string, string> = {
+  pending: 'border-l-orange-400',
+  accepted: 'border-l-green-500',
+  confirmed: 'border-l-green-500',
+  completed: 'border-l-gray-300',
+  rejected: 'border-l-red-300',
+  cancelled: 'border-l-red-300',
+  counter_offered: 'border-l-blue-400',
+  deleted: 'border-l-gray-300',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  accepted: 'Accepted',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  rejected: 'Declined',
+  cancelled: 'Cancelled',
+  counter_offered: 'Countered',
+  deleted: 'Deleted',
+};
+
 export default function ResourceDashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -197,23 +219,38 @@ export default function ResourceDashboard() {
         {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
         <div className="mt-6 grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-gray-200 bg-white p-4 text-center">
-            <p className="font-display text-2xl font-extrabold text-marigold">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-50">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+                <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <p className="font-display text-2xl font-extrabold text-gray-900">
               {bookings.filter((b) => b.status === 'completed').length}
             </p>
-            <p className="text-xs text-gray-500">Completed bookings</p>
+            <p className="text-xs text-gray-500">Completed</p>
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 text-center">
-            <p className="font-display text-2xl font-extrabold text-marigold">
-              {reviewStats.count > 0 ? `\u2605 ${reviewStats.average.toFixed(1)}` : '—'}
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fb923c" stroke="#fb923c" strokeWidth="1">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
+            <p className="font-display text-2xl font-extrabold text-gray-900">
+              {reviewStats.count > 0 ? reviewStats.average.toFixed(1) : '—'}
             </p>
             <p className="text-xs text-gray-500">{reviewStats.count > 0 ? `${reviewStats.count} review${reviewStats.count === 1 ? '' : 's'}` : 'No reviews yet'}</p>
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 text-center">
-            <p className="font-display text-2xl font-extrabold text-marigold">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-marigold/10">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <p className="font-display text-2xl font-extrabold text-gray-900">
               {bookings.filter((b) => b.status === 'pending').length}
             </p>
-            <p className="text-xs text-gray-500">Pending requests</p>
+            <p className="text-xs text-gray-500">Awaiting your response</p>
           </div>
         </div>
 
@@ -227,9 +264,9 @@ export default function ResourceDashboard() {
               <div
                 key={b.id}
                 ref={(el) => { itemRefs.current[b.id] = el; }}
-                className={`rounded-xl border bg-white p-4 shadow-sm transition-colors ${
+                className={`rounded-xl border border-l-4 bg-white p-4 shadow-sm transition-colors ${STATUS_BORDER[b.status] ?? STATUS_BORDER.pending} ${
                   highlightId === b.id ? 'border-marigold ring-2 ring-marigold/40' : 'border-gray-200'
-                }`}
+                } ${b.status === 'pending' ? 'bg-orange-50/30' : ''}`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -240,7 +277,7 @@ export default function ResourceDashboard() {
                     </p>
                   </div>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[b.status] ?? STATUS_STYLES.pending}`}>
-                    {b.status}
+                    {STATUS_LABELS[b.status] ?? b.status}
                   </span>
                 </div>
                 {b.message_from_organizer && (
