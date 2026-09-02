@@ -124,22 +124,24 @@ export default function ResourceProfile() {
   if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
   if (!resource) return (<><PublicHeader /><div className="p-10 text-center text-magenta">Resource not found.</div></>);
 
+  const averageRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <PublicHeader />
-      <div className="mx-auto max-w-3xl px-4 py-10">
+      <div className="mx-auto max-w-5xl px-4 py-10">
         <Link to="/resources" className="text-sm text-marigold hover:underline">&larr; Back to Artists &amp; Resources</Link>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          {resource.profile_image ? (
-            <img src={resource.profile_image} alt="" className="h-56 w-full object-cover" />
-          ) : (
-            <div className="flex h-56 w-full items-center justify-center bg-gradient-to-br from-indigo-100 to-teal-100">
-              <span className="font-display text-6xl font-extrabold text-indigo-300">{resource.display_name.charAt(0)}</span>
-            </div>
-          )}
+        {resource.profile_image ? (
+          <img src={resource.profile_image} alt="" className="mt-4 aspect-[21/9] w-full rounded-2xl object-cover" />
+        ) : (
+          <div className="mt-4 flex aspect-[21/9] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-teal-100">
+            <span className="font-display text-6xl font-extrabold text-indigo-300">{resource.display_name.charAt(0)}</span>
+          </div>
+        )}
 
-          <div className="p-6">
+        <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="md:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h1 className="font-display text-2xl font-bold text-gray-900">{resource.display_name}</h1>
@@ -159,34 +161,34 @@ export default function ResourceProfile() {
             </div>
 
             <p className="mt-2 text-sm text-gray-500">
-              {reviews.length > 0
-                ? `\u2605 ${(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)} average (${reviews.length} review${reviews.length === 1 ? '' : 's'})`
-                : 'No reviews yet'}
+              {reviews.length > 0 ? `\u2605 ${averageRating.toFixed(1)} average (${reviews.length} review${reviews.length === 1 ? '' : 's'})` : 'No reviews yet'}
             </p>
 
-            <h2 className="mt-6 font-display text-lg font-semibold text-gray-900">About</h2>
-            <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
+            <div className="mt-6 border-t border-gray-200 pt-6">
+              <h2 className="font-display text-lg font-semibold text-gray-900">About</h2>
+              <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
+            </div>
 
             {media.length > 0 && (
-              <>
-                <h2 className="mt-6 font-display text-lg font-semibold text-gray-900">Portfolio</h2>
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <h2 className="font-display text-lg font-semibold text-gray-900">Portfolio</h2>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {media.map((m) => (
                     <img key={m.id} src={m.media_url} alt={m.caption ?? ''} className="aspect-square w-full rounded-lg object-cover" />
                   ))}
                 </div>
-              </>
+              </div>
             )}
 
             {resource.pricing_details && (
-              <>
-                <h2 className="mt-6 font-display text-lg font-semibold text-gray-900">Pricing details</h2>
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <h2 className="font-display text-lg font-semibold text-gray-900">Pricing details</h2>
                 <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.pricing_details}</p>
-              </>
+              </div>
             )}
 
             {SOCIAL_LINKS.some((s) => resource[s.key]) && (
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3 border-t border-gray-200 pt-6">
                 {SOCIAL_LINKS.filter((s) => resource[s.key]).map((s) => (
                   <a
                     key={s.key}
@@ -202,9 +204,9 @@ export default function ResourceProfile() {
             )}
 
             {reviews.length > 0 && (
-              <>
-                <h2 className="mt-6 font-display text-lg font-semibold text-gray-900">Reviews</h2>
-                <div className="mt-2 flex flex-col gap-3">
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <h2 className="font-display text-lg font-semibold text-gray-900">Reviews</h2>
+                <div className="mt-3 flex flex-col gap-3">
                   {reviews.map((r) => (
                     <div key={r.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
                       <p className="text-sm text-orange-400">{'\u2605'.repeat(r.rating)}{'\u2606'.repeat(5 - r.rating)}</p>
@@ -212,40 +214,45 @@ export default function ResourceProfile() {
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
+          </div>
 
-            {requestSent ? (
-              <div className="mt-6 rounded-xl bg-green-50 p-4 text-sm text-green-700">
-                ✓ Your booking request has been sent to {resource.display_name}. They'll respond soon.
-              </div>
-            ) : !user ? (
-              <div className="mt-6 rounded-xl bg-gray-50 p-4">
-                <p className="text-sm text-gray-500">Sign in to request a booking for one of your events.</p>
-                <button
-                  onClick={() => navigate('/login', { state: { from: `/resources/${id}` } })}
-                  className="mt-3 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
-                >
-                  Sign in
-                </button>
-              </div>
-            ) : myEvents.length === 0 ? (
-              <div className="mt-6 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-                You'll need to <Link to="/organizer/new" className="font-medium text-marigold hover:underline">create an event</Link> before requesting a booking.
-              </div>
-            ) : (
-              <form onSubmit={handleBookingRequest} className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <h2 className="font-display text-base font-semibold text-gray-900">Request to book</h2>
-                <label className="flex flex-col gap-1 text-sm text-gray-700">
-                  For which event?
-                  <select required value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900">
-                    <option value="">Select an event…</option>
-                    {myEvents.map((e) => (
-                      <option key={e.id} value={e.id}>{e.title}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="md:sticky md:top-6 md:self-start">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="text-xs uppercase tracking-widest text-gray-400">Book this resource</p>
+              <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
+              <p className="text-sm text-gray-500">{pricingLabel(resource)}</p>
+
+              {requestSent ? (
+                <div className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">
+                  ✓ Your booking request has been sent to {resource.display_name}. They'll respond soon.
+                </div>
+              ) : !user ? (
+                <div className="mt-4 rounded-xl bg-gray-50 p-4">
+                  <p className="text-sm text-gray-500">Sign in to request a booking for one of your events.</p>
+                  <button
+                    onClick={() => navigate('/login', { state: { from: `/resources/${id}` } })}
+                    className="mt-3 w-full rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
+                  >
+                    Sign in
+                  </button>
+                </div>
+              ) : myEvents.length === 0 ? (
+                <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+                  You'll need to <Link to="/organizer/new" className="font-medium text-marigold hover:underline">create an event</Link> before requesting a booking.
+                </div>
+              ) : (
+                <form onSubmit={handleBookingRequest} className="mt-4 flex flex-col gap-3">
+                  <label className="flex flex-col gap-1 text-sm text-gray-700">
+                    For which event?
+                    <select required value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900">
+                      <option value="">Select an event…</option>
+                      {myEvents.map((e) => (
+                        <option key={e.id} value={e.id}>{e.title}</option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="flex flex-col gap-1 text-sm text-gray-700">
                     Service date
                     <input type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900" />
@@ -254,21 +261,21 @@ export default function ResourceProfile() {
                     Offered rate ($)
                     <input required type="number" min="0" step="0.01" value={offeredRate} onChange={(e) => setOfferedRate(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900" />
                   </label>
-                </div>
-                <label className="flex flex-col gap-1 text-sm text-gray-700">
-                  Message (optional)
-                  <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900" placeholder="Tell them about your event and what you need" />
-                </label>
-                {bookingError && <p className="text-sm text-magenta">{bookingError}</p>}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {submitting ? 'Sending…' : 'Send booking request'}
-                </button>
-              </form>
-            )}
+                  <label className="flex flex-col gap-1 text-sm text-gray-700">
+                    Message (optional)
+                    <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900" placeholder="Tell them about your event and what you need" />
+                  </label>
+                  {bookingError && <p className="text-sm text-magenta">{bookingError}</p>}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {submitting ? 'Sending…' : 'Send booking request'}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </div>
