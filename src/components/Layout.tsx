@@ -137,7 +137,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="flex-1 px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8">
+      <main className="min-w-0 flex-1 px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8">
         <Outlet />
       </main>
     </div>

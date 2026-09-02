@@ -187,7 +187,9 @@ export default function MyActivity() {
                 <div key={t.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                   <div className="flex flex-col gap-4 p-5 sm:flex-row">
                     {t.event_poster_url ? (
-                      <img src={t.event_poster_url} alt="" className="h-32 w-full shrink-0 rounded-lg object-cover sm:w-32" />
+                      <div className="h-32 w-full shrink-0 overflow-hidden rounded-lg sm:w-32">
+                        <img src={t.event_poster_url} alt="" className="h-full w-full object-cover" />
+                      </div>
                     ) : (
                       <div className="h-32 w-full shrink-0 rounded-lg bg-gradient-to-br from-indigo-100 to-teal-100 sm:w-32" />
                     )}
