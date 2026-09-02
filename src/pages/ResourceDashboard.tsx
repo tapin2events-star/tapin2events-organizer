@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Resource, ResourceBooking } from '../lib/types';
@@ -26,6 +26,9 @@ export default function ResourceDashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('booking');
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [resource, setResource] = useState<Resource | null>(null);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +94,12 @@ export default function ResourceDashboard() {
     })();
   }, [user, authLoading, navigate, location.pathname]);
 
+  useEffect(() => {
+    if (highlightId && itemRefs.current[highlightId]) {
+      itemRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId, bookings]);
+
   async function respond(booking: BookingRow, status: 'accepted' | 'rejected') {
     setBusyId(booking.id);
     const { error } = await supabase.from('resource_bookings').update({ status }).eq('id', booking.id);
@@ -104,7 +113,7 @@ export default function ResourceDashboard() {
           user_email: booking.organizer_email,
           type: `booking_${status}`,
           message: `${resource?.display_name} has ${status} your booking request for ${booking.event_title}`,
-          link: '/activity',
+          link: `/activity?booking=${booking.id}`,
         })
         .then(() => {});
 
@@ -151,7 +160,7 @@ export default function ResourceDashboard() {
           user_email: booking.organizer_email,
           type: 'booking_counter_offered',
           message: `${resource?.display_name} proposed $${rate} instead of $${booking.offered_rate} for ${booking.event_title}`,
-          link: '/activity',
+          link: `/activity?booking=${booking.id}`,
         })
         .then(() => {});
     }
@@ -215,7 +224,13 @@ export default function ResourceDashboard() {
         ) : (
           <div className="mt-6 flex flex-col gap-3">
             {bookings.map((b) => (
-              <div key={b.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div
+                key={b.id}
+                ref={(el) => { itemRefs.current[b.id] = el; }}
+                className={`rounded-xl border bg-white p-4 shadow-sm transition-colors ${
+                  highlightId === b.id ? 'border-marigold ring-2 ring-marigold/40' : 'border-gray-200'
+                }`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-gray-900">{b.event_title}</p>

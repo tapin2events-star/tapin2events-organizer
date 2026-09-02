@@ -67,7 +67,7 @@ export default function ResourceProfile() {
     setSubmitting(true);
     setBookingError(null);
 
-    const { error } = await supabase.from('resource_bookings').insert({
+    const { data: newBooking, error } = await supabase.from('resource_bookings').insert({
       event_id: selectedEventId,
       resource_id: resource.id,
       organizer_email: user.email,
@@ -75,7 +75,7 @@ export default function ResourceProfile() {
       offered_rate: parseFloat(offeredRate),
       message_from_organizer: message || null,
       booking_details: serviceDate ? { service_date: serviceDate } : {},
-    });
+    }).select().single();
 
     setSubmitting(false);
     if (error) {
@@ -95,7 +95,7 @@ export default function ResourceProfile() {
         user_email: resource.email,
         type: 'booking_request',
         message: `New booking request from ${user.email} for ${selectedEvent?.title ?? 'an event'}`,
-        link: '/resources/dashboard',
+        link: `/resources/dashboard?booking=${newBooking?.id}`,
       })
       .then(() => {});
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { ResourceBooking } from '../../lib/types';
@@ -35,6 +35,9 @@ function StarPicker({ value, onChange }: { value: number; onChange: (n: number) 
 
 export default function MyResourceBookings() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('booking');
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -86,6 +89,12 @@ export default function MyResourceBookings() {
     load();
   }, [user?.email]);
 
+  useEffect(() => {
+    if (highlightId && itemRefs.current[highlightId]) {
+      itemRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId, bookings]);
+
   async function markCompleted(booking: BookingRow) {
     setBusyId(booking.id);
     setActionError(null);
@@ -119,7 +128,7 @@ export default function MyResourceBookings() {
         user_email: booking.resource_email,
         type: `counter_offer_${newStatus}`,
         message: `${user!.email} has ${accept ? 'accepted' : 'declined'} your counter offer for ${booking.event_title}`,
-        link: '/resources/dashboard',
+        link: `/resources/dashboard?booking=${booking.id}`,
       })
       .then(() => {});
   }
@@ -156,7 +165,13 @@ export default function MyResourceBookings() {
       {actionError && <p className="mt-2 text-sm text-magenta">{actionError}</p>}
       <div className="mt-4 flex flex-col gap-3">
         {bookings.map((b) => (
-          <div key={b.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div
+            key={b.id}
+            ref={(el) => { itemRefs.current[b.id] = el; }}
+            className={`rounded-xl border bg-white p-4 shadow-sm transition-colors ${
+              highlightId === b.id ? 'border-marigold ring-2 ring-marigold/40' : 'border-gray-200'
+            }`}
+          >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <Link to={`/resources/${b.resource_id}`} className="font-semibold text-gray-900 hover:text-marigold">
