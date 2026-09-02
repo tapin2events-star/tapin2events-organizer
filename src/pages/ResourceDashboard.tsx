@@ -213,7 +213,7 @@ export default function ResourceDashboard() {
 
         {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
-        <div className="mt-6 grid grid-cols-3 gap-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-50">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">

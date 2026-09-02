@@ -41,7 +41,7 @@ export default function EventDetail() {
         </div>
       )}
 
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>
           <h1 className="font-display text-3xl font-extrabold text-bone">{event.title}</h1>
