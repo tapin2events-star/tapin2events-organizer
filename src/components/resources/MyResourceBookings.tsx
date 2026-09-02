@@ -41,6 +41,7 @@ export default function MyResourceBookings() {
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function load() {
     if (!user?.email) return;
@@ -87,34 +88,45 @@ export default function MyResourceBookings() {
 
   async function markCompleted(booking: BookingRow) {
     setBusyId(booking.id);
+    setActionError(null);
     const { error } = await supabase.from('resource_bookings').update({ status: 'completed' }).eq('id', booking.id);
     setBusyId(null);
-    if (!error) setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: 'completed' } : b)));
+    if (error) {
+      console.error('Failed to mark booking completed:', error);
+      setActionError('Could not update this booking. Please try again.');
+      return;
+    }
+    setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: 'completed' } : b)));
   }
 
   async function respondToCounter(booking: BookingRow, accept: boolean) {
     setBusyId(booking.id);
+    setActionError(null);
     const newStatus = accept ? 'accepted' : 'rejected';
     const updates: any = { status: newStatus };
     if (accept) updates.final_rate = booking.counter_offer_rate;
     const { error } = await supabase.from('resource_bookings').update(updates).eq('id', booking.id);
     setBusyId(null);
-    if (!error) {
-      setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: newStatus } : b)));
-      supabase
-        .from('notifications')
-        .insert({
-          user_email: booking.resource_email,
-          type: `counter_offer_${newStatus}`,
-          message: `${user!.email} has ${accept ? 'accepted' : 'declined'} your counter offer for ${booking.event_title}`,
-          link: '/resources/dashboard',
-        })
-        .then(() => {});
+    if (error) {
+      console.error('Failed to respond to counter offer:', error);
+      setActionError('Could not send your response. Please try again.');
+      return;
     }
+    setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: newStatus } : b)));
+    supabase
+      .from('notifications')
+      .insert({
+        user_email: booking.resource_email,
+        type: `counter_offer_${newStatus}`,
+        message: `${user!.email} has ${accept ? 'accepted' : 'declined'} your counter offer for ${booking.event_title}`,
+        link: '/resources/dashboard',
+      })
+      .then(() => {});
   }
 
   async function submitReview(booking: BookingRow) {
     setBusyId(booking.id);
+    setActionError(null);
     const { error } = await supabase.from('resource_reviews').insert({
       resource_id: booking.resource_id,
       booking_id: booking.id,
@@ -123,12 +135,15 @@ export default function MyResourceBookings() {
       comment: comment || null,
     });
     setBusyId(null);
-    if (!error) {
-      setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, has_review: true } : b)));
-      setReviewingId(null);
-      setRating(5);
-      setComment('');
+    if (error) {
+      console.error('Failed to submit review:', error);
+      setActionError('Could not submit your review. Please try again.');
+      return;
     }
+    setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, has_review: true } : b)));
+    setReviewingId(null);
+    setRating(5);
+    setComment('');
   }
 
   if (loading) return <p className="text-sm text-gray-400">Loading…</p>;
@@ -138,6 +153,7 @@ export default function MyResourceBookings() {
     <div className="mt-10">
       <h2 className="font-display text-xl font-bold text-gray-900">My Resource Bookings</h2>
       <p className="mt-1 text-sm text-gray-500">Requests you've sent to artists and vendors.</p>
+      {actionError && <p className="mt-2 text-sm text-magenta">{actionError}</p>}
       <div className="mt-4 flex flex-col gap-3">
         {bookings.map((b) => (
           <div key={b.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
