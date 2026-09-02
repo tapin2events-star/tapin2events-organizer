@@ -101,6 +101,9 @@ export default function ResourceDiscovery() {
                 )}
                 <div className="p-5">
                   <p className="font-display text-lg font-bold text-gray-900">{r.display_name}</p>
+                  {(r.city || r.state) && (
+                    <p className="mt-0.5 text-xs text-gray-400">{[r.city, r.state].filter(Boolean).join(', ')}</p>
+                  )}
                   <p className="mt-1 line-clamp-2 text-sm text-gray-500">{r.bio}</p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {r.categories.slice(0, 2).map((c) => (
