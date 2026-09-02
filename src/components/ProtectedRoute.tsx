@@ -6,11 +6,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-ink text-muted">
-        Loading…
-      </div>
-    );
+    return <p className="text-muted">Loading…</p>;
   }
 
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;

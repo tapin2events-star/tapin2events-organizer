@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { RESOURCE_CATEGORIES, type PricingType, type Resource, type ResourceMedia } from '../lib/types';
-import PublicHeader from '../components/discover/PublicHeader';
 import ImageUpload from '../components/ImageUpload';
 
 export default function ResourceSignup() {
@@ -124,13 +123,12 @@ export default function ResourceSignup() {
     }
   }
 
-  if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
+  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
 
   const fieldClass = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none placeholder:text-gray-400 focus-visible:border-marigold';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <PublicHeader />
       <div className="mx-auto max-w-2xl px-4 py-10">
         <h1 className="font-display text-3xl font-extrabold text-gray-900">
           {existing ? 'Edit your resource profile' : 'Become a Resource'}

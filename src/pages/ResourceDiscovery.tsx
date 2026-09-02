@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { RESOURCE_CATEGORIES, type Resource } from '../lib/types';
-import PublicHeader from '../components/discover/PublicHeader';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for quote';
@@ -39,7 +38,6 @@ export default function ResourceDiscovery() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <PublicHeader />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

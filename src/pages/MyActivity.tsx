@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import PublicHeader from '../components/discover/PublicHeader';
 
 interface MyTicket {
   id: string;
@@ -168,7 +167,6 @@ export default function MyActivity() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <PublicHeader />
       <div className="mx-auto max-w-3xl px-4 py-10">
         <h1 className="font-display text-3xl font-extrabold text-gray-900">My Activity</h1>
         <p className="mt-1 text-gray-500">Every event you've registered for or bought a ticket to.</p>

@@ -4,8 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
 
 const NAV_ITEMS = [
-  { to: '/organizer', label: 'Events', end: true },
-  { to: '/organizer/new', label: 'Create event' },
+  { to: '/', label: 'Discover', end: true },
+  { to: '/resources', label: 'Resources', end: false },
+  { to: '/resources/dashboard', label: 'Resource Dashboard', end: true },
+  { to: '/activity', label: 'My Activity', end: true },
+];
+
+const ORGANIZER_NAV_ITEMS = [
+  { to: '/organizer', label: 'My Events', end: true },
+  { to: '/organizer/new', label: 'Create Event', end: true },
 ];
 
 export default function Layout() {
@@ -16,9 +23,9 @@ export default function Layout() {
     <div className="flex min-h-screen bg-ink text-bone">
       {/* Mobile top bar: only visible below md */}
       <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden">
-        <span className="font-display text-xl font-extrabold tracking-tight text-gray-900">
+        <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           TAP<span className="text-marigold">IN</span>
-        </span>
+        </Link>
         <div className="flex items-center gap-1">
           <NotificationBell />
           <button
@@ -38,21 +45,18 @@ export default function Layout() {
         <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setMenuOpen(false)} />
       )}
 
-      {/* Sidebar: persistent column on desktop, slide-in drawer on mobile */}
+      {/* Sidebar: persistent column on desktop, slide-in drawer on mobile.
+          Present on every page now, not just the organizer console, so
+          there's exactly one navigation system for the whole app. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-gray-200 bg-surface px-5 py-6 transition-transform duration-200 md:static md:z-auto md:w-60 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-surface px-5 py-6 transition-transform duration-200 md:static md:z-auto md:w-60 md:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <span className="font-display text-2xl font-extrabold tracking-tight text-gray-900">
-              TAP<span className="text-marigold">IN</span>
-            </span>
-            <p className="mt-0.5 text-[11px] uppercase tracking-widest text-muted">
-              Organizer
-            </p>
-          </div>
+          <Link to="/" className="font-display text-2xl font-extrabold tracking-tight text-gray-900">
+            TAP<span className="text-marigold">IN</span>
+          </Link>
           <div className="hidden md:block">
             <NotificationBell />
           </div>
@@ -67,7 +71,7 @@ export default function Layout() {
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1">
+        <nav className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -87,26 +91,49 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-200 pt-4">
-          <Link
-            to="/"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-gray-100 hover:text-bone"
-          >
-            View public site
-            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M7 13 13 7M8 7h5v5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-        </div>
+        <p className="mb-1 mt-6 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted/70">
+          Organizer
+        </p>
+        <nav className="flex flex-1 flex-col gap-1">
+          {ORGANIZER_NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-marigold/10 text-marigold'
+                    : 'text-muted hover:bg-gray-100 hover:text-bone'
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
 
         <div className="border-t border-gray-200 pt-4">
-          <p className="truncate text-xs text-muted">{user?.email}</p>
-          <button
-            onClick={() => signOut()}
-            className="mt-2 text-xs font-medium text-magenta hover:text-magenta/80"
-          >
-            Sign out
-          </button>
+          {user ? (
+            <>
+              <p className="truncate text-xs text-muted">{user.email}</p>
+              <button
+                onClick={() => signOut()}
+                className="mt-2 text-xs font-medium text-magenta hover:text-magenta/80"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              onClick={() => setMenuOpen(false)}
+              className="block rounded-lg bg-marigold px-3 py-2 text-center text-sm font-semibold text-ink hover:bg-marigold/90"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </aside>
 

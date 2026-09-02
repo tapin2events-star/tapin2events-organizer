@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import PublicHeader from '../components/discover/PublicHeader';
 
 interface PassData {
   ticket: {
@@ -74,8 +73,8 @@ export default function TicketPass() {
     }
   }
 
-  if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
-  if (error || !data) return (<><PublicHeader /><div className="p-10 text-center text-magenta">{error || 'Ticket not found.'}</div></>);
+  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (error || !data) return <div className="p-10 text-center text-magenta">{error || 'Ticket not found.'}</div>;
 
   const { ticket, event, organizerName } = data;
   const passUrl = window.location.origin + import.meta.env.BASE_URL + 'pass/' + ticket.id;
@@ -85,7 +84,6 @@ export default function TicketPass() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white print:bg-white">
       <div className="print:hidden">
-        <PublicHeader />
       </div>
       <div className="mx-auto max-w-md px-4 py-10 print:py-0">
         <Link to={`/events/${ticket.event_id}`} className="text-sm text-marigold hover:underline print:hidden">&larr; Back to event</Link>

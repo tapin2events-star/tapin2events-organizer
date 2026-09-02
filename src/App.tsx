@@ -26,26 +26,34 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Discover />} />
-          <Route path="/events/:id" element={<PublicEventDetail />} />
-          <Route path="/pass/:ticketId" element={<TicketPass />} />
-          <Route path="/activity" element={<MyActivity />} />
-          <Route path="/resources" element={<ResourceDiscovery />} />
-          <Route path="/resources/new" element={<ResourceSignup />} />
-          <Route path="/resources/dashboard" element={<ResourceDashboard />} />
-          <Route path="/resources/:id" element={<ResourceProfile />} />
-          <Route
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/organizer" element={<Dashboard />} />
-            <Route path="/organizer/new" element={<EventForm />} />
-            <Route path="/organizer/events/:id" element={<EventDetail />} />
-            <Route path="/organizer/events/:id/checkin" element={<Suspense fallback={<p className="text-muted">Loading scanner…</p>}><CheckIn /></Suspense>} />
-            <Route path="/organizer/events/:id/edit" element={<EventForm />} />
+
+          {/* One shared sidebar shell for the entire app now — public pages
+              and organizer pages alike. Auth is enforced per-route below via
+              ProtectedRoute, not by which shell wraps them. */}
+          <Route element={<Layout />}>
+            <Route path="/" element={<Discover />} />
+            <Route path="/events/:id" element={<PublicEventDetail />} />
+            <Route path="/pass/:ticketId" element={<TicketPass />} />
+            <Route path="/activity" element={<MyActivity />} />
+            <Route path="/resources" element={<ResourceDiscovery />} />
+            <Route path="/resources/new" element={<ResourceSignup />} />
+            <Route path="/resources/dashboard" element={<ResourceDashboard />} />
+            <Route path="/resources/:id" element={<ResourceProfile />} />
+
+            <Route path="/organizer" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/organizer/new" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
+            <Route path="/organizer/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
+            <Route
+              path="/organizer/events/:id/checkin"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<p className="text-muted">Loading scanner…</p>}>
+                    <CheckIn />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/organizer/events/:id/edit" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>

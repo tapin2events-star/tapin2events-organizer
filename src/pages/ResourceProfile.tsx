@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Resource, TapEvent, ResourceReview, ResourceMedia } from '../lib/types';
-import PublicHeader from '../components/discover/PublicHeader';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for a quote';
@@ -121,14 +120,13 @@ export default function ResourceProfile() {
       .catch(() => { /* request already succeeded; notification is best-effort */ });
   }
 
-  if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
-  if (!resource) return (<><PublicHeader /><div className="p-10 text-center text-magenta">Resource not found.</div></>);
+  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (!resource) return <div className="p-10 text-center text-magenta">Resource not found.</div>;
 
   const averageRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <PublicHeader />
       <div className="mx-auto max-w-5xl px-4 py-10">
         <Link to="/resources" className="text-sm text-marigold hover:underline">&larr; Back to Artists &amp; Resources</Link>
 

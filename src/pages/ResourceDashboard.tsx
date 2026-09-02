@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Resource, ResourceBooking } from '../lib/types';
-import PublicHeader from '../components/discover/PublicHeader';
 
 interface BookingRow extends ResourceBooking {
   event_title: string;
@@ -188,23 +187,19 @@ export default function ResourceDashboard() {
     }
   }
 
-  if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
+  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
 
   if (!resource) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-        <PublicHeader />
-        <div className="mx-auto max-w-lg px-4 py-16 text-center">
-          <p className="text-lg font-semibold text-gray-700">You don't have a resource profile yet.</p>
-          <Link to="/resources/new" className="mt-3 inline-block text-marigold hover:underline">Create your resource profile &rarr;</Link>
-        </div>
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-lg font-semibold text-gray-700">You don't have a resource profile yet.</p>
+        <Link to="/resources/new" className="mt-3 inline-block text-marigold hover:underline">Create your resource profile &rarr;</Link>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <PublicHeader />
       <div className="mx-auto max-w-3xl px-4 py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
-import PublicHeader from '../components/discover/PublicHeader';
 
 export default function PublicEventDetail() {
   const location = useLocation();
@@ -170,15 +169,14 @@ export default function PublicEventDetail() {
     window.location.href = data.url;
   }
 
-  if (loading) return (<><PublicHeader /><div className="p-10 text-center text-gray-500">Loading…</div></>);
-  if (!event) return (<><PublicHeader /><div className="p-10 text-center text-magenta">Event not found.</div></>);
+  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (!event) return <div className="p-10 text-center text-magenta">Event not found.</div>;
 
   const isFull = !!event.max_capacity && confirmedCount >= event.max_capacity && !myTicket;
   const isFree = event.event_type === 'free';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <PublicHeader />
       <div className="mx-auto max-w-4xl px-4 py-10">
         <Link to="/" className="text-sm text-marigold hover:underline">&larr; Back to Discover</Link>
 
