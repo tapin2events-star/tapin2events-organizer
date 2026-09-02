@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import type { Resource, TapEvent } from '../lib/types';
+import type { Resource, TapEvent, ResourceReview, ResourceMedia } from '../lib/types';
 import PublicHeader from '../components/discover/PublicHeader';
 
 function pricingLabel(r: Resource) {
@@ -32,6 +32,8 @@ export default function ResourceProfile() {
   const [submitting, setSubmitting] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<ResourceReview[]>([]);
+  const [media, setMedia] = useState<ResourceMedia[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -39,6 +41,13 @@ export default function ResourceProfile() {
       const { data } = await supabase.from('resources').select('*').eq('id', id).single();
       setResource((data as Resource) ?? null);
       setLoading(false);
+
+      const [{ data: reviewRows }, { data: mediaRows }] = await Promise.all([
+        supabase.from('resource_reviews').select('*').eq('resource_id', id).order('created_at', { ascending: false }),
+        supabase.from('resource_media').select('*').eq('resource_id', id).order('display_order', { ascending: true }),
+      ]);
+      setReviews((reviewRows ?? []) as ResourceReview[]);
+      setMedia((mediaRows ?? []) as ResourceMedia[]);
     })();
   }, [id]);
 
@@ -150,12 +159,24 @@ export default function ResourceProfile() {
             </div>
 
             <p className="mt-2 text-sm text-gray-500">
-              {resource.review_count > 0 ? `\u2605 ${resource.average_rating.toFixed(1)} average (${resource.review_count} review${resource.review_count === 1 ? '' : 's'})` : 'No reviews yet'}
-              {resource.total_bookings > 0 && ` \u00b7 ${resource.total_bookings} booking${resource.total_bookings === 1 ? '' : 's'} completed`}
+              {reviews.length > 0
+                ? `\u2605 ${(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)} average (${reviews.length} review${reviews.length === 1 ? '' : 's'})`
+                : 'No reviews yet'}
             </p>
 
             <h2 className="mt-6 font-display text-lg font-semibold text-gray-900">About</h2>
             <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
+
+            {media.length > 0 && (
+              <>
+                <h2 className="mt-6 font-display text-lg font-semibold text-gray-900">Portfolio</h2>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {media.map((m) => (
+                    <img key={m.id} src={m.media_url} alt={m.caption ?? ''} className="aspect-square w-full rounded-lg object-cover" />
+                  ))}
+                </div>
+              </>
+            )}
 
             {resource.pricing_details && (
               <>
@@ -178,6 +199,20 @@ export default function ResourceProfile() {
                   </a>
                 ))}
               </div>
+            )}
+
+            {reviews.length > 0 && (
+              <>
+                <h2 className="mt-6 font-display text-lg font-semibold text-gray-900">Reviews</h2>
+                <div className="mt-2 flex flex-col gap-3">
+                  {reviews.map((r) => (
+                    <div key={r.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                      <p className="text-sm text-orange-400">{'\u2605'.repeat(r.rating)}{'\u2606'.repeat(5 - r.rating)}</p>
+                      {r.comment && <p className="mt-1 text-sm text-gray-600">{r.comment}</p>}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {requestSent ? (

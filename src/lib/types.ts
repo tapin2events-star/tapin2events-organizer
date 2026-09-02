@@ -136,8 +136,29 @@ export interface ResourceBooking {
     special_requirements?: string;
   };
   offered_rate: number;
+  counter_offer_rate: number | null;
   message_from_organizer: string | null;
   response_from_resource: string | null;
   status: ResourceBookingStatus;
   created_at: string;
+}
+
+export interface ResourceReview {
+  id: string;
+  resource_id: string;
+  booking_id: string;
+  reviewer_email: string;
+  rating: number;
+  comment: string | null;
+  would_recommend: boolean | null;
+  created_at: string;
+}
+
+export interface ResourceMedia {
+  id: string;
+  resource_id: string;
+  media_type: 'image' | 'video';
+  media_url: string;
+  caption: string | null;
+  display_order: number;
 }

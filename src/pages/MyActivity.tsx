@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import PublicHeader from '../components/discover/PublicHeader';
+import MyResourceBookings from '../components/resources/MyResourceBookings';
 
 interface MyTicket {
   id: string;
@@ -246,6 +247,8 @@ export default function MyActivity() {
             })}
           </div>
         )}
+
+        <MyResourceBookings />
       </div>
     </div>
   );
