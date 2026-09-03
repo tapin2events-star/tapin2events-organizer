@@ -45,6 +45,9 @@ const STATUS_LABELS: Record<string, string> = {
   deleted: 'Deleted',
 };
 
+const TABS = ['Bookings', 'Products'] as const;
+type Tab = (typeof TABS)[number];
+
 export default function ResourceDashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -52,6 +55,7 @@ export default function ResourceDashboard() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('booking');
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [tab, setTab] = useState<Tab>('Bookings');
   const [resource, setResource] = useState<Resource | null>(null);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,6 +219,22 @@ export default function ResourceDashboard() {
 
         {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
+        <div className="mt-6 flex gap-1 border-b border-gray-200">
+          {TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-medium transition ${
+                tab === t ? 'border-b-2 border-marigold text-marigold' : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'Bookings' && (
+          <>
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-50">
@@ -343,9 +363,15 @@ export default function ResourceDashboard() {
             ))}
           </div>
         )}
+          </>
+        )}
 
-        <ProductManager ownerType="resource" ownerId={resource.id} sellerEmail={resource.email} />
-        <ProductOrdersPanel ownerType="resource" ownerId={resource.id} />
+        {tab === 'Products' && (
+          <>
+            <ProductManager ownerType="resource" ownerId={resource.id} sellerEmail={resource.email} />
+            <ProductOrdersPanel ownerType="resource" ownerId={resource.id} />
+          </>
+        )}
       </div>
     </div>
   );

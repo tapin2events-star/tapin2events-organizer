@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Discover', end: true },
   { to: '/resources', label: 'Resources', end: false },
   { to: '/resources/dashboard', label: 'Resource Dashboard', end: true },
+  { to: '/products', label: 'Shop', end: false },
   { to: '/activity', label: 'My Activity', end: true },
 ];
 
