@@ -162,3 +162,49 @@ export interface ResourceMedia {
   caption: string | null;
   display_order: number;
 }
+
+export type ProductCategory = 'apparel' | 'accessories' | 'food' | 'drinks' | 'vip_bundle' | 'add_on' | 'merchandise' | 'series_pass' | 'other';
+export type FulfillmentStatus = 'pending' | 'ready_for_pickup' | 'picked_up' | 'shipped' | 'delivered';
+
+export const PRODUCT_CATEGORIES: { value: ProductCategory; label: string }[] = [
+  { value: 'apparel', label: 'Apparel' },
+  { value: 'accessories', label: 'Accessories' },
+  { value: 'food', label: 'Food' },
+  { value: 'drinks', label: 'Drinks' },
+  { value: 'merchandise', label: 'Merchandise' },
+  { value: 'vip_bundle', label: 'VIP Bundle' },
+  { value: 'add_on', label: 'Add-on' },
+  { value: 'other', label: 'Other' },
+];
+
+export interface Product {
+  id: string;
+  event_id: string | null;
+  resource_id: string | null;
+  seller_email: string;
+  name: string;
+  description: string | null;
+  price: number;
+  images: string[];
+  stock_quantity: number;
+  sold_quantity: number;
+  category: ProductCategory;
+  visibility: 'public' | 'hidden' | 'attendee_only';
+  pickup_required: boolean;
+  shipping_available: boolean;
+  shipping_cost: number;
+  is_active: boolean;
+}
+
+export interface ProductOrder {
+  id: string;
+  order_number: string;
+  customer_email: string;
+  customer_name: string | null;
+  items: Array<{ type: string; item_id: string; item_name: string; quantity: number; unit_price: number; total_price: number; image_url?: string }>;
+  total_amount: number;
+  payment_status: string;
+  fulfillment_status: FulfillmentStatus;
+  shipping_address: { name?: string; address_line1?: string; address_line2?: string; city?: string; state?: string; postal_code?: string; country?: string } | null;
+  created_at: string;
+}

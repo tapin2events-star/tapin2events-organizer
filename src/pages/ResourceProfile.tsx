@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Resource, TapEvent, ResourceReview, ResourceMedia } from '../lib/types';
+import ShopSection from '../components/products/ShopSection';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for a quote';
@@ -214,6 +215,8 @@ export default function ResourceProfile() {
                 </div>
               </div>
             )}
+
+            <ShopSection ownerType="resource" ownerId={resource.id} />
           </div>
 
           <div className="md:sticky md:top-6 md:self-start">

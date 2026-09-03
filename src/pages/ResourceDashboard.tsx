@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Resource, ResourceBooking } from '../lib/types';
+import ProductManager from '../components/products/ProductManager';
+import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 
 interface BookingRow extends ResourceBooking {
   event_title: string;
@@ -341,6 +343,9 @@ export default function ResourceDashboard() {
             ))}
           </div>
         )}
+
+        <ProductManager ownerType="resource" ownerId={resource.id} sellerEmail={resource.email} />
+        <ProductOrdersPanel ownerType="resource" ownerId={resource.id} />
       </div>
     </div>
   );

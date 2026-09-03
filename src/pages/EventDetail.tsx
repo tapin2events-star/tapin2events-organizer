@@ -7,8 +7,10 @@ import SalesTab from '../components/tabs/SalesTab';
 import TasksTab from '../components/tabs/TasksTab';
 import TeamTab from '../components/tabs/TeamTab';
 import VendorApplicationsTab from '../components/tabs/VendorApplicationsTab';
+import ProductManager from '../components/products/ProductManager';
+import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 
-const TABS = ['Overview', 'Sales', 'Tasks', 'Team', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Sales', 'Products', 'Tasks', 'Team', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -80,6 +82,12 @@ export default function EventDetail() {
 
       {tab === 'Overview' && <OverviewTab event={event} />}
       {tab === 'Sales' && <SalesTab eventId={id} />}
+      {tab === 'Products' && (
+        <>
+          <ProductManager ownerType="event" ownerId={id} sellerEmail={event.organizer_email} />
+          <ProductOrdersPanel ownerType="event" ownerId={id} />
+        </>
+      )}
       {tab === 'Tasks' && <TasksTab eventId={id} />}
       {tab === 'Team' && <TeamTab eventId={id} />}
       {tab === 'Vendor applications' && <VendorApplicationsTab eventId={id} />}

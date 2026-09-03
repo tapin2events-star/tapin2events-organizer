@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
+import ShopSection from '../components/products/ShopSection';
 
 export default function PublicEventDetail() {
   const location = useLocation();
@@ -230,6 +231,8 @@ export default function PublicEventDetail() {
             {event.location_address && !event.is_online && (
               <p className="text-sm text-gray-400">{event.location_address}</p>
             )}
+
+            <ShopSection ownerType="event" ownerId={event.id} />
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
