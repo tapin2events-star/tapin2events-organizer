@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Resource, TapEvent, ResourceReview, ResourceMedia } from '../lib/types';
@@ -20,6 +20,8 @@ const SOCIAL_LINKS: Array<{ key: keyof Resource; label: string }> = [
 
 export default function ResourceProfile() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const forEvent = searchParams.get('for_event');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
@@ -58,8 +60,14 @@ export default function ResourceProfile() {
       .select('*')
       .eq('organizer_id', user.id)
       .order('start_date', { ascending: true })
-      .then(({ data }) => setMyEvents((data ?? []) as TapEvent[]));
-  }, [user?.id]);
+      .then(({ data }) => {
+        const events = (data ?? []) as TapEvent[];
+        setMyEvents(events);
+        if (forEvent && events.some((e) => e.id === forEvent)) {
+          setSelectedEventId(forEvent);
+        }
+      });
+  }, [user?.id, forEvent]);
 
   async function handleBookingRequest(e: React.FormEvent) {
     e.preventDefault();

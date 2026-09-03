@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { RESOURCE_CATEGORIES, type Resource } from '../lib/types';
 
@@ -10,6 +10,8 @@ function pricingLabel(r: Resource) {
 }
 
 export default function ResourceDiscovery() {
+  const [searchParams] = useSearchParams();
+  const forEvent = searchParams.get('for_event');
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -52,6 +54,12 @@ export default function ResourceDiscovery() {
           </Link>
         </div>
 
+        {forEvent && (
+          <div className="mt-4 rounded-xl bg-marigold/10 px-4 py-2.5 text-sm text-marigold">
+            Booking a resource for your event — pick one below to continue.
+          </div>
+        )}
+
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <input
             value={search}
@@ -85,7 +93,7 @@ export default function ResourceDiscovery() {
             {filtered.map((r) => (
               <Link
                 key={r.id}
-                to={`/resources/${r.id}`}
+                to={`/resources/${r.id}${forEvent ? `?for_event=${forEvent}` : ''}`}
                 className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
               >
                 {r.profile_image ? (

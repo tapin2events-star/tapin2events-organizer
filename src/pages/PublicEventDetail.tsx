@@ -18,6 +18,8 @@ export default function PublicEventDetail() {
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [registering, setRegistering] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [shareCopied, setShareCopied] = useState(false);
   const checkoutStatus = searchParams.get('checkout'); // 'success' | 'cancelled' | null
 
   useEffect(() => {
@@ -62,6 +64,42 @@ export default function PublicEventDetail() {
       }
     })();
   }, [id, event, user?.email, checkoutStatus]);
+
+  useEffect(() => {
+    if (!user?.email) {
+      setSavedIds([]);
+      return;
+    }
+    supabase.from('profiles').select('interests').eq('email', user.email).single().then(({ data }) => {
+      setSavedIds((data?.interests as string[]) ?? []);
+    });
+  }, [user?.email]);
+
+  async function toggleSave() {
+    if (!id) return;
+    if (!user?.email) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+    const next = savedIds.includes(id) ? savedIds.filter((x) => x !== id) : [...savedIds, id];
+    setSavedIds(next);
+    await supabase.from('profiles').update({ interests: next }).eq('email', user.email);
+  }
+
+  async function handleShare() {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: event?.title, url: shareUrl });
+      } catch {
+        /* user cancelled the native share sheet — not an error */
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(shareUrl);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  }
 
   async function handleRegister() {
     if (!id || !event || !user?.email) return;
@@ -219,6 +257,30 @@ export default function PublicEventDetail() {
           )}
         </div>
 
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+              <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+            </svg>
+            {shareCopied ? 'Link copied!' : 'Share'}
+          </button>
+          <button
+            onClick={toggleSave}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+              id && savedIds.includes(id) ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 text-gray-700 hover:border-marigold hover:text-marigold'
+            }`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={id && savedIds.includes(id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" strokeLinejoin="round" />
+            </svg>
+            {id && savedIds.includes(id) ? 'Saved' : 'Save'}
+          </button>
+        </div>
+
         <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
           <div className="md:col-span-2">
             <h2 className="font-display text-lg font-semibold text-gray-900">About this event</h2>
@@ -238,6 +300,38 @@ export default function PublicEventDetail() {
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
             <p className="text-xs uppercase tracking-widest text-gray-400">Organized by</p>
             <p className="mt-1 font-medium text-gray-900">{organizerName || event.organizer_email}</p>
+            <a
+              href={`mailto:${event.organizer_email}`}
+              className="mt-2 inline-block text-sm font-medium text-marigold hover:underline"
+            >
+              Contact organizer
+            </a>
+
+            {user?.email === event.organizer_email && (
+              <div className="mt-4 flex flex-col gap-2 border-t border-gray-100 pt-4">
+                <p className="text-xs uppercase tracking-widest text-gray-400">Manage this event</p>
+                <Link
+                  to={`/organizer/events/${event.id}`}
+                  className="rounded-lg bg-marigold px-3 py-2 text-center text-sm font-semibold text-ink hover:bg-marigold/90"
+                >
+                  Dashboard
+                </Link>
+                <div className="flex gap-2">
+                  <Link
+                    to={`/organizer/events/${event.id}/edit`}
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+                  >
+                    Edit
+                  </Link>
+                  <Link
+                    to={`/resources?for_event=${event.id}`}
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+                  >
+                    Book Resources
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {myTicket ? (
               <div className="mt-5 rounded-xl bg-green-50 p-4 text-sm text-green-700">
