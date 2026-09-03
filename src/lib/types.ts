@@ -11,6 +11,8 @@ export interface TapEvent {
   end_date: string | null;
   location_name: string | null;
   location_address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   poster_url: string | null;
   ticket_price: number;
   max_capacity: number | null;

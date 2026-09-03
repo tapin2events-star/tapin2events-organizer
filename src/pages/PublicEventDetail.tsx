@@ -282,22 +282,66 @@ export default function PublicEventDetail() {
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
-          <div className="md:col-span-2">
+          <div className="order-2 md:order-1 md:col-span-2">
             <h2 className="font-display text-lg font-semibold text-gray-900">About this event</h2>
             <p className="mt-2 whitespace-pre-wrap text-gray-600">{event.description || 'No description provided.'}</p>
 
-            <h2 className="mt-8 font-display text-lg font-semibold text-gray-900">Location</h2>
-            <p className="mt-2 text-gray-600">
-              {event.is_online ? 'Virtual event' : (event.location_name || 'Venue TBD')}
-            </p>
-            {event.location_address && !event.is_online && (
-              <p className="text-sm text-gray-400">{event.location_address}</p>
+            {!event.is_online && (
+              <>
+                <h2 className="mt-8 font-display text-lg font-semibold text-gray-900">Location</h2>
+                <p className="mt-2 font-medium text-gray-900">{event.location_name || 'Venue TBD'}</p>
+                {event.location_address && <p className="text-sm text-gray-500">{event.location_address}</p>}
+
+                {(() => {
+                  const mapQuery = event.latitude && event.longitude
+                    ? `${event.latitude},${event.longitude}`
+                    : event.location_address || event.location_name;
+                  if (!mapQuery) return null;
+                  const encoded = encodeURIComponent(mapQuery);
+                  return (
+                    <div className="mt-3">
+                      <div className="overflow-hidden rounded-2xl border border-gray-200">
+                        <iframe
+                          title="Event location map"
+                          src={`https://maps.google.com/maps?q=${encoded}&z=15&output=embed`}
+                          className="h-64 w-full"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encoded}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+                        >
+                          Get Directions
+                        </a>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encoded}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 rounded-lg px-4 py-2 text-center text-sm font-medium text-marigold hover:underline"
+                        >
+                          View on Google Maps ↗
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+            {event.is_online && (
+              <>
+                <h2 className="mt-8 font-display text-lg font-semibold text-gray-900">Location</h2>
+                <p className="mt-2 text-gray-600">Virtual event</p>
+              </>
             )}
 
             <ShopSection ownerType="event" ownerId={event.id} />
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="order-1 rounded-2xl border border-gray-200 bg-white p-5 md:order-2">
             <p className="text-xs uppercase tracking-widest text-gray-400">Organized by</p>
             <p className="mt-1 font-medium text-gray-900">{organizerName || event.organizer_email}</p>
             <a
