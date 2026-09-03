@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import MyProductOrders from '../components/products/MyProductOrders';
 
 interface MyTicket {
   id: string;
@@ -246,6 +247,8 @@ export default function MyActivity() {
             })}
           </div>
         )}
+
+        <MyProductOrders />
       </div>
     </div>
   );

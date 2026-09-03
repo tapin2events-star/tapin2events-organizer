@@ -206,5 +206,23 @@ export interface ProductOrder {
   payment_status: string;
   fulfillment_status: FulfillmentStatus;
   shipping_address: { name?: string; address_line1?: string; address_line2?: string; city?: string; state?: string; postal_code?: string; country?: string } | null;
+  tracking_number: string | null;
+  tracking_carrier: string | null;
   created_at: string;
 }
+
+export const FULFILLMENT_STYLES: Record<FulfillmentStatus, string> = {
+  pending: 'bg-orange-100 text-orange-800',
+  ready_for_pickup: 'bg-blue-100 text-blue-800',
+  picked_up: 'bg-green-100 text-green-800',
+  shipped: 'bg-blue-100 text-blue-800',
+  delivered: 'bg-green-100 text-green-800',
+};
+
+export const FULFILLMENT_LABELS: Record<FulfillmentStatus, string> = {
+  pending: 'Pending',
+  ready_for_pickup: 'Ready for pickup',
+  picked_up: 'Picked up',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+};
