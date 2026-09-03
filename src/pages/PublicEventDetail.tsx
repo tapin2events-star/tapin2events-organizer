@@ -338,6 +338,37 @@ export default function PublicEventDetail() {
               </>
             )}
 
+            {event.features && event.features.length > 0 && (
+              <div className="mt-8">
+                <h2 className="font-display text-lg font-semibold text-gray-900">Features</h2>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {event.features.map((f) => (
+                    <div key={f.title} className="flex items-start gap-2.5 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                      <span className="text-xl leading-none">{f.icon}</span>
+                      <span>
+                        <span className="block text-sm font-semibold text-gray-900">{f.title}</span>
+                        {f.description && <span className="block text-xs text-gray-500">{f.description}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {event.social_links && (event.social_links.instagram || event.social_links.facebook || event.social_links.website) && (
+              <div className="mt-6 flex flex-wrap gap-3">
+                {event.social_links.instagram && (
+                  <a href={event.social_links.instagram} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-marigold hover:text-marigold">Instagram</a>
+                )}
+                {event.social_links.facebook && (
+                  <a href={event.social_links.facebook} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-marigold hover:text-marigold">Facebook</a>
+                )}
+                {event.social_links.website && (
+                  <a href={event.social_links.website} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-marigold hover:text-marigold">Website</a>
+                )}
+              </div>
+            )}
+
             <ShopSection ownerType="event" ownerId={event.id} />
           </div>
 
