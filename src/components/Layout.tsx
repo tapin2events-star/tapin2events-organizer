@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import NotificationBell from './NotificationBell';
 
 const NAV_ITEMS = [
@@ -19,6 +20,17 @@ const ORGANIZER_NAV_ITEMS = [
 export default function Layout() {
   const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setIsAdmin(false);
+      return;
+    }
+    supabase.from('profiles').select('is_admin').eq('id', user.id).single().then(({ data }) => {
+      setIsAdmin(!!data?.is_admin);
+    });
+  }, [user?.id]);
 
   return (
     <div className="flex min-h-screen bg-ink text-bone">
@@ -115,7 +127,26 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-200 pt-4">
+        {isAdmin && (
+          <>
+            <p className="mb-1 mt-6 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted/70">
+              Platform
+            </p>
+            <NavLink
+              to="/admin"
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive ? 'bg-marigold/10 text-marigold' : 'text-muted hover:bg-gray-100 hover:text-bone'
+                }`
+              }
+            >
+              Admin Dashboard
+            </NavLink>
+          </>
+        )}
+
+        <div className="border-t border-gray-200 pt-4 mt-4">
           {user ? (
             <>
               <p className="truncate text-xs text-muted">{user.email}</p>

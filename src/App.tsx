@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +17,7 @@ import ResourceProfile from './pages/ResourceProfile';
 import ResourceSignup from './pages/ResourceSignup';
 import ResourceDashboard from './pages/ResourceDashboard';
 import ProductsPage from './pages/ProductsPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Only organizers checking guests in ever need this, and its QR-scanning
 // library is large — code-split it so public visitors never download it.
@@ -41,6 +43,7 @@ export default function App() {
             <Route path="/resources/dashboard" element={<ResourceDashboard />} />
             <Route path="/resources/:id" element={<ResourceProfile />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 
             <Route path="/organizer" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/organizer/new" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
