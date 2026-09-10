@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabaseClient';
 import NotificationBell from './NotificationBell';
 
 const NAV_ITEMS = [
@@ -18,19 +17,8 @@ const ORGANIZER_NAV_ITEMS = [
 ];
 
 export default function Layout() {
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setIsAdmin(false);
-      return;
-    }
-    supabase.from('profiles').select('is_admin').eq('id', user.id).single().then(({ data }) => {
-      setIsAdmin(!!data?.is_admin);
-    });
-  }, [user?.id]);
 
   return (
     <div className="flex min-h-screen bg-ink text-bone">

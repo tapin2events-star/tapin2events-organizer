@@ -111,7 +111,7 @@ export default function EventForm() {
       uploadedPosterUrl = publicUrlData.publicUrl;
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       title,
       description,
       category,
@@ -127,9 +127,14 @@ export default function EventForm() {
       poster_url: uploadedPosterUrl,
       social_links: { instagram: instagramUrl || null, facebook: facebookUrl || null, website: websiteUrl || null },
       status,
-      organizer_id: user.id,
-      organizer_email: user.email,
     };
+    // Ownership is only ever set on creation. An edit must never touch
+    // these fields — otherwise an admin editing someone else's event on
+    // their behalf would silently reassign it to themselves.
+    if (!isEdit) {
+      payload.organizer_id = user.id;
+      payload.organizer_email = user.email;
+    }
 
     const { data, error } = isEdit
       ? await supabase.from('events').update(payload).eq('id', id).select().single()

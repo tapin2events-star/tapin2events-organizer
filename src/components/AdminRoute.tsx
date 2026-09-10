@@ -1,26 +1,13 @@
-import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
-  const [checked, setChecked] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, isAdmin, loading, adminChecked } = useAuth();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setChecked(true);
-      return;
-    }
-    supabase.from('profiles').select('is_admin').eq('id', user.id).single().then(({ data }) => {
-      setIsAdmin(!!data?.is_admin);
-      setChecked(true);
-    });
-  }, [user, authLoading]);
-
-  if (authLoading || !checked) return <p className="text-muted">Loading…</p>;
+  // Wait for BOTH the session check and the (separate, slightly slower)
+  // admin lookup to finish — otherwise a genuine admin could be briefly
+  // redirected away before their admin status has actually been confirmed.
+  if (loading || (user && !adminChecked)) return <p className="text-muted">Loading…</p>;
   if (!user || !isAdmin) return <Navigate to="/" replace />;
 
   return <>{children}</>;

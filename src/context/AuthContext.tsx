@@ -6,6 +6,12 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
+  /** True once the admin check has actually resolved at least once — lets
+   *  callers distinguish "confirmed not admin" from "haven't checked yet",
+   *  since the admin lookup is a separate, slightly slower fetch than the
+   *  session check that `loading` reflects. */
+  adminChecked: boolean;
   /** Sends one email containing BOTH a magic link and a 6-digit code. */
   sendCode: (email: string) => Promise<{ error: string | null }>;
   /** Completes sign-in when the user types the 6-digit code. */
@@ -22,6 +28,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -29,13 +37,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    // Fires when the user returns via the magic link, or after verifyCode succeeds.
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    // Fires when the user returns via the magic link, or after verifyCode
+    // succeeds — but also on routine token refreshes, which can briefly
+    // report a null session before resolving back to the same user. Only
+    // an explicit SIGNED_OUT should be treated as a real logout below.
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      if (event === 'SIGNED_OUT') {
+        setIsAdmin(false);
+        setAdminChecked(false);
+      }
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // Only re-fetches when the user id genuinely changes to a new, real
+  // value — never resets isAdmin just because the id transiently drops to
+  // undefined during a token refresh, which previously caused the admin
+  // nav link to flicker and disappear during ordinary navigation.
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', userId)
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to check admin status:', error);
+        } else {
+          setIsAdmin(!!data?.is_admin);
+        }
+        setAdminChecked(true);
+      });
+  }, [session?.user?.id]);
 
   async function sendCode(email: string) {
     const { error } = await supabase.auth.signInWithOtp({
@@ -73,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, loading, sendCode, verifyCode, signInWithPassword, signOut }}
+      value={{ session, user: session?.user ?? null, loading, isAdmin, adminChecked, sendCode, verifyCode, signInWithPassword, signOut }}
     >
       {children}
     </AuthContext.Provider>
