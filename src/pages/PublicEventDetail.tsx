@@ -13,6 +13,7 @@ export default function PublicEventDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [event, setEvent] = useState<TapEvent | null>(null);
+  const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
   const [organizerName, setOrganizerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [myTicket, setMyTicket] = useState<Ticket | null>(null);
@@ -29,6 +30,16 @@ export default function PublicEventDetail() {
       const { data } = await supabase.from('events').select('*').eq('id', id).single();
       const ev = data as TapEvent | null;
       setEvent(ev);
+      const seriesId = ev?.parent_event_id || ev?.id;
+      if (ev?.is_recurring && seriesId) {
+        supabase
+          .from('events')
+          .select('id, start_date')
+          .or(`id.eq.${seriesId},parent_event_id.eq.${seriesId}`)
+          .eq('status', 'published')
+          .order('start_date', { ascending: true })
+          .then(({ data: siblings }) => setSeriesEvents(siblings ?? []));
+      }
       if (ev?.organizer_email) {
         const { data: org } = await supabase
           .from('profiles')
@@ -284,6 +295,25 @@ export default function PublicEventDetail() {
 
         <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
           <div className="order-2 md:order-1 md:col-span-2">
+            {event.is_recurring && seriesEvents.length > 1 && (
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-marigold">This is a recurring event — choose a date</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {seriesEvents.map((e) => (
+                    <Link
+                      key={e.id}
+                      to={`/events/${e.id}`}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                        e.id === event.id ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 bg-white text-gray-700 hover:border-marigold hover:text-marigold'
+                      }`}
+                    >
+                      {new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <h2 className="font-display text-lg font-semibold text-gray-900">About this event</h2>
             <p className="mt-2 whitespace-pre-wrap text-gray-600">{event.description || 'No description provided.'}</p>
 

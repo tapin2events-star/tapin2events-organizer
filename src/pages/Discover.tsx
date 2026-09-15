@@ -46,7 +46,35 @@ export default function Discover() {
 
   const filtered = useMemo(() => {
     const now = new Date();
-    return events
+
+    // Group occurrences of the same recurring series together (parent_event_id,
+    // or the event's own id if it's the parent) so the list shows one card
+    // per series instead of every occurrence.
+    const seriesMap = new Map<string, TapEvent[]>();
+    for (const e of events) {
+      const seriesKey = e.parent_event_id || e.id;
+      if (!seriesMap.has(seriesKey)) seriesMap.set(seriesKey, []);
+      seriesMap.get(seriesKey)!.push(e);
+    }
+
+    const representatives: TapEvent[] = [];
+    for (const group of seriesMap.values()) {
+      if (group.length === 1) {
+        representatives.push(group[0]);
+        continue;
+      }
+      const upcoming = group
+        .filter((e) => e.start_date && new Date(e.start_date) >= now)
+        .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime());
+      if (upcoming.length > 0) {
+        representatives.push(upcoming[0]);
+      } else {
+        const mostRecent = [...group].sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+        representatives.push(mostRecent[0]);
+      }
+    }
+
+    return representatives
       .filter((e) => {
         if (e.is_recurring) return true;
         if (!e.start_date) return true;
