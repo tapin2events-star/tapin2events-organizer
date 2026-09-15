@@ -297,6 +297,42 @@ export default function PublicEventDetail() {
           </span>
         </div>
 
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div>
+            <span className="text-gray-400">Organized by </span>
+            <span className="font-medium text-gray-700">{organizerName || event.organizer_email}</span>
+          </div>
+          <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
+            Contact organizer
+          </a>
+        </div>
+
+        {user?.email === event.organizer_email && (
+          <div className="mt-3 flex flex-wrap gap-2 rounded-xl bg-gray-50 p-4">
+            <Link to={`/organizer/events/${event.id}`} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white hover:bg-marigold/90">
+              Dashboard
+            </Link>
+            <button
+              onClick={async () => {
+                const nextStatus = event.status === 'published' ? 'draft' : 'published';
+                const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', event.id);
+                if (!error) setEvent({ ...event, status: nextStatus });
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                event.status === 'published' ? 'border border-gray-300 text-gray-700 hover:border-magenta hover:text-magenta' : 'bg-mint text-white hover:bg-mint/90'
+              }`}
+            >
+              {event.status === 'published' ? 'Unpublish' : 'Publish event'}
+            </button>
+            <Link to={`/organizer/events/${event.id}/edit`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+              Edit
+            </Link>
+            <Link to={`/resources?for_event=${event.id}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+              Book Resources
+            </Link>
+          </div>
+        )}
+
         {/* The CTA is the lead of the page — everything above just orients
             the visitor, everything below is supporting detail. */}
         <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -481,43 +517,6 @@ export default function PublicEventDetail() {
           </div>
         )}
 
-        {/* Organizer + management: present, but deliberately quiet — this
-            page's job is to sell the event, not showcase admin controls. */}
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-6 text-sm">
-          <div>
-            <span className="text-gray-400">Organized by </span>
-            <span className="font-medium text-gray-700">{organizerName || event.organizer_email}</span>
-          </div>
-          <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
-            Contact organizer
-          </a>
-        </div>
-
-        {user?.email === event.organizer_email && (
-          <div className="mt-4 flex flex-wrap gap-2 rounded-xl bg-gray-50 p-4">
-            <Link to={`/organizer/events/${event.id}`} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white hover:bg-marigold/90">
-              Dashboard
-            </Link>
-            <button
-              onClick={async () => {
-                const nextStatus = event.status === 'published' ? 'draft' : 'published';
-                const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', event.id);
-                if (!error) setEvent({ ...event, status: nextStatus });
-              }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                event.status === 'published' ? 'border border-gray-300 text-gray-700 hover:border-magenta hover:text-magenta' : 'bg-mint text-white hover:bg-mint/90'
-              }`}
-            >
-              {event.status === 'published' ? 'Unpublish' : 'Publish event'}
-            </button>
-            <Link to={`/organizer/events/${event.id}/edit`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold">
-              Edit
-            </Link>
-            <Link to={`/resources?for_event=${event.id}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold">
-              Book Resources
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
