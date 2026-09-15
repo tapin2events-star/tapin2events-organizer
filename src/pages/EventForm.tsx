@@ -5,6 +5,22 @@ import { useAuth } from '../context/AuthContext';
 import type { EventType } from '../lib/types';
 import { AVAILABLE_FEATURES, type EventFeature } from '../lib/eventFeatures';
 
+interface SponsorEntry {
+  name: string;
+  logo_url?: string;
+  website?: string;
+}
+interface SponsorTier {
+  tier_name: string;
+  price: number;
+  benefits: string;
+  sponsors: SponsorEntry[];
+}
+interface VendorGroup {
+  group_name: string;
+  description?: string;
+}
+
 const CATEGORIES = [
   'Music',
   'Arts & Culture',
@@ -16,7 +32,7 @@ const CATEGORIES = [
   'Other',
 ];
 
-const STEPS = ['Event Details', 'Location & Schedule', 'Features', 'Media & Social'] as const;
+const STEPS = ['Event Details', 'Location & Schedule', 'Features', 'Sponsors & Vendors', 'Media & Social'] as const;
 
 export default function EventForm() {
   const { id } = useParams();
@@ -38,6 +54,10 @@ export default function EventForm() {
   const [ticketPrice, setTicketPrice] = useState('0');
   const [maxCapacity, setMaxCapacity] = useState('');
   const [features, setFeatures] = useState<EventFeature[]>([]);
+  const [vendorApplicationsEnabled, setVendorApplicationsEnabled] = useState(false);
+  const [vendorFee, setVendorFee] = useState('0');
+  const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([]);
+  const [sponsorTiers, setSponsorTiers] = useState<SponsorTier[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [instagramUrl, setInstagramUrl] = useState('');
@@ -70,6 +90,10 @@ export default function EventForm() {
       setTicketPrice(String(data.ticket_price ?? 0));
       setMaxCapacity(data.max_capacity ? String(data.max_capacity) : '');
       setFeatures(Array.isArray(data.features) ? data.features : []);
+      setVendorApplicationsEnabled(!!data.vendor_applications_enabled);
+      setVendorFee(String(data.vendor_fee ?? 0));
+      setVendorGroups(Array.isArray(data.vendors) ? data.vendors : []);
+      setSponsorTiers(Array.isArray(data.sponsors) ? data.sponsors : []);
       setPosterUrl(data.poster_url ?? null);
       setInstagramUrl(data.social_links?.instagram ?? '');
       setFacebookUrl(data.social_links?.facebook ?? '');
@@ -83,6 +107,43 @@ export default function EventForm() {
     setFeatures((prev) =>
       prev.some((x) => x.title === f.title) ? prev.filter((x) => x.title !== f.title) : [...prev, f]
     );
+  }
+
+  function addSponsorTier() {
+    setSponsorTiers((prev) => [...prev, { tier_name: '', price: 0, benefits: '', sponsors: [] }]);
+  }
+  function updateSponsorTier(index: number, updates: Partial<SponsorTier>) {
+    setSponsorTiers((prev) => prev.map((t, i) => (i === index ? { ...t, ...updates } : t)));
+  }
+  function removeSponsorTier(index: number) {
+    setSponsorTiers((prev) => prev.filter((_, i) => i !== index));
+  }
+  function addSponsorToTier(tierIndex: number) {
+    setSponsorTiers((prev) =>
+      prev.map((t, i) => (i === tierIndex ? { ...t, sponsors: [...t.sponsors, { name: '' }] } : t))
+    );
+  }
+  function updateSponsorInTier(tierIndex: number, sponsorIndex: number, updates: Partial<SponsorEntry>) {
+    setSponsorTiers((prev) =>
+      prev.map((t, i) =>
+        i === tierIndex ? { ...t, sponsors: t.sponsors.map((s, si) => (si === sponsorIndex ? { ...s, ...updates } : s)) } : t
+      )
+    );
+  }
+  function removeSponsorFromTier(tierIndex: number, sponsorIndex: number) {
+    setSponsorTiers((prev) =>
+      prev.map((t, i) => (i === tierIndex ? { ...t, sponsors: t.sponsors.filter((_, si) => si !== sponsorIndex) } : t))
+    );
+  }
+
+  function addVendorGroup() {
+    setVendorGroups((prev) => [...prev, { group_name: '', description: '' }]);
+  }
+  function updateVendorGroup(index: number, updates: Partial<VendorGroup>) {
+    setVendorGroups((prev) => prev.map((g, i) => (i === index ? { ...g, ...updates } : g)));
+  }
+  function removeVendorGroup(index: number) {
+    setVendorGroups((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -124,6 +185,10 @@ export default function EventForm() {
       ticket_price: eventType === 'free' ? 0 : Number(ticketPrice) || 0,
       max_capacity: maxCapacity ? Number(maxCapacity) : null,
       features,
+      vendor_applications_enabled: vendorApplicationsEnabled,
+      vendor_fee: Number(vendorFee) || 0,
+      vendors: vendorGroups,
+      sponsors: sponsorTiers,
       poster_url: uploadedPosterUrl,
       social_links: { instagram: instagramUrl || null, facebook: facebookUrl || null, website: websiteUrl || null },
       status,
@@ -293,6 +358,105 @@ export default function EventForm() {
         )}
 
         {step === 4 && (
+          <div className="flex flex-col gap-6">
+            <div>
+              <h3 className="font-display text-lg font-semibold text-bone">Vendors</h3>
+              <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+                <input type="checkbox" checked={vendorApplicationsEnabled} onChange={(e) => setVendorApplicationsEnabled(e.target.checked)} />
+                Accept vendor applications for this event
+              </label>
+
+              {vendorApplicationsEnabled && (
+                <>
+                  <Field label="Vendor fee ($)">
+                    <input type="number" min="0" step="0.01" value={vendorFee} onChange={(e) => setVendorFee(e.target.value)} className={`${inputClass} mt-1 max-w-xs`} />
+                  </Field>
+
+                  <p className="mt-4 text-sm text-muted">Vendor categories (optional — e.g. Food, Crafts, Services)</p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {vendorGroups.map((g, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input
+                          className={`${inputClass} flex-1`}
+                          placeholder="Category name"
+                          value={g.group_name}
+                          onChange={(e) => updateVendorGroup(i, { group_name: e.target.value })}
+                        />
+                        <button type="button" onClick={() => removeVendorGroup(i)} className="rounded-lg border border-gray-300 px-3 text-sm text-magenta">Remove</button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addVendorGroup} className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold">
+                      + Add category
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="font-display text-lg font-semibold text-bone">Sponsor tiers</h3>
+              <p className="mt-1 text-sm text-muted">Define tiers (e.g. Gold, Silver) and add sponsors under each.</p>
+
+              <div className="mt-3 flex flex-col gap-4">
+                {sponsorTiers.map((tier, ti) => (
+                  <div key={ti} className="rounded-xl border border-gray-300 bg-surface2 p-4">
+                    <div className="flex gap-2">
+                      <input
+                        className={`${inputClass} flex-1`}
+                        placeholder="Tier name (e.g. Gold)"
+                        value={tier.tier_name}
+                        onChange={(e) => updateSponsorTier(ti, { tier_name: e.target.value })}
+                      />
+                      <input
+                        className={`${inputClass} w-28`}
+                        type="number"
+                        placeholder="Price"
+                        value={tier.price}
+                        onChange={(e) => updateSponsorTier(ti, { price: Number(e.target.value) || 0 })}
+                      />
+                      <button type="button" onClick={() => removeSponsorTier(ti)} className="rounded-lg border border-gray-300 px-3 text-sm text-magenta">Remove tier</button>
+                    </div>
+                    <textarea
+                      className={`${inputClass} mt-2 w-full`}
+                      rows={2}
+                      placeholder="Benefits (e.g. Logo on materials, 4 tickets, booth space)"
+                      value={tier.benefits}
+                      onChange={(e) => updateSponsorTier(ti, { benefits: e.target.value })}
+                    />
+
+                    <div className="mt-3 flex flex-col gap-2">
+                      {tier.sponsors.map((s, si) => (
+                        <div key={si} className="flex gap-2">
+                          <input
+                            className={`${inputClass} flex-1`}
+                            placeholder="Sponsor name"
+                            value={s.name}
+                            onChange={(e) => updateSponsorInTier(ti, si, { name: e.target.value })}
+                          />
+                          <input
+                            className={`${inputClass} flex-1`}
+                            placeholder="Website (optional)"
+                            value={s.website ?? ''}
+                            onChange={(e) => updateSponsorInTier(ti, si, { website: e.target.value })}
+                          />
+                          <button type="button" onClick={() => removeSponsorFromTier(ti, si)} className="rounded-lg border border-gray-300 px-3 text-sm text-magenta">Remove</button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => addSponsorToTier(ti)} className="self-start rounded-lg border border-gray-300 px-3 py-1 text-xs text-bone hover:border-marigold">
+                        + Add sponsor to this tier
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={addSponsorTier} className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold">
+                  + Add sponsor tier
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
           <>
             <Field label="Poster image">
               <input

@@ -338,6 +338,34 @@ export default function PublicEventDetail() {
               </>
             )}
 
+            {event.sponsors && event.sponsors.some((t) => t.sponsors?.length > 0) && (
+              <div className="mt-8">
+                <h2 className="font-display text-lg font-semibold text-gray-900">Sponsors</h2>
+                <div className="mt-3 flex flex-col gap-4">
+                  {event.sponsors
+                    .filter((t) => t.sponsors?.length > 0)
+                    .map((tier) => (
+                      <div key={tier.tier_name}>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-marigold">{tier.tier_name}</p>
+                        <div className="mt-2 flex flex-wrap gap-3">
+                          {tier.sponsors.map((s) => (
+                            s.website ? (
+                              <a key={s.name} href={s.website} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+                                {s.name}
+                              </a>
+                            ) : (
+                              <span key={s.name} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
+                                {s.name}
+                              </span>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
             {event.features && event.features.length > 0 && (
               <div className="mt-8">
                 <h2 className="font-display text-lg font-semibold text-gray-900">Features</h2>
