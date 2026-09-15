@@ -55,7 +55,7 @@ export default function EventForm() {
   const [maxCapacity, setMaxCapacity] = useState('');
   const [features, setFeatures] = useState<EventFeature[]>([]);
   const [vendorApplicationsEnabled, setVendorApplicationsEnabled] = useState(false);
-  const [vendorFee, setVendorFee] = useState('0');
+  const [vendorFeeTiers, setVendorFeeTiers] = useState<{ tier_name: string; fee: number }[]>([]);
   const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([]);
   const [sponsorTiers, setSponsorTiers] = useState<SponsorTier[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
@@ -91,7 +91,7 @@ export default function EventForm() {
       setMaxCapacity(data.max_capacity ? String(data.max_capacity) : '');
       setFeatures(Array.isArray(data.features) ? data.features : []);
       setVendorApplicationsEnabled(!!data.vendor_applications_enabled);
-      setVendorFee(String(data.vendor_fee ?? 0));
+      setVendorFeeTiers(Array.isArray(data.vendor_fees) ? data.vendor_fees : []);
       setVendorGroups(Array.isArray(data.vendors) ? data.vendors : []);
       setSponsorTiers(Array.isArray(data.sponsors) ? data.sponsors : []);
       setPosterUrl(data.poster_url ?? null);
@@ -186,7 +186,8 @@ export default function EventForm() {
       max_capacity: maxCapacity ? Number(maxCapacity) : null,
       features,
       vendor_applications_enabled: vendorApplicationsEnabled,
-      vendor_fee: Number(vendorFee) || 0,
+      vendor_fee: vendorFeeTiers[0]?.fee ?? 0,
+      vendor_fees: vendorFeeTiers,
       vendors: vendorGroups,
       sponsors: sponsorTiers,
       poster_url: uploadedPosterUrl,
@@ -368,9 +369,30 @@ export default function EventForm() {
 
               {vendorApplicationsEnabled && (
                 <>
-                  <Field label="Vendor fee ($)">
-                    <input type="number" min="0" step="0.01" value={vendorFee} onChange={(e) => setVendorFee(e.target.value)} className={`${inputClass} mt-1 max-w-xs`} />
-                  </Field>
+                  <p className="mt-4 text-sm text-muted">Vendor fee tiers (e.g. Food Truck — $150, Craft Table — $75)</p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {vendorFeeTiers.map((t, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input
+                          className={`${inputClass} flex-1`}
+                          placeholder="Tier name"
+                          value={t.tier_name}
+                          onChange={(e) => setVendorFeeTiers((prev) => prev.map((x, xi) => (xi === i ? { ...x, tier_name: e.target.value } : x)))}
+                        />
+                        <input
+                          className={`${inputClass} w-28`}
+                          type="number"
+                          placeholder="Fee $"
+                          value={t.fee}
+                          onChange={(e) => setVendorFeeTiers((prev) => prev.map((x, xi) => (xi === i ? { ...x, fee: Number(e.target.value) || 0 } : x)))}
+                        />
+                        <button type="button" onClick={() => setVendorFeeTiers((prev) => prev.filter((_, xi) => xi !== i))} className="rounded-lg border border-gray-300 px-3 text-sm text-magenta">Remove</button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setVendorFeeTiers((prev) => [...prev, { tier_name: '', fee: 0 }])} className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold">
+                      + Add fee tier
+                    </button>
+                  </div>
 
                   <p className="mt-4 text-sm text-muted">Vendor categories (optional — e.g. Food, Crafts, Services)</p>
                   <div className="mt-2 flex flex-col gap-2">

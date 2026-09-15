@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
 import ShopSection from '../components/products/ShopSection';
+import VendorApplicationForm from '../components/VendorApplicationForm';
 
 export default function PublicEventDetail() {
   const location = useLocation();
@@ -398,6 +399,16 @@ export default function PublicEventDetail() {
             )}
 
             <ShopSection ownerType="event" ownerId={event.id} />
+
+            {event.vendor_applications_enabled && (
+              <div className="mt-8">
+                <VendorApplicationForm
+                  eventId={event.id}
+                  feeTiers={event.vendor_fees ?? []}
+                  groups={event.vendors ?? []}
+                />
+              </div>
+            )}
           </div>
 
           <div className="order-1 rounded-2xl border border-gray-200 bg-white p-5 md:order-2">

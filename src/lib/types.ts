@@ -16,6 +16,8 @@ export interface TapEvent {
   features: { icon: string; title: string; description?: string }[] | null;
   social_links: { instagram?: string; facebook?: string; website?: string } | null;
   sponsors: { tier_name: string; price: number; benefits: string; sponsors: { name: string; logo_url?: string; website?: string }[] }[] | null;
+  vendor_fees: { tier_name: string; fee: number }[] | null;
+  vendors: { group_name: string; description?: string }[] | null;
   poster_url: string | null;
   ticket_price: number;
   max_capacity: number | null;
