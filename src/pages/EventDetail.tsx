@@ -47,8 +47,25 @@ export default function EventDetail() {
         <div>
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>
           <h1 className="font-display text-3xl font-extrabold text-bone">{event.title}</h1>
+          <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${event.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
+            {event.status === 'published' ? 'Published' : 'Draft'}
+          </span>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              const nextStatus = event.status === 'published' ? 'draft' : 'published';
+              const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', id);
+              if (!error) setEvent({ ...event, status: nextStatus });
+            }}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+              event.status === 'published'
+                ? 'border border-gray-300 text-bone hover:border-magenta hover:text-magenta'
+                : 'bg-mint text-ink hover:bg-mint/90'
+            }`}
+          >
+            {event.status === 'published' ? 'Unpublish' : 'Publish event'}
+          </button>
           <Link
             to={`/organizer/events/${id}/checkin`}
             className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"

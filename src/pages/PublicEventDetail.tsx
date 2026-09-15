@@ -430,6 +430,20 @@ export default function PublicEventDetail() {
                 >
                   Dashboard
                 </Link>
+                <button
+                  onClick={async () => {
+                    const nextStatus = event.status === 'published' ? 'draft' : 'published';
+                    const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', event.id);
+                    if (!error) setEvent({ ...event, status: nextStatus });
+                  }}
+                  className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
+                    event.status === 'published'
+                      ? 'border border-gray-300 text-gray-700 hover:border-magenta hover:text-magenta'
+                      : 'bg-mint text-ink hover:bg-mint/90'
+                  }`}
+                >
+                  {event.status === 'published' ? 'Unpublish' : 'Publish event'}
+                </button>
                 <div className="flex gap-2">
                   <Link
                     to={`/organizer/events/${event.id}/edit`}
