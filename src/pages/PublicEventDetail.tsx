@@ -227,10 +227,39 @@ export default function PublicEventDetail() {
   const isFree = event.event_type === 'free';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <div className="mx-auto max-w-4xl px-4 py-10">
-        <Link to="/" className="text-sm text-marigold hover:underline">&larr; Back to Discover</Link>
+    <div className="min-h-screen bg-white">
+      {/* Hero: title and key facts live directly on the image, editorial-style,
+          instead of a separate text block below a plain picture frame. */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900 sm:aspect-[21/9]">
+        {event.poster_url ? (
+          <img src={event.poster_url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-indigo-600 via-indigo-500 to-teal-500" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
+        <Link
+          to="/"
+          className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60 sm:left-6 sm:top-6"
+        >
+          &larr;
+        </Link>
+
+        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
+          <div className="mx-auto max-w-4xl">
+            {event.category && (
+              <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                {event.category}
+              </span>
+            )}
+            <h1 className="mt-2 font-display text-2xl font-extrabold leading-tight text-white sm:text-4xl">
+              {event.title}
+            </h1>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl px-4 pb-16 sm:px-6">
         {checkoutStatus === 'success' && (
           <div className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">
             ✓ Payment received! Your ticket is confirmed — check your email.
@@ -242,285 +271,253 @@ export default function PublicEventDetail() {
           </div>
         )}
 
-        {event.poster_url ? (
-          <div className="mt-4 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-100">
-            <img src={event.poster_url} alt="" className="h-full w-full object-cover" />
-          </div>
-        ) : (
-          <div className="mt-4 flex aspect-[21/9] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-teal-100" />
-        )}
+        {/* Key facts strip: fast orientation without hunting through prose. */}
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-gray-100 pb-5 text-[15px] text-gray-700">
+          {event.start_date && (
+            <span className="flex items-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              {new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              {' · '}
+              {new Date(event.start_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          )}
+          <span className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 1 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+            {event.is_online ? 'Virtual event' : (event.location_name || 'Venue TBD')}
+          </span>
+          <span className="ml-auto flex items-center gap-3">
+            <button onClick={handleShare} className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-marigold">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
+              {shareCopied ? 'Copied!' : 'Share'}
+            </button>
+            <button onClick={toggleSave} className={`flex items-center gap-1.5 text-sm font-medium ${id && savedIds.includes(id) ? 'text-marigold' : 'text-gray-500 hover:text-marigold'}`}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill={id && savedIds.includes(id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" strokeLinejoin="round" /></svg>
+              {id && savedIds.includes(id) ? 'Saved' : 'Save'}
+            </button>
+          </span>
+        </div>
 
-        <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
+        {/* The CTA is the lead of the page — everything above just orients
+            the visitor, everything below is supporting detail. */}
+        <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
-            <p className="text-xs uppercase tracking-widest text-gray-500">{event.category}</p>
-            <h1 className="font-display text-3xl font-extrabold text-gray-900">{event.title}</h1>
-            {event.start_date && (
-              <p className="mt-1 text-gray-500">
-                {new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                {' at '}
-                {new Date(event.start_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-              </p>
-            )}
+            <p className="text-sm text-gray-400">{isFree ? 'Free to attend' : 'Ticket price'}</p>
+            <p className="font-display text-2xl font-extrabold text-white">{isFree ? 'Free' : `$${event.ticket_price}`}</p>
           </div>
-          {isFree ? (
-            <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">Free</span>
+          {myTicket ? (
+            <div className="flex flex-col gap-1 sm:items-end">
+              <p className="text-sm font-medium text-mint">✓ You're registered</p>
+              <Link to={`/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
+                View your ticket &amp; QR code
+              </Link>
+            </div>
+          ) : !user ? (
+            <button
+              onClick={() => navigate('/login', { state: { from: location.pathname } })}
+              className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
+            >
+              Sign in to {isFree ? 'register' : 'buy a ticket'}
+            </button>
+          ) : isFull ? (
+            <p className="text-sm font-medium text-gray-400">This event is full.</p>
           ) : (
-            <span className="text-2xl font-bold text-gray-900">${event.ticket_price}</span>
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <button
+                onClick={isFree ? handleRegister : handleBuyTicket}
+                disabled={registering}
+                className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
+              </button>
+              {registerError && <p className="text-sm text-magenta">{registerError}</p>}
+            </div>
           )}
         </div>
 
-        <div className="mt-3 flex gap-2">
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-              <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
-            </svg>
-            {shareCopied ? 'Link copied!' : 'Share'}
-          </button>
-          <button
-            onClick={toggleSave}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-              id && savedIds.includes(id) ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 text-gray-700 hover:border-marigold hover:text-marigold'
-            }`}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={id && savedIds.includes(id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" strokeLinejoin="round" />
-            </svg>
-            {id && savedIds.includes(id) ? 'Saved' : 'Save'}
-          </button>
-        </div>
+        {event.is_recurring && seriesEvents.length > 1 && (
+          <div className="mt-6">
+            <p className="text-sm font-medium text-gray-700">Recurring event — choose a date</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {seriesEvents.map((e) => (
+                <Link
+                  key={e.id}
+                  to={`/events/${e.id}`}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                    e.id === event.id ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-200 text-gray-700 hover:border-marigold hover:text-marigold'
+                  }`}
+                >
+                  {new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
-        <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
-          <div className="order-2 md:order-1 md:col-span-2">
-            {event.is_recurring && seriesEvents.length > 1 && (
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-marigold">This is a recurring event — choose a date</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {seriesEvents.map((e) => (
-                    <Link
-                      key={e.id}
-                      to={`/events/${e.id}`}
-                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                        e.id === event.id ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 bg-white text-gray-700 hover:border-marigold hover:text-marigold'
-                      }`}
-                    >
-                      {new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </Link>
-                  ))}
-                </div>
+        {/* What to expect: description and features together, since both
+            answer the same question ("what is this actually like?"). */}
+        {(event.description || (event.features && event.features.length > 0)) && (
+          <div className="mt-10">
+            <h2 className="font-display text-xl font-bold text-gray-900">What to expect</h2>
+            {event.description && (
+              <p className="mt-3 whitespace-pre-wrap leading-relaxed text-gray-600">{event.description}</p>
+            )}
+            {event.features && event.features.length > 0 && (
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {event.features.map((f) => (
+                  <div key={f.title} className="flex items-start gap-2.5 rounded-xl bg-gray-50 p-3">
+                    <span className="text-xl leading-none">{f.icon}</span>
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">{f.title}</span>
+                      {f.description && <span className="block text-xs text-gray-500">{f.description}</span>}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
+          </div>
+        )}
 
-            <h2 className="font-display text-lg font-semibold text-gray-900">About this event</h2>
-            <p className="mt-2 whitespace-pre-wrap text-gray-600">{event.description || 'No description provided.'}</p>
+        {/* Logistics: everything about actually getting there. */}
+        {!event.is_online && (
+          <div className="mt-10">
+            <h2 className="font-display text-xl font-bold text-gray-900">Location</h2>
+            <p className="mt-2 font-medium text-gray-900">{event.location_name || 'Venue TBD'}</p>
+            {event.location_address && <p className="text-sm text-gray-500">{event.location_address}</p>}
 
-            {!event.is_online && (
-              <>
-                <h2 className="mt-8 font-display text-lg font-semibold text-gray-900">Location</h2>
-                <p className="mt-2 font-medium text-gray-900">{event.location_name || 'Venue TBD'}</p>
-                {event.location_address && <p className="text-sm text-gray-500">{event.location_address}</p>}
+            {(() => {
+              const mapQuery = event.latitude && event.longitude
+                ? `${event.latitude},${event.longitude}`
+                : event.location_address || event.location_name;
+              if (!mapQuery) return null;
+              const encoded = encodeURIComponent(mapQuery);
+              return (
+                <div className="mt-3">
+                  <div className="overflow-hidden rounded-2xl border border-gray-200">
+                    <iframe
+                      title="Event location map"
+                      src={`https://maps.google.com/maps?q=${encoded}&z=15&output=embed`}
+                      className="h-64 w-full"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encoded}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+                    >
+                      Get Directions
+                    </a>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encoded}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 rounded-lg px-4 py-2 text-center text-sm font-medium text-marigold hover:underline"
+                    >
+                      View on Google Maps ↗
+                    </a>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
-                {(() => {
-                  const mapQuery = event.latitude && event.longitude
-                    ? `${event.latitude},${event.longitude}`
-                    : event.location_address || event.location_name;
-                  if (!mapQuery) return null;
-                  const encoded = encodeURIComponent(mapQuery);
-                  return (
-                    <div className="mt-3">
-                      <div className="overflow-hidden rounded-2xl border border-gray-200">
-                        <iframe
-                          title="Event location map"
-                          src={`https://maps.google.com/maps?q=${encoded}&z=15&output=embed`}
-                          className="h-64 w-full"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${encoded}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
-                        >
-                          Get Directions
-                        </a>
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encoded}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 rounded-lg px-4 py-2 text-center text-sm font-medium text-marigold hover:underline"
-                        >
-                          View on Google Maps ↗
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </>
-            )}
-            {event.is_online && (
-              <>
-                <h2 className="mt-8 font-display text-lg font-semibold text-gray-900">Location</h2>
-                <p className="mt-2 text-gray-600">Virtual event</p>
-              </>
-            )}
+        <ShopSection ownerType="event" ownerId={event.id} />
 
+        {event.vendor_applications_enabled && (
+          <div className="mt-10">
+            <VendorApplicationForm
+              eventId={event.id}
+              feeTiers={event.vendor_fees ?? []}
+              groups={event.vendors ?? []}
+            />
+          </div>
+        )}
+
+        {/* Extras: lighter-weight, lower on the page since they support the
+            event rather than define it. */}
+        {((event.sponsors && event.sponsors.some((t) => t.sponsors?.length > 0)) ||
+          (event.social_links && (event.social_links.instagram || event.social_links.facebook || event.social_links.website))) && (
+          <div className="mt-10 border-t border-gray-100 pt-8">
             {event.sponsors && event.sponsors.some((t) => t.sponsors?.length > 0) && (
-              <div className="mt-8">
-                <h2 className="font-display text-lg font-semibold text-gray-900">Sponsors</h2>
-                <div className="mt-3 flex flex-col gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Sponsors</p>
+                <div className="mt-2 flex flex-col gap-3">
                   {event.sponsors
                     .filter((t) => t.sponsors?.length > 0)
                     .map((tier) => (
-                      <div key={tier.tier_name}>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-marigold">{tier.tier_name}</p>
-                        <div className="mt-2 flex flex-wrap gap-3">
-                          {tier.sponsors.map((s) => (
-                            s.website ? (
-                              <a key={s.name} href={s.website} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
-                                {s.name}
-                              </a>
-                            ) : (
-                              <span key={s.name} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
-                                {s.name}
-                              </span>
-                            )
-                          ))}
-                        </div>
+                      <div key={tier.tier_name} className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-medium text-gray-400">{tier.tier_name}:</span>
+                        {tier.sponsors.map((s) => (
+                          s.website ? (
+                            <a key={s.name} href={s.website} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-700 underline-offset-2 hover:text-marigold hover:underline">
+                              {s.name}
+                            </a>
+                          ) : (
+                            <span key={s.name} className="text-sm font-medium text-gray-700">{s.name}</span>
+                          )
+                        ))}
                       </div>
                     ))}
                 </div>
               </div>
             )}
 
-            {event.features && event.features.length > 0 && (
-              <div className="mt-8">
-                <h2 className="font-display text-lg font-semibold text-gray-900">Features</h2>
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {event.features.map((f) => (
-                    <div key={f.title} className="flex items-start gap-2.5 rounded-xl border border-gray-100 bg-gray-50 p-3">
-                      <span className="text-xl leading-none">{f.icon}</span>
-                      <span>
-                        <span className="block text-sm font-semibold text-gray-900">{f.title}</span>
-                        {f.description && <span className="block text-xs text-gray-500">{f.description}</span>}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {event.social_links && (event.social_links.instagram || event.social_links.facebook || event.social_links.website) && (
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 {event.social_links.instagram && (
-                  <a href={event.social_links.instagram} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-marigold hover:text-marigold">Instagram</a>
+                  <a href={event.social_links.instagram} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:border-marigold hover:text-marigold">Instagram</a>
                 )}
                 {event.social_links.facebook && (
-                  <a href={event.social_links.facebook} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-marigold hover:text-marigold">Facebook</a>
+                  <a href={event.social_links.facebook} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:border-marigold hover:text-marigold">Facebook</a>
                 )}
                 {event.social_links.website && (
-                  <a href={event.social_links.website} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-marigold hover:text-marigold">Website</a>
+                  <a href={event.social_links.website} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:border-marigold hover:text-marigold">Website</a>
                 )}
               </div>
             )}
-
-            <ShopSection ownerType="event" ownerId={event.id} />
-
-            {event.vendor_applications_enabled && (
-              <div className="mt-8">
-                <VendorApplicationForm
-                  eventId={event.id}
-                  feeTiers={event.vendor_fees ?? []}
-                  groups={event.vendors ?? []}
-                />
-              </div>
-            )}
           </div>
+        )}
 
-          <div className="order-1 rounded-2xl border border-gray-200 bg-white p-5 md:order-2">
-            <p className="text-xs uppercase tracking-widest text-gray-400">Organized by</p>
-            <p className="mt-1 font-medium text-gray-900">{organizerName || event.organizer_email}</p>
-            <a
-              href={`mailto:${event.organizer_email}`}
-              className="mt-2 inline-block text-sm font-medium text-marigold hover:underline"
-            >
-              Contact organizer
-            </a>
-
-            {user?.email === event.organizer_email && (
-              <div className="mt-4 flex flex-col gap-2 border-t border-gray-100 pt-4">
-                <p className="text-xs uppercase tracking-widest text-gray-400">Manage this event</p>
-                <Link
-                  to={`/organizer/events/${event.id}`}
-                  className="rounded-lg bg-marigold px-3 py-2 text-center text-sm font-semibold text-ink hover:bg-marigold/90"
-                >
-                  Dashboard
-                </Link>
-                <button
-                  onClick={async () => {
-                    const nextStatus = event.status === 'published' ? 'draft' : 'published';
-                    const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', event.id);
-                    if (!error) setEvent({ ...event, status: nextStatus });
-                  }}
-                  className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
-                    event.status === 'published'
-                      ? 'border border-gray-300 text-gray-700 hover:border-magenta hover:text-magenta'
-                      : 'bg-mint text-ink hover:bg-mint/90'
-                  }`}
-                >
-                  {event.status === 'published' ? 'Unpublish' : 'Publish event'}
-                </button>
-                <div className="flex gap-2">
-                  <Link
-                    to={`/organizer/events/${event.id}/edit`}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
-                  >
-                    Edit
-                  </Link>
-                  <Link
-                    to={`/resources?for_event=${event.id}`}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
-                  >
-                    Book Resources
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {myTicket ? (
-              <div className="mt-5 rounded-xl bg-green-50 p-4 text-sm text-green-700">
-                <p>✓ You're registered for this event.</p>
-                <Link to={`/pass/${myTicket.id}`} className="mt-2 inline-block font-medium underline">
-                  View your ticket &amp; QR code
-                </Link>
-              </div>
-            ) : !user ? (
-              <button
-                onClick={() => navigate('/login', { state: { from: location.pathname } })}
-                className="mt-5 w-full rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
-              >
-                Sign in to {isFree ? 'register' : 'buy a ticket'}
-              </button>
-            ) : isFull ? (
-              <div className="mt-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">This event is full.</div>
-            ) : (
-              <>
-                <button
-                  onClick={isFree ? handleRegister : handleBuyTicket}
-                  disabled={registering}
-                  className="mt-5 w-full rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
-                </button>
-                {registerError && <p className="mt-2 text-sm text-magenta">{registerError}</p>}
-              </>
-            )}
+        {/* Organizer + management: present, but deliberately quiet — this
+            page's job is to sell the event, not showcase admin controls. */}
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-6 text-sm">
+          <div>
+            <span className="text-gray-400">Organized by </span>
+            <span className="font-medium text-gray-700">{organizerName || event.organizer_email}</span>
           </div>
+          <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
+            Contact organizer
+          </a>
         </div>
+
+        {user?.email === event.organizer_email && (
+          <div className="mt-4 flex flex-wrap gap-2 rounded-xl bg-gray-50 p-4">
+            <Link to={`/organizer/events/${event.id}`} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white hover:bg-marigold/90">
+              Dashboard
+            </Link>
+            <button
+              onClick={async () => {
+                const nextStatus = event.status === 'published' ? 'draft' : 'published';
+                const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', event.id);
+                if (!error) setEvent({ ...event, status: nextStatus });
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                event.status === 'published' ? 'border border-gray-300 text-gray-700 hover:border-magenta hover:text-magenta' : 'bg-mint text-white hover:bg-mint/90'
+              }`}
+            >
+              {event.status === 'published' ? 'Unpublish' : 'Publish event'}
+            </button>
+            <Link to={`/organizer/events/${event.id}/edit`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+              Edit
+            </Link>
+            <Link to={`/resources?for_event=${event.id}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+              Book Resources
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
