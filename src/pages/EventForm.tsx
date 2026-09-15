@@ -34,6 +34,19 @@ const CATEGORIES = [
 
 const STEPS = ['Event Details', 'Location & Schedule', 'Features', 'Sponsors & Vendors', 'Media & Social'] as const;
 
+// Adding months naively (date.setMonth) overflows for day-of-month values
+// that don't exist in the target month — e.g. Jan 31 + 1 month becomes
+// Mar 3 instead of Feb 28. This clamps to the last valid day instead.
+function addMonthsClamped(date: Date, months: number): Date {
+  const d = new Date(date);
+  const originalDay = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const daysInTargetMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(originalDay, daysInTargetMonth));
+  return d;
+}
+
 export default function EventForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -49,6 +62,11 @@ export default function EventForm() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isOnline, setIsOnline] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurFrequency, setRecurFrequency] = useState<'weekly' | 'monthly'>('weekly');
+  const [recurCount, setRecurCount] = useState('4');
+  const [seriesPassEnabled, setSeriesPassEnabled] = useState(false);
+  const [seriesPassDiscount, setSeriesPassDiscount] = useState('10');
   const [locationName, setLocationName] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
   const [ticketPrice, setTicketPrice] = useState('0');
@@ -206,12 +224,71 @@ export default function EventForm() {
       ? await supabase.from('events').update(payload).eq('id', id).select().single()
       : await supabase.from('events').insert(payload).select().single();
 
-    setSaving(false);
-
     if (error) {
+      setSaving(false);
       setError(error.message);
       return;
     }
+
+    // Recurring series: the just-created event is the parent. Each
+    // additional occurrence is a fully independent event row (its own
+    // tickets, capacity, and check-in), offset by the chosen interval —
+    // deliberately not a single virtual "recurring" event, since every
+    // other part of the app (checkout, check-in, capacity) already
+    // assumes one event = one occurrence.
+    if (!isEdit && isRecurring && startDate) {
+      const count = Math.min(Math.max(Number(recurCount) || 0, 2), 52);
+      const baseStart = new Date(startDate);
+      const baseEnd = endDate ? new Date(endDate) : null;
+      const recurrenceRule = { frequency: recurFrequency, count };
+
+      await supabase
+        .from('events')
+        .update({
+          is_recurring: true,
+          recurrence_rule: recurrenceRule,
+          series_pass_enabled: seriesPassEnabled,
+          series_pass_discount: seriesPassEnabled ? Number(seriesPassDiscount) || 0 : null,
+        })
+        .eq('id', data.id);
+
+      const occurrences = [];
+      for (let i = 1; i < count; i++) {
+        let offsetStart: Date;
+        let offsetEnd: Date | null;
+        if (recurFrequency === 'weekly') {
+          offsetStart = new Date(baseStart);
+          offsetStart.setDate(offsetStart.getDate() + 7 * i);
+          offsetEnd = baseEnd ? new Date(baseEnd) : null;
+          if (offsetEnd) offsetEnd.setDate(offsetEnd.getDate() + 7 * i);
+        } else {
+          offsetStart = addMonthsClamped(baseStart, i);
+          offsetEnd = baseEnd ? addMonthsClamped(baseEnd, i) : null;
+        }
+        occurrences.push({
+          ...payload,
+          organizer_id: user.id,
+          organizer_email: user.email,
+          start_date: offsetStart.toISOString(),
+          end_date: offsetEnd ? offsetEnd.toISOString() : null,
+          parent_event_id: String(data.id),
+          is_recurring: true,
+          recurrence_rule: recurrenceRule,
+          series_pass_enabled: seriesPassEnabled,
+          series_pass_discount: seriesPassEnabled ? Number(seriesPassDiscount) || 0 : null,
+        });
+      }
+      if (occurrences.length > 0) {
+        const { error: seriesError } = await supabase.from('events').insert(occurrences);
+        if (seriesError) {
+          setSaving(false);
+          setError(`Event created, but generating the rest of the series failed: ${seriesError.message}`);
+          return;
+        }
+      }
+    }
+
+    setSaving(false);
     navigate(`/organizer/events/${data.id}`);
   }
 
@@ -327,6 +404,44 @@ export default function EventForm() {
                   <input value={locationAddress} onChange={(e) => setLocationAddress(e.target.value)} className={inputClass} />
                 </Field>
               </>
+            )}
+
+            {!isEdit && (
+              <div className="mt-2 border-t border-gray-200 pt-4">
+                <label className="flex items-center gap-2 text-sm text-muted">
+                  <input type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} />
+                  This event repeats
+                </label>
+
+                {isRecurring && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <p className="text-xs text-muted">
+                      This creates {recurCount || 0} separate events, each with its own tickets and check-in, spaced by the interval below.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Repeats">
+                        <select value={recurFrequency} onChange={(e) => setRecurFrequency(e.target.value as 'weekly' | 'monthly')} className={inputClass}>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                      </Field>
+                      <Field label="Number of occurrences">
+                        <input type="number" min="2" max="52" value={recurCount} onChange={(e) => setRecurCount(e.target.value)} className={inputClass} />
+                      </Field>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-sm text-muted">
+                      <input type="checkbox" checked={seriesPassEnabled} onChange={(e) => setSeriesPassEnabled(e.target.checked)} />
+                      Offer a discounted series pass covering every occurrence
+                    </label>
+                    {seriesPassEnabled && (
+                      <Field label="Series pass discount (% off buying all individually)">
+                        <input type="number" min="0" max="100" value={seriesPassDiscount} onChange={(e) => setSeriesPassDiscount(e.target.value)} className={`${inputClass} max-w-[160px]`} />
+                      </Field>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}

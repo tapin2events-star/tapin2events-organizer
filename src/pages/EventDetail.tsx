@@ -16,6 +16,7 @@ type Tab = (typeof TABS)[number];
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const [event, setEvent] = useState<TapEvent | null>(null);
+  const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('Overview');
 
@@ -29,6 +30,15 @@ export default function EventDetail() {
       .then(({ data }) => {
         setEvent(data as TapEvent);
         setLoading(false);
+        const seriesId = data?.parent_event_id || data?.id;
+        if (data?.is_recurring && seriesId) {
+          supabase
+            .from('events')
+            .select('id, start_date')
+            .or(`id.eq.${seriesId},parent_event_id.eq.${seriesId}`)
+            .order('start_date', { ascending: true })
+            .then(({ data: siblings }) => setSeriesEvents(siblings ?? []));
+        }
       });
   }, [id]);
 
@@ -80,6 +90,25 @@ export default function EventDetail() {
           </Link>
         </div>
       </div>
+
+      {event.is_recurring && seriesEvents.length > 1 && (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-surface2 p-4">
+          <p className="text-xs uppercase tracking-widest text-muted">Part of a recurring series ({seriesEvents.length} occurrences)</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {seriesEvents.map((e, i) => (
+              <Link
+                key={e.id}
+                to={`/organizer/events/${e.id}`}
+                className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                  e.id === id ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 text-bone hover:border-marigold'
+                }`}
+              >
+                #{i + 1} · {new Date(e.start_date).toLocaleDateString()}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-300">
         {TABS.map((t) => (
