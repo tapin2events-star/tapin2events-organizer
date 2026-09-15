@@ -63,6 +63,12 @@ export default function EventForm() {
   const [endDate, setEndDate] = useState('');
   const [isOnline, setIsOnline] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
+  // Tracks whether the event was ALREADY part of a series when loaded —
+  // distinct from isRecurring, which the organizer can still toggle. Only
+  // an event that wasn't already recurring should be eligible to generate
+  // a new series; a genuinely already-recurring event shouldn't regenerate
+  // one just because the box is still checked while editing.
+  const [wasAlreadyRecurring, setWasAlreadyRecurring] = useState(false);
   const [recurFrequency, setRecurFrequency] = useState<'weekly' | 'monthly'>('weekly');
   const [recurCount, setRecurCount] = useState('4');
   const [seriesPassEnabled, setSeriesPassEnabled] = useState(false);
@@ -117,6 +123,10 @@ export default function EventForm() {
       setFacebookUrl(data.social_links?.facebook ?? '');
       setWebsiteUrl(data.social_links?.website ?? '');
       setStatus(data.status === 'published' ? 'published' : 'draft');
+      setIsRecurring(!!data.is_recurring);
+      setWasAlreadyRecurring(!!data.is_recurring);
+      if (data.recurrence_rule?.frequency) setRecurFrequency(data.recurrence_rule.frequency);
+      if (data.recurrence_rule?.count) setRecurCount(String(data.recurrence_rule.count));
       setLoading(false);
     })();
   }, [id, isEdit]);
@@ -236,7 +246,7 @@ export default function EventForm() {
     // deliberately not a single virtual "recurring" event, since every
     // other part of the app (checkout, check-in, capacity) already
     // assumes one event = one occurrence.
-    if (!isEdit && isRecurring && startDate) {
+    if (!wasAlreadyRecurring && isRecurring && startDate) {
       const count = Math.min(Math.max(Number(recurCount) || 0, 2), 52);
       const baseStart = new Date(startDate);
       const baseEnd = endDate ? new Date(endDate) : null;
@@ -406,7 +416,7 @@ export default function EventForm() {
               </>
             )}
 
-            {!isEdit && (
+            {!wasAlreadyRecurring && (
               <div className="mt-2 border-t border-gray-200 pt-4">
                 <label className="flex items-center gap-2 text-sm text-muted">
                   <input type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} />
