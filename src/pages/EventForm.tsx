@@ -83,7 +83,7 @@ export default function EventForm() {
   const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([]);
   const [sponsorTiers, setSponsorTiers] = useState<SponsorTier[]>([]);
   const [seatingEnabled, setSeatingEnabled] = useState(false);
-  const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; num_tables: number; seats_per_table: number; total_seats: number; color: string }[]>([]);
+  const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; num_tables: number; seats_per_table: number; total_seats: number; color: string; bundle_enabled: boolean; bundle_price: number }[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [instagramUrl, setInstagramUrl] = useState('');
@@ -131,6 +131,8 @@ export default function EventForm() {
               seats_per_table: s.seats_per_table ?? (s.total_seats ?? 8),
               total_seats: s.total_seats ?? (s.num_tables ?? 1) * (s.seats_per_table ?? 8),
               color: s.color ?? '#4F46E5',
+              bundle_enabled: s.bundle_enabled ?? false,
+              bundle_price: s.bundle_price ?? 0,
             }))
           : []
       );
@@ -510,15 +512,35 @@ export default function EventForm() {
                               ))}
                             </div>
                           </div>
+
+                          <div className="mt-3 border-t border-gray-300 pt-3">
+                            <label className="flex items-center gap-2 text-sm text-muted">
+                              <input
+                                type="checkbox"
+                                checked={s.bundle_enabled}
+                                onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, bundle_enabled: e.target.checked } : x)))}
+                              />
+                              Also let buyers purchase a whole table at once (bundle)
+                            </label>
+                            {s.bundle_enabled && (
+                              <Field label={`Price for a full table (${s.seats_per_table} seats)`}>
+                                <input
+                                  className={`${inputClass} mt-1 max-w-[160px]`}
+                                  type="number"
+                                  value={s.bundle_price}
+                                  onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, bundle_price: Number(e.target.value) || 0 } : x)))}
+                                />
+                              </Field>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
                     <button
                       type="button"
-                      onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 25, num_tables: 1, seats_per_table: 8, total_seats: 8, color: '#4F46E5' }])}
+                      onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 25, num_tables: 1, seats_per_table: 8, total_seats: 8, color: '#4F46E5', bundle_enabled: false, bundle_price: 0 }])}
                       className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold"
-                    >
-                      + Add section
+                    >                      + Add section
                     </button>
                   </div>
                 )}

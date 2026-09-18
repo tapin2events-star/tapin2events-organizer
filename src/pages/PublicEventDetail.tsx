@@ -17,6 +17,7 @@ export default function PublicEventDetail() {
   const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
   const [selectedSectionName, setSelectedSectionName] = useState<string | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [seatMode, setSeatMode] = useState<'individual' | 'bundle'>('individual');
   const [organizerName, setOrganizerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [myTicket, setMyTicket] = useState<Ticket | null>(null);
@@ -223,8 +224,9 @@ export default function PublicEventDetail() {
     window.location.href = data.url;
   }
 
-  async function handleBuySeats() {
-    if (!id || !event || !selectedSectionName || selectedSeats.length === 0) return;
+  async function handleBuySeats(seatLabels?: string[], bundlePrice?: number) {
+    const seatsToBuy = seatLabels ?? selectedSeats;
+    if (!id || !event || !selectedSectionName || seatsToBuy.length === 0) return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -233,7 +235,8 @@ export default function PublicEventDetail() {
       body: {
         event_id: id,
         section_name: selectedSectionName,
-        seat_labels: selectedSeats,
+        seat_labels: seatsToBuy,
+        bundle_price: bundlePrice,
         successUrl: `${base}events/${id}?checkout=success`,
         cancelUrl: `${base}events/${id}?checkout=cancelled`,
       },
@@ -368,7 +371,25 @@ export default function PublicEventDetail() {
             the visitor, everything below is supporting detail. */}
         {event.is_seating_enabled && event.seating_sections && event.seating_sections.length > 0 ? (
           <div className="mt-6 rounded-2xl bg-gray-900 p-5 sm:p-6">
-            <p className="text-sm font-semibold text-white">Select Your Seats</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">Select Your Seats</p>
+              {event.seating_sections.some((s) => s.bundle_enabled) && (
+                <div className="flex gap-1 rounded-lg bg-gray-800 p-1">
+                  <button
+                    onClick={() => setSeatMode('individual')}
+                    className={`rounded-md px-3 py-1 text-xs font-medium ${seatMode === 'individual' ? 'bg-marigold text-white' : 'text-gray-400'}`}
+                  >
+                    Individual Seats
+                  </button>
+                  <button
+                    onClick={() => setSeatMode('bundle')}
+                    className={`rounded-md px-3 py-1 text-xs font-medium ${seatMode === 'bundle' ? 'bg-marigold text-white' : 'text-gray-400'}`}
+                  >
+                    Bundles
+                  </button>
+                </div>
+              )}
+            </div>
             {myTicket ? (
               <div className="mt-3">
                 <p className="text-sm font-medium text-mint">✓ You're registered</p>
@@ -383,6 +404,49 @@ export default function PublicEventDetail() {
               >
                 Sign in to choose seats
               </button>
+            ) : seatMode === 'bundle' ? (
+              <div className="mt-3 flex flex-col gap-3">
+                {event.seating_sections
+                  .filter((s) => s.bundle_enabled)
+                  .map((section) => {
+                    const bookedSeats = event.booked_seats ?? [];
+                    const availableTables = Array.from({ length: section.num_tables }, (_, i) => i + 1).filter((table) => {
+                      const tableSeats = Array.from({ length: section.seats_per_table }, (_, si) => `${section.name}-T${table}-${si + 1}`);
+                      return tableSeats.every((seat) => !bookedSeats.includes(seat));
+                    });
+                    return (
+                      <div key={section.name} className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2 text-sm font-semibold text-white">
+                            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: section.color }} />
+                            {section.name} — Full table ({section.seats_per_table} seats)
+                          </span>
+                          <span className="text-sm text-gray-300">${section.bundle_price}/table</span>
+                        </div>
+                        {availableTables.length === 0 ? (
+                          <p className="mt-3 text-sm text-gray-400">No full tables currently available in this section.</p>
+                        ) : (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {availableTables.map((table) => {
+                              const tableSeats = Array.from({ length: section.seats_per_table }, (_, si) => `${section.name}-T${table}-${si + 1}`);
+                              return (
+                                <button
+                                  key={table}
+                                  onClick={() => { setSelectedSectionName(section.name); handleBuySeats(tableSeats, section.bundle_price); }}
+                                  disabled={registering}
+                                  className="rounded-lg border border-gray-600 px-3 py-2 text-sm font-medium text-white hover:border-marigold disabled:opacity-50"
+                                >
+                                  Buy Table {table} — ${section.bundle_price}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                {registerError && <p className="mt-2 text-sm text-magenta">{registerError}</p>}
+              </div>
             ) : (
               <>
                 <div className="mt-3 flex flex-col gap-3">
@@ -419,7 +483,7 @@ export default function PublicEventDetail() {
                       </span>
                     </p>
                     <button
-                      onClick={handleBuySeats}
+                      onClick={() => handleBuySeats()}
                       disabled={registering}
                       className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                     >
