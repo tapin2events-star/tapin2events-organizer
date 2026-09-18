@@ -6,9 +6,13 @@ import NotificationBell from './NotificationBell';
 const NAV_ITEMS = [
   { to: '/', label: 'Discover', end: true },
   { to: '/resources', label: 'Resources', end: false },
-  { to: '/resources/dashboard', label: 'Resource Dashboard', end: true },
   { to: '/products', label: 'Shop', end: false },
+];
+
+const MY_STUFF_ITEMS = [
+  { to: '/profile', label: 'Profile', end: true },
   { to: '/activity', label: 'My Activity', end: true },
+  { to: '/resources/dashboard', label: 'Resource Dashboard', end: true },
 ];
 
 const ORGANIZER_NAV_ITEMS = [
@@ -74,6 +78,29 @@ export default function Layout() {
 
         <nav className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-marigold/10 text-marigold'
+                    : 'text-muted hover:bg-gray-100 hover:text-bone'
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <p className="mb-1 mt-6 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted/70">
+          My Stuff
+        </p>
+        <nav className="flex flex-col gap-1">
+          {MY_STUFF_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

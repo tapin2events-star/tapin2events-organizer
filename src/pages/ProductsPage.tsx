@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { PRODUCT_CATEGORIES, type Product } from '../lib/types';
 import MyProductOrders from '../components/products/MyProductOrders';
@@ -13,7 +13,8 @@ const TABS = ['Browse', 'My Orders'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ProductsPage() {
-  const [tab, setTab] = useState<Tab>('Browse');
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'orders' ? 'My Orders' : 'Browse');
   const [products, setProducts] = useState<ProductWithSeller[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
