@@ -76,7 +76,7 @@ export default function Profile() {
         </Link>
         {profile.is_organizer && (
           <Link to="/organizer" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-            <p className="font-medium text-bone">My Events</p>
+            <p className="font-medium text-bone">Organizer Dashboard</p>
             <p className="text-xs text-muted">Events you organize</p>
           </Link>
         )}

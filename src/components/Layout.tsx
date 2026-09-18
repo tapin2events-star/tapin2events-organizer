@@ -16,7 +16,7 @@ const MY_STUFF_ITEMS = [
 ];
 
 const ORGANIZER_NAV_ITEMS = [
-  { to: '/organizer', label: 'My Events', end: true },
+  { to: '/organizer', label: 'Organizer Dashboard', end: true },
   { to: '/organizer/new', label: 'Create Event', end: true },
 ];
 
