@@ -77,10 +77,9 @@ export default function VendorApplicationForm({ eventId, feeTiers, groups }: Ven
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-200 bg-white p-5">
-      <h3 className="font-display text-lg font-semibold text-gray-900">Apply to be a vendor</h3>
+    <form onSubmit={handleSubmit} className="rounded-2xl bg-gray-50 p-5">
       {groups.length > 0 && (
-        <p className="mt-1 text-sm text-gray-500">Categories: {groups.map((g) => g.group_name).join(', ')}</p>
+        <p className="text-sm text-gray-500">Categories: {groups.map((g) => g.group_name).join(', ')}</p>
       )}
 
       <div className="mt-4 flex flex-col gap-3">

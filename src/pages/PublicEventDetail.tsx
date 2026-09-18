@@ -409,7 +409,14 @@ export default function PublicEventDetail() {
                 {selectedSeats.length > 0 && (
                   <div className="mt-4 flex flex-col gap-3 border-t border-gray-800 pt-4 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-gray-300">
-                      {selectedSeats.length} seat{selectedSeats.length === 1 ? '' : 's'} selected: <span className="text-white">{selectedSeats.join(', ')}</span>
+                      {selectedSeats.length} seat{selectedSeats.length === 1 ? '' : 's'} selected: <span className="text-white">
+                        {selectedSeats
+                          .map((label) => {
+                            const match = label.match(/-T(\d+)-(\d+)$/);
+                            return match ? `Table ${match[1]}, Seat ${match[2]}` : label;
+                          })
+                          .join(' · ')}
+                      </span>
                     </p>
                     <button
                       onClick={handleBuySeats}
@@ -555,11 +562,14 @@ export default function PublicEventDetail() {
 
         {event.vendor_applications_enabled && (
           <div className="mt-10">
-            <VendorApplicationForm
-              eventId={event.id}
-              feeTiers={event.vendor_fees ?? []}
-              groups={event.vendors ?? []}
-            />
+            <h2 className="font-display text-xl font-bold text-gray-900">Become a Vendor</h2>
+            <div className="mt-3">
+              <VendorApplicationForm
+                eventId={event.id}
+                feeTiers={event.vendor_fees ?? []}
+                groups={event.vendors ?? []}
+              />
+            </div>
           </div>
         )}
 

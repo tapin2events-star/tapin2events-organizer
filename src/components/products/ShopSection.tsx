@@ -65,8 +65,8 @@ export default function ShopSection({ ownerType, ownerId }: ShopSectionProps) {
   }
 
   return (
-    <div className="mt-6 border-t border-gray-200 pt-6">
-      <h2 className="font-display text-lg font-semibold text-gray-900">Shop</h2>
+    <div className="mt-10">
+      <h2 className="font-display text-xl font-bold text-gray-900">Shop</h2>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {products.map((p) => {
           const available = p.stock_quantity - p.sold_quantity;
