@@ -94,6 +94,7 @@ export default function EventForm() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [originalBookedSeats, setOriginalBookedSeats] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -133,6 +134,7 @@ export default function EventForm() {
             }))
           : []
       );
+      setOriginalBookedSeats(Array.isArray(data.booked_seats) ? data.booked_seats : []);
       setPosterUrl(data.poster_url ?? null);
       setInstagramUrl(data.social_links?.instagram ?? '');
       setFacebookUrl(data.social_links?.facebook ?? '');
@@ -197,6 +199,35 @@ export default function EventForm() {
       setStep(1);
       return;
     }
+
+    // Prevent shrinking or renaming a section that already has real,
+    // sold seats -- seat labels are tied to the section name, so
+    // renaming would silently orphan existing tickets from capacity
+    // tracking, and reducing capacity below what's sold would make the
+    // section show fewer seats than are actually already taken.
+    if (isEdit && seatingEnabled && originalBookedSeats.length > 0) {
+      // Seat labels are "<section name>-T<table>-<seat>" -- strip only that
+      // trailing pattern, since a naive split on "-T" would misparse a
+      // section name that itself happens to contain "-T" (e.g. "VIP-Table").
+      const sectionNameFromLabel = (label: string) => label.replace(/-T\d+-\d+$/, '');
+      const bookedSectionNames = new Set(originalBookedSeats.map(sectionNameFromLabel));
+      for (const sectionName of bookedSectionNames) {
+        const bookedCount = originalBookedSeats.filter((s) => sectionNameFromLabel(s) === sectionName).length;
+        const currentSection = seatingSections.find((s) => s.name === sectionName);
+        if (!currentSection) {
+          setError(`"${sectionName}" already has ${bookedCount} seat(s) sold and can't be removed or renamed. Add a new section instead if you want to change it.`);
+          setStep(1);
+          return;
+        }
+        const newCapacity = currentSection.num_tables * currentSection.seats_per_table;
+        if (newCapacity < bookedCount) {
+          setError(`"${sectionName}" already has ${bookedCount} seat(s) sold — capacity can't be reduced below that.`);
+          setStep(1);
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     setError(null);
 
