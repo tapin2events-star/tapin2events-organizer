@@ -19,7 +19,7 @@ export interface TapEvent {
   vendor_fees: { tier_name: string; fee: number }[] | null;
   vendors: { group_name: string; description?: string }[] | null;
   is_seating_enabled: boolean | null;
-  seating_sections: { name: string; price: number; total_seats: number }[] | null;
+  seating_sections: { name: string; price: number; num_tables: number; seats_per_table: number; total_seats: number; color: string }[] | null;
   booked_seats: string[] | null;
   parent_event_id: string | null;
   poster_url: string | null;

@@ -83,7 +83,7 @@ export default function EventForm() {
   const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([]);
   const [sponsorTiers, setSponsorTiers] = useState<SponsorTier[]>([]);
   const [seatingEnabled, setSeatingEnabled] = useState(false);
-  const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; total_seats: number }[]>([]);
+  const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; num_tables: number; seats_per_table: number; total_seats: number; color: string }[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [instagramUrl, setInstagramUrl] = useState('');
@@ -121,7 +121,18 @@ export default function EventForm() {
       setVendorGroups(Array.isArray(data.vendors) ? data.vendors : []);
       setSponsorTiers(Array.isArray(data.sponsors) ? data.sponsors : []);
       setSeatingEnabled(!!data.is_seating_enabled);
-      setSeatingSections(Array.isArray(data.seating_sections) ? data.seating_sections : []);
+      setSeatingSections(
+        Array.isArray(data.seating_sections)
+          ? data.seating_sections.map((s: any) => ({
+              name: s.name ?? '',
+              price: s.price ?? 0,
+              num_tables: s.num_tables ?? 1,
+              seats_per_table: s.seats_per_table ?? (s.total_seats ?? 8),
+              total_seats: s.total_seats ?? (s.num_tables ?? 1) * (s.seats_per_table ?? 8),
+              color: s.color ?? '#4F46E5',
+            }))
+          : []
+      );
       setPosterUrl(data.poster_url ?? null);
       setInstagramUrl(data.social_links?.instagram ?? '');
       setFacebookUrl(data.social_links?.facebook ?? '');
@@ -223,7 +234,9 @@ export default function EventForm() {
       vendors: vendorGroups,
       sponsors: sponsorTiers,
       is_seating_enabled: seatingEnabled,
-      seating_sections: seatingEnabled ? seatingSections : [],
+      seating_sections: seatingEnabled
+        ? seatingSections.map((s) => ({ ...s, total_seats: s.num_tables * s.seats_per_table }))
+        : [],
       poster_url: uploadedPosterUrl,
       social_links: { instagram: instagramUrl || null, facebook: facebookUrl || null, website: websiteUrl || null },
       status,
@@ -394,40 +407,84 @@ export default function EventForm() {
                 </label>
 
                 {seatingEnabled && (
-                  <div className="mt-3 flex flex-col gap-2">
+                  <div className="mt-3 flex flex-col gap-3">
                     <p className="text-xs text-muted">
-                      Each section gets its own price and seat count. Attendees pick a section and quantity; each ticket is assigned a specific seat automatically.
+                      Each section is made of tables with seats around them. Attendees pick their exact seats on a visual map; each is assigned specifically, not just a quantity.
                     </p>
-                    {seatingSections.map((s, i) => (
-                      <div key={i} className="flex gap-2">
-                        <input
-                          className={`${inputClass} flex-1`}
-                          placeholder="Section name (e.g. Main Floor)"
-                          value={s.name}
-                          onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))}
-                        />
-                        <input
-                          className={`${inputClass} w-24`}
-                          type="number"
-                          placeholder="Price"
-                          value={s.price}
-                          onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, price: Number(e.target.value) || 0 } : x)))}
-                        />
-                        <input
-                          className={`${inputClass} w-24`}
-                          type="number"
-                          placeholder="Seats"
-                          value={s.total_seats}
-                          onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, total_seats: Number(e.target.value) || 0 } : x)))}
-                        />
-                        <button type="button" onClick={() => setSeatingSections((prev) => prev.filter((_, xi) => xi !== i))} className="rounded-lg border border-gray-300 px-3 text-sm text-magenta">
-                          Remove
-                        </button>
-                      </div>
-                    ))}
+                    {seatingSections.map((s, i) => {
+                      const computedTotal = s.num_tables * s.seats_per_table;
+                      return (
+                        <div key={i} className="rounded-xl border border-gray-300 bg-surface2 p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="font-medium text-bone">{s.name || 'Untitled section'}</p>
+                              <p className="text-xs text-muted">{computedTotal} seats</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-bone">${s.price}</span>
+                              <button type="button" onClick={() => setSeatingSections((prev) => prev.filter((_, xi) => xi !== i))} className="text-magenta">
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <Field label="Section name">
+                              <input
+                                className={inputClass}
+                                placeholder="Main Section"
+                                value={s.name}
+                                onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))}
+                              />
+                            </Field>
+                            <Field label="Price per seat ($)">
+                              <input
+                                className={inputClass}
+                                type="number"
+                                value={s.price}
+                                onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, price: Number(e.target.value) || 0 } : x)))}
+                              />
+                            </Field>
+                            <Field label="Number of tables">
+                              <input
+                                className={inputClass}
+                                type="number"
+                                min="1"
+                                value={s.num_tables}
+                                onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, num_tables: Math.max(1, Number(e.target.value) || 1) } : x)))}
+                              />
+                            </Field>
+                            <Field label="Seats per table">
+                              <input
+                                className={inputClass}
+                                type="number"
+                                min="1"
+                                value={s.seats_per_table}
+                                onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, seats_per_table: Math.max(1, Number(e.target.value) || 1) } : x)))}
+                              />
+                            </Field>
+                          </div>
+
+                          <div className="mt-3">
+                            <p className="text-sm text-muted">Section color</p>
+                            <div className="mt-1 flex gap-2">
+                              {['#4F46E5', '#DC2626', '#16A34A', '#D97706', '#7C3AED', '#0891B2', '#65A30D', '#EA580C'].map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, color: c } : x)))}
+                                  className={`h-6 w-6 rounded-full ${s.color === c ? 'ring-2 ring-offset-2 ring-offset-surface2 ring-bone' : ''}`}
+                                  style={{ backgroundColor: c }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                     <button
                       type="button"
-                      onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 0, total_seats: 0 }])}
+                      onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 25, num_tables: 1, seats_per_table: 8, total_seats: 8, color: '#4F46E5' }])}
                       className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold"
                     >
                       + Add section
