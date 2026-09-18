@@ -83,7 +83,8 @@ export default function EventForm() {
   const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([]);
   const [sponsorTiers, setSponsorTiers] = useState<SponsorTier[]>([]);
   const [seatingEnabled, setSeatingEnabled] = useState(false);
-  const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; num_tables: number; seats_per_table: number; total_seats: number; color: string; bundle_enabled: boolean; bundle_price: number }[]>([]);
+  const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; num_tables: number; seats_per_table: number; total_seats: number; color: string; bundle_enabled: boolean; bundle_price: number; bundle_description: string; bundle_product_id: string | null }[]>([]);
+  const [eventProducts, setEventProducts] = useState<{ id: string; name: string }[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [instagramUrl, setInstagramUrl] = useState('');
@@ -95,6 +96,11 @@ export default function EventForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [originalBookedSeats, setOriginalBookedSeats] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    supabase.from('products').select('id, name').eq('event_id', id).then(({ data }) => setEventProducts(data ?? []));
+  }, [isEdit, id]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -133,6 +139,8 @@ export default function EventForm() {
               color: s.color ?? '#4F46E5',
               bundle_enabled: s.bundle_enabled ?? false,
               bundle_price: s.bundle_price ?? 0,
+              bundle_description: s.bundle_description ?? '',
+              bundle_product_id: s.bundle_product_id ?? null,
             }))
           : []
       );
@@ -520,17 +528,51 @@ export default function EventForm() {
                                 checked={s.bundle_enabled}
                                 onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, bundle_enabled: e.target.checked } : x)))}
                               />
-                              Also let buyers purchase a whole table at once (bundle)
+                              Offer a bundled upgrade for this section (e.g. seat + T-shirt, seat + VIP perk)
                             </label>
                             {s.bundle_enabled && (
-                              <Field label={`Price for a full table (${s.seats_per_table} seats)`}>
-                                <input
-                                  className={`${inputClass} mt-1 max-w-[160px]`}
-                                  type="number"
-                                  value={s.bundle_price}
-                                  onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, bundle_price: Number(e.target.value) || 0 } : x)))}
-                                />
-                              </Field>
+                              <div className="mt-2 flex flex-col gap-2">
+                                <p className="text-xs text-muted">
+                                  Buyers still pick their exact seat as normal — this just adds an optional upgrade for whatever seat they choose.
+                                </p>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <Field label="Bundle price per seat ($)">
+                                    <input
+                                      className={inputClass}
+                                      type="number"
+                                      value={s.bundle_price}
+                                      onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, bundle_price: Number(e.target.value) || 0 } : x)))}
+                                    />
+                                  </Field>
+                                  <Field label="Include a product (optional)">
+                                    <select
+                                      className={inputClass}
+                                      value={s.bundle_product_id ?? ''}
+                                      onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, bundle_product_id: e.target.value || null } : x)))}
+                                    >
+                                      <option value="">None</option>
+                                      {eventProducts.map((p) => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                      ))}
+                                    </select>
+                                  </Field>
+                                </div>
+                                {isEdit && eventProducts.length === 0 && (
+                                  <p className="text-xs text-muted">No products yet for this event — add one from the Products tab, then come back here to link it.</p>
+                                )}
+                                {!isEdit && (
+                                  <p className="text-xs text-muted">Product linking is available once you've saved this event and added products to it.</p>
+                                )}
+                                <Field label="What's included (shown to buyers)">
+                                  <textarea
+                                    className={inputClass}
+                                    rows={2}
+                                    placeholder="Includes a commemorative T-shirt and a drink voucher"
+                                    value={s.bundle_description}
+                                    onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, bundle_description: e.target.value } : x)))}
+                                  />
+                                </Field>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -538,7 +580,7 @@ export default function EventForm() {
                     })}
                     <button
                       type="button"
-                      onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 25, num_tables: 1, seats_per_table: 8, total_seats: 8, color: '#4F46E5', bundle_enabled: false, bundle_price: 0 }])}
+                      onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 25, num_tables: 1, seats_per_table: 8, total_seats: 8, color: '#4F46E5', bundle_enabled: false, bundle_price: 0, bundle_description: '', bundle_product_id: null }])}
                       className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold"
                     >                      + Add section
                     </button>
