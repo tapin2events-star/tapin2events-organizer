@@ -28,16 +28,22 @@ export default function MyVendorApplications() {
   useEffect(() => {
     if (!user?.email) return;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('event_vendor_applications')
         .select('*')
         .eq('resource_email', user.email)
         .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Failed to load vendor applications:', error);
+        setLoading(false);
+        return;
+      }
       const rows = data ?? [];
       const eventIds = [...new Set(rows.map((r) => r.event_id))];
-      const { data: events } = eventIds.length
+      const { data: events, error: eventsError } = eventIds.length
         ? await supabase.from('events').select('id, title').in('id', eventIds)
-        : { data: [] };
+        : { data: [], error: null };
+      if (eventsError) console.error('Failed to load event titles for vendor applications:', eventsError);
       const eventsById = new Map((events ?? []).map((e) => [e.id, e.title]));
       setApps(rows.map((r) => ({ ...r, event_title: eventsById.get(r.event_id) ?? 'Event' })));
       setLoading(false);
