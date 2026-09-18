@@ -14,6 +14,8 @@ export default function PublicEventDetail() {
   const [searchParams] = useSearchParams();
   const [event, setEvent] = useState<TapEvent | null>(null);
   const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
+  const [selectedSectionName, setSelectedSectionName] = useState<string | null>(null);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [organizerName, setOrganizerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [myTicket, setMyTicket] = useState<Ticket | null>(null);
@@ -220,6 +222,30 @@ export default function PublicEventDetail() {
     window.location.href = data.url;
   }
 
+  async function handleBuySeats() {
+    if (!id || !event || !selectedSectionName) return;
+    setRegistering(true);
+    setRegisterError(null);
+
+    const base = window.location.origin + import.meta.env.BASE_URL;
+    const { data, error } = await supabase.functions.invoke('create-seated-checkout', {
+      body: {
+        event_id: id,
+        section_name: selectedSectionName,
+        quantity: selectedQuantity,
+        successUrl: `${base}events/${id}?checkout=success`,
+        cancelUrl: `${base}events/${id}?checkout=cancelled`,
+      },
+    });
+
+    setRegistering(false);
+    if (error || !data?.url) {
+      setRegisterError(error?.message || 'Something went wrong starting checkout. Please try again.');
+      return;
+    }
+    window.location.href = data.url;
+  }
+
   if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
   if (!event) return <div className="p-10 text-center text-magenta">Event not found.</div>;
 
@@ -335,40 +361,111 @@ export default function PublicEventDetail() {
 
         {/* The CTA is the lead of the page — everything above just orients
             the visitor, everything below is supporting detail. */}
-        <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div>
-            <p className="text-sm text-gray-400">{isFree ? 'Free to attend' : 'Ticket price'}</p>
-            <p className="font-display text-2xl font-extrabold text-white">{isFree ? 'Free' : `$${event.ticket_price}`}</p>
-          </div>
-          {myTicket ? (
-            <div className="flex flex-col gap-1 sm:items-end">
-              <p className="text-sm font-medium text-mint">✓ You're registered</p>
-              <Link to={`/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
-                View your ticket &amp; QR code
-              </Link>
-            </div>
-          ) : !user ? (
-            <button
-              onClick={() => navigate('/login', { state: { from: location.pathname } })}
-              className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
-            >
-              Sign in to {isFree ? 'register' : 'buy a ticket'}
-            </button>
-          ) : isFull ? (
-            <p className="text-sm font-medium text-gray-400">This event is full.</p>
-          ) : (
-            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+        {event.is_seating_enabled && event.seating_sections && event.seating_sections.length > 0 ? (
+          <div className="mt-6 rounded-2xl bg-gray-900 p-5 sm:p-6">
+            <p className="text-sm text-gray-400">Reserved seating — choose a section</p>
+            {myTicket ? (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-mint">✓ You're registered</p>
+                <Link to={`/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
+                  View your ticket &amp; QR code
+                </Link>
+              </div>
+            ) : !user ? (
               <button
-                onClick={isFree ? handleRegister : handleBuyTicket}
-                disabled={registering}
-                className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                className="mt-3 rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
               >
-                {registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
+                Sign in to choose seats
               </button>
-              {registerError && <p className="text-sm text-magenta">{registerError}</p>}
+            ) : (
+              <>
+                <div className="mt-3 flex flex-col gap-2">
+                  {event.seating_sections.map((section) => {
+                    const bookedInSection = (event.booked_seats ?? []).filter((s) => s.startsWith(`${section.name}-`)).length;
+                    const available = section.total_seats - bookedInSection;
+                    const isSelected = selectedSectionName === section.name;
+                    return (
+                      <button
+                        key={section.name}
+                        disabled={available <= 0}
+                        onClick={() => { setSelectedSectionName(section.name); setSelectedQuantity(1); }}
+                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-40 ${
+                          isSelected ? 'border-marigold bg-marigold/10' : 'border-gray-700 hover:border-marigold'
+                        }`}
+                      >
+                        <span>
+                          <span className="block text-sm font-semibold text-white">{section.name}</span>
+                          <span className="block text-xs text-gray-400">{available > 0 ? `${available} seat${available === 1 ? '' : 's'} left` : 'Sold out'}</span>
+                        </span>
+                        <span className="font-display text-lg font-bold text-white">${section.price}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedSectionName && (
+                  <div className="mt-4 flex flex-col gap-3 border-t border-gray-800 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      Quantity
+                      <input
+                        type="number"
+                        min="1"
+                        max={(event.seating_sections.find((s) => s.name === selectedSectionName)?.total_seats ?? 1)}
+                        value={selectedQuantity}
+                        onChange={(e) => setSelectedQuantity(Math.max(1, Number(e.target.value) || 1))}
+                        className="w-20 rounded-lg border border-gray-700 bg-gray-800 px-2 py-1 text-white"
+                      />
+                    </label>
+                    <button
+                      onClick={handleBuySeats}
+                      disabled={registering}
+                      className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                    >
+                      {registering ? 'Please wait…' : `Buy ${selectedQuantity} seat${selectedQuantity === 1 ? '' : 's'} in ${selectedSectionName}`}
+                    </button>
+                  </div>
+                )}
+                {registerError && <p className="mt-2 text-sm text-magenta">{registerError}</p>}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div>
+              <p className="text-sm text-gray-400">{isFree ? 'Free to attend' : 'Ticket price'}</p>
+              <p className="font-display text-2xl font-extrabold text-white">{isFree ? 'Free' : `$${event.ticket_price}`}</p>
             </div>
-          )}
-        </div>
+            {myTicket ? (
+              <div className="flex flex-col gap-1 sm:items-end">
+                <p className="text-sm font-medium text-mint">✓ You're registered</p>
+                <Link to={`/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
+                  View your ticket &amp; QR code
+                </Link>
+              </div>
+            ) : !user ? (
+              <button
+                onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
+              >
+                Sign in to {isFree ? 'register' : 'buy a ticket'}
+              </button>
+            ) : isFull ? (
+              <p className="text-sm font-medium text-gray-400">This event is full.</p>
+            ) : (
+              <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                <button
+                  onClick={isFree ? handleRegister : handleBuyTicket}
+                  disabled={registering}
+                  className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
+                </button>
+                {registerError && <p className="text-sm text-magenta">{registerError}</p>}
+              </div>
+            )}
+          </div>
+        )}
 
         {event.is_recurring && seriesEvents.length > 1 && (
           <div className="mt-6">

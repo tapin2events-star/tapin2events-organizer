@@ -82,6 +82,8 @@ export default function EventForm() {
   const [vendorFeeTiers, setVendorFeeTiers] = useState<{ tier_name: string; fee: number }[]>([]);
   const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([]);
   const [sponsorTiers, setSponsorTiers] = useState<SponsorTier[]>([]);
+  const [seatingEnabled, setSeatingEnabled] = useState(false);
+  const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; total_seats: number }[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [instagramUrl, setInstagramUrl] = useState('');
@@ -118,6 +120,8 @@ export default function EventForm() {
       setVendorFeeTiers(Array.isArray(data.vendor_fees) ? data.vendor_fees : []);
       setVendorGroups(Array.isArray(data.vendors) ? data.vendors : []);
       setSponsorTiers(Array.isArray(data.sponsors) ? data.sponsors : []);
+      setSeatingEnabled(!!data.is_seating_enabled);
+      setSeatingSections(Array.isArray(data.seating_sections) ? data.seating_sections : []);
       setPosterUrl(data.poster_url ?? null);
       setInstagramUrl(data.social_links?.instagram ?? '');
       setFacebookUrl(data.social_links?.facebook ?? '');
@@ -218,6 +222,8 @@ export default function EventForm() {
       vendor_fees: vendorFeeTiers,
       vendors: vendorGroups,
       sponsors: sponsorTiers,
+      is_seating_enabled: seatingEnabled,
+      seating_sections: seatingEnabled ? seatingSections : [],
       poster_url: uploadedPosterUrl,
       social_links: { instagram: instagramUrl || null, facebook: facebookUrl || null, website: websiteUrl || null },
       status,
@@ -379,6 +385,57 @@ export default function EventForm() {
                 <input type="number" min="0" value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} className={inputClass} />
               </Field>
             </div>
+
+            {eventType !== 'free' && (
+              <div className="border-t border-gray-200 pt-4">
+                <label className="flex items-center gap-2 text-sm text-muted">
+                  <input type="checkbox" checked={seatingEnabled} onChange={(e) => setSeatingEnabled(e.target.checked)} />
+                  Use reserved seating sections instead of one flat price
+                </label>
+
+                {seatingEnabled && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    <p className="text-xs text-muted">
+                      Each section gets its own price and seat count. Attendees pick a section and quantity; each ticket is assigned a specific seat automatically.
+                    </p>
+                    {seatingSections.map((s, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input
+                          className={`${inputClass} flex-1`}
+                          placeholder="Section name (e.g. Main Floor)"
+                          value={s.name}
+                          onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, name: e.target.value } : x)))}
+                        />
+                        <input
+                          className={`${inputClass} w-24`}
+                          type="number"
+                          placeholder="Price"
+                          value={s.price}
+                          onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, price: Number(e.target.value) || 0 } : x)))}
+                        />
+                        <input
+                          className={`${inputClass} w-24`}
+                          type="number"
+                          placeholder="Seats"
+                          value={s.total_seats}
+                          onChange={(e) => setSeatingSections((prev) => prev.map((x, xi) => (xi === i ? { ...x, total_seats: Number(e.target.value) || 0 } : x)))}
+                        />
+                        <button type="button" onClick={() => setSeatingSections((prev) => prev.filter((_, xi) => xi !== i))} className="rounded-lg border border-gray-300 px-3 text-sm text-magenta">
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 0, total_seats: 0 }])}
+                      className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold"
+                    >
+                      + Add section
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <Field label="Publish status">
               <select value={status} onChange={(e) => setStatus(e.target.value as 'draft' | 'published')} className={inputClass}>

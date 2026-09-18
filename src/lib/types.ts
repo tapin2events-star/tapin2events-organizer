@@ -18,6 +18,9 @@ export interface TapEvent {
   sponsors: { tier_name: string; price: number; benefits: string; sponsors: { name: string; logo_url?: string; website?: string }[] }[] | null;
   vendor_fees: { tier_name: string; fee: number }[] | null;
   vendors: { group_name: string; description?: string }[] | null;
+  is_seating_enabled: boolean | null;
+  seating_sections: { name: string; price: number; total_seats: number }[] | null;
+  booked_seats: string[] | null;
   parent_event_id: string | null;
   poster_url: string | null;
   ticket_price: number;
@@ -26,8 +29,6 @@ export interface TapEvent {
   is_recurring: boolean;
   is_online: boolean;
   is_featured: boolean;
-  is_seating_enabled: boolean;
-  seating_sections: { price: number }[] | null;
   organizer_id: string;
   organizer_email: string;
   vendor_applications_enabled: boolean;
