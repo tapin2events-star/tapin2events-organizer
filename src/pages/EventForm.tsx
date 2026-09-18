@@ -440,12 +440,17 @@ export default function EventForm() {
               </Field>
             </div>
 
-            {eventType !== 'free' && (
-              <div className="border-t border-gray-200 pt-4">
-                <label className="flex items-center gap-2 text-sm text-muted">
-                  <input type="checkbox" checked={seatingEnabled} onChange={(e) => setSeatingEnabled(e.target.checked)} />
-                  Use reserved seating sections instead of one flat price
-                </label>
+            <div className="border-t border-gray-200 pt-4">
+              {eventType === 'free' ? (
+                <p className="text-sm text-muted">
+                  Reserved seating sections are available for Paid or Private events — switch the Type above to enable this.
+                </p>
+              ) : (
+                <>
+                  <label className="flex items-center gap-2 text-sm text-muted">
+                    <input type="checkbox" checked={seatingEnabled} onChange={(e) => setSeatingEnabled(e.target.checked)} />
+                    Use reserved seating sections instead of one flat price
+                  </label>
 
                 {seatingEnabled && (
                   <div className="mt-3 flex flex-col gap-3">
@@ -582,12 +587,14 @@ export default function EventForm() {
                       type="button"
                       onClick={() => setSeatingSections((prev) => [...prev, { name: '', price: 25, num_tables: 1, seats_per_table: 8, total_seats: 8, color: '#4F46E5', bundle_enabled: false, bundle_price: 0, bundle_description: '', bundle_product_id: null }])}
                       className="self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-bone hover:border-marigold"
-                    >                      + Add section
+                    >
+                      + Add section
                     </button>
                   </div>
                 )}
-              </div>
-            )}
+                </>
+              )}
+            </div>
 
             <Field label="Publish status">
               <select value={status} onChange={(e) => setStatus(e.target.value as 'draft' | 'published')} className={inputClass}>
