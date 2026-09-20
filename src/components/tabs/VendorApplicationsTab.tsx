@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import type { VendorApplication, VendorApplicationStatus } from '../../lib/types';
 
@@ -17,6 +17,12 @@ export default function VendorApplicationsTab({ eventId }: { eventId: string }) 
   const [newVendor, setNewVendor] = useState({ business_name: '', email: '', description: '', agreed_fee: '0' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | VendorApplicationStatus>('all');
+
+  const filteredApps = useMemo(
+    () => apps.filter((a) => statusFilter === 'all' || a.status === statusFilter),
+    [apps, statusFilter]
+  );
 
   async function load() {
     const { data } = await supabase
@@ -122,8 +128,29 @@ export default function VendorApplicationsTab({ eventId }: { eventId: string }) 
       )}
 
       {apps.length > 0 && (
+        <div className="mb-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone"
+          >
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="paid">Paid</option>
+            <option value="rejected">Rejected</option>
+            <option value="withdrawn">Withdrawn</option>
+          </select>
+        </div>
+      )}
+
+      {apps.length > 0 && filteredApps.length === 0 && (
+        <p className="text-sm text-muted">No vendors match this filter.</p>
+      )}
+
+      {filteredApps.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {apps.map((app) => (
+          {filteredApps.map((app) => (
             <li key={app.id} className="rounded-xl bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>

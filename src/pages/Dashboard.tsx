@@ -16,6 +16,8 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [vendorFilter, setVendorFilter] = useState<'all' | 'pending_vendors'>('all');
+  const [eventsWithPendingVendors, setEventsWithPendingVendors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -26,6 +28,16 @@ export default function Dashboard() {
         .eq('organizer_id', user.id)
         .order('start_date', { ascending: true, nullsFirst: false });
       if (!error && data) setEvents(data as TapEvent[]);
+
+      const eventIds = (data ?? []).map((e) => e.id);
+      if (eventIds.length > 0) {
+        const { data: pendingVendors } = await supabase
+          .from('event_vendor_applications')
+          .select('event_id')
+          .in('event_id', eventIds)
+          .eq('status', 'pending');
+        setEventsWithPendingVendors(new Set((pendingVendors ?? []).map((v) => v.event_id)));
+      }
 
       if (user.email) {
         const { data: profile } = await supabase
@@ -45,12 +57,13 @@ export default function Dashboard() {
     return events
       .filter((e) => statusFilter === 'all' || e.status === statusFilter)
       .filter((e) => typeFilter === 'all' || (typeFilter === 'free' ? e.event_type === 'free' : e.event_type !== 'free'))
+      .filter((e) => vendorFilter === 'all' || eventsWithPendingVendors.has(e.id))
       .filter((e) => {
         if (timeFilter === 'all' || !e.start_date) return true;
         const isUpcoming = new Date(e.start_date) >= now;
         return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
       });
-  }, [events, statusFilter, typeFilter, timeFilter]);
+  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors]);
 
   return (
     <div>
@@ -86,6 +99,12 @@ export default function Dashboard() {
             <option value="upcoming">Upcoming</option>
             <option value="past">Past</option>
           </select>
+          {eventsWithPendingVendors.size > 0 && (
+            <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value as typeof vendorFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
+              <option value="all">All events</option>
+              <option value="pending_vendors">Has pending vendor applications</option>
+            </select>
+          )}
         </div>
       )}
 
