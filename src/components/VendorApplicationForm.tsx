@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 
@@ -70,7 +70,7 @@ export default function VendorApplicationForm({ eventId, feeTiers, groups }: Ven
         <p className="font-medium text-green-800">Application submitted!</p>
         <p className="mt-1 text-sm text-green-700">
           The organizer will review it and follow up. You can check your status anytime on{' '}
-          <a href="/activity" className="underline">My Activity</a>.
+          <Link to="/activity" className="underline">My Activity</Link>.
         </p>
       </div>
     );
