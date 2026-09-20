@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import MyVendorApplications from '../components/MyVendorApplications';
 
 interface MyTicket {
   id: string;
@@ -291,8 +290,6 @@ export default function MyActivity() {
             )}
           </>
         )}
-
-        <MyVendorApplications />
       </div>
     </div>
   );
