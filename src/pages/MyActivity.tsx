@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -89,6 +89,9 @@ export default function MyActivity() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [emailedId, setEmailedId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled' | 'refunded'>('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'general' | 'seated' | 'series_pass'>('all');
 
   useEffect(() => {
     if (authLoading) return; // don't judge auth state until it's actually finished checking
@@ -137,6 +140,18 @@ export default function MyActivity() {
     })();
   }, [user, authLoading, navigate, location.pathname]);
 
+  const filteredTickets = useMemo(() => {
+    const now = new Date();
+    return tickets
+      .filter((t) => statusFilter === 'all' || t.status === statusFilter)
+      .filter((t) => typeFilter === 'all' || t.ticket_type === typeFilter)
+      .filter((t) => {
+        if (timeFilter === 'all' || !t.event_start_date) return true;
+        const isUpcoming = new Date(t.event_start_date) >= now;
+        return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
+      });
+  }, [tickets, statusFilter, typeFilter, timeFilter]);
+
   async function handleDownload(t: MyTicket) {
     setBusyId(t.id);
     await downloadBlob(
@@ -180,8 +195,35 @@ export default function MyActivity() {
             <Link to="/" className="mt-3 inline-block text-marigold hover:underline">Browse events to get started &rarr;</Link>
           </div>
         ) : (
-          <div className="mt-6 flex flex-col gap-4">
-            {tickets.map((t) => {
+          <>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900">
+                <option value="all">All statuses</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="pending">Pending</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option>
+              </select>
+              <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value as typeof timeFilter)} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900">
+                <option value="all">Any date</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="past">Past</option>
+              </select>
+              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900">
+                <option value="all">All ticket types</option>
+                <option value="general">General admission</option>
+                <option value="seated">Reserved seating</option>
+                <option value="series_pass">Series pass</option>
+              </select>
+            </div>
+
+            {filteredTickets.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-white/60 py-10 text-center">
+                <p className="text-gray-500">No tickets match these filters.</p>
+              </div>
+            ) : (
+          <div className="mt-4 flex flex-col gap-4">
+            {filteredTickets.map((t) => {
               const passUrl = `${window.location.origin}${import.meta.env.BASE_URL}pass/${t.id}`;
               const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=1`;
               return (
@@ -246,6 +288,8 @@ export default function MyActivity() {
               );
             })}
           </div>
+            )}
+          </>
         )}
 
         <MyVendorApplications />
