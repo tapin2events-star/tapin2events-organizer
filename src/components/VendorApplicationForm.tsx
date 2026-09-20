@@ -70,7 +70,7 @@ export default function VendorApplicationForm({ eventId, feeTiers, groups }: Ven
         <p className="font-medium text-green-800">Application submitted!</p>
         <p className="mt-1 text-sm text-green-700">
           The organizer will review it and follow up. You can check your status anytime on{' '}
-          <Link to="/activity" className="underline">My Activity</Link>.
+          <Link to="/vendor-applications" className="underline">My Vendor Applications</Link>.
         </p>
       </div>
     );
