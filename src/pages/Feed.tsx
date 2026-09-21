@@ -37,6 +37,7 @@ export default function Feed() {
   const [shareCopiedId, setShareCopiedId] = useState<string | null>(null);
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -98,14 +99,15 @@ export default function Feed() {
           const postId = entry.target.getAttribute('data-post-id');
           const video = postId ? videoRefs.current[postId] : null;
           if (!video) return;
-          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
             video.play().catch(() => {});
+            setIsPaused(false);
           } else {
             video.pause();
           }
         });
       },
-      { threshold: [0, 0.6, 1] }
+      { threshold: [0, 0.4, 1] }
     );
     const slides = containerRef.current?.querySelectorAll('[data-post-id]') ?? [];
     slides.forEach((el) => observer.observe(el));
@@ -179,6 +181,7 @@ export default function Feed() {
         {showCreateModal && (
           <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
         )}
+        <BottomTabBar />
       </div>
     );
   }
@@ -196,9 +199,16 @@ export default function Feed() {
               loop
               playsInline
               muted
+              preload="auto"
               onClick={(e) => {
                 const v = e.currentTarget;
-                v.paused ? v.play() : v.pause();
+                if (v.paused) {
+                  v.play();
+                  setIsPaused(false);
+                } else {
+                  v.pause();
+                  setIsPaused(true);
+                }
               }}
             />
 
@@ -306,7 +316,7 @@ export default function Feed() {
       {showCreateModal && (
         <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
       )}
-      <BottomTabBar />
+      {(isPaused || openComments || reportingId || showCreateModal) && <BottomTabBar />}
     </div>
   );
 }
