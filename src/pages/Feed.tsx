@@ -166,7 +166,7 @@ export default function Feed() {
     setReportingId(null);
   }
 
-  if (loading) return <div className="flex h-screen items-center justify-center text-muted">Loading…</div>;
+  if (loading) return <div className="flex h-[100dvh] items-center justify-center text-muted">Loading…</div>;
 
   if (posts.length === 0) {
     return (
@@ -190,7 +190,7 @@ export default function Feed() {
     <div className="fixed inset-0 z-30 bg-black">
       <div ref={containerRef} className="h-full snap-y snap-mandatory overflow-y-scroll">
         {posts.map((post) => (
-          <div key={post.id} data-post-id={post.id} className="relative flex h-screen w-full snap-start items-center justify-center bg-black">
+          <div key={post.id} data-post-id={post.id} className="relative flex h-[100dvh] w-full snap-start items-center justify-center bg-black">
             <HlsVideo
               videoRef={(el) => { videoRefs.current[post.id] = el; }}
               src={post.video_url}
