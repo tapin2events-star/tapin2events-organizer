@@ -10,6 +10,8 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
   const [role, setRole] = useState<CollaborationRole>('editor');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resentId, setResentId] = useState<string | null>(null);
 
   async function load() {
     const { data } = await supabase
@@ -24,6 +26,38 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
   useEffect(() => {
     load();
   }, [eventId]);
+
+  async function sendInviteEmail(invitedEmail: string, invitedRole: string) {
+    const eventUrl = `${window.location.origin}${import.meta.env.BASE_URL}organizer/events/${eventId}`;
+    const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+        <div style="font-size:20px;font-weight:800;">TapIN</div>
+        <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">You've been invited to help organize an event</div>
+      </div>
+      <div style="padding:24px;">
+        <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${eventTitle}</h1>
+        <p style="font-size:14px;color:#374151;">${user?.email} has invited you to help manage this event on TapIN as a <strong>${invitedRole}</strong>.</p>
+        <p style="margin-top:8px;font-size:13px;color:#6b7280;">Sign in with this email address (${invitedEmail}) to access it.</p>
+        <a href="${eventUrl}" style="display:block;text-align:center;margin-top:16px;background:linear-gradient(135deg,#4f46e5,#14b8a6);color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">Go to Event</a>
+      </div>
+    </div>`;
+    await supabase.functions.invoke('send-ticket-confirmation', {
+      body: { to: invitedEmail, subject: `You've been invited to help organize ${eventTitle}`, html },
+    });
+  }
+
+  async function resendInvite(collabId: string, collaboratorEmail: string, collabRole: string) {
+    setResendingId(collabId);
+    setResentId(null);
+    try {
+      await sendInviteEmail(collaboratorEmail, collabRole);
+      setResentId(collabId);
+    } catch (e) {
+      console.error('Resend invite email failed:', e);
+      setError('Could not resend the invite email. Please try again.');
+    }
+    setResendingId(null);
+  }
 
   async function handleInvite(e: FormEvent) {
     e.preventDefault();
@@ -71,23 +105,8 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
     setEmail('');
     load();
 
-    const eventUrl = `${window.location.origin}${import.meta.env.BASE_URL}organizer/events/${eventId}`;
-    const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
-        <div style="font-size:20px;font-weight:800;">TapIN</div>
-        <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">You've been invited to help organize an event</div>
-      </div>
-      <div style="padding:24px;">
-        <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${eventTitle}</h1>
-        <p style="font-size:14px;color:#374151;">${user.email} has invited you to help manage this event on TapIN as a <strong>${invitedRole}</strong>.</p>
-        <p style="margin-top:8px;font-size:13px;color:#6b7280;">Sign in with this email address (${invitedEmail}) to access it.</p>
-        <a href="${eventUrl}" style="display:block;text-align:center;margin-top:16px;background:linear-gradient(135deg,#4f46e5,#14b8a6);color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">Go to Event</a>
-      </div>
-    </div>`;
     try {
-      await supabase.functions.invoke('send-ticket-confirmation', {
-        body: { to: invitedEmail, subject: `You've been invited to help organize ${eventTitle}`, html },
-      });
+      await sendInviteEmail(invitedEmail, invitedRole);
     } catch (e) {
       console.error('Team invite email failed:', e);
     }
@@ -153,9 +172,18 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
                   {c.role} · {c.status}
                 </p>
               </div>
-              <button onClick={() => remove(c.id, c.collaborator_email)} className="text-xs text-magenta hover:text-magenta/80">
-                Remove
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => resendInvite(c.id, c.collaborator_email, c.role)}
+                  disabled={resendingId === c.id}
+                  className="text-xs text-marigold hover:text-marigold/80 disabled:opacity-50"
+                >
+                  {resendingId === c.id ? 'Sending…' : resentId === c.id ? 'Sent!' : 'Resend invite'}
+                </button>
+                <button onClick={() => remove(c.id, c.collaborator_email)} className="text-xs text-magenta hover:text-magenta/80">
+                  Remove
+                </button>
+              </div>
             </li>
           ))}
         </ul>
