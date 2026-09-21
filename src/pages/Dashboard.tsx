@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import TicketStubCard from '../components/TicketStubCard';
 import PayoutsCard from '../components/PayoutsCard';
 import MyResourceBookings from '../components/resources/MyResourceBookings';
+import FilterPillGroup from '../components/FilterPillGroup';
 import type { TapEvent } from '../lib/types';
 
 export default function Dashboard() {
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const [eventsWithPendingVendors, setEventsWithPendingVendors] = useState<Set<string>>(new Set());
   const [seriesPassFilter, setSeriesPassFilter] = useState<'all' | 'has_series_passes'>('all');
   const [eventsWithSeriesPasses, setEventsWithSeriesPasses] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -94,33 +96,74 @@ export default function Dashboard() {
       {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
       {!loading && events.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
-            <option value="all">All statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
-            <option value="all">Free &amp; paid</option>
-            <option value="free">Free only</option>
-            <option value="paid">Paid only</option>
-          </select>
-          <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value as typeof timeFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
-            <option value="all">Any date</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="past">Past</option>
-          </select>
-          {eventsWithPendingVendors.size > 0 && (
-            <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value as typeof vendorFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
-              <option value="all">All events</option>
-              <option value="pending_vendors">Has pending vendor applications</option>
-            </select>
-          )}
-          {eventsWithSeriesPasses.size > 0 && (
-            <select value={seriesPassFilter} onChange={(e) => setSeriesPassFilter(e.target.value as typeof seriesPassFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
-              <option value="all">All events</option>
-              <option value="has_series_passes">Has series pass sales</option>
-            </select>
+        <div className="mb-4">
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+              showFilters || statusFilter !== 'all' || typeFilter !== 'all' || timeFilter !== 'all' || vendorFilter !== 'all' || seriesPassFilter !== 'all'
+                ? 'border-marigold bg-marigold/10 text-marigold'
+                : 'border-gray-300 bg-surface2 text-bone'
+            }`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 5h16M7 12h10M10 19h4" strokeLinecap="round" /></svg>
+            Filters
+          </button>
+
+          {showFilters && (
+            <div className="mt-3 flex flex-col gap-4 rounded-xl border border-gray-200 bg-surface2 p-4">
+              <FilterPillGroup
+                label="Status"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: 'all', label: 'All statuses' },
+                  { value: 'published', label: 'Published' },
+                  { value: 'draft', label: 'Draft' },
+                ]}
+              />
+              <FilterPillGroup
+                label="Type"
+                value={typeFilter}
+                onChange={setTypeFilter}
+                options={[
+                  { value: 'all', label: 'Free & paid' },
+                  { value: 'free', label: 'Free only' },
+                  { value: 'paid', label: 'Paid only' },
+                ]}
+              />
+              <FilterPillGroup
+                label="Date"
+                value={timeFilter}
+                onChange={setTimeFilter}
+                options={[
+                  { value: 'all', label: 'Any date' },
+                  { value: 'upcoming', label: 'Upcoming' },
+                  { value: 'past', label: 'Past' },
+                ]}
+              />
+              {eventsWithPendingVendors.size > 0 && (
+                <FilterPillGroup
+                  label="Vendors"
+                  value={vendorFilter}
+                  onChange={setVendorFilter}
+                  options={[
+                    { value: 'all', label: 'All events' },
+                    { value: 'pending_vendors', label: 'Has pending vendor applications' },
+                  ]}
+                />
+              )}
+              {eventsWithSeriesPasses.size > 0 && (
+                <FilterPillGroup
+                  label="Series passes"
+                  value={seriesPassFilter}
+                  onChange={setSeriesPassFilter}
+                  options={[
+                    { value: 'all', label: 'All events' },
+                    { value: 'has_series_passes', label: 'Has series pass sales' },
+                  ]}
+                />
+              )}
+            </div>
           )}
         </div>
       )}
