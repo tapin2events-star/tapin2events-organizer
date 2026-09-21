@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DiscoverEventCard from '../components/discover/DiscoverEventCard';
+import DiscoverMap from '../components/discover/DiscoverMap';
+
+type DiscoverTab = 'all' | 'map' | 'today' | 'saved';
 
 export default function Discover() {
   const { user } = useAuth();
@@ -15,6 +18,8 @@ export default function Discover() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [priceFilter, setPriceFilter] = useState<'' | 'free' | 'paid'>('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [tab, setTab] = useState<DiscoverTab>('all');
 
   useEffect(() => {
     (async () => {
@@ -93,6 +98,15 @@ export default function Discover() {
       .filter((e) => !priceFilter || e.event_type === priceFilter);
   }, [events, search, category, priceFilter]);
 
+  const tabFiltered = useMemo(() => {
+    if (tab === 'saved') return filtered.filter((e) => savedIds.includes(e.id));
+    if (tab === 'today') {
+      const now = new Date();
+      return filtered.filter((e) => e.start_date && new Date(e.start_date).toDateString() === now.toDateString());
+    }
+    return filtered;
+  }, [filtered, tab, savedIds]);
+
   async function toggleSave(eventId: string) {
     if (!user?.email) {
       navigate('/login', { state: { from: location.pathname + location.search } });
@@ -106,60 +120,98 @@ export default function Discover() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+    <div className="min-h-screen bg-ink">
       <div className="mx-auto max-w-6xl px-4 py-10">
         <h1 className="font-display text-4xl font-extrabold text-gray-900">Discover Events</h1>
         <p className="mt-1 text-lg text-gray-500">Find amazing events happening near you</p>
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+        <Link
+          to="/resources"
+          className="mt-8 flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-white px-4 py-3 font-semibold text-purple hover:border-purple-300"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3" /><path d="M2 20c0-3 3-5 7-5s7 2 7 5" strokeLinecap="round" /><circle cx="17" cy="8" r="2.5" /><path d="M15 15.5c2.7.3 5 1.9 5 4.5" strokeLinecap="round" /></svg>
+          Artists &amp; Resources
+        </Link>
+
+        <div className="mt-4 flex items-center gap-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search events, venues, or descriptions"
             className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none placeholder:text-gray-400 focus-visible:border-marigold"
           />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none focus-visible:border-marigold"
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            aria-label="Toggle filters"
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${
+              showFilters || category || priceFilter ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 bg-white text-gray-500'
+            }`}
           >
-            <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <select
-            value={priceFilter}
-            onChange={(e) => setPriceFilter(e.target.value as '' | 'free' | 'paid')}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none focus-visible:border-marigold"
-          >
-            <option value="">Free & paid</option>
-            <option value="free">Free only</option>
-            <option value="paid">Paid only</option>
-          </select>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 5h16M7 12h10M10 19h4" strokeLinecap="round" /></svg>
+          </button>
         </div>
 
-        <Link
-          to="/resources"
-          className="mt-6 block rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-5 transition hover:border-purple-300"
-        >
-          <p className="text-xs font-semibold uppercase tracking-widest text-purple">Artists &amp; Resources</p>
-          <p className="mt-1 font-display text-xl font-bold text-gray-900">Discover artists and event resources</p>
-          <p className="mt-1 text-sm text-gray-500">Filter by artist category, state, or city, then open a profile to learn more and book.</p>
-        </Link>
+        {showFilters && (
+          <div className="mt-3 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none focus-visible:border-marigold"
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <select
+              value={priceFilter}
+              onChange={(e) => setPriceFilter(e.target.value as '' | 'free' | 'paid')}
+              className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none focus-visible:border-marigold"
+            >
+              <option value="">Free &amp; paid</option>
+              <option value="free">Free only</option>
+              <option value="paid">Paid only</option>
+            </select>
+          </div>
+        )}
 
         <p className="mt-6 text-sm text-gray-500">
           {loading ? 'Loading…' : `${filtered.length} event${filtered.length === 1 ? '' : 's'} found`}
         </p>
 
-        {!loading && filtered.length === 0 ? (
+        <div className="mt-3 flex gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1">
+          {([
+            { id: 'all', label: 'All Events' },
+            { id: 'map', label: 'Map' },
+            { id: 'today', label: 'Today' },
+            { id: 'saved', label: 'Saved' },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'map' ? (
+          <DiscoverMap events={filtered} />
+        ) : !loading && tabFiltered.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
-            <p className="text-lg font-semibold text-gray-500">No events found</p>
-            <p className="mt-1 text-gray-400">Try adjusting your search or filters</p>
+            <p className="text-lg font-semibold text-gray-500">
+              {tab === 'saved' ? 'No saved events yet' : tab === 'today' ? 'Nothing happening today' : 'No events found'}
+            </p>
+            <p className="mt-1 text-gray-400">
+              {tab === 'saved' ? 'Tap the bookmark icon on any event to save it here.' : 'Try adjusting your search or filters'}
+            </p>
           </div>
         ) : (
           <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((event) => (
+            {tabFiltered.map((event) => (
               <DiscoverEventCard
                 key={event.id}
                 event={event}
