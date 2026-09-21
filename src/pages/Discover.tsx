@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
@@ -138,6 +138,15 @@ export default function Discover() {
             <option value="paid">Paid only</option>
           </select>
         </div>
+
+        <Link
+          to="/resources"
+          className="mt-6 block rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-5 transition hover:border-purple-300"
+        >
+          <p className="text-xs font-semibold uppercase tracking-widest text-purple">Artists &amp; Resources</p>
+          <p className="mt-1 font-display text-xl font-bold text-gray-900">Discover artists and event resources</p>
+          <p className="mt-1 text-sm text-gray-500">Filter by artist category, state, or city, then open a profile to learn more and book.</p>
+        </Link>
 
         <p className="mt-6 text-sm text-gray-500">
           {loading ? 'Loading…' : `${filtered.length} event${filtered.length === 1 ? '' : 's'} found`}
