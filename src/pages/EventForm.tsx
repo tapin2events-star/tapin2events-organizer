@@ -154,6 +154,8 @@ export default function EventForm() {
       setWasAlreadyRecurring(!!data.is_recurring);
       if (data.recurrence_rule?.frequency) setRecurFrequency(data.recurrence_rule.frequency);
       if (data.recurrence_rule?.count) setRecurCount(String(data.recurrence_rule.count));
+      setSeriesPassEnabled(!!data.series_pass_enabled);
+      if (data.series_pass_discount != null) setSeriesPassDiscount(String(data.series_pass_discount));
       setLoading(false);
     })();
   }, [id, isEdit]);
@@ -278,6 +280,8 @@ export default function EventForm() {
       seating_sections: seatingEnabled
         ? seatingSections.map((s) => ({ ...s, total_seats: s.num_tables * s.seats_per_table }))
         : [],
+      series_pass_enabled: (isRecurring || wasAlreadyRecurring) ? seriesPassEnabled : false,
+      series_pass_discount: (isRecurring || wasAlreadyRecurring) && seriesPassEnabled ? Number(seriesPassDiscount) || 0 : null,
       poster_url: uploadedPosterUrl,
       social_links: { instagram: instagramUrl || null, facebook: facebookUrl || null, website: websiteUrl || null },
       status,
@@ -298,6 +302,21 @@ export default function EventForm() {
       setSaving(false);
       setError(error.message);
       return;
+    }
+
+    // A series pass setting belongs to the whole series, not just the one
+    // occurrence being edited -- the checkout flow reads it off the parent,
+    // and any occurrence's page displays it off itself, so every row in
+    // the series needs to agree.
+    if (isEdit && wasAlreadyRecurring) {
+      const seriesParentId = data.parent_event_id || data.id;
+      await supabase
+        .from('events')
+        .update({
+          series_pass_enabled: seriesPassEnabled,
+          series_pass_discount: seriesPassEnabled ? Number(seriesPassDiscount) || 0 : null,
+        })
+        .or(`id.eq.${seriesParentId},parent_event_id.eq.${seriesParentId}`);
     }
 
     // Recurring series: the just-created event is the parent. Each
@@ -655,17 +674,21 @@ export default function EventForm() {
                         <input type="number" min="2" max="52" value={recurCount} onChange={(e) => setRecurCount(e.target.value)} className={inputClass} />
                       </Field>
                     </div>
-
-                    <label className="flex items-center gap-2 text-sm text-muted">
-                      <input type="checkbox" checked={seriesPassEnabled} onChange={(e) => setSeriesPassEnabled(e.target.checked)} />
-                      Offer a discounted series pass covering every occurrence
-                    </label>
-                    {seriesPassEnabled && (
-                      <Field label="Series pass discount (% off buying all individually)">
-                        <input type="number" min="0" max="100" value={seriesPassDiscount} onChange={(e) => setSeriesPassDiscount(e.target.value)} className={`${inputClass} max-w-[160px]`} />
-                      </Field>
-                    )}
                   </div>
+                )}
+              </div>
+            )}
+
+            {(isRecurring || wasAlreadyRecurring) && (
+              <div className="mt-2 border-t border-gray-200 pt-4">
+                <label className="flex items-center gap-2 text-sm text-muted">
+                  <input type="checkbox" checked={seriesPassEnabled} onChange={(e) => setSeriesPassEnabled(e.target.checked)} />
+                  Offer a discounted series pass covering every occurrence
+                </label>
+                {seriesPassEnabled && (
+                  <Field label="Series pass discount (% off buying all individually)">
+                    <input type="number" min="0" max="100" value={seriesPassDiscount} onChange={(e) => setSeriesPassDiscount(e.target.value)} className={`${inputClass} max-w-[160px]`} />
+                  </Field>
                 )}
               </div>
             )}
