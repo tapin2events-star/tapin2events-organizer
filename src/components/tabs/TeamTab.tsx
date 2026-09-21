@@ -29,9 +29,37 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
     e.preventDefault();
     if (!email.trim() || !user?.email) return;
     setError(null);
+    const invitedEmail = email.trim().toLowerCase();
+
+    // The event_collaborations row is just a record of the invite --
+    // actual access is granted by events.collaborators, the array RLS
+    // checks for permission on tickets, orders, tasks, and vendor apps.
+    // Both need updating, or the invite would look successful while
+    // granting no real access.
+    const { data: currentEvent, error: fetchError } = await supabase
+      .from('events')
+      .select('collaborators')
+      .eq('id', eventId)
+      .single();
+    if (fetchError) {
+      setError(fetchError.message);
+      return;
+    }
+    const existingCollaborators: string[] = currentEvent?.collaborators ?? [];
+    if (!existingCollaborators.includes(invitedEmail)) {
+      const { error: grantError } = await supabase
+        .from('events')
+        .update({ collaborators: [...existingCollaborators, invitedEmail] })
+        .eq('id', eventId);
+      if (grantError) {
+        setError(grantError.message);
+        return;
+      }
+    }
+
     const { error } = await supabase.from('event_collaborations').insert({
       event_id: eventId,
-      collaborator_email: email,
+      collaborator_email: invitedEmail,
       role,
       invited_by: user.email,
     });
@@ -39,11 +67,11 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
       setError(error.message);
       return;
     }
-    const invitedEmail = email;
     const invitedRole = role;
     setEmail('');
     load();
 
+    const eventUrl = `${window.location.origin}${import.meta.env.BASE_URL}organizer/events/${eventId}`;
     const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
       <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
         <div style="font-size:20px;font-weight:800;">TapIN</div>
@@ -52,7 +80,8 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
       <div style="padding:24px;">
         <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${eventTitle}</h1>
         <p style="font-size:14px;color:#374151;">${user.email} has invited you to help manage this event on TapIN as a <strong>${invitedRole}</strong>.</p>
-        <p style="margin-top:16px;font-size:13px;color:#6b7280;">Sign in with this email address (${invitedEmail}) to access it.</p>
+        <p style="margin-top:8px;font-size:13px;color:#6b7280;">Sign in with this email address (${invitedEmail}) to access it.</p>
+        <a href="${eventUrl}" style="display:block;text-align:center;margin-top:16px;background:linear-gradient(135deg,#4f46e5,#14b8a6);color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">Go to Event</a>
       </div>
     </div>`;
     try {
@@ -64,7 +93,10 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: string, collaboratorEmail: string) {
+    const { data: currentEvent } = await supabase.from('events').select('collaborators').eq('id', eventId).single();
+    const remaining = (currentEvent?.collaborators ?? []).filter((e: string) => e !== collaboratorEmail);
+    await supabase.from('events').update({ collaborators: remaining }).eq('id', eventId);
     await supabase.from('event_collaborations').delete().eq('id', id);
     load();
   }
@@ -121,7 +153,7 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
                   {c.role} · {c.status}
                 </p>
               </div>
-              <button onClick={() => remove(c.id)} className="text-xs text-magenta hover:text-magenta/80">
+              <button onClick={() => remove(c.id, c.collaborator_email)} className="text-xs text-magenta hover:text-magenta/80">
                 Remove
               </button>
             </li>
