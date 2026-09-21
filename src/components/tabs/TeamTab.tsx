@@ -30,7 +30,7 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
   async function sendInviteEmail(invitedEmail: string, invitedRole: string) {
     const eventUrl = `${window.location.origin}${import.meta.env.BASE_URL}organizer/events/${eventId}`;
     const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+      <div style="background:#4f46e5;padding:24px;color:white;">
         <div style="font-size:20px;font-weight:800;">TapIN</div>
         <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">You've been invited to help organize an event</div>
       </div>
@@ -38,7 +38,7 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
         <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${eventTitle}</h1>
         <p style="font-size:14px;color:#374151;">${user?.email} has invited you to help manage this event on TapIN as a <strong>${invitedRole}</strong>.</p>
         <p style="margin-top:8px;font-size:13px;color:#6b7280;">Sign in with this email address (${invitedEmail}) to access it.</p>
-        <a href="${eventUrl}" style="display:block;text-align:center;margin-top:16px;background:linear-gradient(135deg,#4f46e5,#14b8a6);color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">Go to Event</a>
+        <a href="${eventUrl}" style="display:block;text-align:center;margin-top:16px;background:#4f46e5;color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">Go to Event</a>
       </div>
     </div>`;
     await supabase.functions.invoke('send-ticket-confirmation', {

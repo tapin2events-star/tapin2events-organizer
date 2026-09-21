@@ -59,7 +59,7 @@ function buildTicketEmailHtml(t: MyTicket, qrUrl: string, passUrl: string) {
     : 'Date to be announced';
   return `
     <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+      <div style="background:#4f46e5;padding:24px;color:white;">
         <div style="font-size:20px;font-weight:800;">TapIN</div>
         <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">Your ticket</div>
       </div>
@@ -75,7 +75,7 @@ function buildTicketEmailHtml(t: MyTicket, qrUrl: string, passUrl: string) {
           <img src="${qrUrl}" width="180" height="180" alt="QR code" style="border:1px solid #e5e7eb;border-radius:16px;padding:8px;background:#ffffff;" />
           <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Scan this code at the entrance</p>
         </div>
-        <a href="${passUrl}" style="display:block;text-align:center;background:linear-gradient(135deg,#4f46e5,#14b8a6);color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">View Your Ticket Online</a>
+        <a href="${passUrl}" style="display:block;text-align:center;background:#4f46e5;color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">View Your Ticket Online</a>
       </div>
     </div>`;
 }

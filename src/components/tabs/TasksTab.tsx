@@ -51,7 +51,7 @@ export default function TasksTab({ eventId, eventTitle }: { eventId: string; eve
 
     if (taskAssignee.trim()) {
       const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+        <div style="background:#4f46e5;padding:24px;color:white;">
           <div style="font-size:20px;font-weight:800;">TapIN</div>
           <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">New task assigned to you</div>
         </div>
