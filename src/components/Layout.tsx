@@ -49,14 +49,14 @@ export default function Layout() {
 
       {/* Backdrop, mobile only, closes the drawer on tap */}
       {menuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setMenuOpen(false)} />
+        <div className="fixed inset-0 z-[1001] bg-black/30 md:hidden" onClick={() => setMenuOpen(false)} />
       )}
 
       {/* Sidebar: persistent column on desktop, slide-in drawer on mobile.
           Present on every page now, not just the organizer console, so
           there's exactly one navigation system for the whole app. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-surface px-5 py-6 transition-transform duration-200 md:static md:z-auto md:w-60 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-[1002] flex w-64 shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-surface px-5 py-6 transition-transform duration-200 md:static md:z-auto md:w-60 md:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
