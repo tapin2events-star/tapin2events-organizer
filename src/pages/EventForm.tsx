@@ -403,7 +403,7 @@ export default function EventForm() {
                 type="button"
                 onClick={() => setStep(n)}
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition ${
-                  step === n ? 'bg-gradient-to-r from-marigold to-mint text-white' : 'bg-surface2 text-muted hover:text-bone'
+                  step === n ? 'bg-gradient-to-r from-marigold to-teal text-white' : 'bg-surface2 text-muted hover:text-bone'
                 }`}
               >
                 {n}

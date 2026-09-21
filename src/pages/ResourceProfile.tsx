@@ -278,7 +278,7 @@ export default function ResourceProfile() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
                   >
                     {submitting ? 'Sending…' : 'Send booking request'}
                   </button>

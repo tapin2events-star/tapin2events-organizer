@@ -53,7 +53,7 @@ export default function Profile() {
         {profile.profile_photo ? (
           <img src={profile.profile_photo} alt="" className="h-16 w-16 rounded-full object-cover" />
         ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-mint font-display text-2xl font-bold text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal font-display text-2xl font-bold text-white">
             {(profile.full_name || profile.email).charAt(0).toUpperCase()}
           </div>
         )}

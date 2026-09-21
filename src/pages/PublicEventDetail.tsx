@@ -282,7 +282,7 @@ export default function PublicEventDetail() {
   const isFree = event.event_type === 'free';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-ink">
       {/* Hero: title and key facts live directly on the image, editorial-style,
           instead of a separate text block below a plain picture frame. */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900 sm:aspect-[21/9]">
@@ -403,7 +403,7 @@ export default function PublicEventDetail() {
             ) : !user ? (
               <button
                 onClick={() => navigate('/login', { state: { from: location.pathname } })}
-                className="mt-3 rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
+                className="mt-3 rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
               >
                 Sign in to choose seats
               </button>
@@ -463,7 +463,7 @@ export default function PublicEventDetail() {
                         <button
                           onClick={() => handleBuySeats()}
                           disabled={registering}
-                          className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                          className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                         >
                           {registering ? 'Please wait…' : `Buy ${selectedSeats.length} seat${selectedSeats.length === 1 ? '' : 's'} — $${total.toFixed(2)}`}
                         </button>
@@ -491,7 +491,7 @@ export default function PublicEventDetail() {
             ) : !user ? (
               <button
                 onClick={() => navigate('/login', { state: { from: location.pathname } })}
-                className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
+                className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
               >
                 Sign in to {isFree ? 'register' : 'buy a ticket'}
               </button>
@@ -502,7 +502,7 @@ export default function PublicEventDetail() {
                 <button
                   onClick={isFree ? handleRegister : handleBuyTicket}
                   disabled={registering}
-                  className="rounded-xl bg-gradient-to-r from-marigold to-mint px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
                 </button>

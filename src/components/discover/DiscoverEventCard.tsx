@@ -129,7 +129,7 @@ export default function DiscoverEventCard({
           ) : (
             <Link
               to={`/events/${event.id}`}
-              className="rounded-lg bg-gradient-to-r from-marigold to-mint px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
             >
               {event.event_type === 'free' ? 'Register' : 'Get Tickets'}
             </Link>
