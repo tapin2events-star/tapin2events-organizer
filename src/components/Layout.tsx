@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
+import BottomTabBar from './BottomTabBar';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Discover', end: true },
@@ -30,7 +31,7 @@ export default function Layout() {
       {/* Mobile top bar: only visible below md */}
       <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden">
         <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
-          TAP<span className="text-marigold">IN</span>
+          <span className="bg-gradient-to-r from-marigold to-teal bg-clip-text text-transparent">TapIN</span>
         </Link>
         <div className="flex items-center gap-1">
           <NotificationBell />
@@ -61,7 +62,7 @@ export default function Layout() {
       >
         <div className="mb-8 flex items-center justify-between">
           <Link to="/" className="font-display text-2xl font-extrabold tracking-tight text-gray-900">
-            TAP<span className="text-marigold">IN</span>
+            <span className="bg-gradient-to-r from-marigold to-teal bg-clip-text text-transparent">TapIN</span>
           </Link>
           <div className="hidden md:block">
             <NotificationBell />
@@ -185,9 +186,11 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8">
+      <main className="min-w-0 flex-1 px-4 py-6 pt-20 pb-24 md:px-8 md:py-8 md:pt-8 md:pb-8">
         <Outlet />
       </main>
+
+      <BottomTabBar />
     </div>
   );
 }

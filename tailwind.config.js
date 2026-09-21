@@ -7,13 +7,16 @@ export default {
       // a light shadcn/ui theme (white cards, gray-900 text, indigo accents)
       // rather than the dark ticket-stub concept this app started with.
       colors: {
-        ink: "#FFFFFF",       // page background
+        ink: "#F5F5FB",       // page background -- soft lavender tint, not pure white
         surface: "#FFFFFF",   // card background
         surface2: "#F9FAFB",  // input / secondary fill
-        marigold: "#4F46E5",  // primary action (was orange -> now indigo-600)
-        magenta: "#DC2626",   // destructive/error (now red-600)
-        mint: "#16A34A",      // success (now green-600)
-        bone: "#111827",      // primary text (now near-black, gray-900)
+        marigold: "#4F46E5",  // primary action / brand gradient start (indigo)
+        teal: "#14B8A6",      // brand gradient end (paired with marigold) -- distinct from mint
+        purple: "#9333EA",    // secondary "resources/featured" gradient start
+        pink: "#EC4899",      // secondary "resources/featured" gradient end
+        magenta: "#DC2626",   // destructive/error (kept as-is, despite the name -- this is red)
+        mint: "#16A34A",      // success/confirmed state (kept as a true green, distinct from teal)
+        bone: "#111827",      // primary text (near-black, gray-900)
         muted: "#6B7280",     // secondary text (gray-500)
       },
       fontFamily: {
