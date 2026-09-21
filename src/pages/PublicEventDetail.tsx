@@ -6,6 +6,7 @@ import type { TapEvent, Ticket } from '../lib/types';
 import ShopSection from '../components/products/ShopSection';
 import VendorApplicationForm from '../components/VendorApplicationForm';
 import SeatPicker from '../components/SeatPicker';
+import { resolveFeatureIcon } from '../lib/featureIconMap';
 
 export default function PublicEventDetail() {
   const location = useLocation();
@@ -577,8 +578,10 @@ export default function PublicEventDetail() {
             {event.features && event.features.length > 0 && (
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {event.features.map((f) => (
-                  <div key={f.title} className="flex items-start gap-2.5 rounded-xl bg-gray-50 p-3">
-                    <span className="text-xl leading-none">{f.icon}</span>
+                  <div key={f.title} className="flex items-start gap-3 rounded-xl bg-gray-50 p-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-lg leading-none">
+                      {resolveFeatureIcon(f.icon)}
+                    </span>
                     <span>
                       <span className="block text-sm font-semibold text-gray-900">{f.title}</span>
                       {f.description && <span className="block text-xs text-gray-500">{f.description}</span>}
