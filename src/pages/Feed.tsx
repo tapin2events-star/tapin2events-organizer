@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import BottomTabBar from '../components/BottomTabBar';
+import HlsVideo from '../components/feed/HlsVideo';
+import CreatePostModal from '../components/feed/CreatePostModal';
 
 interface Post {
   id: string;
@@ -34,51 +36,54 @@ export default function Feed() {
   const [newComment, setNewComment] = useState('');
   const [shareCopiedId, setShareCopiedId] = useState<string | null>(null);
   const [reportingId, setReportingId] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    (async () => {
-      const { data: postRows, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(30);
-      if (error) {
-        console.error('Failed to load feed:', error);
-        setLoading(false);
-        return;
-      }
-      const rows = postRows ?? [];
-      const postIds = rows.map((p) => p.id);
-      const authorEmails = [...new Set(rows.map((p) => p.author_email))];
-
-      const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }] = await Promise.all([
-        authorEmails.length ? supabase.from('profiles').select('email, full_name').in('email', authorEmails) : Promise.resolve({ data: [] }),
-        postIds.length ? supabase.from('post_likes').select('post_id') : Promise.resolve({ data: [] }),
-        postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active') : Promise.resolve({ data: [] }),
-        user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
-      ]);
-
-      const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
-      const likeCountByPost = new Map<string, number>();
-      (likes ?? []).forEach((l) => likeCountByPost.set(l.post_id, (likeCountByPost.get(l.post_id) ?? 0) + 1));
-      const commentCountByPost = new Map<string, number>();
-      (commentCounts ?? []).forEach((c) => commentCountByPost.set(c.post_id, (commentCountByPost.get(c.post_id) ?? 0) + 1));
-      const myLikedSet = new Set((myLikes ?? []).map((l) => l.post_id));
-
-      setPosts(
-        rows.map((p) => ({
-          ...p,
-          author_name: namesByEmail.get(p.author_email) || p.author_email,
-          like_count: likeCountByPost.get(p.id) ?? 0,
-          comment_count: commentCountByPost.get(p.id) ?? 0,
-          liked_by_me: myLikedSet.has(p.id),
-        }))
-      );
+  async function loadPosts() {
+    const { data: postRows, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (error) {
+      console.error('Failed to load feed:', error);
       setLoading(false);
-    })();
+      return;
+    }
+    const rows = postRows ?? [];
+    const postIds = rows.map((p) => p.id);
+    const authorEmails = [...new Set(rows.map((p) => p.author_email))];
+
+    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }] = await Promise.all([
+      authorEmails.length ? supabase.from('profiles').select('email, full_name').in('email', authorEmails) : Promise.resolve({ data: [] }),
+      postIds.length ? supabase.from('post_likes').select('post_id') : Promise.resolve({ data: [] }),
+      postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active') : Promise.resolve({ data: [] }),
+      user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
+    ]);
+
+    const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
+    const likeCountByPost = new Map<string, number>();
+    (likes ?? []).forEach((l) => likeCountByPost.set(l.post_id, (likeCountByPost.get(l.post_id) ?? 0) + 1));
+    const commentCountByPost = new Map<string, number>();
+    (commentCounts ?? []).forEach((c) => commentCountByPost.set(c.post_id, (commentCountByPost.get(c.post_id) ?? 0) + 1));
+    const myLikedSet = new Set((myLikes ?? []).map((l) => l.post_id));
+
+    setPosts(
+      rows.map((p) => ({
+        ...p,
+        author_name: namesByEmail.get(p.author_email) || p.author_email,
+        like_count: likeCountByPost.get(p.id) ?? 0,
+        comment_count: commentCountByPost.get(p.id) ?? 0,
+        liked_by_me: myLikedSet.has(p.id),
+      }))
+    );
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadPosts();
   }, [user?.email]);
 
   // TikTok-style feeds only autoplay whichever video is actually on
@@ -166,6 +171,14 @@ export default function Feed() {
       <div className="flex h-[70vh] flex-col items-center justify-center text-center">
         <p className="font-display text-xl font-semibold text-bone">No posts yet</p>
         <p className="mt-1 text-sm text-muted">Be the first to share something with the community.</p>
+        {user && (
+          <button onClick={() => setShowCreateModal(true)} className="mt-4 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">
+            + New Post
+          </button>
+        )}
+        {showCreateModal && (
+          <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
+        )}
       </div>
     );
   }
@@ -175,8 +188,8 @@ export default function Feed() {
       <div ref={containerRef} className="h-full snap-y snap-mandatory overflow-y-scroll">
         {posts.map((post) => (
           <div key={post.id} data-post-id={post.id} className="relative flex h-screen w-full snap-start items-center justify-center bg-black">
-            <video
-              ref={(el) => { videoRefs.current[post.id] = el; }}
+            <HlsVideo
+              videoRef={(el) => { videoRefs.current[post.id] = el; }}
               src={post.video_url}
               poster={post.thumbnail_url ?? undefined}
               className="h-full w-full object-contain"
@@ -192,6 +205,15 @@ export default function Feed() {
             <Link to="/" className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white">
               &larr;
             </Link>
+            {user && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                aria-label="New post"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
+              </button>
+            )}
 
             <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
               <button onClick={() => toggleLike(post)} className="flex flex-col items-center gap-1 text-white">
@@ -280,6 +302,9 @@ export default function Feed() {
             <button onClick={() => setReportingId(null)} className="mt-3 text-sm text-muted">Cancel</button>
           </div>
         </div>
+      )}
+      {showCreateModal && (
+        <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
       )}
       <BottomTabBar />
     </div>

@@ -20,11 +20,14 @@ import ResourceSignup from './pages/ResourceSignup';
 import ResourceDashboard from './pages/ResourceDashboard';
 import ProductsPage from './pages/ProductsPage';
 import AdminDashboard from './pages/AdminDashboard';
-import Feed from './pages/Feed';
 
 // Only organizers checking guests in ever need this, and its QR-scanning
 // library is large — code-split it so public visitors never download it.
 const CheckIn = lazy(() => import('./pages/CheckIn'));
+// Feed pulls in hls.js for cross-browser video playback -- a meaningfully
+// large library that visitors who never open the feed shouldn't have to
+// download as part of the app's main bundle.
+const Feed = lazy(() => import('./pages/Feed'));
 
 export default function App() {
   return (
@@ -32,7 +35,14 @@ export default function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/feed" element={<Feed />} />
+          <Route
+            path="/feed"
+            element={
+              <Suspense fallback={<div className="flex h-screen items-center justify-center bg-black text-white">Loading…</div>}>
+                <Feed />
+              </Suspense>
+            }
+          />
 
           {/* One shared sidebar shell for the entire app now — public pages
               and organizer pages alike. Auth is enforced per-route below via
