@@ -12,13 +12,12 @@ const TABS = [
     ),
   },
   {
-    to: '/resources',
-    label: 'Resources',
-    end: false,
+    to: '/feed',
+    label: 'Feed',
+    end: true,
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2}>
-        <circle cx="9" cy="8" r="3" /><path d="M2 20c0-3 3-5 7-5s7 2 7 5" strokeLinecap="round" />
-        <circle cx="17" cy="8" r="2.5" /><path d="M15 15.5c2.7.3 5 1.9 5 4.5" strokeLinecap="round" />
+        <rect x="4" y="4" width="16" height="16" rx="3" /><path d="M9 8h6M9 12h6M9 16h3" strokeLinecap="round" />
       </svg>
     ),
   },
