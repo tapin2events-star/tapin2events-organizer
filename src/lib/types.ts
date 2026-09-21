@@ -27,6 +27,8 @@ export interface TapEvent {
   max_capacity: number | null;
   status: EventStatus;
   is_recurring: boolean;
+  series_pass_enabled: boolean | null;
+  series_pass_discount: number | null;
   is_online: boolean;
   is_featured: boolean;
   organizer_id: string;

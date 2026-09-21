@@ -253,6 +253,28 @@ export default function PublicEventDetail() {
     setSelectedSeats((prev) => (prev.includes(seatLabel) ? prev.filter((s) => s !== seatLabel) : [...prev, seatLabel]));
   }
 
+  async function handleBuySeriesPass() {
+    if (!id || !event) return;
+    setRegistering(true);
+    setRegisterError(null);
+
+    const base = window.location.origin + import.meta.env.BASE_URL;
+    const { data, error } = await supabase.functions.invoke('create-series-pass-checkout', {
+      body: {
+        event_id: id,
+        successUrl: `${base}events/${id}?checkout=success`,
+        cancelUrl: `${base}events/${id}?checkout=cancelled`,
+      },
+    });
+
+    setRegistering(false);
+    if (error || !data?.url) {
+      setRegisterError(error?.message || 'Something went wrong starting checkout. Please try again.');
+      return;
+    }
+    window.location.href = data.url;
+  }
+
   if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
   if (!event) return <div className="p-10 text-center text-magenta">Event not found.</div>;
 
@@ -506,6 +528,41 @@ export default function PublicEventDetail() {
                 </Link>
               ))}
             </div>
+
+            {event.series_pass_enabled && !myTicket && (() => {
+              const fullPrice = (event.ticket_price ?? 0) * seriesEvents.length;
+              const discount = event.series_pass_discount ?? 0;
+              const passPrice = Math.round(fullPrice * (1 - discount / 100) * 100) / 100;
+              return (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-indigo-50 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      Series pass — all {seriesEvents.length} dates for ${passPrice.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {discount}% off the ${fullPrice.toFixed(2)} price of buying each date separately
+                    </p>
+                  </div>
+                  {!user ? (
+                    <button
+                      onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                      className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90"
+                    >
+                      Sign in to buy
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleBuySeriesPass}
+                      disabled={registering}
+                      className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50"
+                    >
+                      {registering ? 'Please wait…' : 'Buy series pass'}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+            {registerError && <p className="mt-2 text-sm text-magenta">{registerError}</p>}
           </div>
         )}
 
