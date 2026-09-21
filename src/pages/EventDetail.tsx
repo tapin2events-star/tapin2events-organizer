@@ -134,8 +134,8 @@ export default function EventDetail() {
           <ProductOrdersPanel ownerType="event" ownerId={id} />
         </>
       )}
-      {tab === 'Tasks' && <TasksTab eventId={id} />}
-      {tab === 'Team' && <TeamTab eventId={id} />}
+      {tab === 'Tasks' && <TasksTab eventId={id} eventTitle={event.title} />}
+      {tab === 'Team' && <TeamTab eventId={id} eventTitle={event.title} />}
       {tab === 'Vendor applications' && <VendorApplicationsTab eventId={id} />}
     </div>
   );

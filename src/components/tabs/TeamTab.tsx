@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { CollaborationRole, EventCollaboration } from '../../lib/types';
 
-export default function TeamTab({ eventId }: { eventId: string }) {
+export default function TeamTab({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
   const { user } = useAuth();
   const [collabs, setCollabs] = useState<EventCollaboration[]>([]);
   const [email, setEmail] = useState('');
@@ -39,8 +39,29 @@ export default function TeamTab({ eventId }: { eventId: string }) {
       setError(error.message);
       return;
     }
+    const invitedEmail = email;
+    const invitedRole = role;
     setEmail('');
     load();
+
+    const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#4f46e5,#14b8a6);padding:24px;color:white;">
+        <div style="font-size:20px;font-weight:800;">TapIN</div>
+        <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">You've been invited to help organize an event</div>
+      </div>
+      <div style="padding:24px;">
+        <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${eventTitle}</h1>
+        <p style="font-size:14px;color:#374151;">${user.email} has invited you to help manage this event on TapIN as a <strong>${invitedRole}</strong>.</p>
+        <p style="margin-top:16px;font-size:13px;color:#6b7280;">Sign in with this email address (${invitedEmail}) to access it.</p>
+      </div>
+    </div>`;
+    try {
+      await supabase.functions.invoke('send-ticket-confirmation', {
+        body: { to: invitedEmail, subject: `You've been invited to help organize ${eventTitle}`, html },
+      });
+    } catch (e) {
+      console.error('Team invite email failed:', e);
+    }
   }
 
   async function remove(id: string) {
