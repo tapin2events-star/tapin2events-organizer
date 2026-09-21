@@ -18,6 +18,8 @@ export default function Dashboard() {
   const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [vendorFilter, setVendorFilter] = useState<'all' | 'pending_vendors'>('all');
   const [eventsWithPendingVendors, setEventsWithPendingVendors] = useState<Set<string>>(new Set());
+  const [seriesPassFilter, setSeriesPassFilter] = useState<'all' | 'has_series_passes'>('all');
+  const [eventsWithSeriesPasses, setEventsWithSeriesPasses] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +39,14 @@ export default function Dashboard() {
           .in('event_id', eventIds)
           .eq('status', 'pending');
         setEventsWithPendingVendors(new Set((pendingVendors ?? []).map((v) => v.event_id)));
+
+        const { data: seriesPassTickets } = await supabase
+          .from('tickets')
+          .select('event_id')
+          .in('event_id', eventIds)
+          .eq('ticket_type', 'series_pass')
+          .eq('status', 'confirmed');
+        setEventsWithSeriesPasses(new Set((seriesPassTickets ?? []).map((t) => t.event_id)));
       }
 
       if (user.email) {
@@ -58,12 +68,13 @@ export default function Dashboard() {
       .filter((e) => statusFilter === 'all' || e.status === statusFilter)
       .filter((e) => typeFilter === 'all' || (typeFilter === 'free' ? e.event_type === 'free' : e.event_type !== 'free'))
       .filter((e) => vendorFilter === 'all' || eventsWithPendingVendors.has(e.id))
+      .filter((e) => seriesPassFilter === 'all' || eventsWithSeriesPasses.has(e.id))
       .filter((e) => {
         if (timeFilter === 'all' || !e.start_date) return true;
         const isUpcoming = new Date(e.start_date) >= now;
         return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
       });
-  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors]);
+  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses]);
 
   return (
     <div>
@@ -103,6 +114,12 @@ export default function Dashboard() {
             <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value as typeof vendorFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
               <option value="all">All events</option>
               <option value="pending_vendors">Has pending vendor applications</option>
+            </select>
+          )}
+          {eventsWithSeriesPasses.size > 0 && (
+            <select value={seriesPassFilter} onChange={(e) => setSeriesPassFilter(e.target.value as typeof seriesPassFilter)} className="rounded-lg border border-gray-300 bg-surface2 px-3 py-1.5 text-sm text-bone">
+              <option value="all">All events</option>
+              <option value="has_series_passes">Has series pass sales</option>
             </select>
           )}
         </div>

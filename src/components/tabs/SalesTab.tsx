@@ -31,6 +31,13 @@ export default function SalesTab({ eventId }: { eventId: string }) {
   const totalAttendees = confirmed.reduce((sum, t) => sum + (t.quantity || 1), 0);
   const totalRevenue = confirmed.reduce((sum, t) => sum + (t.price_paid || 0) * (t.quantity || 1), 0);
 
+  // A single series pass purchase creates one ticket row per occurrence in
+  // the series, so counting rows would overcount -- count distinct orders
+  // instead to get the actual number of passes covering this date.
+  const seriesPassTickets = confirmed.filter((t) => t.ticket_type === 'series_pass');
+  const seriesPassCount = new Set(seriesPassTickets.map((t) => t.order_id)).size;
+  const seriesPassRevenue = seriesPassTickets.reduce((sum, t) => sum + (t.price_paid || 0) * (t.quantity || 1), 0);
+
   function exportCsv() {
     const rows = [
       ['Attendee email', 'Ticket type', 'Quantity', 'Amount', 'Status', 'Purchased'],
@@ -64,6 +71,13 @@ export default function SalesTab({ eventId }: { eventId: string }) {
           <p className="text-xs uppercase tracking-widest text-muted">Revenue</p>
           <p className="mt-1 font-display text-3xl font-extrabold text-mint">${totalRevenue.toFixed(2)}</p>
         </div>
+        {seriesPassCount > 0 && (
+          <div className="rounded-xl bg-surface border border-gray-200 p-5 sm:col-span-2">
+            <p className="text-xs uppercase tracking-widest text-muted">Series Passes Covering This Date</p>
+            <p className="mt-1 font-display text-3xl font-extrabold text-indigo-500">{seriesPassCount}</p>
+            <p className="mt-1 text-xs text-muted">${seriesPassRevenue.toFixed(2)} of the revenue above came from series passes</p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between">
