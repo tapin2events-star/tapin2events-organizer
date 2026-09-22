@@ -164,7 +164,7 @@ export default function Feed() {
             // race with React's own timing for applying the `muted` prop --
             // setting it explicitly and imperatively removes any doubt.
             video.muted = isMuted;
-            video.play().catch(() => {});
+            video.play().catch((err) => console.error('[Feed] video.play() rejected:', err?.name, err?.message));
             setIsPaused(false);
           } else {
             video.pause();

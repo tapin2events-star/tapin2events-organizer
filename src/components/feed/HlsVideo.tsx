@@ -31,6 +31,16 @@ export default function HlsVideo({ src, videoRef, shouldLoad, ...rest }: HlsVide
 
     if (Hls.isSupported()) {
       const hls = new Hls();
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        console.error('[HlsVideo] hls.js error:', {
+          type: data.type,
+          details: data.details,
+          fatal: data.fatal,
+          response: data.response,
+          reason: data.reason,
+          src,
+        });
+      });
       hls.loadSource(src);
       hls.attachMedia(video);
       return () => hls.destroy();
@@ -39,6 +49,16 @@ export default function HlsVideo({ src, videoRef, shouldLoad, ...rest }: HlsVide
     // Last-resort fallback for a browser with neither -- just try it directly.
     video.src = src;
   }, [src, shouldLoad]);
+
+  useEffect(() => {
+    const video = internalRef.current;
+    if (!video) return;
+    const onError = () => {
+      console.error('[HlsVideo] native <video> error:', video.error, 'src:', src);
+    };
+    video.addEventListener('error', onError);
+    return () => video.removeEventListener('error', onError);
+  }, [src]);
 
   return (
     <video
