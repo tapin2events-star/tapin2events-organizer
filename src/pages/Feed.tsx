@@ -144,10 +144,14 @@ export default function Feed() {
   // `autoPlay` prop that never updates as the user scrolls.
   useEffect(() => {
     if (visiblePosts.length === 0) return;
-    // Guarantee the very first post loads immediately, without waiting on
-    // the observer's async callback (it fires on the same tick in most
-    // browsers, but this removes any doubt for the post someone lands on).
+    // Guarantee the very first post loads AND plays immediately, without
+    // waiting on the observer's async callback. Previously only
+    // activatedPostIds (shouldLoad) was safeguarded here, not activePostId
+    // (shouldPlay) -- on a fresh page load, if the observer's initial
+    // callback was delayed or inconsistent, the first video would load but
+    // never actually be told to play until the user scrolled or tapped.
     setActivatedPostIds((prev) => new Set(prev).add(visiblePosts[0].id));
+    setActivePostId(visiblePosts[0].id);
 
     const observer = new IntersectionObserver(
       (entries) => {
