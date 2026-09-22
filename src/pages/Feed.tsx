@@ -218,16 +218,16 @@ export default function Feed() {
 
   return (
     <div className="fixed inset-0 z-30 bg-black">
-      {eventFilterId ? (
-        <div className="absolute inset-x-0 top-4 z-40 flex items-center justify-center gap-2 px-14">
-          <Link to={`/events/${eventFilterId}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white">
-            &larr;
-          </Link>
-          <p className="truncate text-center text-sm font-semibold text-white">{eventFilterTitle ?? 'Event posts'}</p>
-        </div>
-      ) : (
-        user && (
-          <div className="absolute inset-x-0 top-4 z-40 flex justify-center gap-1 rounded-full bg-black/40 p-1 mx-auto w-fit backdrop-blur-sm">
+      <div className="absolute inset-x-0 top-4 z-40 flex items-center justify-between gap-2 px-4">
+        {eventFilterId ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <Link to={`/events/${eventFilterId}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white">
+              &larr;
+            </Link>
+            <p className="truncate text-sm font-semibold text-white">{eventFilterTitle ?? 'Event posts'}</p>
+          </div>
+        ) : user ? (
+          <div className="flex gap-1 rounded-full bg-black/40 p-1 backdrop-blur-sm">
             {([
               { id: 'for_you', label: 'For You' },
               { id: 'following', label: 'Following' },
@@ -241,8 +241,33 @@ export default function Feed() {
               </button>
             ))}
           </div>
-        )
-      )}
+        ) : (
+          <span />
+        )}
+
+        <div className="flex shrink-0 items-center gap-2">
+          {user && !eventFilterId && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              aria-label="New post"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
+            </button>
+          )}
+          <button
+            onClick={() => setIsMuted((m) => !m)}
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
+          >
+            {isMuted ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H2v6h4l5 4V5z" strokeLinejoin="round" /><path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" /></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H2v6h4l5 4V5z" strokeLinejoin="round" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" strokeLinecap="round" /></svg>
+            )}
+          </button>
+        </div>
+      </div>
 
       {visiblePosts.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center text-center text-white">
@@ -285,30 +310,6 @@ export default function Feed() {
                 }
               }}
             />
-
-            <Link to="/" className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white">
-              &larr;
-            </Link>
-            {user && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                aria-label="New post"
-                className="absolute right-16 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
-              </button>
-            )}
-            <button
-              onClick={() => setIsMuted((m) => !m)}
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
-            >
-              {isMuted ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H2v6h4l5 4V5z" strokeLinejoin="round" /><path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" /></svg>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H2v6h4l5 4V5z" strokeLinejoin="round" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" strokeLinecap="round" /></svg>
-              )}
-            </button>
 
             <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
               <button onClick={() => toggleLike(post)} className="flex flex-col items-center gap-1 text-white">
