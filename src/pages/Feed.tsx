@@ -65,6 +65,7 @@ export default function Feed() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [activatedPostIds, setActivatedPostIds] = useState<Set<string>>(new Set());
   const [burstingHeartId, setBurstingHeartId] = useState<string | null>(null);
   const lastTapRef = useRef<Record<string, number>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
@@ -142,11 +143,19 @@ export default function Feed() {
   // `autoPlay` prop that never updates as the user scrolls.
   useEffect(() => {
     if (visiblePosts.length === 0) return;
+    // Guarantee the very first post loads immediately, without waiting on
+    // the observer's async callback (it fires on the same tick in most
+    // browsers, but this removes any doubt for the post someone lands on).
+    setActivatedPostIds((prev) => new Set(prev).add(visiblePosts[0].id));
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const postId = entry.target.getAttribute('data-post-id');
           const video = postId ? videoRefs.current[postId] : null;
+          if (entry.isIntersecting && postId) {
+            setActivatedPostIds((prev) => (prev.has(postId) ? prev : new Set(prev).add(postId)));
+          }
           if (!video) return;
           if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
             video.play().catch(() => {});
@@ -364,6 +373,7 @@ export default function Feed() {
             <HlsVideo
               videoRef={(el) => { videoRefs.current[post.id] = el; }}
               src={post.video_url}
+              shouldLoad={activatedPostIds.has(post.id)}
               poster={post.thumbnail_url ?? undefined}
               className="h-full w-full object-contain"
               loop
