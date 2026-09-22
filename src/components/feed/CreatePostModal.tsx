@@ -24,6 +24,7 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   const [eventSearch, setEventSearch] = useState('');
   const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(null);
+  const [myEvents, setMyEvents] = useState<EventOption[]>([]);
   const [stage, setStage] = useState<'pick' | 'uploading' | 'processing' | 'error'>('pick');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -44,6 +45,19 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
     }, 300);
     return () => clearTimeout(timeout);
   }, [eventSearch, selectedEvent]);
+
+  useEffect(() => {
+    setSelectedEvent(null);
+    setEventSearch('');
+    if (posterType === 'organizer' && user?.email) {
+      supabase
+        .from('events')
+        .select('id, title')
+        .eq('organizer_email', user.email)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => setMyEvents(data ?? []));
+    }
+  }, [posterType, user?.email]);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
@@ -243,7 +257,22 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
 
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-bone">Tag an Event <span className="text-muted font-normal">(Optional)</span></span>
-              {selectedEvent ? (
+              {posterType === 'organizer' ? (
+                myEvents.length > 0 ? (
+                  <select
+                    value={selectedEvent?.id ?? ''}
+                    onChange={(e) => setSelectedEvent(myEvents.find((ev) => ev.id === e.target.value) ?? null)}
+                    className="rounded-lg border border-gray-300 bg-surface2 px-3 py-2 text-sm text-bone outline-none focus-visible:border-marigold"
+                  >
+                    <option value="">Select one of your events</option>
+                    {myEvents.map((ev) => (
+                      <option key={ev.id} value={ev.id}>{ev.title}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-sm text-muted">You don't have any events to tag yet.</p>
+                )
+              ) : selectedEvent ? (
                 <div className="flex items-center justify-between rounded-lg border border-marigold bg-marigold/10 px-3 py-2 text-sm text-marigold">
                   {selectedEvent.title}
                   <button onClick={() => { setSelectedEvent(null); setEventSearch(''); }}>✕</button>
