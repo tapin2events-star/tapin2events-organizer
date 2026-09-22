@@ -69,6 +69,7 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [resources, setResources] = useState<ResourcePin[]>([]);
+  const [mapFilter, setMapFilter] = useState<'all' | 'events' | 'resources'>('all');
 
   useEffect(() => {
     supabase
@@ -83,16 +84,18 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
   const withCoords = useMemo(() => events.filter((e) => e.latitude != null && e.longitude != null), [events]);
 
   const visibleEvents = useMemo(() => {
+    if (mapFilter === 'resources') return [];
     if (!searchLocation) return withCoords;
     return withCoords.filter(
       (e) => haversineMiles(searchLocation.lat, searchLocation.lng, Number(e.latitude), Number(e.longitude)) <= radiusMiles
     );
-  }, [withCoords, searchLocation, radiusMiles]);
+  }, [withCoords, searchLocation, radiusMiles, mapFilter]);
 
   const visibleResources = useMemo(() => {
+    if (mapFilter === 'events') return [];
     if (!searchLocation) return resources;
     return resources.filter((r) => haversineMiles(searchLocation.lat, searchLocation.lng, r.latitude, r.longitude) <= radiusMiles);
-  }, [resources, searchLocation, radiusMiles]);
+  }, [resources, searchLocation, radiusMiles, mapFilter]);
 
   const fallbackCenter: [number, number] =
     withCoords.length > 0
@@ -154,9 +157,31 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
         <p className="text-xs font-semibold uppercase tracking-widest text-marigold">TapIN Map</p>
         <p className="mt-1 font-display text-xl font-bold text-gray-900">Explore events, artists, and resources near you</p>
         <p className="mt-1 text-sm text-gray-500">
-          Showing {visibleEvents.length} event{visibleEvents.length === 1 ? '' : 's'} and {visibleResources.length} resource{visibleResources.length === 1 ? '' : 's'}
+          {mapFilter === 'events'
+            ? `Showing ${visibleEvents.length} event${visibleEvents.length === 1 ? '' : 's'}`
+            : mapFilter === 'resources'
+            ? `Showing ${visibleResources.length} resource${visibleResources.length === 1 ? '' : 's'}`
+            : `Showing ${visibleEvents.length} event${visibleEvents.length === 1 ? '' : 's'} and ${visibleResources.length} resource${visibleResources.length === 1 ? '' : 's'}`}
           {searchLocation ? ` within ${radiusMiles} miles` : ''}
         </p>
+
+        <div className="mt-3 flex gap-1 rounded-xl bg-white/60 p-1">
+          {([
+            { id: 'all', label: 'All' },
+            { id: 'events', label: 'Events' },
+            { id: 'resources', label: 'Resources' },
+          ] as const).map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setMapFilter(f.id)}
+              className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                mapFilter === f.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
 
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input
@@ -216,7 +241,9 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
         <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
           <p className="text-lg font-semibold text-gray-500">Nothing to show on the map</p>
           <p className="mt-1 text-gray-400">
-            {searchLocation ? 'Try a larger radius or a different location.' : "None of the events or resources matching your filters have a location set yet."}
+            {searchLocation
+              ? 'Try a larger radius or a different location.'
+              : `None of the ${mapFilter === 'events' ? 'events' : mapFilter === 'resources' ? 'resources' : 'events or resources'} matching your filters have a location set yet.`}
           </p>
         </div>
       ) : (
