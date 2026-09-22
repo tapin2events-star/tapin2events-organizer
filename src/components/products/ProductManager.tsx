@@ -9,6 +9,18 @@ interface ProductManagerProps {
   sellerEmail: string;
 }
 
+interface VariantRow {
+  id: string | null; // null means not yet saved
+  size: string;
+  color: string;
+  priceAdjustment: string;
+  stockQuantity: string;
+}
+
+function emptyVariantRow(): VariantRow {
+  return { id: null, size: '', color: '', priceAdjustment: '0', stockQuantity: '0' };
+}
+
 const emptyForm = {
   name: '',
   description: '',
@@ -27,6 +39,8 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [variants, setVariants] = useState<VariantRow[]>([]);
+  const [removedVariantIds, setRemovedVariantIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,10 +64,12 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
     setForm(emptyForm);
     setImageUrl(null);
     setEditingId(null);
+    setVariants([]);
+    setRemovedVariantIds([]);
     setShowForm(true);
   }
 
-  function startEdit(p: Product) {
+  async function startEdit(p: Product) {
     setForm({
       name: p.name,
       description: p.description ?? '',
@@ -66,7 +82,37 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
     });
     setImageUrl(p.images?.[0] ?? null);
     setEditingId(p.id);
+    setRemovedVariantIds([]);
+    const { data: existingVariants } = await supabase
+      .from('product_variants')
+      .select('id, size, color, price_adjustment, stock_quantity, sold_quantity')
+      .eq('product_id', p.id);
+    setVariants(
+      (existingVariants ?? []).map((v) => ({
+        id: v.id,
+        size: v.size ?? '',
+        color: v.color ?? '',
+        priceAdjustment: String(v.price_adjustment),
+        stockQuantity: String(v.stock_quantity),
+      }))
+    );
     setShowForm(true);
+  }
+
+  function addVariantRow() {
+    setVariants((prev) => [...prev, emptyVariantRow()]);
+  }
+
+  function updateVariantRow(index: number, patch: Partial<VariantRow>) {
+    setVariants((prev) => prev.map((v, i) => (i === index ? { ...v, ...patch } : v)));
+  }
+
+  function removeVariantRow(index: number) {
+    setVariants((prev) => {
+      const row = prev[index];
+      if (row.id) setRemovedVariantIds((ids) => [...ids, row.id!]);
+      return prev.filter((_, i) => i !== index);
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -88,16 +134,38 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
       shipping_cost: form.shippingAvailable ? parseFloat(form.shippingCost) || 0 : 0,
     };
 
-    const { error: saveError } = editingId
-      ? await supabase.from('products').update(payload).eq('id', editingId)
-      : await supabase.from('products').insert(payload);
+    const { data: savedProduct, error: saveError } = editingId
+      ? await supabase.from('products').update(payload).eq('id', editingId).select().single()
+      : await supabase.from('products').insert(payload).select().single();
 
-    setSaving(false);
-    if (saveError) {
+    if (saveError || !savedProduct) {
+      setSaving(false);
       console.error('Failed to save product:', saveError);
       setError('Something went wrong saving this product. Please try again.');
       return;
     }
+
+    // Save variants: update existing rows, insert new ones, delete removed ones.
+    const validVariants = variants.filter((v) => v.size.trim() || v.color.trim());
+    for (const v of validVariants) {
+      const variantPayload = {
+        product_id: savedProduct.id,
+        size: v.size.trim() || null,
+        color: v.color.trim() || null,
+        price_adjustment: parseFloat(v.priceAdjustment) || 0,
+        stock_quantity: parseInt(v.stockQuantity, 10) || 0,
+      };
+      if (v.id) {
+        await supabase.from('product_variants').update(variantPayload).eq('id', v.id);
+      } else {
+        await supabase.from('product_variants').insert(variantPayload);
+      }
+    }
+    if (removedVariantIds.length > 0) {
+      await supabase.from('product_variants').delete().in('id', removedVariantIds);
+    }
+
+    setSaving(false);
     setShowForm(false);
     load();
   }
@@ -155,6 +223,58 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
               <input type="number" min="0" value={form.stockQuantity} onChange={(e) => setForm({ ...form, stockQuantity: e.target.value })} className={fieldClass} />
             </label>
           </div>
+
+          <div className="rounded-lg border border-gray-200 p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Sizes / Colors <span className="font-normal text-gray-400">(optional)</span></p>
+                <p className="text-xs text-gray-400">Add a row for each size/color combination you sell -- each tracks its own stock.</p>
+              </div>
+              <button type="button" onClick={addVariantRow} className="shrink-0 text-xs font-medium text-marigold hover:underline">
+                + Add option
+              </button>
+            </div>
+            {variants.length > 0 && (
+              <div className="mt-3 flex flex-col gap-2">
+                {variants.map((v, i) => (
+                  <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:items-center">
+                    <input
+                      placeholder="Size (e.g. Medium)"
+                      value={v.size}
+                      onChange={(e) => updateVariantRow(i, { size: e.target.value })}
+                      className={`${fieldClass} text-sm`}
+                    />
+                    <input
+                      placeholder="Color (e.g. Blue)"
+                      value={v.color}
+                      onChange={(e) => updateVariantRow(i, { color: e.target.value })}
+                      className={`${fieldClass} text-sm`}
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Price +/-"
+                      value={v.priceAdjustment}
+                      onChange={(e) => updateVariantRow(i, { priceAdjustment: e.target.value })}
+                      className={`${fieldClass} text-sm`}
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Stock"
+                      value={v.stockQuantity}
+                      onChange={(e) => updateVariantRow(i, { stockQuantity: e.target.value })}
+                      className={`${fieldClass} text-sm`}
+                    />
+                    <button type="button" onClick={() => removeVariantRow(i)} className="text-xs font-medium text-magenta hover:underline">
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" checked={form.pickupRequired} onChange={(e) => setForm({ ...form, pickupRequired: e.target.checked })} />
