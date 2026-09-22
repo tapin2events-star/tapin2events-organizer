@@ -111,6 +111,8 @@ export interface Resource {
   location: string | null;
   city: string | null;
   state: string | null;
+  latitude: number | null;
+  longitude: number | null;
   profile_image: string | null;
   pricing_type: PricingType;
   base_rate: number;

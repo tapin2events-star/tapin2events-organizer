@@ -90,6 +90,30 @@ export default function ResourceSignup() {
     setSaving(true);
     setError(null);
 
+    // Geocode city/state into coordinates so this resource can actually
+    // show up on the map -- only re-geocode when the location text has
+    // actually changed, to avoid needless lookups on every edit.
+    let latitude = existing?.latitude ?? null;
+    let longitude = existing?.longitude ?? null;
+    const locationChanged = city !== (existing?.city ?? '') || state !== (existing?.state ?? '');
+    if (locationChanged && (city.trim() || state.trim())) {
+      try {
+        const query = [city, state].filter(Boolean).join(', ');
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+        const results = await res.json();
+        if (results.length > 0) {
+          latitude = parseFloat(results[0].lat);
+          longitude = parseFloat(results[0].lon);
+        } else {
+          latitude = null;
+          longitude = null;
+        }
+      } catch {
+        // If geocoding fails, save anyway without coordinates rather than
+        // blocking the whole profile save over a map-only feature.
+      }
+    }
+
     const payload = {
       display_name: displayName,
       email: user.email,
@@ -97,6 +121,8 @@ export default function ResourceSignup() {
       bio,
       city: city || null,
       state: state || null,
+      latitude,
+      longitude,
       profile_image: profileImage || null,
       pricing_type: pricingType,
       base_rate: baseRate ? parseFloat(baseRate) : 0,

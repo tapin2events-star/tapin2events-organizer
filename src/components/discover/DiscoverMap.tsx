@@ -1,16 +1,29 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { supabase } from '../../lib/supabaseClient';
 import type { TapEvent } from '../../lib/types';
 
 // Vite bundles Leaflet's default marker images at paths the library can't
 // resolve on its own -- point it at CDN-hosted copies instead of shipping
 // broken (invisible) map pins.
-const markerIcon = new L.Icon({
+const eventMarkerIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+// A distinct violet marker for resources/artists, served via jsDelivr's
+// GitHub-proxy CDN (production-appropriate, unlike raw.githubusercontent.com).
+const resourceMarkerIcon = new L.Icon({
+  iconUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-violet.png',
+  iconRetinaUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-2x-violet.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -39,6 +52,14 @@ function RecenterOnChange({ center, zoom }: { center: [number, number]; zoom: nu
   return null;
 }
 
+interface ResourcePin {
+  id: string;
+  display_name: string;
+  categories: string[] | null;
+  latitude: number;
+  longitude: number;
+}
+
 export default function DiscoverMap({ events }: { events: TapEvent[] }) {
   const [cityInput, setCityInput] = useState('');
   const [stateInput, setStateInput] = useState('');
@@ -47,6 +68,17 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
   const [geocoding, setGeocoding] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [resources, setResources] = useState<ResourcePin[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('resources')
+      .select('id, display_name, categories, latitude, longitude')
+      .eq('status', 'active')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .then(({ data }) => setResources((data ?? []) as ResourcePin[]));
+  }, []);
 
   const withCoords = useMemo(() => events.filter((e) => e.latitude != null && e.longitude != null), [events]);
 
@@ -56,6 +88,11 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
       (e) => haversineMiles(searchLocation.lat, searchLocation.lng, Number(e.latitude), Number(e.longitude)) <= radiusMiles
     );
   }, [withCoords, searchLocation, radiusMiles]);
+
+  const visibleResources = useMemo(() => {
+    if (!searchLocation) return resources;
+    return resources.filter((r) => haversineMiles(searchLocation.lat, searchLocation.lng, r.latitude, r.longitude) <= radiusMiles);
+  }, [resources, searchLocation, radiusMiles]);
 
   const fallbackCenter: [number, number] =
     withCoords.length > 0
@@ -109,15 +146,16 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
     );
   }
 
+  const totalVisible = visibleEvents.length + visibleResources.length;
+
   return (
     <div className="mt-6">
       <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-50 to-teal-50 p-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-marigold">TapIN Map</p>
-        <p className="mt-1 font-display text-xl font-bold text-gray-900">Explore events near you</p>
+        <p className="mt-1 font-display text-xl font-bold text-gray-900">Explore events, artists, and resources near you</p>
         <p className="mt-1 text-sm text-gray-500">
-          {searchLocation
-            ? `Showing ${visibleEvents.length} event${visibleEvents.length === 1 ? '' : 's'} within ${radiusMiles} miles`
-            : `Showing all ${withCoords.length} mappable event${withCoords.length === 1 ? '' : 's'}`}
+          Showing {visibleEvents.length} event{visibleEvents.length === 1 ? '' : 's'} and {visibleResources.length} resource{visibleResources.length === 1 ? '' : 's'}
+          {searchLocation ? ` within ${radiusMiles} miles` : ''}
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -174,11 +212,11 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
         )}
       </div>
 
-      {visibleEvents.length === 0 ? (
+      {totalVisible === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
-          <p className="text-lg font-semibold text-gray-500">No mappable events</p>
+          <p className="text-lg font-semibold text-gray-500">Nothing to show on the map</p>
           <p className="mt-1 text-gray-400">
-            {searchLocation ? 'Try a larger radius or a different location.' : "None of the events matching your filters have a location set yet."}
+            {searchLocation ? 'Try a larger radius or a different location.' : "None of the events or resources matching your filters have a location set yet."}
           </p>
         </div>
       ) : (
@@ -197,7 +235,7 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
               />
             )}
             {visibleEvents.map((event) => (
-              <Marker key={event.id} position={[Number(event.latitude), Number(event.longitude)]} icon={markerIcon}>
+              <Marker key={`event-${event.id}`} position={[Number(event.latitude), Number(event.longitude)]} icon={eventMarkerIcon}>
                 <Popup>
                   <div className="min-w-[160px]">
                     <p className="font-semibold text-gray-900">{event.title}</p>
@@ -208,6 +246,21 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
                     )}
                     <Link to={`/events/${event.id}`} className="mt-1 inline-block text-xs font-medium text-marigold hover:underline">
                       View event &rarr;
+                    </Link>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+            {visibleResources.map((resource) => (
+              <Marker key={`resource-${resource.id}`} position={[resource.latitude, resource.longitude]} icon={resourceMarkerIcon}>
+                <Popup>
+                  <div className="min-w-[160px]">
+                    <p className="font-semibold text-gray-900">{resource.display_name}</p>
+                    {resource.categories && resource.categories.length > 0 && (
+                      <p className="text-xs capitalize text-gray-500">{resource.categories.join(', ')}</p>
+                    )}
+                    <Link to={`/resources/${resource.id}`} className="mt-1 inline-block text-xs font-medium text-purple hover:underline">
+                      View profile &rarr;
                     </Link>
                   </div>
                 </Popup>
