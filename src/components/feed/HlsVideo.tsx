@@ -23,12 +23,13 @@ export default function HlsVideo({ src, videoRef, shouldLoad, ...rest }: HlsVide
     const video = internalRef.current;
     if (!video || !shouldLoad) return;
 
-    const canPlayNatively = video.canPlayType('application/vnd.apple.mpegurl');
-    if (canPlayNatively) {
-      video.src = src;
-      return;
-    }
-
+    // hls.js's own docs recommend checking its own support FIRST, falling
+    // back to native canPlayType only if hls.js isn't available at all.
+    // canPlayType('application/vnd.apple.mpegurl') is documented to be
+    // unreliable across browsers for this MIME type -- checking it first
+    // (as this code previously did) let some non-Safari browsers take the
+    // native-playback branch incorrectly, setting the raw .m3u8 as `src`
+    // directly, which they can't actually play (MEDIA_ERR_SRC_NOT_SUPPORTED).
     if (Hls.isSupported()) {
       const hls = new Hls();
       hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -44,6 +45,11 @@ export default function HlsVideo({ src, videoRef, shouldLoad, ...rest }: HlsVide
       hls.loadSource(src);
       hls.attachMedia(video);
       return () => hls.destroy();
+    }
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+      return;
     }
 
     // Last-resort fallback for a browser with neither -- just try it directly.
