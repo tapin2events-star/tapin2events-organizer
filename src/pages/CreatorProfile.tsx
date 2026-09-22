@@ -37,7 +37,7 @@ export default function CreatorProfile() {
     (async () => {
       const [{ data: profileData }, { data: postRows }, { data: followRow }] = await Promise.all([
         supabase
-          .from('profiles')
+          .from('public_profiles')
           .select('email, full_name, bio, profile_photo, is_organizer, is_resource, followers_count, following_count')
           .eq('email', decodedEmail)
           .single(),

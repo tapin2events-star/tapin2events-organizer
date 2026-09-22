@@ -48,7 +48,7 @@ export default function PublicEventDetail() {
       }
       if (ev?.organizer_email) {
         const { data: org } = await supabase
-          .from('profiles')
+          .from('public_profiles')
           .select('full_name')
           .eq('email', ev.organizer_email)
           .single();

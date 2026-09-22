@@ -90,7 +90,7 @@ export default function Feed() {
     const authorEmails = [...new Set(rows.map((p) => p.author_email))];
 
     const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }, { data: myFollows }] = await Promise.all([
-      authorEmails.length ? supabase.from('profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
+      authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_likes').select('post_id') : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active') : Promise.resolve({ data: [] }),
       user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
@@ -189,7 +189,7 @@ export default function Feed() {
     const authorEmails = [...new Set(rows.map((c) => c.author_email))];
 
     const [{ data: profiles }, { data: likes }, { data: myLikes }] = await Promise.all([
-      authorEmails.length ? supabase.from('profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
+      authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
       commentIds.length ? supabase.from('comment_likes').select('comment_id') : Promise.resolve({ data: [] }),
       user?.email && commentIds.length ? supabase.from('comment_likes').select('comment_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
     ]);
