@@ -13,6 +13,7 @@ import PublicEventDetail from './pages/PublicEventDetail';
 import TicketPass from './pages/TicketPass';
 import MyActivity from './pages/MyActivity';
 import Profile from './pages/Profile';
+import CreatorProfile from './pages/CreatorProfile';
 import MyVendorApplicationsPage from './pages/MyVendorApplicationsPage';
 import ResourceDiscovery from './pages/ResourceDiscovery';
 import ResourceProfile from './pages/ResourceProfile';
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/pass/:ticketId" element={<TicketPass />} />
             <Route path="/activity" element={<MyActivity />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/creator/:email" element={<CreatorProfile />} />
             <Route path="/vendor-applications" element={<MyVendorApplicationsPage />} />
             <Route path="/resources" element={<ResourceDiscovery />} />
             <Route path="/resources/new" element={<ResourceSignup />} />

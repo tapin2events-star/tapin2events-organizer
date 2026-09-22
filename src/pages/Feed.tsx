@@ -15,6 +15,7 @@ interface Post {
   thumbnail_url: string | null;
   created_at: string;
   author_name: string;
+  author_photo: string | null;
   like_count: number;
   comment_count: number;
   liked_by_me: boolean;
@@ -27,10 +28,14 @@ interface Comment {
   created_at: string;
 }
 
+type FeedMode = 'for_you' | 'following';
+
 export default function Feed() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedMode, setFeedMode] = useState<FeedMode>('for_you');
+  const [followingEmails, setFollowingEmails] = useState<Set<string>>(new Set());
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -40,6 +45,8 @@ export default function Feed() {
   const [isPaused, setIsPaused] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const visiblePosts = feedMode === 'following' ? posts.filter((p) => followingEmails.has(p.author_email)) : posts;
 
   async function loadPosts() {
     const { data: postRows, error } = await supabase
@@ -57,24 +64,28 @@ export default function Feed() {
     const postIds = rows.map((p) => p.id);
     const authorEmails = [...new Set(rows.map((p) => p.author_email))];
 
-    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }] = await Promise.all([
-      authorEmails.length ? supabase.from('profiles').select('email, full_name').in('email', authorEmails) : Promise.resolve({ data: [] }),
+    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }, { data: myFollows }] = await Promise.all([
+      authorEmails.length ? supabase.from('profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_likes').select('post_id') : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active') : Promise.resolve({ data: [] }),
       user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
+      user?.email ? supabase.from('follows').select('following_email').eq('follower_email', user.email) : Promise.resolve({ data: [] }),
     ]);
 
     const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
+    const photosByEmail = new Map((profiles ?? []).map((p) => [p.email, p.profile_photo]));
     const likeCountByPost = new Map<string, number>();
     (likes ?? []).forEach((l) => likeCountByPost.set(l.post_id, (likeCountByPost.get(l.post_id) ?? 0) + 1));
     const commentCountByPost = new Map<string, number>();
     (commentCounts ?? []).forEach((c) => commentCountByPost.set(c.post_id, (commentCountByPost.get(c.post_id) ?? 0) + 1));
     const myLikedSet = new Set((myLikes ?? []).map((l) => l.post_id));
+    setFollowingEmails(new Set((myFollows ?? []).map((f) => f.following_email)));
 
     setPosts(
       rows.map((p) => ({
         ...p,
         author_name: namesByEmail.get(p.author_email) || p.author_email,
+        author_photo: photosByEmail.get(p.author_email) ?? null,
         like_count: likeCountByPost.get(p.id) ?? 0,
         comment_count: commentCountByPost.get(p.id) ?? 0,
         liked_by_me: myLikedSet.has(p.id),
@@ -92,7 +103,7 @@ export default function Feed() {
   // play/pause videos accordingly, rather than relying on a single
   // `autoPlay` prop that never updates as the user scrolls.
   useEffect(() => {
-    if (posts.length === 0) return;
+    if (visiblePosts.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -112,7 +123,7 @@ export default function Feed() {
     const slides = containerRef.current?.querySelectorAll('[data-post-id]') ?? [];
     slides.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [posts]);
+  }, [visiblePosts]);
 
   async function toggleLike(post: Post) {
     if (!user?.email) return;
@@ -188,8 +199,34 @@ export default function Feed() {
 
   return (
     <div className="fixed inset-0 z-30 bg-black">
+      {user && (
+        <div className="absolute inset-x-0 top-4 z-40 flex justify-center gap-1 rounded-full bg-black/40 p-1 mx-auto w-fit backdrop-blur-sm">
+          {([
+            { id: 'for_you', label: 'For You' },
+            { id: 'following', label: 'Following' },
+          ] as const).map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setFeedMode(m.id)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium ${feedMode === m.id ? 'bg-white text-ink' : 'text-white/70'}`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {visiblePosts.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center text-center text-white">
+          <p className="font-display text-xl font-semibold">You're not following anyone yet</p>
+          <p className="mt-1 text-sm text-white/60">Follow creators from "For You" to see their posts here.</p>
+          <button onClick={() => setFeedMode('for_you')} className="mt-4 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">
+            Browse For You
+          </button>
+        </div>
+      ) : (
       <div ref={containerRef} className="h-full snap-y snap-mandatory overflow-y-scroll">
-        {posts.map((post) => (
+        {visiblePosts.map((post) => (
           <div key={post.id} data-post-id={post.id} className="relative flex h-[100dvh] w-full snap-start items-center justify-center bg-black">
             <HlsVideo
               videoRef={(el) => { videoRefs.current[post.id] = el; }}
@@ -251,13 +288,23 @@ export default function Feed() {
             </div>
 
             <div className="absolute inset-x-0 bottom-0 p-4 pb-6 text-white" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
-              <p className="font-semibold">{post.author_name}</p>
-              <span className="inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs">{post.poster_type}</span>
+              <Link to={`/creator/${encodeURIComponent(post.author_email)}`} className="flex items-center gap-2">
+                {post.author_photo ? (
+                  <img src={post.author_photo} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal text-xs font-bold">
+                    {post.author_name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="font-semibold">{post.author_name}</span>
+              </Link>
+              <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs">{post.poster_type}</span>
               {post.caption && <p className="mt-1 text-sm">{post.caption}</p>}
             </div>
           </div>
         ))}
       </div>
+      )}
 
       {openComments && (
         <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] rounded-t-2xl bg-surface p-4">
