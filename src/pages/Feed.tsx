@@ -158,6 +158,12 @@ export default function Feed() {
           }
           if (!video) return;
           if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
+            // Chrome's autoplay policy checks the DOM node's actual .muted
+            // property at the moment play() is called. Calling play() here
+            // via a ref, outside React's normal render/commit cycle, can
+            // race with React's own timing for applying the `muted` prop --
+            // setting it explicitly and imperatively removes any doubt.
+            video.muted = isMuted;
             video.play().catch(() => {});
             setIsPaused(false);
           } else {
@@ -170,7 +176,7 @@ export default function Feed() {
     const slides = containerRef.current?.querySelectorAll('[data-post-id]') ?? [];
     slides.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [visiblePosts]);
+  }, [visiblePosts, isMuted]);
 
   async function toggleLike(post: Post) {
     if (!user?.email) return;
