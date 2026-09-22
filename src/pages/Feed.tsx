@@ -164,8 +164,6 @@ export default function Feed() {
           if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
             setActivePostId(postId);
             setIsPaused(false);
-          } else {
-            setActivePostId((current) => (current === postId ? null : current));
           }
         });
       },
