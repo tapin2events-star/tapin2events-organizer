@@ -11,6 +11,7 @@ interface Variant {
   price_adjustment: number;
   stock_quantity: number;
   sold_quantity: number;
+  image_url: string | null;
 }
 
 export default function ProductDetail() {
@@ -20,6 +21,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [fulfillment, setFulfillment] = useState<'pickup' | 'shipping'>('pickup');
   const [shipping, setShipping] = useState({ name: '', address_line1: '', city: '', state: '', postal_code: '' });
@@ -46,6 +48,7 @@ export default function ProductDetail() {
 
   const hasVariants = variants.length > 0;
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
+  const displayedImage = selectedVariant?.image_url || product.images?.[galleryIndex] || product.images?.[0] || null;
   const effectivePrice = product.price + (selectedVariant?.price_adjustment ?? 0);
   const available = hasVariants
     ? selectedVariant
@@ -96,11 +99,26 @@ export default function ProductDetail() {
       <button onClick={() => navigate(-1)} className="text-sm text-marigold">&larr; Back</button>
 
       <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {product.images?.[0] ? (
-          <img src={product.images[0]} alt={product.name} className="aspect-square w-full rounded-2xl object-cover" />
-        ) : (
-          <div className="aspect-square w-full rounded-2xl bg-gray-100" />
-        )}
+        <div>
+          {displayedImage ? (
+            <img src={displayedImage} alt={product.name} className="aspect-square w-full rounded-2xl object-cover" />
+          ) : (
+            <div className="aspect-square w-full rounded-2xl bg-gray-100" />
+          )}
+          {product.images && product.images.length > 1 && !selectedVariant?.image_url && (
+            <div className="mt-2 flex gap-2">
+              {product.images.map((img, i) => (
+                <button
+                  key={img}
+                  onClick={() => setGalleryIndex(i)}
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${galleryIndex === i ? 'border-marigold' : 'border-transparent'}`}
+                >
+                  <img src={img} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div>
           <h1 className="font-display text-2xl font-bold text-gray-900">{product.name}</h1>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { PRODUCT_CATEGORIES, type Product, type ProductCategory } from '../../lib/types';
+import MultiImageUpload from '../MultiImageUpload';
 import ImageUpload from '../ImageUpload';
 
 interface ProductManagerProps {
@@ -15,10 +16,11 @@ interface VariantRow {
   color: string;
   priceAdjustment: string;
   stockQuantity: string;
+  imageUrl: string | null;
 }
 
 function emptyVariantRow(): VariantRow {
-  return { id: null, size: '', color: '', priceAdjustment: '0', stockQuantity: '0' };
+  return { id: null, size: '', color: '', priceAdjustment: '0', stockQuantity: '0', imageUrl: null };
 }
 
 const emptyForm = {
@@ -38,7 +40,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [removedVariantIds, setRemovedVariantIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -62,7 +64,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
 
   function startCreate() {
     setForm(emptyForm);
-    setImageUrl(null);
+    setImageUrls([]);
     setEditingId(null);
     setVariants([]);
     setRemovedVariantIds([]);
@@ -80,12 +82,12 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
       shippingAvailable: p.shipping_available,
       shippingCost: String(p.shipping_cost),
     });
-    setImageUrl(p.images?.[0] ?? null);
+    setImageUrls(p.images ?? []);
     setEditingId(p.id);
     setRemovedVariantIds([]);
     const { data: existingVariants } = await supabase
       .from('product_variants')
-      .select('id, size, color, price_adjustment, stock_quantity, sold_quantity')
+      .select('id, size, color, price_adjustment, stock_quantity, sold_quantity, image_url')
       .eq('product_id', p.id);
     setVariants(
       (existingVariants ?? []).map((v) => ({
@@ -94,6 +96,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
         color: v.color ?? '',
         priceAdjustment: String(v.price_adjustment),
         stockQuantity: String(v.stock_quantity),
+        imageUrl: v.image_url ?? null,
       }))
     );
     setShowForm(true);
@@ -126,7 +129,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
       name: form.name,
       description: form.description || null,
       price: parseFloat(form.price),
-      images: imageUrl ? [imageUrl] : [],
+      images: imageUrls,
       category: form.category,
       stock_quantity: parseInt(form.stockQuantity, 10) || 0,
       pickup_required: form.pickupRequired,
@@ -154,6 +157,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
         color: v.color.trim() || null,
         price_adjustment: parseFloat(v.priceAdjustment) || 0,
         stock_quantity: parseInt(v.stockQuantity, 10) || 0,
+        image_url: v.imageUrl,
       };
       if (v.id) {
         await supabase.from('product_variants').update(variantPayload).eq('id', v.id);
@@ -196,7 +200,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
 
       {showForm && (
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <ImageUpload currentUrl={imageUrl} onUploaded={setImageUrl} pathPrefix={`products/${ownerType}`} label="Product photo" />
+          <MultiImageUpload urls={imageUrls} onChange={setImageUrls} pathPrefix={`products/${ownerType}`} label="Product photos" />
           <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
             Name
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={fieldClass} />
@@ -235,40 +239,50 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
               </button>
             </div>
             {variants.length > 0 && (
-              <div className="mt-3 flex flex-col gap-2">
+              <div className="mt-3 flex flex-col gap-3">
                 {variants.map((v, i) => (
-                  <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:items-center">
-                    <input
-                      placeholder="Size (e.g. Medium)"
-                      value={v.size}
-                      onChange={(e) => updateVariantRow(i, { size: e.target.value })}
-                      className={`${fieldClass} text-sm`}
-                    />
-                    <input
-                      placeholder="Color (e.g. Blue)"
-                      value={v.color}
-                      onChange={(e) => updateVariantRow(i, { color: e.target.value })}
-                      className={`${fieldClass} text-sm`}
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Price +/-"
-                      value={v.priceAdjustment}
-                      onChange={(e) => updateVariantRow(i, { priceAdjustment: e.target.value })}
-                      className={`${fieldClass} text-sm`}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Stock"
-                      value={v.stockQuantity}
-                      onChange={(e) => updateVariantRow(i, { stockQuantity: e.target.value })}
-                      className={`${fieldClass} text-sm`}
-                    />
-                    <button type="button" onClick={() => removeVariantRow(i)} className="text-xs font-medium text-magenta hover:underline">
-                      Remove
-                    </button>
+                  <div key={i} className="rounded-lg border border-gray-100 bg-gray-50 p-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:items-center">
+                      <input
+                        placeholder="Size (e.g. Medium)"
+                        value={v.size}
+                        onChange={(e) => updateVariantRow(i, { size: e.target.value })}
+                        className={`${fieldClass} text-sm`}
+                      />
+                      <input
+                        placeholder="Color (e.g. Blue)"
+                        value={v.color}
+                        onChange={(e) => updateVariantRow(i, { color: e.target.value })}
+                        className={`${fieldClass} text-sm`}
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Price +/-"
+                        value={v.priceAdjustment}
+                        onChange={(e) => updateVariantRow(i, { priceAdjustment: e.target.value })}
+                        className={`${fieldClass} text-sm`}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Stock"
+                        value={v.stockQuantity}
+                        onChange={(e) => updateVariantRow(i, { stockQuantity: e.target.value })}
+                        className={`${fieldClass} text-sm`}
+                      />
+                      <button type="button" onClick={() => removeVariantRow(i)} className="text-xs font-medium text-magenta hover:underline">
+                        Remove
+                      </button>
+                    </div>
+                    <div className="mt-2">
+                      <ImageUpload
+                        currentUrl={v.imageUrl}
+                        onUploaded={(url) => updateVariantRow(i, { imageUrl: url })}
+                        pathPrefix={`products/${ownerType}/variants`}
+                        label="Photo for this option (optional -- falls back to main photos)"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
