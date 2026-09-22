@@ -7,6 +7,7 @@ import ShopSection from '../components/products/ShopSection';
 import VendorApplicationForm from '../components/VendorApplicationForm';
 import SeatPicker from '../components/SeatPicker';
 import { resolveFeatureIcon } from '../lib/featureIconMap';
+import CommunityPosts from '../components/discover/CommunityPosts';
 
 export default function PublicEventDetail() {
   const location = useLocation();
@@ -592,6 +593,8 @@ export default function PublicEventDetail() {
             )}
           </div>
         )}
+
+        <CommunityPosts eventId={event.id} />
 
         {/* Logistics: everything about actually getting there. */}
         {!event.is_online && (

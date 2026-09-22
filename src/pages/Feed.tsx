@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import BottomTabBar from '../components/BottomTabBar';
@@ -19,6 +19,7 @@ interface Post {
   like_count: number;
   comment_count: number;
   liked_by_me: boolean;
+  event_id: string | null;
 }
 
 interface Comment {
@@ -32,6 +33,9 @@ type FeedMode = 'for_you' | 'following';
 
 export default function Feed() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const eventFilterId = searchParams.get('event');
+  const [eventFilterTitle, setEventFilterTitle] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedMode, setFeedMode] = useState<FeedMode>('for_you');
@@ -43,18 +47,20 @@ export default function Feed() {
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const visiblePosts = feedMode === 'following' ? posts.filter((p) => followingEmails.has(p.author_email)) : posts;
+  const visiblePosts = eventFilterId
+    ? posts.filter((p) => p.event_id === eventFilterId)
+    : feedMode === 'following'
+    ? posts.filter((p) => followingEmails.has(p.author_email))
+    : posts;
 
   async function loadPosts() {
-    const { data: postRows, error } = await supabase
-      .from('posts')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(30);
+    let query = supabase.from('posts').select('*').eq('status', 'active').order('created_at', { ascending: false });
+    query = eventFilterId ? query.eq('event_id', eventFilterId) : query.limit(30);
+    const { data: postRows, error } = await query;
     if (error) {
       console.error('Failed to load feed:', error);
       setLoading(false);
@@ -96,7 +102,20 @@ export default function Feed() {
 
   useEffect(() => {
     loadPosts();
-  }, [user?.email]);
+  }, [user?.email, eventFilterId]);
+
+  useEffect(() => {
+    if (!eventFilterId) {
+      setEventFilterTitle(null);
+      return;
+    }
+    supabase
+      .from('events')
+      .select('title')
+      .eq('id', eventFilterId)
+      .single()
+      .then(({ data }) => setEventFilterTitle(data?.title ?? null));
+  }, [eventFilterId]);
 
   // TikTok-style feeds only autoplay whichever video is actually on
   // screen -- watch scroll position via IntersectionObserver and
@@ -199,30 +218,48 @@ export default function Feed() {
 
   return (
     <div className="fixed inset-0 z-30 bg-black">
-      {user && (
-        <div className="absolute inset-x-0 top-4 z-40 flex justify-center gap-1 rounded-full bg-black/40 p-1 mx-auto w-fit backdrop-blur-sm">
-          {([
-            { id: 'for_you', label: 'For You' },
-            { id: 'following', label: 'Following' },
-          ] as const).map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setFeedMode(m.id)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium ${feedMode === m.id ? 'bg-white text-ink' : 'text-white/70'}`}
-            >
-              {m.label}
-            </button>
-          ))}
+      {eventFilterId ? (
+        <div className="absolute inset-x-0 top-4 z-40 flex items-center justify-center gap-2 px-14">
+          <Link to={`/events/${eventFilterId}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white">
+            &larr;
+          </Link>
+          <p className="truncate text-center text-sm font-semibold text-white">{eventFilterTitle ?? 'Event posts'}</p>
         </div>
+      ) : (
+        user && (
+          <div className="absolute inset-x-0 top-4 z-40 flex justify-center gap-1 rounded-full bg-black/40 p-1 mx-auto w-fit backdrop-blur-sm">
+            {([
+              { id: 'for_you', label: 'For You' },
+              { id: 'following', label: 'Following' },
+            ] as const).map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setFeedMode(m.id)}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium ${feedMode === m.id ? 'bg-white text-ink' : 'text-white/70'}`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )
       )}
 
       {visiblePosts.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center text-center text-white">
-          <p className="font-display text-xl font-semibold">You're not following anyone yet</p>
-          <p className="mt-1 text-sm text-white/60">Follow creators from "For You" to see their posts here.</p>
-          <button onClick={() => setFeedMode('for_you')} className="mt-4 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">
-            Browse For You
-          </button>
+          {eventFilterId ? (
+            <>
+              <p className="font-display text-xl font-semibold">No posts for this event yet</p>
+              <p className="mt-1 text-sm text-white/60">Check back later, or be the first to share something.</p>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-xl font-semibold">You're not following anyone yet</p>
+              <p className="mt-1 text-sm text-white/60">Follow creators from "For You" to see their posts here.</p>
+              <button onClick={() => setFeedMode('for_you')} className="mt-4 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">
+                Browse For You
+              </button>
+            </>
+          )}
         </div>
       ) : (
       <div ref={containerRef} className="h-full snap-y snap-mandatory overflow-y-scroll">
@@ -235,7 +272,7 @@ export default function Feed() {
               className="h-full w-full object-contain"
               loop
               playsInline
-              muted
+              muted={isMuted}
               preload="auto"
               onClick={(e) => {
                 const v = e.currentTarget;
@@ -256,11 +293,22 @@ export default function Feed() {
               <button
                 onClick={() => setShowCreateModal(true)}
                 aria-label="New post"
-                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
+                className="absolute right-16 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
               </button>
             )}
+            <button
+              onClick={() => setIsMuted((m) => !m)}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
+            >
+              {isMuted ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H2v6h4l5 4V5z" strokeLinejoin="round" /><path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" /></svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H2v6h4l5 4V5z" strokeLinejoin="round" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" strokeLinecap="round" /></svg>
+              )}
+            </button>
 
             <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
               <button onClick={() => toggleLike(post)} className="flex flex-col items-center gap-1 text-white">
