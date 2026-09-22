@@ -9,7 +9,7 @@ import CreatePostModal from '../components/feed/CreatePostModal';
 interface Post {
   id: string;
   author_email: string;
-  poster_type: 'organizer' | 'resource';
+  poster_type: 'organizer' | 'resource' | null;
   caption: string | null;
   video_url: string;
   thumbnail_url: string | null;
@@ -347,7 +347,9 @@ export default function Feed() {
                 )}
                 <span className="font-semibold">{post.author_name}</span>
               </Link>
-              <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs">{post.poster_type}</span>
+              {post.poster_type && (
+                <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs">{post.poster_type}</span>
+              )}
               {post.caption && <p className="mt-1 text-sm">{post.caption}</p>}
             </div>
           </div>

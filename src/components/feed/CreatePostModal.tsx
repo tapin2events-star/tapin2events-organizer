@@ -18,7 +18,7 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   const [customThumbnail, setCustomThumbnail] = useState<File | null>(null);
   const [customThumbnailPreview, setCustomThumbnailPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
-  const [posterType, setPosterType] = useState<'organizer' | 'resource'>('organizer');
+  const [posterType, setPosterType] = useState<'organizer' | 'resource' | null>(null);
   const [category, setCategory] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [eventSearch, setEventSearch] = useState('');
@@ -302,18 +302,21 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
               )}
             </div>
 
-            <div className="flex gap-2">
-              {(['organizer', 'resource'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setPosterType(t)}
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize ${
-                    posterType === t ? 'bg-marigold text-white' : 'bg-gray-100 text-muted'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-bone">Posting as <span className="text-muted font-normal">(Optional)</span></span>
+              <div className="flex gap-2">
+                {(['organizer', 'resource'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setPosterType((current) => (current === t ? null : t))}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize ${
+                      posterType === t ? 'bg-marigold text-white' : 'bg-gray-100 text-muted'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button
