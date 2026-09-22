@@ -66,6 +66,7 @@ export default function Feed() {
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [activatedPostIds, setActivatedPostIds] = useState<Set<string>>(new Set());
+  const [activePostId, setActivePostId] = useState<string | null>(null);
   const [burstingHeartId, setBurstingHeartId] = useState<string | null>(null);
   const lastTapRef = useRef<Record<string, number>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
@@ -152,22 +153,15 @@ export default function Feed() {
       (entries) => {
         entries.forEach((entry) => {
           const postId = entry.target.getAttribute('data-post-id');
-          const video = postId ? videoRefs.current[postId] : null;
-          if (entry.isIntersecting && postId) {
+          if (!postId) return;
+          if (entry.isIntersecting) {
             setActivatedPostIds((prev) => (prev.has(postId) ? prev : new Set(prev).add(postId)));
           }
-          if (!video) return;
           if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
-            // Chrome's autoplay policy checks the DOM node's actual .muted
-            // property at the moment play() is called. Calling play() here
-            // via a ref, outside React's normal render/commit cycle, can
-            // race with React's own timing for applying the `muted` prop --
-            // setting it explicitly and imperatively removes any doubt.
-            video.muted = isMuted;
-            video.play().catch((err) => console.error('[Feed] video.play() rejected:', err?.name, err?.message));
+            setActivePostId(postId);
             setIsPaused(false);
           } else {
-            video.pause();
+            setActivePostId((current) => (current === postId ? null : current));
           }
         });
       },
@@ -176,7 +170,7 @@ export default function Feed() {
     const slides = containerRef.current?.querySelectorAll('[data-post-id]') ?? [];
     slides.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [visiblePosts, isMuted]);
+  }, [visiblePosts]);
 
   async function toggleLike(post: Post) {
     if (!user?.email) return;
@@ -380,6 +374,7 @@ export default function Feed() {
               videoRef={(el) => { videoRefs.current[post.id] = el; }}
               src={post.video_url}
               shouldLoad={activatedPostIds.has(post.id)}
+              shouldPlay={activePostId === post.id}
               poster={post.thumbnail_url ?? undefined}
               className="h-full w-full object-contain"
               loop

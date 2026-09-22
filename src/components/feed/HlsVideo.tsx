@@ -5,6 +5,7 @@ interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
   src: string;
   videoRef?: (el: HTMLVideoElement | null) => void;
   shouldLoad: boolean;
+  shouldPlay: boolean;
 }
 
 // Safari plays HLS (.m3u8) natively; every other browser needs hls.js to
@@ -16,7 +17,7 @@ interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
 // off-screen, creates real resource contention that browsers (Chrome
 // especially) don't handle gracefully, silently failing playback. Instead
 // this only loads once the post has actually scrolled into view.
-export default function HlsVideo({ src, videoRef, shouldLoad, ...rest }: HlsVideoProps) {
+export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted, ...rest }: HlsVideoProps) {
   const internalRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -66,12 +67,42 @@ export default function HlsVideo({ src, videoRef, shouldLoad, ...rest }: HlsVide
     return () => video.removeEventListener('error', onError);
   }, [src]);
 
+  // Autoplay needs to wait until the video can actually play -- calling
+  // play() the instant a post scrolls into view (before hls.js has
+  // finished parsing the manifest) gets interrupted by hls.js's own
+  // subsequent load, producing an AbortError and silently failing. A
+  // manual tap works because by then the video has caught up; autoplay
+  // doesn't have that luxury, so this waits for readiness explicitly.
+  useEffect(() => {
+    const video = internalRef.current;
+    if (!video) return;
+
+    if (!shouldPlay) {
+      video.pause();
+      return;
+    }
+
+    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      video.muted = !!muted;
+      video.play().catch((err) => console.error('[HlsVideo] play() rejected:', err?.name, err?.message));
+      return;
+    }
+
+    const onCanPlay = () => {
+      video.muted = !!muted;
+      video.play().catch((err) => console.error('[HlsVideo] play() rejected (after canplay):', err?.name, err?.message));
+    };
+    video.addEventListener('canplay', onCanPlay);
+    return () => video.removeEventListener('canplay', onCanPlay);
+  }, [shouldPlay, src, muted]);
+
   return (
     <video
       ref={(el) => {
         internalRef.current = el;
         videoRef?.(el);
       }}
+      muted={muted}
       {...rest}
     />
   );
