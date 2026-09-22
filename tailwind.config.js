@@ -3,6 +3,17 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      keyframes: {
+        heartBurst: {
+          '0%': { transform: 'translate(-50%, -50%) scale(0)', opacity: '0' },
+          '15%': { transform: 'translate(-50%, -50%) scale(1.2)', opacity: '1' },
+          '30%': { transform: 'translate(-50%, -50%) scale(1)', opacity: '1' },
+          '100%': { transform: 'translate(-50%, -50%) scale(1)', opacity: '0' },
+        },
+      },
+      animation: {
+        'heart-burst': 'heartBurst 0.8s ease-out forwards',
+      },
       // Remapped to match the real TapIN2Events (Base44) app's actual palette:
       // a light shadcn/ui theme (white cards, gray-900 text, indigo accents)
       // rather than the dark ticket-stub concept this app started with.

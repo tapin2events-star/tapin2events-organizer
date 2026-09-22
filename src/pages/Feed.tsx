@@ -25,8 +25,24 @@ interface Post {
 interface Comment {
   id: string;
   author_email: string;
+  author_name: string;
+  author_photo: string | null;
   content: string;
   created_at: string;
+  like_count: number;
+  liked_by_me: boolean;
+}
+
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 type FeedMode = 'for_you' | 'following';
@@ -45,9 +61,12 @@ export default function Feed() {
   const [newComment, setNewComment] = useState('');
   const [shareCopiedId, setShareCopiedId] = useState<string | null>(null);
   const [reportingId, setReportingId] = useState<string | null>(null);
+  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [burstingHeartId, setBurstingHeartId] = useState<string | null>(null);
+  const lastTapRef = useRef<Record<string, number>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -159,28 +178,80 @@ export default function Feed() {
 
   async function openCommentPanel(postId: string) {
     setOpenComments(postId);
-    const { data } = await supabase
+    const { data: commentRows } = await supabase
       .from('post_comments')
       .select('id, author_email, content, created_at')
       .eq('post_id', postId)
       .eq('status', 'active')
       .order('created_at', { ascending: true });
-    setComments(data ?? []);
+    const rows = commentRows ?? [];
+    const commentIds = rows.map((c) => c.id);
+    const authorEmails = [...new Set(rows.map((c) => c.author_email))];
+
+    const [{ data: profiles }, { data: likes }, { data: myLikes }] = await Promise.all([
+      authorEmails.length ? supabase.from('profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
+      commentIds.length ? supabase.from('comment_likes').select('comment_id') : Promise.resolve({ data: [] }),
+      user?.email && commentIds.length ? supabase.from('comment_likes').select('comment_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
+    ]);
+    const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
+    const photosByEmail = new Map((profiles ?? []).map((p) => [p.email, p.profile_photo]));
+    const likeCountByComment = new Map<string, number>();
+    (likes ?? []).forEach((l) => likeCountByComment.set(l.comment_id, (likeCountByComment.get(l.comment_id) ?? 0) + 1));
+    const myLikedSet = new Set((myLikes ?? []).map((l) => l.comment_id));
+
+    setComments(
+      rows.map((c) => ({
+        ...c,
+        author_name: namesByEmail.get(c.author_email) || c.author_email,
+        author_photo: photosByEmail.get(c.author_email) ?? null,
+        like_count: likeCountByComment.get(c.id) ?? 0,
+        liked_by_me: myLikedSet.has(c.id),
+      }))
+    );
   }
 
   async function submitComment() {
     if (!user?.email || !openComments || !newComment.trim()) return;
     const content = newComment.trim();
     setNewComment('');
+    const { data: profile } = await supabase.from('profiles').select('full_name, profile_photo').eq('email', user.email).single();
     const { data } = await supabase
       .from('post_comments')
       .insert({ post_id: openComments, author_email: user.email, content })
       .select()
       .single();
     if (data) {
-      setComments((prev) => [...prev, data]);
+      setComments((prev) => [
+        ...prev,
+        { ...data, author_name: profile?.full_name || user.email, author_photo: profile?.profile_photo ?? null, like_count: 0, liked_by_me: false },
+      ]);
       setPosts((prev) => prev.map((p) => (p.id === openComments ? { ...p, comment_count: p.comment_count + 1 } : p)));
     }
+  }
+
+  async function toggleCommentLike(comment: Comment) {
+    if (!user?.email) return;
+    const wasLiked = comment.liked_by_me;
+    setComments((prev) =>
+      prev.map((c) => (c.id === comment.id ? { ...c, liked_by_me: !wasLiked, like_count: c.like_count + (wasLiked ? -1 : 1) } : c))
+    );
+    if (wasLiked) {
+      await supabase.from('comment_likes').delete().eq('comment_id', comment.id).eq('user_email', user.email);
+    } else {
+      await supabase.from('comment_likes').insert({ comment_id: comment.id, user_email: user.email });
+    }
+  }
+
+  async function deleteComment(commentId: string) {
+    await supabase.from('post_comments').delete().eq('id', commentId);
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+    setPosts((prev) => prev.map((p) => (p.id === openComments ? { ...p, comment_count: Math.max(p.comment_count - 1, 0) } : p)));
+  }
+
+  async function reportComment(commentId: string, reason: string) {
+    if (!user?.email) return;
+    await supabase.from('post_reports').insert({ comment_id: commentId, reporter_email: user.email, reason });
+    setReportingCommentId(null);
   }
 
   function handleShare(postId: string) {
@@ -300,6 +371,19 @@ export default function Feed() {
               muted={isMuted}
               preload="auto"
               onClick={(e) => {
+                const now = Date.now();
+                const lastTap = lastTapRef.current[post.id] ?? 0;
+                lastTapRef.current[post.id] = now;
+
+                if (now - lastTap < 300) {
+                  // Double tap: like (if not already liked) and show the heart burst --
+                  // never unlike from a double tap, matching how TikTok/Instagram behave.
+                  if (!post.liked_by_me) toggleLike(post);
+                  setBurstingHeartId(post.id);
+                  setTimeout(() => setBurstingHeartId((current) => (current === post.id ? null : current)), 800);
+                  return;
+                }
+
                 const v = e.currentTarget;
                 if (v.paused) {
                   v.play();
@@ -310,6 +394,15 @@ export default function Feed() {
                 }
               }}
             />
+
+            {burstingHeartId === post.id && (
+              <svg
+                className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-heart-burst"
+                width="100" height="100" viewBox="0 0 24 24" fill="#EC4899" stroke="#EC4899" strokeWidth="1"
+              >
+                <path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.8 4.8 0 0 1 8.8-2.7 4.8 4.8 0 0 1 8.8 2.7z" strokeLinejoin="round" />
+              </svg>
+            )}
 
             <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
               <button onClick={() => toggleLike(post)} className="flex flex-col items-center gap-1 text-white">
@@ -363,12 +456,37 @@ export default function Feed() {
             <p className="font-semibold text-bone">Comments</p>
             <button onClick={() => setOpenComments(null)} className="text-muted">✕</button>
           </div>
-          <div className="mt-3 flex max-h-[45vh] flex-col gap-3 overflow-y-auto">
-            {comments.length === 0 && <p className="text-sm text-muted">No comments yet.</p>}
+          <div className="mt-3 flex max-h-[45vh] flex-col gap-4 overflow-y-auto">
+            {comments.length === 0 && <p className="text-sm text-muted">No comments yet. Be the first to say something.</p>}
             {comments.map((c) => (
-              <div key={c.id}>
-                <p className="text-sm font-medium text-bone">{c.author_email}</p>
-                <p className="text-sm text-muted">{c.content}</p>
+              <div key={c.id} className="flex gap-2">
+                {c.author_photo ? (
+                  <img src={c.author_photo} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal text-xs font-bold text-white">
+                    {c.author_name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-sm font-medium text-bone">{c.author_name}</p>
+                    <p className="text-xs text-muted">{timeAgo(c.created_at)}</p>
+                  </div>
+                  <p className="text-sm text-bone">{c.content}</p>
+                  <div className="mt-1 flex items-center gap-3">
+                    <button onClick={() => toggleCommentLike(c)} className="flex items-center gap-1 text-xs text-muted">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill={c.liked_by_me ? '#EC4899' : 'none'} stroke={c.liked_by_me ? '#EC4899' : 'currentColor'} strokeWidth="2">
+                        <path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.8 4.8 0 0 1 8.8-2.7 4.8 4.8 0 0 1 8.8 2.7z" strokeLinejoin="round" />
+                      </svg>
+                      {c.like_count > 0 && c.like_count}
+                    </button>
+                    {user?.email === c.author_email ? (
+                      <button onClick={() => deleteComment(c.id)} className="text-xs text-muted">Delete</button>
+                    ) : user ? (
+                      <button onClick={() => setReportingCommentId(c.id)} className="text-xs text-muted">Report</button>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -408,6 +526,25 @@ export default function Feed() {
               ))}
             </div>
             <button onClick={() => setReportingId(null)} className="mt-3 text-sm text-muted">Cancel</button>
+          </div>
+        </div>
+      )}
+      {reportingCommentId && (
+        <div className="fixed inset-0 z-[1050] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-surface p-5">
+            <p className="font-semibold text-bone">Report this comment</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {['Spam', 'Inappropriate content', 'Harassment', 'Other'].map((reason) => (
+                <button
+                  key={reason}
+                  onClick={() => reportComment(reportingCommentId, reason)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-left text-sm text-bone hover:border-marigold"
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setReportingCommentId(null)} className="mt-3 text-sm text-muted">Cancel</button>
           </div>
         </div>
       )}
