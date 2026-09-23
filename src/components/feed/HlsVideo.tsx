@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 
 interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
@@ -8,102 +8,136 @@ interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
   shouldPlay: boolean;
 }
 
-// Safari plays HLS (.m3u8) natively; every other browser needs hls.js to
-// demux and feed it into a plain <video> tag via MediaSource.
-//
-// `shouldLoad` gates when the source actually attaches. A feed with many
-// posts mounts many HlsVideo instances at once -- eagerly initializing
-// hls.js (and its MediaSource) for every single one, including ones far
-// off-screen, creates real resource contention that browsers (Chrome
-// especially) don't handle gracefully, silently failing playback. Instead
-// this only loads once the post has actually scrolled into view.
+// Apple's own WebKit engine (every browser on iPhone/iPad, plus desktop
+// Safari) plays HLS natively and reliably -- and its autoplay rules are
+// built around that native path. hls.js 1.7 can also run on iOS via
+// Managed Media Source, but routing iPhones through it broke autoplay, so
+// native is preferred there. Everywhere else, hls.js is used: desktop
+// Chrome's newer built-in HLS reports canPlayType() as supported but
+// failed on these streams (confirmed: MediaError code 4).
+function prefersNativeHls(video: HTMLVideoElement): boolean {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isDesktopSafari = /^((?!chrome|chromium|crios|fxios|edg|android).)*safari/i.test(ua);
+  return (isIOS || isDesktopSafari) && !!video.canPlayType('application/vnd.apple.mpegurl');
+}
+
 export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted, ...rest }: HlsVideoProps) {
   const internalRef = useRef<HTMLVideoElement | null>(null);
+  const [needsTap, setNeedsTap] = useState(false);
+
+  // React sets the `muted` *property* but never writes the `muted`
+  // *attribute* to the DOM (a long-standing React quirk). Safari's autoplay
+  // policy looks at the attribute / defaultMuted, so without this a fresh
+  // page load (no prior tap) gets treated as "may have sound" and blocked.
+  // Declared first so it runs before the load/play effects in each commit.
+  useEffect(() => {
+    const video = internalRef.current;
+    if (!video) return;
+    video.defaultMuted = !!muted;
+    video.muted = !!muted;
+    if (muted) video.setAttribute('muted', '');
+    else video.removeAttribute('muted');
+  }, [muted]);
 
   useEffect(() => {
     const video = internalRef.current;
     if (!video || !shouldLoad) return;
 
-    // hls.js's own docs recommend checking its own support FIRST, falling
-    // back to native canPlayType only if hls.js isn't available at all.
-    // canPlayType('application/vnd.apple.mpegurl') is documented to be
-    // unreliable across browsers for this MIME type -- checking it first
-    // (as this code previously did) let some non-Safari browsers take the
-    // native-playback branch incorrectly, setting the raw .m3u8 as `src`
-    // directly, which they can't actually play (MEDIA_ERR_SRC_NOT_SUPPORTED).
+    if (prefersNativeHls(video)) {
+      video.src = src;
+      return;
+    }
+
     if (Hls.isSupported()) {
       const hls = new Hls();
       hls.on(Hls.Events.ERROR, (_event, data) => {
-        console.error('[HlsVideo] hls.js error:', {
-          type: data.type,
-          details: data.details,
-          fatal: data.fatal,
-          response: data.response,
-          reason: data.reason,
-          src,
-        });
+        if (!data.fatal) return;
+        console.error('[HlsVideo] hls.js fatal error:', { type: data.type, details: data.details, src });
       });
       hls.loadSource(src);
       hls.attachMedia(video);
       return () => hls.destroy();
     }
 
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-      return;
-    }
-
-    // Last-resort fallback for a browser with neither -- just try it directly.
+    // Last resort for a browser with neither -- just try it directly.
     video.src = src;
   }, [src, shouldLoad]);
 
   useEffect(() => {
     const video = internalRef.current;
     if (!video) return;
-    const onError = () => {
-      console.error('[HlsVideo] native <video> error:', video.error, 'src:', src);
-    };
+    const onError = () => console.error('[HlsVideo] native <video> error:', video.error, 'src:', src);
+    const onPlaying = () => setNeedsTap(false);
     video.addEventListener('error', onError);
-    return () => video.removeEventListener('error', onError);
+    video.addEventListener('playing', onPlaying);
+    return () => {
+      video.removeEventListener('error', onError);
+      video.removeEventListener('playing', onPlaying);
+    };
   }, [src]);
 
-  // Autoplay needs to wait until the video can actually play -- calling
-  // play() the instant a post scrolls into view (before hls.js has
-  // finished parsing the manifest) gets interrupted by hls.js's own
-  // subsequent load, producing an AbortError and silently failing. A
-  // manual tap works because by then the video has caught up; autoplay
-  // doesn't have that luxury, so this waits for readiness explicitly.
+  // Autoplay: try as soon as the video can actually play, retrying on the
+  // next `canplay` if a load interrupted the attempt (AbortError). If the
+  // browser outright refuses (NotAllowedError), show a clear play button
+  // instead of leaving what looks like a frozen frame.
   useEffect(() => {
     const video = internalRef.current;
     if (!video) return;
 
     if (!shouldPlay) {
       video.pause();
+      setNeedsTap(false);
       return;
     }
+    if (!shouldLoad) return;
 
-    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
-      video.muted = !!muted;
-      video.play().catch((err) => console.error('[HlsVideo] play() rejected:', err?.name, err?.message));
-      return;
-    }
-
-    const onCanPlay = () => {
-      video.muted = !!muted;
-      video.play().catch((err) => console.error('[HlsVideo] play() rejected (after canplay):', err?.name, err?.message));
+    let cancelled = false;
+    const attempt = () => {
+      if (cancelled) return;
+      const playPromise = video.play();
+      if (!playPromise) return;
+      playPromise
+        .then(() => {
+          if (cancelled) return;
+          setNeedsTap(false);
+          video.removeEventListener('canplay', attempt);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          if (err?.name === 'NotAllowedError') setNeedsTap(true);
+          else if (err?.name !== 'AbortError') console.error('[HlsVideo] play() rejected:', err?.name, err?.message);
+          // AbortError = a newer load interrupted this attempt; the next
+          // `canplay` event retries automatically.
+        });
     };
-    video.addEventListener('canplay', onCanPlay);
-    return () => video.removeEventListener('canplay', onCanPlay);
-  }, [shouldPlay, src, muted]);
+
+    video.addEventListener('canplay', attempt);
+    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) attempt();
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener('canplay', attempt);
+    };
+  }, [shouldPlay, shouldLoad, src]);
 
   return (
-    <video
-      ref={(el) => {
-        internalRef.current = el;
-        videoRef?.(el);
-      }}
-      muted={muted}
-      {...rest}
-    />
+    <>
+      <video
+        ref={(el) => {
+          internalRef.current = el;
+          videoRef?.(el);
+        }}
+        muted={muted}
+        {...rest}
+      />
+      {needsTap && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/50 text-white">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
