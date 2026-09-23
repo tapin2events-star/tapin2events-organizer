@@ -112,8 +112,13 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
         });
     };
 
+    // Call play() immediately rather than waiting for readiness: iOS Safari
+    // won't download any video data until play() is called, so waiting for
+    // `canplay` first deadlocks (the video waits for play, play waits for the
+    // video). If an immediate attempt gets interrupted by a load (hls.js on
+    // desktop), the `canplay` listener retries once the video is ready.
     video.addEventListener('canplay', attempt);
-    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) attempt();
+    attempt();
 
     return () => {
       cancelled = true;
