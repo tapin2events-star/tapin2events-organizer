@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import ReportsTab from '../components/admin/ReportsTab';
 
-const TABS = ['Overview', 'Events', 'Resources', 'Products', 'Users', 'Orders'] as const;
+const TABS = ['Overview', 'Events', 'Resources', 'Products', 'Users', 'Orders', 'Reports'] as const;
 type Tab = (typeof TABS)[number];
 
 interface StatCounts {
@@ -328,6 +329,8 @@ export default function AdminDashboard() {
           ))}
         </div>
       )}
+
+      {tab === 'Reports' && <ReportsTab />}
 
       {tab === 'Orders' && (
         <div className="mt-6 flex flex-col gap-2">

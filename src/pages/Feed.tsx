@@ -51,6 +51,10 @@ export default function Feed() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const eventFilterId = searchParams.get('event');
+  // Share links and profile-grid taps open /feed?post=<id>; that post is
+  // placed first so it's the one that opens and plays.
+  const sharedPostId = searchParams.get('post');
+  const loadIdRef = useRef(0);
   const [eventFilterTitle, setEventFilterTitle] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,32 +76,69 @@ export default function Feed() {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const visiblePosts = eventFilterId
-    ? posts.filter((p) => p.event_id === eventFilterId)
-    : feedMode === 'following'
-    ? posts.filter((p) => followingEmails.has(p.author_email))
-    : posts;
+  // The database query itself scopes posts to the event or to the people
+  // you follow, so what's loaded is exactly what should be shown.
+  const visiblePosts = posts;
 
   async function loadPosts() {
+    // Ignore responses from an older load (e.g. after quickly switching
+    // between For You and Following) so they can't overwrite newer results.
+    const loadId = ++loadIdRef.current;
+
+    // Who the viewer follows is needed up front, so the Following tab asks the
+    // database for those creators' posts directly instead of filtering down
+    // only the 30 newest posts overall (which dropped anyone older than that).
+    const { data: myFollows } = user?.email
+      ? await supabase.from('follows').select('following_email').eq('follower_email', user.email)
+      : { data: [] as { following_email: string }[] };
+    if (loadId !== loadIdRef.current) return;
+    const followed = (myFollows ?? []).map((f) => f.following_email);
+    setFollowingEmails(new Set(followed));
+
     let query = supabase.from('posts').select('*').eq('status', 'active').order('created_at', { ascending: false });
-    query = eventFilterId ? query.eq('event_id', eventFilterId) : query.limit(30);
+    if (eventFilterId) {
+      query = query.eq('event_id', eventFilterId);
+    } else if (feedMode === 'following') {
+      if (followed.length === 0) {
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+      query = query.in('author_email', followed).limit(30);
+    } else {
+      query = query.limit(30);
+    }
     const { data: postRows, error } = await query;
+    if (loadId !== loadIdRef.current) return;
     if (error) {
       console.error('Failed to load feed:', error);
       setLoading(false);
       return;
     }
-    const rows = postRows ?? [];
+    let rows = postRows ?? [];
+    if (sharedPostId && !eventFilterId && feedMode === 'for_you') {
+      const alreadyLoaded = rows.find((p) => p.id === sharedPostId);
+      if (alreadyLoaded) {
+        rows = [alreadyLoaded, ...rows.filter((p) => p.id !== sharedPostId)];
+      } else {
+        const { data: shared } = await supabase.from('posts').select('*').eq('id', sharedPostId).eq('status', 'active').maybeSingle();
+        if (loadId !== loadIdRef.current) return;
+        if (shared) rows = [shared, ...rows];
+      }
+    }
     const postIds = rows.map((p) => p.id);
     const authorEmails = [...new Set(rows.map((p) => p.author_email))];
 
-    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }, { data: myFollows }] = await Promise.all([
+    // Counts are fetched only for the posts on screen -- fetching every like
+    // and comment in the database would silently undercount once the site
+    // passes Supabase's 1,000-rows-per-request cap.
+    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }] = await Promise.all([
       authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
-      postIds.length ? supabase.from('post_likes').select('post_id') : Promise.resolve({ data: [] }),
-      postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active') : Promise.resolve({ data: [] }),
-      user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
-      user?.email ? supabase.from('follows').select('following_email').eq('follower_email', user.email) : Promise.resolve({ data: [] }),
+      postIds.length ? supabase.from('post_likes').select('post_id').in('post_id', postIds) : Promise.resolve({ data: [] }),
+      postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active').in('post_id', postIds) : Promise.resolve({ data: [] }),
+      user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email).in('post_id', postIds) : Promise.resolve({ data: [] }),
     ]);
+    if (loadId !== loadIdRef.current) return;
 
     const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
     const photosByEmail = new Map((profiles ?? []).map((p) => [p.email, p.profile_photo]));
@@ -106,7 +147,6 @@ export default function Feed() {
     const commentCountByPost = new Map<string, number>();
     (commentCounts ?? []).forEach((c) => commentCountByPost.set(c.post_id, (commentCountByPost.get(c.post_id) ?? 0) + 1));
     const myLikedSet = new Set((myLikes ?? []).map((l) => l.post_id));
-    setFollowingEmails(new Set((myFollows ?? []).map((f) => f.following_email)));
 
     setPosts(
       rows.map((p) => ({
@@ -123,7 +163,7 @@ export default function Feed() {
 
   useEffect(() => {
     loadPosts();
-  }, [user?.email, eventFilterId]);
+  }, [user?.email, eventFilterId, feedMode, sharedPostId]);
 
   useEffect(() => {
     if (!eventFilterId) {
@@ -201,8 +241,8 @@ export default function Feed() {
 
     const [{ data: profiles }, { data: likes }, { data: myLikes }] = await Promise.all([
       authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
-      commentIds.length ? supabase.from('comment_likes').select('comment_id') : Promise.resolve({ data: [] }),
-      user?.email && commentIds.length ? supabase.from('comment_likes').select('comment_id').eq('user_email', user.email) : Promise.resolve({ data: [] }),
+      commentIds.length ? supabase.from('comment_likes').select('comment_id').in('comment_id', commentIds) : Promise.resolve({ data: [] }),
+      user?.email && commentIds.length ? supabase.from('comment_likes').select('comment_id').eq('user_email', user.email).in('comment_id', commentIds) : Promise.resolve({ data: [] }),
     ]);
     const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
     const photosByEmail = new Map((profiles ?? []).map((p) => [p.email, p.profile_photo]));
@@ -278,9 +318,19 @@ export default function Feed() {
     setReportingId(null);
   }
 
+  async function deletePost(postId: string) {
+    if (!window.confirm('Delete this post? This can\'t be undone.')) return;
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) {
+      window.alert('Could not delete this post. Please try again.');
+      return;
+    }
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }
+
   if (loading) return <div className="flex h-[100dvh] items-center justify-center text-muted">Loading…</div>;
 
-  if (posts.length === 0) {
+  if (posts.length === 0 && feedMode === 'for_you' && !eventFilterId) {
     return (
       <div className="flex h-[70vh] flex-col items-center justify-center text-center">
         <p className="font-display text-xl font-semibold text-bone">No posts yet</p>
@@ -360,7 +410,9 @@ export default function Feed() {
             </>
           ) : (
             <>
-              <p className="font-display text-xl font-semibold">You're not following anyone yet</p>
+              <p className="font-display text-xl font-semibold">
+                {followingEmails.size === 0 ? "You're not following anyone yet" : 'No posts from people you follow yet'}
+              </p>
               <p className="mt-1 text-sm text-white/60">Follow creators from "For You" to see their posts here.</p>
               <button onClick={() => setFeedMode('for_you')} className="mt-4 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">
                 Browse For You
@@ -437,9 +489,15 @@ export default function Feed() {
                 </svg>
                 <span className="text-xs font-medium">{shareCopiedId === post.id ? 'Copied!' : 'Share'}</span>
               </button>
-              <button onClick={() => setReportingId(post.id)} className="text-white/70">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 8v5M12 16h.01" strokeLinecap="round" /></svg>
-              </button>
+              {user?.email === post.author_email ? (
+                <button onClick={() => deletePost(post.id)} aria-label="Delete post" className="text-white/70">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+              ) : (
+                <button onClick={() => setReportingId(post.id)} aria-label="Report post" className="text-white/70">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 8v5M12 16h.01" strokeLinecap="round" /></svg>
+                </button>
+              )}
             </div>
 
             <div className="absolute inset-x-0 bottom-0 p-4 pb-6 text-white" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
