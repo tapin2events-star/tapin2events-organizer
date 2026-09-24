@@ -320,8 +320,10 @@ export default function Feed() {
 
   async function deletePost(postId: string) {
     if (!window.confirm('Delete this post? This can\'t be undone.')) return;
-    const { error } = await supabase.from('posts').delete().eq('id', postId);
-    if (error) {
+    // Runs server-side so the post, its video in Gumlet, and any custom
+    // thumbnail are all removed together (the Gumlet key stays off the browser).
+    const { data, error } = await supabase.functions.invoke('delete-post', { body: { post_id: postId } });
+    if (error || !data?.success) {
       window.alert('Could not delete this post. Please try again.');
       return;
     }
