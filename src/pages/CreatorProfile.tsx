@@ -31,6 +31,21 @@ export default function CreatorProfile() {
   const [followBusy, setFollowBusy] = useState(false);
 
   const decodedEmail = decodeURIComponent(email ?? '');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Same server-side delete the feed uses, so the post, its Gumlet video,
+  // and any custom thumbnail are all removed together.
+  async function deletePost(postId: string) {
+    if (!window.confirm("Delete this post? This can't be undone.")) return;
+    setDeletingId(postId);
+    const { data, error } = await supabase.functions.invoke('delete-post', { body: { post_id: postId } });
+    setDeletingId(null);
+    if (error || !data?.success) {
+      window.alert('Could not delete this post. Please try again.');
+      return;
+    }
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }
 
   useEffect(() => {
     if (!decodedEmail) return;
@@ -135,13 +150,25 @@ export default function CreatorProfile() {
         ) : (
           <div className="mt-3 grid grid-cols-3 gap-1">
             {posts.map((post) => (
-              <Link key={post.id} to={`/feed?post=${post.id}`} className="aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
-                {post.thumbnail_url ? (
-                  <img src={post.thumbnail_url} alt={post.caption ?? ''} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-2xl">🎥</div>
+              <div key={post.id} className="relative">
+                <Link to={`/feed?post=${post.id}`} className="block aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
+                  {post.thumbnail_url ? (
+                    <img src={post.thumbnail_url} alt={post.caption ?? ''} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl">🎥</div>
+                  )}
+                </Link>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => deletePost(post.id)}
+                    disabled={deletingId === post.id}
+                    aria-label="Delete post"
+                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-magenta disabled:opacity-50"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </button>
                 )}
-              </Link>
+              </div>
             ))}
           </div>
         )}
