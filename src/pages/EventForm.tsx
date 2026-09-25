@@ -58,6 +58,10 @@ export default function EventForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [aiNotes, setAiNotes] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [showAiNotes, setShowAiNotes] = useState(false);
   const [eventType, setEventType] = useState<EventType>('free');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -429,6 +433,63 @@ export default function EventForm() {
 
             <Field label="Description">
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputClass} />
+              <div className="mt-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!title.trim()) {
+                        setAiError('Add a title first so there\'s something to write about.');
+                        return;
+                      }
+                      setAiGenerating(true);
+                      setAiError(null);
+                      const { data, error } = await supabase.functions.invoke('generate-event-description', {
+                        body: {
+                          title,
+                          category,
+                          start_date: startDate ? new Date(startDate).toISOString() : null,
+                          location_name: locationName,
+                          is_online: isOnline,
+                          is_free: eventType === 'free',
+                          ticket_price: ticketPrice,
+                          notes: aiNotes,
+                        },
+                      });
+                      setAiGenerating(false);
+                      if (error || !data?.description) {
+                        setAiError(data?.error || 'Could not generate a description right now. Please try again.');
+                        return;
+                      }
+                      setDescription(data.description);
+                    }}
+                    disabled={aiGenerating}
+                    className="flex items-center gap-1.5 rounded-full border border-marigold/40 bg-marigold/10 px-3 py-1.5 text-sm font-medium text-marigold hover:bg-marigold/20 disabled:opacity-50"
+                  >
+                    <span aria-hidden>✨</span>
+                    {aiGenerating ? 'Writing…' : description.trim() ? 'Rewrite with AI' : 'Help me write this'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAiNotes((v) => !v)}
+                    className="text-sm font-medium text-muted hover:text-bone"
+                  >
+                    {showAiNotes ? 'Hide extra context' : '+ Add context for the AI'}
+                  </button>
+                </div>
+                {showAiNotes && (
+                  <input
+                    value={aiNotes}
+                    onChange={(e) => setAiNotes(e.target.value)}
+                    placeholder="e.g. kid-friendly, first time hosting this, bring your own chair"
+                    className={`${inputClass} mt-2`}
+                  />
+                )}
+                <p className="mt-1 text-xs text-muted">
+                  Uses the title, category, date, location, and price you've filled in so far — you can regenerate after adding more.
+                </p>
+                {aiError && <p className="mt-1 text-xs text-magenta">{aiError}</p>}
+              </div>
             </Field>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
