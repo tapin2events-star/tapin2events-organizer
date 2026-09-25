@@ -19,6 +19,10 @@ export default function Dashboard() {
   const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [vendorFilter, setVendorFilter] = useState<'all' | 'pending_vendors'>('all');
   const [eventsWithPendingVendors, setEventsWithPendingVendors] = useState<Set<string>>(new Set());
+  // Events where the current user isn't the organizer but has been given
+  // vendor-management access as a team member (narrower than full access).
+  const [vendorManagerEventIds, setVendorManagerEventIds] = useState<Set<string>>(new Set());
+  const [accessFilter, setAccessFilter] = useState<'all' | 'vendor_management'>('all');
   const [seriesPassFilter, setSeriesPassFilter] = useState<'all' | 'has_series_passes'>('all');
   const [eventsWithSeriesPasses, setEventsWithSeriesPasses] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
@@ -26,14 +30,31 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('organizer_id', user.id)
-        .order('start_date', { ascending: true, nullsFirst: false });
-      if (!error && data) setEvents(data as TapEvent[]);
+      const [{ data: ownEvents, error }, { data: myCollabs }] = await Promise.all([
+        supabase.from('events').select('*').eq('organizer_id', user.id).order('start_date', { ascending: true, nullsFirst: false }),
+        user.email
+          ? supabase.from('event_collaborations').select('event_id, role, permissions').eq('collaborator_email', user.email)
+          : Promise.resolve({ data: [] as { event_id: string; role: string; permissions: string[] }[] }),
+      ]);
 
-      const eventIds = (data ?? []).map((e) => e.id);
+      // Team members (including vendor managers) need to see the event on
+      // their own dashboard too, not just the organizer -- collaborator
+      // access previously granted permission on the underlying data but the
+      // event never actually showed up in this list to navigate into.
+      const collabEventIds = (myCollabs ?? []).map((c) => c.event_id);
+      const vendorMgrIds = new Set((myCollabs ?? []).filter((c) => c.permissions?.includes('manage_vendors')).map((c) => c.event_id));
+      setVendorManagerEventIds(vendorMgrIds);
+
+      const ownIds = new Set((ownEvents ?? []).map((e) => e.id));
+      const collabOnlyIds = collabEventIds.filter((id) => !ownIds.has(id));
+      const { data: collabEvents } = collabOnlyIds.length
+        ? await supabase.from('events').select('*').in('id', collabOnlyIds)
+        : { data: [] as TapEvent[] };
+
+      const data = [...(ownEvents ?? []), ...(collabEvents ?? [])];
+      if (!error) setEvents(data as TapEvent[]);
+
+      const eventIds = data.map((e) => e.id);
       if (eventIds.length > 0) {
         const { data: pendingVendors } = await supabase
           .from('event_vendor_applications')
@@ -70,13 +91,14 @@ export default function Dashboard() {
       .filter((e) => statusFilter === 'all' || e.status === statusFilter)
       .filter((e) => typeFilter === 'all' || (typeFilter === 'free' ? e.event_type === 'free' : e.event_type !== 'free'))
       .filter((e) => vendorFilter === 'all' || eventsWithPendingVendors.has(e.id))
+      .filter((e) => accessFilter === 'all' || e.organizer_id === user?.id || vendorManagerEventIds.has(e.id))
       .filter((e) => seriesPassFilter === 'all' || eventsWithSeriesPasses.has(e.id))
       .filter((e) => {
         if (timeFilter === 'all' || !e.start_date) return true;
         const isUpcoming = new Date(e.start_date) >= now;
         return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
       });
-  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses]);
+  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, accessFilter, vendorManagerEventIds, user?.id]);
 
   return (
     <div>
@@ -163,6 +185,17 @@ export default function Dashboard() {
                   ]}
                 />
               )}
+              {vendorManagerEventIds.size > 0 && (
+                <FilterPillGroup
+                  label="Vendor management access"
+                  value={accessFilter}
+                  onChange={setAccessFilter}
+                  options={[
+                    { value: 'all', label: 'All events' },
+                    { value: 'vendor_management', label: 'I can manage vendors' },
+                  ]}
+                />
+              )}
             </div>
           )}
         </div>
@@ -188,7 +221,14 @@ export default function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredEvents.map((event) => (
-            <TicketStubCard key={event.id} event={event} />
+            <div key={event.id} className="relative">
+              {vendorManagerEventIds.has(event.id) && event.organizer_id !== user?.id && (
+                <span className="absolute right-3 top-3 z-10 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple">
+                  Vendor Manager
+                </span>
+              )}
+              <TicketStubCard event={event} />
+            </div>
           ))}
         </div>
       )}

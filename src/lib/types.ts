@@ -70,7 +70,7 @@ export interface Ticket {
   created_at: string;
 }
 
-export type CollaborationRole = 'admin' | 'editor' | 'viewer';
+export type CollaborationRole = 'admin' | 'editor' | 'viewer' | 'vendor_manager';
 export type CollaborationStatus = 'pending' | 'accepted' | 'declined';
 
 export interface EventCollaboration {
@@ -78,6 +78,7 @@ export interface EventCollaboration {
   event_id: string;
   collaborator_email: string;
   role: CollaborationRole;
+  permissions: string[];
   invited_by: string;
   motivation: string | null;
   status: CollaborationStatus;

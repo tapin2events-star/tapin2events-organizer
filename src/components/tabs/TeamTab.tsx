@@ -65,29 +65,33 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
     setError(null);
     const invitedEmail = email.trim().toLowerCase();
 
-    // The event_collaborations row is just a record of the invite --
-    // actual access is granted by events.collaborators, the array RLS
-    // checks for permission on tickets, orders, tasks, and vendor apps.
-    // Both need updating, or the invite would look successful while
-    // granting no real access.
-    const { data: currentEvent, error: fetchError } = await supabase
-      .from('events')
-      .select('collaborators')
-      .eq('id', eventId)
-      .single();
-    if (fetchError) {
-      setError(fetchError.message);
-      return;
-    }
-    const existingCollaborators: string[] = currentEvent?.collaborators ?? [];
-    if (!existingCollaborators.includes(invitedEmail)) {
-      const { error: grantError } = await supabase
+    // The event_collaborations row is just a record of the invite -- actual
+    // access is granted separately. Admin/Editor/Viewer get full access via
+    // events.collaborators (the array RLS checks for tickets, orders, tasks,
+    // and vendor apps). Vendor Manager is narrower on purpose: it only sets
+    // permissions=['manage_vendors'], which a dedicated RLS policy checks
+    // for vendor applications specifically -- it does NOT touch
+    // events.collaborators, so a vendor manager can't see tickets/orders/tasks.
+    if (role !== 'vendor_manager') {
+      const { data: currentEvent, error: fetchError } = await supabase
         .from('events')
-        .update({ collaborators: [...existingCollaborators, invitedEmail] })
-        .eq('id', eventId);
-      if (grantError) {
-        setError(grantError.message);
+        .select('collaborators')
+        .eq('id', eventId)
+        .single();
+      if (fetchError) {
+        setError(fetchError.message);
         return;
+      }
+      const existingCollaborators: string[] = currentEvent?.collaborators ?? [];
+      if (!existingCollaborators.includes(invitedEmail)) {
+        const { error: grantError } = await supabase
+          .from('events')
+          .update({ collaborators: [...existingCollaborators, invitedEmail] })
+          .eq('id', eventId);
+        if (grantError) {
+          setError(grantError.message);
+          return;
+        }
       }
     }
 
@@ -95,6 +99,7 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
       event_id: eventId,
       collaborator_email: invitedEmail,
       role,
+      permissions: role === 'vendor_manager' ? ['manage_vendors'] : [],
       invited_by: user.email,
     });
     if (error) {
@@ -143,6 +148,7 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
             <option value="admin">Admin</option>
             <option value="editor">Editor</option>
             <option value="viewer">Viewer</option>
+            <option value="vendor_manager">Vendor Manager</option>
           </select>
         </label>
         <button
@@ -169,7 +175,7 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
               <div>
                 <p className="text-sm font-medium text-bone">{c.collaborator_email}</p>
                 <p className="font-mono text-xs text-muted">
-                  {c.role} · {c.status}
+                  {c.role === 'vendor_manager' ? 'Vendor Manager (vendor applications only)' : c.role} · {c.status}
                 </p>
               </div>
               <div className="flex items-center gap-3">
