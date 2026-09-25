@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import type { Resource, TapEvent, ResourceReview, ResourceMedia } from '../lib/types';
+import type { Resource, TapEvent, ResourceReview } from '../lib/types';
 import ShopSection from '../components/products/ShopSection';
+import ResourceMediaSection from '../components/resources/ResourceMediaSection';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for a quote';
@@ -35,7 +36,6 @@ export default function ResourceProfile() {
   const [requestSent, setRequestSent] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<ResourceReview[]>([]);
-  const [media, setMedia] = useState<ResourceMedia[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -44,12 +44,8 @@ export default function ResourceProfile() {
       setResource((data as Resource) ?? null);
       setLoading(false);
 
-      const [{ data: reviewRows }, { data: mediaRows }] = await Promise.all([
-        supabase.from('resource_reviews').select('*').eq('resource_id', id).order('created_at', { ascending: false }),
-        supabase.from('resource_media').select('*').eq('resource_id', id).order('display_order', { ascending: true }),
-      ]);
+      const { data: reviewRows } = await supabase.from('resource_reviews').select('*').eq('resource_id', id).order('created_at', { ascending: false });
       setReviews((reviewRows ?? []) as ResourceReview[]);
-      setMedia((mediaRows ?? []) as ResourceMedia[]);
     })();
   }, [id]);
 
@@ -176,16 +172,7 @@ export default function ResourceProfile() {
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
 
-            {media.length > 0 && (
-              <div className="mt-6 border-t border-gray-200 pt-6">
-                <h2 className="font-display text-lg font-semibold text-gray-900">Portfolio</h2>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {media.map((m) => (
-                    <img key={m.id} src={m.media_url} alt={m.caption ?? ''} className="aspect-square w-full rounded-lg object-cover" />
-                  ))}
-                </div>
-              </div>
-            )}
+            <ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} />
 
             {resource.pricing_details && (
               <div className="mt-6 border-t border-gray-200 pt-6">

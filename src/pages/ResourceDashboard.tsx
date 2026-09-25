@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import type { Resource, ResourceBooking } from '../lib/types';
 import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
+import ResourceMediaManager from '../components/resources/ResourceMediaManager';
 
 interface BookingRow extends ResourceBooking {
   event_title: string;
@@ -45,7 +46,7 @@ const STATUS_LABELS: Record<string, string> = {
   deleted: 'Deleted',
 };
 
-const TABS = ['Bookings', 'Products'] as const;
+const TABS = ['Bookings', 'Media', 'Products'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ResourceDashboard() {
@@ -55,7 +56,7 @@ export default function ResourceDashboard() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('booking');
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [tab, setTab] = useState<Tab>('Bookings');
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'media' ? 'Media' : 'Bookings');
   const [resource, setResource] = useState<Resource | null>(null);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -365,6 +366,8 @@ export default function ResourceDashboard() {
         )}
           </>
         )}
+
+        {tab === 'Media' && <ResourceMediaManager resourceId={resource.id} />}
 
         {tab === 'Products' && (
           <>

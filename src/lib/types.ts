@@ -168,12 +168,22 @@ export interface ResourceReview {
   created_at: string;
 }
 
+// 'photo' = an uploaded image (usually in an album); 'embed' = a music or
+// video link shown as a player (see lib/mediaEmbeds).
 export interface ResourceMedia {
   id: string;
   resource_id: string;
-  media_type: 'image' | 'video';
+  album_id: string | null;
+  media_type: 'photo' | 'embed';
   media_url: string;
   caption: string | null;
+  display_order: number;
+}
+
+export interface ResourceAlbum {
+  id: string;
+  resource_id: string;
+  title: string;
   display_order: number;
 }
 

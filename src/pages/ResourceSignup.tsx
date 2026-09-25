@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { RESOURCE_CATEGORIES, type PricingType, type Resource, type ResourceMedia } from '../lib/types';
+import { RESOURCE_CATEGORIES, type PricingType, type Resource } from '../lib/types';
 import ImageUpload from '../components/ImageUpload';
 
 export default function ResourceSignup() {
@@ -10,7 +10,6 @@ export default function ResourceSignup() {
   const navigate = useNavigate();
   const location = useLocation();
   const [existing, setExisting] = useState<Resource | null>(null);
-  const [media, setMedia] = useState<ResourceMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -54,27 +53,11 @@ export default function ResourceSignup() {
         setFacebookUrl(r.facebook_url ?? '');
         setWebsiteUrl(r.website_url ?? '');
 
-        const { data: mediaRows } = await supabase.from('resource_media').select('*').eq('resource_id', r.id).order('display_order', { ascending: true });
-        setMedia((mediaRows ?? []) as ResourceMedia[]);
       }
       setLoading(false);
     })();
   }, [user, authLoading, navigate, location.pathname]);
 
-  async function addPhoto(url: string) {
-    if (!existing) return;
-    const { data } = await supabase
-      .from('resource_media')
-      .insert({ resource_id: existing.id, media_url: url, display_order: media.length })
-      .select()
-      .single();
-    if (data) setMedia((prev) => [...prev, data as ResourceMedia]);
-  }
-
-  async function removePhoto(mediaId: string) {
-    await supabase.from('resource_media').delete().eq('id', mediaId);
-    setMedia((prev) => prev.filter((m) => m.id !== mediaId));
-  }
 
   function toggleCategory(c: string) {
     setCategories((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
@@ -213,27 +196,12 @@ export default function ResourceSignup() {
               <ImageUpload currentUrl={profileImage || null} onUploaded={setProfileImage} pathPrefix="resources" label="Profile photo" />
 
           {existing && (
-            <div>
-              <p className="text-sm font-medium text-gray-700">Portfolio photos</p>
-              {media.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {media.map((m) => (
-                    <div key={m.id} className="group relative aspect-square">
-                      <img src={m.media_url} alt="" className="h-full w-full rounded-lg object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(m.id)}
-                        className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white opacity-0 group-hover:opacity-100"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="mt-2">
-                <ImageUpload currentUrl={null} onUploaded={addPhoto} pathPrefix="resources-portfolio" label="Add a photo" />
-              </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm font-medium text-gray-900">Photos, music & video</p>
+              <p className="mt-0.5 text-sm text-gray-600">
+                Add photo albums and music or video players to your profile from the Media tab in your Resource Dashboard.
+              </p>
+              <Link to="/resources/dashboard?tab=media" className="mt-2 inline-block text-sm font-semibold text-marigold">Manage media &rarr;</Link>
             </div>
           )}
           </div>
