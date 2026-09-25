@@ -22,6 +22,10 @@ export default function Dashboard() {
   // Events where the current user isn't the organizer but has been given
   // vendor-management access as a team member (narrower than full access).
   const [vendorManagerEventIds, setVendorManagerEventIds] = useState<Set<string>>(new Set());
+  // Separately: events the organizer owns where they've delegated vendor
+  // management to someone else -- the organizer should be able to see who
+  // they've handed that off to, not just the person who received it.
+  const [eventsWithVendorManagerAssigned, setEventsWithVendorManagerAssigned] = useState<Map<string, string>>(new Map());
   const [accessFilter, setAccessFilter] = useState<'all' | 'vendor_management'>('all');
   const [seriesPassFilter, setSeriesPassFilter] = useState<'all' | 'has_series_passes'>('all');
   const [eventsWithSeriesPasses, setEventsWithSeriesPasses] = useState<Set<string>>(new Set());
@@ -70,6 +74,13 @@ export default function Dashboard() {
           .eq('ticket_type', 'series_pass')
           .eq('status', 'confirmed');
         setEventsWithSeriesPasses(new Set((seriesPassTickets ?? []).map((t) => t.event_id)));
+
+        const { data: assignedVendorMgrs } = await supabase
+          .from('event_collaborations')
+          .select('event_id, collaborator_email')
+          .in('event_id', eventIds)
+          .contains('permissions', ['manage_vendors']);
+        setEventsWithVendorManagerAssigned(new Map((assignedVendorMgrs ?? []).map((c) => [c.event_id, c.collaborator_email])));
       }
 
       if (user.email) {
@@ -91,14 +102,19 @@ export default function Dashboard() {
       .filter((e) => statusFilter === 'all' || e.status === statusFilter)
       .filter((e) => typeFilter === 'all' || (typeFilter === 'free' ? e.event_type === 'free' : e.event_type !== 'free'))
       .filter((e) => vendorFilter === 'all' || eventsWithPendingVendors.has(e.id))
-      .filter((e) => accessFilter === 'all' || e.organizer_id === user?.id || vendorManagerEventIds.has(e.id))
+      .filter(
+        (e) =>
+          accessFilter === 'all' ||
+          vendorManagerEventIds.has(e.id) ||
+          (e.organizer_id === user?.id && eventsWithVendorManagerAssigned.has(e.id))
+      )
       .filter((e) => seriesPassFilter === 'all' || eventsWithSeriesPasses.has(e.id))
       .filter((e) => {
         if (timeFilter === 'all' || !e.start_date) return true;
         const isUpcoming = new Date(e.start_date) >= now;
         return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
       });
-  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, accessFilter, vendorManagerEventIds, user?.id]);
+  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, accessFilter, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
 
   return (
     <div>
@@ -185,7 +201,7 @@ export default function Dashboard() {
                   ]}
                 />
               )}
-              {vendorManagerEventIds.size > 0 && (
+              {(vendorManagerEventIds.size > 0 || eventsWithVendorManagerAssigned.size > 0) && (
                 <FilterPillGroup
                   label="Vendor management access"
                   value={accessFilter}
@@ -225,6 +241,14 @@ export default function Dashboard() {
               {vendorManagerEventIds.has(event.id) && event.organizer_id !== user?.id && (
                 <span className="absolute right-3 top-3 z-10 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple">
                   Vendor Manager
+                </span>
+              )}
+              {event.organizer_id === user?.id && eventsWithVendorManagerAssigned.has(event.id) && (
+                <span
+                  title={`Vendor manager: ${eventsWithVendorManagerAssigned.get(event.id)}`}
+                  className="absolute right-3 top-3 z-10 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple"
+                >
+                  Vendor Manager Assigned
                 </span>
               )}
               <TicketStubCard event={event} />
