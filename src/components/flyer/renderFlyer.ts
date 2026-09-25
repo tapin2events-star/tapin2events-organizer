@@ -255,8 +255,13 @@ function drawRows(ctx: CanvasRenderingContext2D, c: FlyerContent, p: Palette, x:
   return y;
 }
 
-export function drawFlyer(canvas: HTMLCanvasElement, style: FlyerStyle, palette: Palette, size: FlyerSize, c: FlyerContent) {
-  const { width, height } = SIZES[size];
+// maxWidth (optional) renders a smaller copy with the identical layout --
+// used for the event poster, which is shown on web pages, not printed.
+export function drawFlyer(canvas: HTMLCanvasElement, style: FlyerStyle, palette: Palette, size: FlyerSize, c: FlyerContent, maxWidth?: number) {
+  const full = SIZES[size];
+  const shrink = maxWidth && full.width > maxWidth ? maxWidth / full.width : 1;
+  const width = Math.round(full.width * shrink);
+  const height = Math.round(full.height * shrink);
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');

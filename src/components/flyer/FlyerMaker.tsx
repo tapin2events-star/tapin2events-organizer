@@ -77,6 +77,7 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'download' | 'poster' | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // The flyer fonts (Big Shoulders Display, Public Sans) are loaded by the
   // page; wait for them so the first render isn't in a fallback font.
@@ -126,16 +127,13 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const palette = PALETTES.find((p) => p.id === paletteId) ?? PALETTES[0];
+  const content = () => ({ headline: headline.trim() || event.title, tagline: tagline.trim(), ...formatDetails(event), qr, photo });
+
   useEffect(() => {
     if (!canvasRef.current || !fontsReady) return;
-    const palette = PALETTES.find((p) => p.id === paletteId) ?? PALETTES[0];
-    drawFlyer(canvasRef.current, style, palette, size, {
-      headline: headline.trim() || event.title,
-      tagline: tagline.trim(),
-      ...formatDetails(event),
-      qr,
-      photo,
-    });
+    drawFlyer(canvasRef.current, style, palette, size, content());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style, paletteId, size, headline, tagline, photo, qr, fontsReady, event]);
 
   function handlePhoto(file: File) {
@@ -147,15 +145,29 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
     });
   }
 
-  function toBlob(): Promise<Blob | null> {
-    return new Promise((resolve) => canvasRef.current?.toBlob((b) => resolve(b), 'image/png') ?? resolve(null));
+  function toBlob(canvas: HTMLCanvasElement | null = canvasRef.current, type = 'image/png', quality?: number): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      if (!canvas) {
+        resolve(null);
+        return;
+      }
+      try {
+        canvas.toBlob((b) => resolve(b), type, quality);
+      } catch {
+        resolve(null);
+      }
+    });
   }
 
   async function download() {
     setBusy('download');
+    setExportError(null);
     const blob = await toBlob();
     setBusy(null);
-    if (!blob) return;
+    if (!blob) {
+      setExportError("Couldn't save the flyer. Please try again.");
+      return;
+    }
     const slug = (event.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -168,10 +180,16 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
 
   async function useAsPoster() {
     setBusy('poster');
-    const blob = await toBlob();
+    setExportError(null);
+    const posterCanvas = document.createElement('canvas');
+    drawFlyer(posterCanvas, style, palette, size, content(), 1080);
+    const blob = await toBlob(posterCanvas, 'image/jpeg', 0.9);
     setBusy(null);
-    if (!blob) return;
-    onUseAsPoster(new File([blob], 'flyer.png', { type: 'image/png' }));
+    if (!blob) {
+      setExportError("Couldn't save the flyer. Please try again.");
+      return;
+    }
+    onUseAsPoster(new File([blob], 'flyer.jpg', { type: 'image/jpeg' }));
     onClose();
   }
 
@@ -280,6 +298,7 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
             <button type="button" onClick={download} disabled={!!busy || !fontsReady} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-bone hover:border-marigold disabled:opacity-50">
               {busy === 'download' ? 'Preparing…' : 'Download'}
             </button>
+            {exportError && <p className="text-sm text-magenta">{exportError}</p>}
           </div>
         </div>
       </div>
