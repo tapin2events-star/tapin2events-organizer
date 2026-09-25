@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import FollowListModal from '../components/profile/FollowListModal';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
@@ -37,6 +38,8 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [savedEvents, setSavedEvents] = useState<TapEvent[]>([]);
+  const [myResourceId, setMyResourceId] = useState<string | null>(null);
+  const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [tab, setTab] = useState<SettingsTab>('basic');
@@ -74,6 +77,10 @@ export default function Profile() {
       if (savedIds.length > 0) {
         const { data: events } = await supabase.from('events').select('*').in('id', savedIds);
         setSavedEvents((events ?? []) as TapEvent[]);
+      }
+      if (profileData?.is_resource) {
+        const { data: resource } = await supabase.from('resources').select('id').eq('email', user.email).maybeSingle();
+        setMyResourceId(resource?.id ?? null);
       }
       setLoading(false);
     })();
@@ -175,14 +182,14 @@ export default function Profile() {
           <p className="text-center font-display text-xl font-bold text-bone">0</p>
           <p className="text-xs text-muted">Posts</p>
         </div>
-        <div>
+        <button onClick={() => setOpenList('followers')} className="text-left">
           <p className="text-center font-display text-xl font-bold text-bone">{profile.followers_count ?? 0}</p>
           <p className="text-xs text-muted">Followers</p>
-        </div>
-        <div>
+        </button>
+        <button onClick={() => setOpenList('following')} className="text-left">
           <p className="text-center font-display text-xl font-bold text-bone">{profile.following_count ?? 0}</p>
           <p className="text-xs text-muted">Following</p>
-        </div>
+        </button>
       </div>
 
       {profile.bio && <p className="mt-4 text-sm text-muted">{profile.bio}</p>}
@@ -206,6 +213,12 @@ export default function Profile() {
           <Link to="/resources/dashboard" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
             <p className="font-medium text-bone">Resource Dashboard</p>
             <p className="text-xs text-muted">Your bookings and listing</p>
+          </Link>
+        )}
+        {profile.is_resource && myResourceId && (
+          <Link to={`/resources/${myResourceId}`} className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
+            <p className="font-medium text-bone">View My Resource Page</p>
+            <p className="text-xs text-muted">What others see when they find you</p>
           </Link>
         )}
       </div>
@@ -326,6 +339,16 @@ export default function Profile() {
           </div>
         )}
       </div>
+
+      {openList && (
+        <FollowListModal
+          email={profile.email}
+          direction={openList}
+          isPrivate={false}
+          isOwnList={true}
+          onClose={() => setOpenList(null)}
+        />
+      )}
     </div>
   );
 }

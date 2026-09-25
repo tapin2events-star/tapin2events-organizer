@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import FollowListModal from '../components/profile/FollowListModal';
 
 interface CreatorProfile {
   email: string;
@@ -12,6 +13,7 @@ interface CreatorProfile {
   is_resource: boolean | null;
   followers_count: number | null;
   following_count: number | null;
+  is_profile_private: boolean | null;
 }
 
 interface Post {
@@ -28,6 +30,7 @@ export default function CreatorProfile() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
 
   const decodedEmail = decodeURIComponent(email ?? '');
@@ -53,7 +56,7 @@ export default function CreatorProfile() {
       const [{ data: profileData }, { data: postRows }, { data: followRow }] = await Promise.all([
         supabase
           .from('public_profiles')
-          .select('email, full_name, bio, profile_photo, is_organizer, is_resource, followers_count, following_count')
+          .select('email, full_name, bio, profile_photo, is_organizer, is_resource, followers_count, following_count, is_profile_private')
           .eq('email', decodedEmail)
           .single(),
         supabase
@@ -121,14 +124,14 @@ export default function CreatorProfile() {
           <p className="text-center font-display text-lg font-bold text-bone">{posts.length}</p>
           <p className="text-xs text-muted">Posts</p>
         </div>
-        <div>
+        <button onClick={() => setOpenList('followers')} className="text-left">
           <p className="text-center font-display text-lg font-bold text-bone">{profile.followers_count ?? 0}</p>
           <p className="text-xs text-muted">Followers</p>
-        </div>
-        <div>
+        </button>
+        <button onClick={() => setOpenList('following')} className="text-left">
           <p className="text-center font-display text-lg font-bold text-bone">{profile.following_count ?? 0}</p>
           <p className="text-xs text-muted">Following</p>
-        </div>
+        </button>
 
         {!isOwnProfile && user && (
           <button
@@ -173,6 +176,16 @@ export default function CreatorProfile() {
           </div>
         )}
       </div>
+
+      {openList && (
+        <FollowListModal
+          email={profile.email}
+          direction={openList}
+          isPrivate={!!profile.is_profile_private}
+          isOwnList={isOwnProfile}
+          onClose={() => setOpenList(null)}
+        />
+      )}
     </div>
   );
 }
