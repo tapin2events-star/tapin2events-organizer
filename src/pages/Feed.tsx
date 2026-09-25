@@ -63,6 +63,9 @@ export default function Feed() {
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
   const [shareCopiedId, setShareCopiedId] = useState<string | null>(null);
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
@@ -229,6 +232,8 @@ export default function Feed() {
 
   async function openCommentPanel(postId: string) {
     setOpenComments(postId);
+    setComments([]);
+    setCommentsLoading(true);
     const { data: commentRows } = await supabase
       .from('post_comments')
       .select('id, author_email, content, created_at')
@@ -259,12 +264,14 @@ export default function Feed() {
         liked_by_me: myLikedSet.has(c.id),
       }))
     );
+    setCommentsLoading(false);
   }
 
   async function submitComment() {
-    if (!user?.email || !openComments || !newComment.trim()) return;
+    if (!user?.email || !openComments || !newComment.trim() || postingComment) return;
     const content = newComment.trim();
     setNewComment('');
+    setPostingComment(true);
     const { data: profile } = await supabase.from('profiles').select('full_name, profile_photo').eq('email', user.email).single();
     const { data } = await supabase
       .from('post_comments')
@@ -277,7 +284,9 @@ export default function Feed() {
         { ...data, author_name: profile?.full_name || user.email, author_photo: profile?.profile_photo ?? null, like_count: 0, liked_by_me: false },
       ]);
       setPosts((prev) => prev.map((p) => (p.id === openComments ? { ...p, comment_count: p.comment_count + 1 } : p)));
+      setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     }
+    setPostingComment(false);
   }
 
   async function toggleCommentLike(comment: Comment) {
@@ -524,63 +533,106 @@ export default function Feed() {
       )}
 
       {openComments && (
-        <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] rounded-t-2xl bg-surface p-4">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-bone">Comments</p>
-            <button onClick={() => setOpenComments(null)} className="text-muted">✕</button>
-          </div>
-          <div className="mt-3 flex max-h-[45vh] flex-col gap-4 overflow-y-auto">
-            {comments.length === 0 && <p className="text-sm text-muted">No comments yet. Be the first to say something.</p>}
-            {comments.map((c) => (
-              <div key={c.id} className="flex gap-2">
-                {c.author_photo ? (
-                  <img src={c.author_photo} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
-                ) : (
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal text-xs font-bold text-white">
-                    {c.author_name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-sm font-medium text-bone">{c.author_name}</p>
-                    <p className="text-xs text-muted">{timeAgo(c.created_at)}</p>
-                  </div>
-                  <p className="text-sm text-bone">{c.content}</p>
-                  <div className="mt-1 flex items-center gap-3">
-                    <button onClick={() => toggleCommentLike(c)} className="flex items-center gap-1 text-xs text-muted">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill={c.liked_by_me ? '#EC4899' : 'none'} stroke={c.liked_by_me ? '#EC4899' : 'currentColor'} strokeWidth="2">
-                        <path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.8 4.8 0 0 1 8.8-2.7 4.8 4.8 0 0 1 8.8 2.7z" strokeLinejoin="round" />
-                      </svg>
-                      {c.like_count > 0 && c.like_count}
-                    </button>
-                    {user?.email === c.author_email ? (
-                      <button onClick={() => deleteComment(c.id)} className="text-xs text-muted">Delete</button>
-                    ) : user ? (
-                      <button onClick={() => setReportingCommentId(c.id)} className="text-xs text-muted">Report</button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {user ? (
-            <div className="mt-3 flex gap-2">
-              <input
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment…"
-                className="flex-1 rounded-full border border-gray-300 bg-surface2 px-4 py-2 text-sm text-bone outline-none focus-visible:border-marigold"
-              />
-              <button onClick={submitComment} className="rounded-full bg-marigold px-4 py-2 text-sm font-semibold text-white">
-                Post
+        <>
+          <div className="fixed inset-0 z-[1040] bg-black/40" onClick={() => setOpenComments(null)} />
+          <div
+            className="fixed inset-x-0 bottom-0 z-[1050] mx-auto flex max-h-[70dvh] max-w-lg flex-col rounded-t-2xl bg-surface shadow-2xl"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
+            <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-gray-300" />
+            <div className="flex items-center justify-between px-4 pb-2 pt-2">
+              <span className="w-6" />
+              <p className="text-sm font-semibold text-bone">
+                {commentsLoading ? 'Comments' : `${comments.length} comment${comments.length === 1 ? '' : 's'}`}
+              </p>
+              <button onClick={() => setOpenComments(null)} aria-label="Close comments" className="flex h-6 w-6 items-center justify-center text-muted">
+                ✕
               </button>
             </div>
-          ) : (
-            <p className="mt-3 text-sm text-muted">
-              <Link to="/login" className="text-marigold underline">Sign in</Link> to comment.
-            </p>
-          )}
-        </div>
+
+            <div className="min-h-[30dvh] flex-1 overflow-y-auto border-t border-gray-100 px-4 py-3">
+              {commentsLoading ? (
+                <p className="py-8 text-center text-sm text-muted">Loading comments…</p>
+              ) : comments.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm font-medium text-bone">No comments yet</p>
+                  <p className="text-xs text-muted">Be the first to say something.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {comments.map((c) => (
+                    <div key={c.id} className="flex gap-2.5">
+                      <Link to={`/creator/${encodeURIComponent(c.author_email)}`} className="shrink-0">
+                        {c.author_photo ? (
+                          <img src={c.author_photo} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        ) : (
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal text-xs font-bold text-white">
+                            {c.author_name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2">
+                          <Link to={`/creator/${encodeURIComponent(c.author_email)}`} className="truncate text-sm font-semibold text-bone">
+                            {c.author_name}
+                          </Link>
+                          <p className="shrink-0 text-xs text-muted">{timeAgo(c.created_at)}</p>
+                        </div>
+                        <p className="whitespace-pre-wrap break-words text-sm text-bone">{c.content}</p>
+                        <div className="mt-1 flex items-center gap-4">
+                          {user?.email === c.author_email ? (
+                            <button onClick={() => deleteComment(c.id)} className="text-xs text-muted">Delete</button>
+                          ) : user ? (
+                            <button onClick={() => setReportingCommentId(c.id)} className="text-xs text-muted">Report</button>
+                          ) : null}
+                        </div>
+                      </div>
+                      <button onClick={() => toggleCommentLike(c)} aria-label="Like comment" className="flex shrink-0 flex-col items-center gap-0.5 self-start pt-1 text-xs text-muted">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={c.liked_by_me ? '#EC4899' : 'none'} stroke={c.liked_by_me ? '#EC4899' : 'currentColor'} strokeWidth="2">
+                          <path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.8 4.8 0 0 1 8.8-2.7 4.8 4.8 0 0 1 8.8 2.7z" strokeLinejoin="round" />
+                        </svg>
+                        {c.like_count > 0 && c.like_count}
+                      </button>
+                    </div>
+                  ))}
+                  <div ref={commentsEndRef} />
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 px-3 py-2.5">
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        submitComment();
+                      }
+                    }}
+                    enterKeyHint="send"
+                    maxLength={500}
+                    placeholder="Add a comment…"
+                    className="min-w-0 flex-1 rounded-full border border-gray-300 bg-surface2 px-4 py-2.5 text-base text-bone outline-none focus-visible:border-marigold"
+                  />
+                  <button
+                    onClick={submitComment}
+                    disabled={!newComment.trim() || postingComment}
+                    className="shrink-0 rounded-full bg-marigold px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+                  >
+                    Post
+                  </button>
+                </div>
+              ) : (
+                <p className="py-1 text-center text-sm text-muted">
+                  <Link to="/login" className="font-medium text-marigold">Sign in</Link> to join the conversation.
+                </p>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {reportingId && (
@@ -603,7 +655,7 @@ export default function Feed() {
         </div>
       )}
       {reportingCommentId && (
-        <div className="fixed inset-0 z-[1050] flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[1060] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-surface p-5">
             <p className="font-semibold text-bone">Report this comment</p>
             <div className="mt-3 flex flex-col gap-2">
@@ -624,7 +676,7 @@ export default function Feed() {
       {showCreateModal && (
         <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
       )}
-      {(isPaused || openComments || reportingId || showCreateModal) && <BottomTabBar />}
+      {isPaused && !openComments && !reportingId && !reportingCommentId && !showCreateModal && <BottomTabBar />}
     </div>
   );
 }
