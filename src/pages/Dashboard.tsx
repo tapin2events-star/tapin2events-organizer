@@ -17,7 +17,7 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all');
-  const [vendorFilter, setVendorFilter] = useState<'all' | 'pending_vendors'>('all');
+  const [vendorFilter, setVendorFilter] = useState<'all' | 'pending_vendors' | 'vendor_manager'>('all');
   const [eventsWithPendingVendors, setEventsWithPendingVendors] = useState<Set<string>>(new Set());
   // Events where the current user isn't the organizer but has been given
   // vendor-management access as a team member (narrower than full access).
@@ -26,7 +26,6 @@ export default function Dashboard() {
   // management to someone else -- the organizer should be able to see who
   // they've handed that off to, not just the person who received it.
   const [eventsWithVendorManagerAssigned, setEventsWithVendorManagerAssigned] = useState<Map<string, string>>(new Map());
-  const [accessFilter, setAccessFilter] = useState<'all' | 'vendor_management'>('all');
   const [seriesPassFilter, setSeriesPassFilter] = useState<'all' | 'has_series_passes'>('all');
   const [eventsWithSeriesPasses, setEventsWithSeriesPasses] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
@@ -101,20 +100,22 @@ export default function Dashboard() {
     return events
       .filter((e) => statusFilter === 'all' || e.status === statusFilter)
       .filter((e) => typeFilter === 'all' || (typeFilter === 'free' ? e.event_type === 'free' : e.event_type !== 'free'))
-      .filter((e) => vendorFilter === 'all' || eventsWithPendingVendors.has(e.id))
-      .filter(
-        (e) =>
-          accessFilter === 'all' ||
-          vendorManagerEventIds.has(e.id) ||
-          (e.organizer_id === user?.id && eventsWithVendorManagerAssigned.has(e.id))
-      )
+      .filter((e) => {
+        if (vendorFilter === 'pending_vendors') return eventsWithPendingVendors.has(e.id);
+        // Vendor manager covers both sides: events you were given vendor
+        // management on, and your own events where you've assigned someone.
+        if (vendorFilter === 'vendor_manager') {
+          return vendorManagerEventIds.has(e.id) || (e.organizer_id === user?.id && eventsWithVendorManagerAssigned.has(e.id));
+        }
+        return true;
+      })
       .filter((e) => seriesPassFilter === 'all' || eventsWithSeriesPasses.has(e.id))
       .filter((e) => {
         if (timeFilter === 'all' || !e.start_date) return true;
         const isUpcoming = new Date(e.start_date) >= now;
         return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
       });
-  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, accessFilter, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
+  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
 
   return (
     <div>
@@ -179,39 +180,25 @@ export default function Dashboard() {
                   { value: 'past', label: 'Past' },
                 ]}
               />
-              {eventsWithPendingVendors.size > 0 && (
-                <FilterPillGroup
-                  label="Vendors"
-                  value={vendorFilter}
-                  onChange={setVendorFilter}
-                  options={[
-                    { value: 'all', label: 'All events' },
-                    { value: 'pending_vendors', label: 'Has pending vendor applications' },
-                  ]}
-                />
-              )}
-              {eventsWithSeriesPasses.size > 0 && (
-                <FilterPillGroup
-                  label="Series passes"
-                  value={seriesPassFilter}
-                  onChange={setSeriesPassFilter}
-                  options={[
-                    { value: 'all', label: 'All events' },
-                    { value: 'has_series_passes', label: 'Has series pass sales' },
-                  ]}
-                />
-              )}
-              {(vendorManagerEventIds.size > 0 || eventsWithVendorManagerAssigned.size > 0) && (
-                <FilterPillGroup
-                  label="Vendor management access"
-                  value={accessFilter}
-                  onChange={setAccessFilter}
-                  options={[
-                    { value: 'all', label: 'All events' },
-                    { value: 'vendor_management', label: 'I can manage vendors' },
-                  ]}
-                />
-              )}
+              <FilterPillGroup
+                label="Vendors"
+                value={vendorFilter}
+                onChange={setVendorFilter}
+                options={[
+                  { value: 'all', label: 'All events' },
+                  { value: 'pending_vendors', label: 'Pending applications' },
+                  { value: 'vendor_manager', label: 'Vendor manager' },
+                ]}
+              />
+              <FilterPillGroup
+                label="Series passes"
+                value={seriesPassFilter}
+                onChange={setSeriesPassFilter}
+                options={[
+                  { value: 'all', label: 'All events' },
+                  { value: 'has_series_passes', label: 'Has series pass sales' },
+                ]}
+              />
             </div>
           )}
         </div>
@@ -233,6 +220,17 @@ export default function Dashboard() {
       ) : filteredEvents.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
           <p className="text-muted">No events match these filters.</p>
+          {vendorFilter === 'vendor_manager' && (
+            <p className="mt-2 text-sm text-muted">
+              To assign one, open an event, go to its <span className="font-medium text-bone">Team</span> tab, and invite someone with the <span className="font-medium text-bone">Vendor Manager</span> role.
+            </p>
+          )}
+          {vendorFilter === 'pending_vendors' && (
+            <p className="mt-2 text-sm text-muted">None of your events have vendor applications waiting for review right now.</p>
+          )}
+          {seriesPassFilter === 'has_series_passes' && (
+            <p className="mt-2 text-sm text-muted">No series passes have been sold for your events yet.</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
