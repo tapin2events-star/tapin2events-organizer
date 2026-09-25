@@ -3,18 +3,20 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { PRODUCT_CATEGORIES, type Product } from '../lib/types';
 import MyProductOrders from '../components/products/MyProductOrders';
+import MyProducts from '../components/products/MyProducts';
 
 interface ProductWithSeller extends Product {
   sellerName: string;
   linkTo: string;
 }
 
-const TABS = ['Browse', 'My Orders'] as const;
+const TABS = ['Browse', 'My Orders', 'My Products'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ProductsPage() {
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'orders' ? 'My Orders' : 'Browse');
+  const initialTab = searchParams.get('tab');
+  const [tab, setTab] = useState<Tab>(initialTab === 'orders' ? 'My Orders' : initialTab === 'products' ? 'My Products' : 'Browse');
   const [products, setProducts] = useState<ProductWithSeller[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -139,6 +141,7 @@ export default function ProductsPage() {
       )}
 
       {tab === 'My Orders' && <MyProductOrders />}
+      {tab === 'My Products' && <MyProducts />}
     </div>
   );
 }

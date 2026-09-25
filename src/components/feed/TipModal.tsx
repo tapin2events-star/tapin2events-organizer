@@ -24,9 +24,12 @@ export default function TipModal({ postId, creatorName, onClose }: TipModalProps
 
   const amount = custom.trim() ? Number(custom) : preset;
   const amountValid = amount !== null && Number.isFinite(amount) && amount >= MIN_TIP && amount <= MAX_TIP;
-  // Same math as the server: 5% + $0.45, added on top so the creator gets the full tip.
+  // Same fees as tickets and products (and the same math as the server):
+  // 3.7% + $1.79 service fee plus 2.9% processing, added on top.
   const tipCents = amountValid ? Math.round((amount as number) * 100) : 0;
-  const feeCents = amountValid ? Math.round(tipCents * 0.05) + 45 : 0;
+  const serviceFeeCents = amountValid ? Math.round(tipCents * 0.037) + 179 : 0;
+  const processingFeeCents = amountValid ? Math.round(tipCents * 0.029) : 0;
+  const feeCents = serviceFeeCents + processingFeeCents;
   const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
   async function sendTip() {
@@ -118,7 +121,8 @@ export default function TipModal({ postId, creatorName, onClose }: TipModalProps
         {amountValid && (
           <div className="mt-4 rounded-xl bg-surface2 px-4 py-3 text-sm">
             <div className="flex justify-between text-bone"><span>Tip for {creatorName}</span><span>{money(tipCents)}</span></div>
-            <div className="mt-1 flex justify-between text-muted"><span>Service fee</span><span>{money(feeCents)}</span></div>
+            <div className="mt-1 flex justify-between text-muted"><span>Service fee</span><span>{money(serviceFeeCents)}</span></div>
+            <div className="mt-1 flex justify-between text-muted"><span>Payment processing fee</span><span>{money(processingFeeCents)}</span></div>
             <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 font-semibold text-bone"><span>Total</span><span>{money(tipCents + feeCents)}</span></div>
           </div>
         )}

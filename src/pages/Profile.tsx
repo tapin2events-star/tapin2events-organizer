@@ -42,6 +42,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [savedEvents, setSavedEvents] = useState<TapEvent[]>([]);
   const [myResourceId, setMyResourceId] = useState<string | null>(null);
+  const [vendorAppCounts, setVendorAppCounts] = useState({ needsPayment: 0, pending: 0 });
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -81,6 +82,17 @@ export default function Profile() {
         const { data: events } = await supabase.from('events').select('*').in('id', savedIds);
         setSavedEvents((events ?? []) as TapEvent[]);
       }
+      // Vendor applications this person has sent: "needs payment" matches the
+      // Pay button on the applications page (approved with a fee owed).
+      const { data: myApps } = await supabase
+        .from('event_vendor_applications')
+        .select('status, agreed_fee')
+        .eq('resource_email', user.email);
+      setVendorAppCounts({
+        needsPayment: (myApps ?? []).filter((a) => a.status === 'approved' && Number(a.agreed_fee) > 0).length,
+        pending: (myApps ?? []).filter((a) => a.status === 'pending').length,
+      });
+
       if (profileData?.is_resource) {
         const { data: resource } = await supabase.from('resources').select('id').eq('email', user.email).maybeSingle();
         setMyResourceId(resource?.id ?? null);
@@ -204,6 +216,17 @@ export default function Profile() {
         <Link to="/activity" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
           <p className="font-medium text-bone">My Activity</p>
           <p className="text-xs text-muted">Tickets and registrations</p>
+        </Link>
+        <Link to="/vendor-applications" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-medium text-bone">My Vendor Applications</p>
+            {vendorAppCounts.needsPayment > 0 ? (
+              <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">{vendorAppCounts.needsPayment} needs payment</span>
+            ) : vendorAppCounts.pending > 0 ? (
+              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-muted">{vendorAppCounts.pending} pending</span>
+            ) : null}
+          </div>
+          <p className="text-xs text-muted">Events you've applied to vend at</p>
         </Link>
         <Link to="/products?tab=orders" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
           <p className="font-medium text-bone">My Orders</p>
