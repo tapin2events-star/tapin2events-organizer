@@ -27,6 +27,9 @@ export default function Dashboard() {
   // they've handed that off to, not just the person who received it.
   const [eventsWithVendorManagerAssigned, setEventsWithVendorManagerAssigned] = useState<Map<string, string>>(new Map());
   const [seriesPassFilter, setSeriesPassFilter] = useState<'all' | 'has_series_passes'>('all');
+  const [bookingFilter, setBookingFilter] = useState<'all' | 'pending' | 'booked'>('all');
+  const [eventsWithPendingBookings, setEventsWithPendingBookings] = useState<Set<string>>(new Set());
+  const [eventsWithBookedResources, setEventsWithBookedResources] = useState<Set<string>>(new Set());
   const [eventsWithSeriesPasses, setEventsWithSeriesPasses] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
 
@@ -74,6 +77,16 @@ export default function Dashboard() {
           .eq('status', 'confirmed');
         setEventsWithSeriesPasses(new Set((seriesPassTickets ?? []).map((t) => t.event_id)));
 
+        // Resource bookings: "pending" means waiting on someone (the resource
+        // hasn't answered, or they countered and it's your turn); "booked"
+        // means the resource is locked in.
+        const { data: bookings } = await supabase
+          .from('resource_bookings')
+          .select('event_id, status')
+          .in('event_id', eventIds);
+        setEventsWithPendingBookings(new Set((bookings ?? []).filter((b) => ['pending', 'counter_offered'].includes(b.status)).map((b) => b.event_id)));
+        setEventsWithBookedResources(new Set((bookings ?? []).filter((b) => ['accepted', 'confirmed', 'completed'].includes(b.status)).map((b) => b.event_id)));
+
         const { data: assignedVendorMgrs } = await supabase
           .from('event_collaborations')
           .select('event_id, collaborator_email')
@@ -111,11 +124,16 @@ export default function Dashboard() {
       })
       .filter((e) => seriesPassFilter === 'all' || eventsWithSeriesPasses.has(e.id))
       .filter((e) => {
+        if (bookingFilter === 'pending') return eventsWithPendingBookings.has(e.id);
+        if (bookingFilter === 'booked') return eventsWithBookedResources.has(e.id);
+        return true;
+      })
+      .filter((e) => {
         if (timeFilter === 'all' || !e.start_date) return true;
         const isUpcoming = new Date(e.start_date) >= now;
         return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
       });
-  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
+  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, bookingFilter, eventsWithPendingBookings, eventsWithBookedResources, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
 
   return (
     <div>
@@ -139,7 +157,7 @@ export default function Dashboard() {
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-              showFilters || statusFilter !== 'all' || typeFilter !== 'all' || timeFilter !== 'all' || vendorFilter !== 'all' || seriesPassFilter !== 'all'
+              showFilters || statusFilter !== 'all' || typeFilter !== 'all' || timeFilter !== 'all' || vendorFilter !== 'all' || seriesPassFilter !== 'all' || bookingFilter !== 'all'
                 ? 'border-marigold bg-marigold/10 text-marigold'
                 : 'border-gray-300 bg-surface2 text-bone'
             }`}
@@ -191,6 +209,16 @@ export default function Dashboard() {
                 ]}
               />
               <FilterPillGroup
+                label="Resource bookings"
+                value={bookingFilter}
+                onChange={setBookingFilter}
+                options={[
+                  { value: 'all', label: 'All events' },
+                  { value: 'pending', label: 'Pending bookings' },
+                  { value: 'booked', label: 'Resources booked' },
+                ]}
+              />
+              <FilterPillGroup
                 label="Series passes"
                 value={seriesPassFilter}
                 onChange={setSeriesPassFilter}
@@ -227,6 +255,14 @@ export default function Dashboard() {
           )}
           {vendorFilter === 'pending_vendors' && (
             <p className="mt-2 text-sm text-muted">None of your events have vendor applications waiting for review right now.</p>
+          )}
+          {bookingFilter === 'pending' && (
+            <p className="mt-2 text-sm text-muted">No resource bookings are waiting on a response right now.</p>
+          )}
+          {bookingFilter === 'booked' && (
+            <p className="mt-2 text-sm text-muted">
+              You haven't booked any resources for your events yet. Browse <Link to="/resources" className="font-medium text-marigold">Resources</Link> to find artists and vendors.
+            </p>
           )}
           {seriesPassFilter === 'has_series_passes' && (
             <p className="mt-2 text-sm text-muted">No series passes have been sold for your events yet.</p>
