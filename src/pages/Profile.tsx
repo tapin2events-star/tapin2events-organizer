@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FollowListModal from '../components/profile/FollowListModal';
+import PayoutsCard from '../components/PayoutsCard';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
@@ -21,6 +22,8 @@ interface ProfileRow {
   phone_number: string | null;
   is_profile_private: boolean | null;
   preferred_home_page: string | null;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean | null;
   notification_preferences: {
     event_updates?: boolean;
     new_followers?: boolean;
@@ -62,7 +65,7 @@ export default function Profile() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select(
-          'full_name, email, bio, profile_photo, is_organizer, is_resource, interests, followers_count, following_count, location, city, state, country, phone_number, is_profile_private, preferred_home_page, notification_preferences'
+          'full_name, email, bio, profile_photo, is_organizer, is_resource, interests, followers_count, following_count, location, city, state, country, phone_number, is_profile_private, preferred_home_page, notification_preferences, stripe_account_id, stripe_charges_enabled'
         )
         .eq('id', user.id)
         .single();
@@ -83,6 +86,9 @@ export default function Profile() {
         setMyResourceId(resource?.id ?? null);
       }
       setLoading(false);
+      if (window.location.hash === '#payouts') {
+        setTimeout(() => document.getElementById('payouts')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+      }
     })();
   }, [user, authLoading, navigate, location.pathname]);
 
@@ -221,6 +227,11 @@ export default function Profile() {
             <p className="text-xs text-muted">What others see when they find you</p>
           </Link>
         )}
+      </div>
+
+      <div id="payouts" className="mt-8">
+        <h2 className="mb-2 font-display text-lg font-semibold text-bone">Payouts</h2>
+        <PayoutsCard hasAccount={!!profile.stripe_account_id} chargesEnabled={!!profile.stripe_charges_enabled} variant="creator" />
       </div>
 
       <div className="mt-10">

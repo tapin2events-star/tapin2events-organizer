@@ -505,6 +505,18 @@ export default function Feed() {
                   <span className="text-[11px] font-semibold">Tip</span>
                 </button>
               )}
+              {user?.email === post.author_email && !post.author_can_receive_tips && (
+                <Link
+                  to="/profile#payouts"
+                  aria-label="Set up payouts to get tips"
+                  className="flex h-14 w-12 flex-col items-center justify-center gap-0.5 rounded-full border border-white/40 bg-white/10 text-white backdrop-blur-sm"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[10px] font-semibold leading-tight">Get tips</span>
+                </Link>
+              )}
               <button onClick={() => handleShare(post.id)} className="flex flex-col items-center gap-1 text-white">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                   <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />

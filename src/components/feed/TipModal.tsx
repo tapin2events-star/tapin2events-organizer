@@ -24,6 +24,10 @@ export default function TipModal({ postId, creatorName, onClose }: TipModalProps
 
   const amount = custom.trim() ? Number(custom) : preset;
   const amountValid = amount !== null && Number.isFinite(amount) && amount >= MIN_TIP && amount <= MAX_TIP;
+  // Same math as the server: 5% + $0.45, added on top so the creator gets the full tip.
+  const tipCents = amountValid ? Math.round((amount as number) * 100) : 0;
+  const feeCents = amountValid ? Math.round(tipCents * 0.05) + 45 : 0;
+  const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
   async function sendTip() {
     if (!amountValid || sending) return;
@@ -111,6 +115,13 @@ export default function TipModal({ postId, creatorName, onClose }: TipModalProps
         {custom.trim() && !amountValid && (
           <p className="mt-2 text-xs text-magenta">Tips can be between ${MIN_TIP} and ${MAX_TIP}.</p>
         )}
+        {amountValid && (
+          <div className="mt-4 rounded-xl bg-surface2 px-4 py-3 text-sm">
+            <div className="flex justify-between text-bone"><span>Tip for {creatorName}</span><span>{money(tipCents)}</span></div>
+            <div className="mt-1 flex justify-between text-muted"><span>Service fee</span><span>{money(feeCents)}</span></div>
+            <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 font-semibold text-bone"><span>Total</span><span>{money(tipCents + feeCents)}</span></div>
+          </div>
+        )}
         {error && <p className="mt-2 text-sm text-magenta">{error}</p>}
 
         <div className="mt-5 grid grid-cols-2 gap-3">
@@ -125,10 +136,10 @@ export default function TipModal({ postId, creatorName, onClose }: TipModalProps
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.8 4.8 0 0 1 8.8-2.7 4.8 4.8 0 0 1 8.8 2.7z" strokeLinejoin="round" />
             </svg>
-            {sending ? 'Opening checkout…' : 'Send Tip'}
+            {sending ? 'Opening checkout…' : amountValid ? `Pay ${money(tipCents)} tip` : 'Choose an amount'}
           </button>
         </div>
-        <p className="mt-3 text-center text-xs text-muted">A small service fee is added at checkout. {creatorName.split(' ')[0]} receives the full tip.</p>
+        <p className="mt-3 text-center text-xs text-muted">{creatorName} receives the full tip. You'll pay securely on the next screen.</p>
       </div>
     </div>
   );

@@ -1,13 +1,18 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
+// The same Stripe payout setup powers ticket sales (organizers) and tips
+// (any creator), so `variant` only changes the wording, not the flow.
 export default function PayoutsCard({
   hasAccount,
   chargesEnabled,
+  variant = 'organizer',
 }: {
   hasAccount: boolean;
   chargesEnabled: boolean;
+  variant?: 'organizer' | 'creator';
 }) {
+  const creator = variant === 'creator';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +34,9 @@ export default function PayoutsCard({
   if (chargesEnabled) {
     return (
       <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-        ✓ Payouts are set up — ticket sales for your events go straight to your bank account.
+        {creator
+          ? '✓ Payouts are set up — people can tip your videos, and tips go straight to your bank account.'
+          : '✓ Payouts are set up — ticket sales for your events go straight to your bank account.'}
       </div>
     );
   }
@@ -39,12 +46,16 @@ export default function PayoutsCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-bone">
-            {hasAccount ? 'Finish setting up payouts' : 'Get paid for your paid events'}
+            {hasAccount ? 'Finish setting up payouts' : creator ? 'Set up payouts to receive tips' : 'Get paid for your paid events'}
           </p>
           <p className="text-xs text-muted">
-            {hasAccount
-              ? 'Your Stripe setup is incomplete — finish it to start receiving ticket sales directly.'
-              : 'Connect a bank account so ticket sales for your paid events are deposited directly to you.'}
+            {creator
+              ? hasAccount
+                ? "Your Stripe setup isn't finished yet. Finish it so people can start tipping your videos."
+                : 'Connect a bank account through Stripe so people can tip your videos. Tips are deposited directly to you.'
+              : hasAccount
+                ? 'Your Stripe setup is incomplete — finish it to start receiving ticket sales directly.'
+                : 'Connect a bank account so ticket sales for your paid events are deposited directly to you.'}
           </p>
         </div>
         <button
