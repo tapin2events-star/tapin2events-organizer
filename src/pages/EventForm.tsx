@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { EventType } from '../lib/types';
 import { AVAILABLE_FEATURES, type EventFeature } from '../lib/eventFeatures';
+import FlyerMaker from '../components/flyer/FlyerMaker';
 
 interface SponsorEntry {
   name: string;
@@ -99,6 +100,17 @@ export default function EventForm() {
   const [eventProducts, setEventProducts] = useState<{ id: string; name: string }[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const [showFlyerMaker, setShowFlyerMaker] = useState(false);
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!posterFile) {
+      setPosterPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(posterFile);
+    setPosterPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [posterFile]);
   const [instagramUrl, setInstagramUrl] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
@@ -1082,7 +1094,24 @@ export default function EventForm() {
               {posterUrl && !posterFile && (
                 <img src={posterUrl} alt="Current poster" className="mt-2 h-24 rounded-lg object-cover" />
               )}
+              {posterPreview && <img src={posterPreview} alt="New poster" className="mt-2 h-24 rounded-lg object-cover" />}
+              <button
+                type="button"
+                onClick={() => setShowFlyerMaker(true)}
+                disabled={!title.trim()}
+                className="mt-3 flex items-center gap-1.5 rounded-full border border-marigold/40 bg-marigold/10 px-3 py-1.5 text-sm font-medium text-marigold hover:bg-marigold/20 disabled:opacity-50"
+              >
+                ✨ Make a flyer
+              </button>
+              {!title.trim() && <p className="mt-1 text-xs text-muted">Add a title on step 1 to make a flyer.</p>}
             </Field>
+            {showFlyerMaker && (
+              <FlyerMaker
+                event={{ id, title, category, description, startDate, endDate, isOnline, locationName, locationAddress, eventType, ticketPrice }}
+                onClose={() => setShowFlyerMaker(false)}
+                onUseAsPoster={(file) => setPosterFile(file)}
+              />
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Instagram">
