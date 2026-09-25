@@ -84,6 +84,7 @@ export default function Feed() {
   const visiblePosts = posts;
 
   async function loadPosts() {
+    setLoading(true);
     // Ignore responses from an older load (e.g. after quickly switching
     // between For You and Following) so they can't overwrite newer results.
     const loadId = ++loadIdRef.current;
@@ -103,6 +104,7 @@ export default function Feed() {
       query = query.eq('event_id', eventFilterId);
     } else if (feedMode === 'following') {
       if (followed.length === 0) {
+        if (loadId !== loadIdRef.current) return;
         setPosts([]);
         setLoading(false);
         return;
