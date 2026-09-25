@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import FollowListModal from '../components/profile/FollowListModal';
+import CreatorEvents, { type CreatorEvent } from '../components/profile/CreatorEvents';
+import CreatorProducts, { type CreatorProduct } from '../components/profile/CreatorProducts';
 
 interface CreatorProfile {
   email: string;
@@ -29,6 +31,10 @@ export default function CreatorProfile() {
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<CreatorEvent[]>([]);
+  const [products, setProducts] = useState<CreatorProduct[]>([]);
+  const [resourceId, setResourceId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'posts' | 'events' | 'shop'>('posts');
   const [isFollowing, setIsFollowing] = useState(false);
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
@@ -53,7 +59,7 @@ export default function CreatorProfile() {
   useEffect(() => {
     if (!decodedEmail) return;
     (async () => {
-      const [{ data: profileData }, { data: postRows }, { data: followRow }] = await Promise.all([
+      const [{ data: profileData }, { data: postRows }, { data: followRow }, { data: eventRows }, { data: productRows }, { data: resourceRow }] = await Promise.all([
         supabase
           .from('public_profiles')
           .select('email, full_name, bio, profile_photo, is_organizer, is_resource, followers_count, following_count, is_profile_private')
@@ -68,9 +74,30 @@ export default function CreatorProfile() {
         user?.email
           ? supabase.from('follows').select('follower_email').eq('follower_email', user.email).eq('following_email', decodedEmail).maybeSingle()
           : Promise.resolve({ data: null }),
+        // Only public events and products -- the same things anyone can find
+        // elsewhere in the app. Drafts and hidden products never show here,
+        // even when the owner is the one looking.
+        supabase
+          .from('events')
+          .select('id, title, start_date, end_date, poster_url, location_name, is_online, parent_event_id')
+          .eq('organizer_email', decodedEmail)
+          .in('status', ['published', 'completed']),
+        supabase
+          .from('products')
+          .select('id, name, price, images')
+          .eq('seller_email', decodedEmail)
+          .eq('is_active', true)
+          .eq('visibility', 'public')
+          .order('created_at', { ascending: false }),
+        supabase.from('resources').select('id').eq('email', decodedEmail).maybeSingle(),
       ]);
       setProfile(profileData);
       setPosts(postRows ?? []);
+      setEvents((eventRows ?? []) as CreatorEvent[]);
+      setProducts((productRows ?? []) as CreatorProduct[]);
+      setResourceId(resourceRow?.id ?? null);
+      // Open on whichever tab has something to show.
+      setTab((postRows ?? []).length > 0 ? 'posts' : (eventRows ?? []).length > 0 ? 'events' : (productRows ?? []).length > 0 ? 'shop' : 'posts');
       setIsFollowing(!!followRow);
       setLoading(false);
     })();
@@ -119,6 +146,15 @@ export default function CreatorProfile() {
 
       {profile.bio && <p className="mt-3 text-sm text-muted">{profile.bio}</p>}
 
+      {resourceId && (
+        <Link
+          to={`/resources/${resourceId}`}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple hover:border-purple-300"
+        >
+          ⭐ View resource profile &rarr;
+        </Link>
+      )}
+
       <div className="mt-4 flex items-center gap-6">
         <div>
           <p className="text-center font-display text-lg font-bold text-bone">{posts.length}</p>
@@ -147,8 +183,25 @@ export default function CreatorProfile() {
       </div>
 
       <div className="mt-8">
-        <p className="font-display text-lg font-semibold text-bone">Posts</p>
-        {posts.length === 0 ? (
+        <div className="flex gap-1 border-b border-gray-200">
+          {([
+            { id: 'posts', label: `Posts (${posts.length})` },
+            { id: 'events', label: `Events (${new Set(events.map((e) => e.parent_event_id ?? e.id)).size})` },
+            { id: 'shop', label: `Shop (${products.length})` },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 text-sm font-medium ${tab === t.id ? 'border-b-2 border-marigold text-marigold' : 'text-muted hover:text-bone'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'events' && <CreatorEvents events={events} />}
+        {tab === 'shop' && <CreatorProducts products={products} />}
+        {tab === 'posts' && (posts.length === 0 ? (
           <p className="mt-2 text-sm text-muted">No posts yet.</p>
         ) : (
           <div className="mt-3 grid grid-cols-3 gap-1">
@@ -174,7 +227,7 @@ export default function CreatorProfile() {
               </div>
             ))}
           </div>
-        )}
+        ))}
       </div>
 
       {openList && (
