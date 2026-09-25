@@ -236,36 +236,15 @@ export default function Feed() {
     setOpenComments(postId);
     setComments([]);
     setCommentsLoading(true);
-    const { data: commentRows } = await supabase
-      .from('post_comments')
-      .select('id, author_email, content, created_at')
-      .eq('post_id', postId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: true });
-    const rows = commentRows ?? [];
-    const commentIds = rows.map((c) => c.id);
-    const authorEmails = [...new Set(rows.map((c) => c.author_email))];
-
-    const [{ data: profiles }, { data: likes }, { data: myLikes }] = await Promise.all([
-      authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
-      commentIds.length ? supabase.from('comment_likes').select('comment_id').in('comment_id', commentIds) : Promise.resolve({ data: [] }),
-      user?.email && commentIds.length ? supabase.from('comment_likes').select('comment_id').eq('user_email', user.email).in('comment_id', commentIds) : Promise.resolve({ data: [] }),
-    ]);
-    const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
-    const photosByEmail = new Map((profiles ?? []).map((p) => [p.email, p.profile_photo]));
-    const likeCountByComment = new Map<string, number>();
-    (likes ?? []).forEach((l) => likeCountByComment.set(l.comment_id, (likeCountByComment.get(l.comment_id) ?? 0) + 1));
-    const myLikedSet = new Set((myLikes ?? []).map((l) => l.comment_id));
-
-    setComments(
-      rows.map((c) => ({
-        ...c,
-        author_name: namesByEmail.get(c.author_email) || c.author_email,
-        author_photo: photosByEmail.get(c.author_email) ?? null,
-        like_count: likeCountByComment.get(c.id) ?? 0,
-        liked_by_me: myLikedSet.has(c.id),
-      }))
-    );
+    // One database call that joins comments, commenter profiles, and like
+    // counts server-side, instead of the previous two sequential round-trips
+    // (fetch comments, wait, then fetch profiles/likes based on the result).
+    const { data, error } = await supabase.rpc('get_post_comments', {
+      p_post_id: postId,
+      p_viewer_email: user?.email ?? null,
+    });
+    if (error) console.error('Failed to load comments:', error);
+    setComments((data ?? []) as Comment[]);
     setCommentsLoading(false);
   }
 
