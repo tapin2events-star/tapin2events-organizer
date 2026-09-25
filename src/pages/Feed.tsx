@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import BottomTabBar from '../components/BottomTabBar';
 import HlsVideo from '../components/feed/HlsVideo';
 import CreatePostModal from '../components/feed/CreatePostModal';
+import TipModal from '../components/feed/TipModal';
 
 interface Post {
   id: string;
@@ -16,6 +17,7 @@ interface Post {
   created_at: string;
   author_name: string;
   author_photo: string | null;
+  author_can_receive_tips: boolean;
   like_count: number;
   comment_count: number;
   liked_by_me: boolean;
@@ -49,7 +51,22 @@ type FeedMode = 'for_you' | 'following';
 
 export default function Feed() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [tippingPost, setTippingPost] = useState<{ id: string; creatorName: string } | null>(null);
+  const [tipThanks, setTipThanks] = useState(false);
+
+  // Returning from a completed tip checkout: say thanks, then tidy the URL
+  // (keeping ?post= so the same video stays on screen).
+  useEffect(() => {
+    if (searchParams.get('tip') !== 'success') return;
+    setTipThanks(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('tip');
+    setSearchParams(next, { replace: true });
+    const timer = setTimeout(() => setTipThanks(false), 5000);
+    return () => clearTimeout(timer);
+  }, [searchParams, setSearchParams]);
   const eventFilterId = searchParams.get('event');
   // Share links and profile-grid taps open /feed?post=<id>; that post is
   // placed first so it's the one that opens and plays.
@@ -138,7 +155,7 @@ export default function Feed() {
     // and comment in the database would silently undercount once the site
     // passes Supabase's 1,000-rows-per-request cap.
     const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }] = await Promise.all([
-      authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo').in('email', authorEmails) : Promise.resolve({ data: [] }),
+      authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo, can_receive_tips').in('email', authorEmails) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_likes').select('post_id').in('post_id', postIds) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active').in('post_id', postIds) : Promise.resolve({ data: [] }),
       user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email).in('post_id', postIds) : Promise.resolve({ data: [] }),
@@ -147,6 +164,7 @@ export default function Feed() {
 
     const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
     const photosByEmail = new Map((profiles ?? []).map((p) => [p.email, p.profile_photo]));
+    const tippableEmails = new Set((profiles ?? []).filter((p) => p.can_receive_tips).map((p) => p.email));
     const likeCountByPost = new Map<string, number>();
     (likes ?? []).forEach((l) => likeCountByPost.set(l.post_id, (likeCountByPost.get(l.post_id) ?? 0) + 1));
     const commentCountByPost = new Map<string, number>();
@@ -158,6 +176,7 @@ export default function Feed() {
         ...p,
         author_name: namesByEmail.get(p.author_email) || p.author_email,
         author_photo: photosByEmail.get(p.author_email) ?? null,
+        author_can_receive_tips: tippableEmails.has(p.author_email),
         like_count: likeCountByPost.get(p.id) ?? 0,
         comment_count: commentCountByPost.get(p.id) ?? 0,
         liked_by_me: myLikedSet.has(p.id),
@@ -474,6 +493,18 @@ export default function Feed() {
                 </svg>
                 <span className="text-xs font-medium">{post.comment_count}</span>
               </button>
+              {post.author_can_receive_tips && user?.email !== post.author_email && (
+                <button
+                  onClick={() => (user ? setTippingPost({ id: post.id, creatorName: post.author_name }) : navigate('/login'))}
+                  aria-label={`Tip ${post.author_name}`}
+                  className="flex h-14 w-12 flex-col items-center justify-center gap-0.5 rounded-full bg-gradient-to-b from-pink-500 to-rose-500 text-white shadow-lg"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[11px] font-semibold">Tip</span>
+                </button>
+              )}
               <button onClick={() => handleShare(post.id)} className="flex flex-col items-center gap-1 text-white">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                   <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
@@ -657,7 +688,15 @@ export default function Feed() {
       {showCreateModal && (
         <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
       )}
-      {isPaused && !openComments && !reportingId && !reportingCommentId && !showCreateModal && <BottomTabBar />}
+      {tippingPost && (
+        <TipModal postId={tippingPost.id} creatorName={tippingPost.creatorName} onClose={() => setTippingPost(null)} />
+      )}
+      {tipThanks && (
+        <div className="fixed inset-x-0 top-16 z-[1200] mx-auto w-fit max-w-[90vw] rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-bone shadow-xl">
+          💖 Tip sent! Thanks for supporting creators.
+        </div>
+      )}
+      {isPaused && !openComments && !reportingId && !reportingCommentId && !showCreateModal && !tippingPost && <BottomTabBar />}
     </div>
   );
 }

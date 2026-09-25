@@ -13,13 +13,14 @@ const NAV_ITEMS = [
 const MY_STUFF_ITEMS = [
   { to: '/profile', label: 'Profile', end: true },
   { to: '/activity', label: 'My Activity', end: true },
-  { to: '/vendor-applications', label: 'Vendor Applications', end: true },
+  { to: '/vendor-applications', label: 'My Vendor Applications', end: true },
   { to: '/resources/dashboard', label: 'Resource Dashboard', end: true },
 ];
 
 const ORGANIZER_NAV_ITEMS = [
   { to: '/organizer', label: 'Organizer Dashboard', end: true },
   { to: '/organizer/new', label: 'Create Event', end: true },
+  { to: '/organizer/vendor-applications', label: 'Vendor Applications', end: true },
 ];
 
 export default function Layout() {

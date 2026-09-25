@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [vendorFilter, setVendorFilter] = useState<'all' | 'pending_vendors' | 'vendor_manager'>('all');
   const [eventsWithPendingVendors, setEventsWithPendingVendors] = useState<Set<string>>(new Set());
+  const [pendingVendorAppCount, setPendingVendorAppCount] = useState(0);
   // Events where the current user isn't the organizer but has been given
   // vendor-management access as a team member (narrower than full access).
   const [vendorManagerEventIds, setVendorManagerEventIds] = useState<Set<string>>(new Set());
@@ -68,6 +69,7 @@ export default function Dashboard() {
           .in('event_id', eventIds)
           .eq('status', 'pending');
         setEventsWithPendingVendors(new Set((pendingVendors ?? []).map((v) => v.event_id)));
+        setPendingVendorAppCount((pendingVendors ?? []).length);
 
         const { data: seriesPassTickets } = await supabase
           .from('tickets')
@@ -149,6 +151,22 @@ export default function Dashboard() {
           + Create event
         </Link>
       </div>
+
+      <Link
+        to="/organizer/vendor-applications"
+        className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface2 px-4 py-3 hover:border-marigold"
+      >
+        <div>
+          <p className="font-semibold text-bone">Vendor Applications</p>
+          <p className="text-xs text-muted">Review vendor applications across all your events</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {pendingVendorAppCount > 0 && (
+            <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">{pendingVendorAppCount} pending</span>
+          )}
+          <span className="text-muted">&rarr;</span>
+        </div>
+      </Link>
 
       {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 

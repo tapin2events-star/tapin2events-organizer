@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import CreatorProfile from './pages/CreatorProfile';
 import ProductDetail from './pages/ProductDetail';
 import MyVendorApplicationsPage from './pages/MyVendorApplicationsPage';
+import OrganizerVendorApplicationsPage from './pages/OrganizerVendorApplicationsPage';
 import ResourceDiscovery from './pages/ResourceDiscovery';
 import ResourceProfile from './pages/ResourceProfile';
 import ResourceSignup from './pages/ResourceSignup';
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 
             <Route path="/organizer" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/organizer/vendor-applications" element={<ProtectedRoute><OrganizerVendorApplicationsPage /></ProtectedRoute>} />
             <Route path="/organizer/new" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
             <Route path="/organizer/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route
