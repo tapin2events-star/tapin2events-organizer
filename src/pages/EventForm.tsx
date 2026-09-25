@@ -62,6 +62,14 @@ export default function EventForm() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiNotes, setShowAiNotes] = useState(false);
+  // Quick create: fill the form from a flyer image and/or a short description.
+  const [quickOpen, setQuickOpen] = useState(true);
+  const [quickText, setQuickText] = useState('');
+  const [quickFlyerUrl, setQuickFlyerUrl] = useState<string | null>(null);
+  const [quickUploading, setQuickUploading] = useState(false);
+  const [quickFilling, setQuickFilling] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [quickResult, setQuickResult] = useState<{ fromFlyer: boolean; needs_review: string[]; review_note: string | null; price_found: string | null } | null>(null);
   const [eventType, setEventType] = useState<EventType>('free');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -97,6 +105,75 @@ export default function EventForm() {
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
 
   const [loading, setLoading] = useState(isEdit);
+
+  async function handleFlyerUpload(file: File) {
+    if (!user) return;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      setQuickError('Please upload a JPG, PNG, WebP, or GIF image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setQuickError('That image is over 5 MB. Try a smaller version of your flyer.');
+      return;
+    }
+    setQuickUploading(true);
+    setQuickError(null);
+    // Uploaded to the same place event posters live, so the flyer can
+    // become this event's poster without a second upload.
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${user.id}/${Date.now()}-flyer.${ext}`;
+    const { error } = await supabase.storage.from('event-posters').upload(path, file, { contentType: file.type });
+    setQuickUploading(false);
+    if (error) {
+      setQuickError('Upload failed. Please try again.');
+      return;
+    }
+    setQuickFlyerUrl(supabase.storage.from('event-posters').getPublicUrl(path).data.publicUrl);
+  }
+
+  async function handleQuickFill() {
+    if (!quickText.trim() && !quickFlyerUrl) {
+      setQuickError('Upload a flyer or describe your event first.');
+      return;
+    }
+    setQuickFilling(true);
+    setQuickError(null);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const { data, error } = await supabase.functions.invoke('extract-event-details', {
+      body: { text: quickText, image_url: quickFlyerUrl, today },
+    });
+    setQuickFilling(false);
+    if (error || !data?.fields) {
+      let msg = "Couldn't read that right now. Please try again.";
+      try {
+        const body = await (error as { context?: Response })?.context?.json();
+        if (body?.error) msg = body.error;
+      } catch {
+        // keep the generic message
+      }
+      setQuickError(msg);
+      return;
+    }
+    const f = data.fields;
+    // Only fill what the AI actually found; anything missing is left for the
+    // organizer. Status stays Draft, and ticketing stays free -- a price on
+    // the flyer is shown below rather than applied.
+    if (f.title) setTitle(f.title);
+    if (f.description) setDescription(f.description);
+    if (f.category) setCategory(f.category);
+    if (f.start_datetime) setStartDate(f.start_datetime);
+    if (f.end_datetime) setEndDate(f.end_datetime);
+    setIsOnline(!!f.is_online);
+    if (f.location_name) setLocationName(f.location_name);
+    if (f.location_address) setLocationAddress(f.location_address);
+    if (quickFlyerUrl) {
+      setPosterUrl(quickFlyerUrl);
+      setPosterFile(null);
+    }
+    setQuickResult({ fromFlyer: !!quickFlyerUrl, needs_review: f.needs_review ?? [], review_note: f.review_note, price_found: f.price_found });
+    setQuickOpen(false);
+  }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [originalBookedSeats, setOriginalBookedSeats] = useState<string[]>([]);
@@ -422,6 +499,96 @@ export default function EventForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {step === 1 && (
           <>
+            {!isEdit && quickOpen && (
+              <div className="rounded-2xl border border-marigold/30 bg-marigold/5 p-4">
+                <p className="font-semibold text-bone">✨ Quick create with AI</p>
+                <p className="mt-0.5 text-sm text-muted">
+                  Upload your flyer or describe your event, and we'll fill in the form. Nothing is published until you review it and choose to.
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  {quickFlyerUrl ? (
+                    <div className="relative">
+                      <img src={quickFlyerUrl} alt="Your flyer" className="h-24 w-20 rounded-lg object-cover" />
+                      <button type="button" onClick={() => setQuickFlyerUrl(null)} aria-label="Remove flyer" className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-800 text-xs text-white">✕</button>
+                    </div>
+                  ) : (
+                    <label className="flex h-24 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 bg-white text-center text-xs text-muted hover:border-marigold">
+                      <span className="text-xl">🖼️</span>
+                      {quickUploading ? 'Uploading…' : 'Upload flyer'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={quickUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = '';
+                          if (file) handleFlyerUpload(file);
+                        }}
+                      />
+                    </label>
+                  )}
+                  <textarea
+                    value={quickText}
+                    onChange={(e) => setQuickText(e.target.value)}
+                    rows={3}
+                    maxLength={2000}
+                    placeholder="Or describe it, e.g. Poetry night at Kings Barcade, Oct 30 at 8pm, $10 at the door"
+                    className={`${inputClass} flex-1 text-sm`}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleQuickFill}
+                    disabled={quickFilling || quickUploading || (!quickText.trim() && !quickFlyerUrl)}
+                    className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {quickFilling ? 'Reading…' : 'Fill in the form'}
+                  </button>
+                  <button type="button" onClick={() => setQuickOpen(false)} className="text-sm text-muted hover:text-bone">
+                    I'll fill it in myself
+                  </button>
+                </div>
+                {quickError && <p className="mt-2 text-sm text-magenta">{quickError}</p>}
+              </div>
+            )}
+
+            {quickResult && (
+              <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm">
+                <p className="font-semibold text-green-800">
+                  ✨ Filled in from your {quickResult.fromFlyer ? 'flyer' : 'description'}
+                </p>
+                <p className="mt-0.5 text-green-800">
+                  Review every step before publishing. Your event stays a draft until you choose to publish it.
+                </p>
+                {quickResult.needs_review.length > 0 && (
+                  <p className="mt-2 text-amber-800">
+                    <span className="font-semibold">Please double-check:</span>{' '}
+                    {quickResult.needs_review
+                      .map((k) => ({ title: 'Title', category: 'Category', date: 'Date', start_time: 'Start time', end_time: 'End time', location: 'Location', description: 'Description' } as Record<string, string>)[k] ?? k)
+                      .join(', ')}
+                  </p>
+                )}
+                {quickResult.review_note && <p className="mt-1 text-amber-800">{quickResult.review_note}</p>}
+                {quickResult.price_found && !/^free$/i.test(quickResult.price_found.trim()) && (
+                  <p className="mt-2 text-bone">
+                    Your {quickResult.fromFlyer ? 'flyer' : 'description'} lists <span className="font-semibold">{quickResult.price_found}</span>. To sell tickets through TapIN, change <span className="font-semibold">Type</span> below to Paid and enter a price. Otherwise it stays a free listing.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickResult(null);
+                    setQuickOpen(true);
+                  }}
+                  className="mt-2 text-sm font-medium text-marigold hover:underline"
+                >
+                  Try again with a different flyer or description
+                </button>
+              </div>
+            )}
+
             <Field label="Title">
               <input
                 value={title}
