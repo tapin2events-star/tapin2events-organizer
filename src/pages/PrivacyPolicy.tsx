@@ -78,7 +78,7 @@ export default function PrivacyPolicy() {
         <ul>
           <li>Edit your profile, make it private, and change notification settings in <Link to="/profile">Profile</Link>.</li>
           <li>Edit or delete your posts, events, and other content.</li>
-          <li><strong>Delete your account:</strong> email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> from the email address on your account and we'll delete it.</li>
+          <li><strong>Delete your account:</strong> go to your Profile and choose <strong>Delete my account</strong>. It takes effect right away. If you can't sign in, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> from the email address on your account.</li>
           <li>Depending on where you live, you may have the right to access, correct, delete, or get a copy of your personal information. Email us and we'll respond within the time the law requires. We won't treat you differently for making a request.</li>
         </ul>
       </LegalSection>

@@ -115,6 +115,11 @@ export default function Login() {
           <p className="text-muted mt-1 text-sm">Organizer console</p>
         </div>
 
+        {new URLSearchParams(location.search).get('deleted') === '1' && (
+          <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-center text-sm text-green-800">
+            Your account has been deleted. Thanks for being part of TapIN.
+          </div>
+        )}
         <div className="bg-surface rounded-2xl shadow-sm border border-gray-200 p-8">
           {step === 'email' && (
             <form onSubmit={handleEmail} className="flex flex-col gap-4">

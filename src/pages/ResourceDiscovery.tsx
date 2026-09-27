@@ -22,6 +22,7 @@ export default function ResourceDiscovery() {
       const { data } = await supabase
         .from('resources')
         .select('*')
+        .eq('status', 'active')
         .order('average_rating', { ascending: false });
       setResources((data ?? []) as Resource[]);
       setLoading(false);

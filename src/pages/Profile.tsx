@@ -7,6 +7,7 @@ import { normalizeInterests, type InterestGroup } from '../lib/interests';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
+import DeleteAccountSection from '../components/DeleteAccountSection';
 
 interface ProfileRow {
   full_name: string | null;
@@ -414,6 +415,8 @@ export default function Profile() {
           </div>
         )}
       </div>
+
+      <DeleteAccountSection />
 
       {openList && (
         <FollowListModal

@@ -19,7 +19,7 @@ export default function ResourceProfile() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +117,17 @@ export default function ResourceProfile() {
 
   if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
   if (!resource) return <div className="p-10 text-center text-magenta">Resource not found.</div>;
+  // Inactive or suspended profiles (including deleted accounts) are hidden
+  // from everyone except the owner and admins.
+  if (resource.status && resource.status !== 'active' && resource.email !== user?.email && !isAdmin) {
+    return (
+      <div className="p-10 text-center">
+        <p className="text-lg font-semibold text-bone">This profile isn't available</p>
+        <p className="mt-1 text-sm text-muted">It may have been removed or deactivated.</p>
+        <Link to="/resources" className="mt-4 inline-block text-sm font-medium text-marigold hover:underline">Browse other resources</Link>
+      </div>
+    );
+  }
 
   const averageRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
