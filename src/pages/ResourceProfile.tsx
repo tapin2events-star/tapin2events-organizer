@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import type { Resource, TapEvent, ResourceReview } from '../lib/types';
 import ShopSection from '../components/products/ShopSection';
 import ResourceMediaSection from '../components/resources/ResourceMediaSection';
+import EventLinks from '../components/EventLinks';
+import { visibleLinks } from '../lib/socialLinks';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for a quote';
@@ -12,12 +14,6 @@ function pricingLabel(r: Resource) {
   return `$${r.base_rate} flat rate`;
 }
 
-const SOCIAL_LINKS: Array<{ key: keyof Resource; label: string }> = [
-  { key: 'instagram_url', label: 'Instagram' },
-  { key: 'facebook_url', label: 'Facebook' },
-  { key: 'youtube_url', label: 'YouTube' },
-  { key: 'website_url', label: 'Website' },
-];
 
 export default function ResourceProfile() {
   const { id } = useParams<{ id: string }>();
@@ -189,19 +185,12 @@ export default function ResourceProfile() {
               </div>
             )}
 
-            {SOCIAL_LINKS.some((s) => resource[s.key]) && (
-              <div className="mt-6 flex flex-wrap gap-3 border-t border-gray-200 pt-6">
-                {SOCIAL_LINKS.filter((s) => resource[s.key]).map((s) => (
-                  <a
-                    key={s.key}
-                    href={resource[s.key] as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:border-marigold hover:text-marigold"
-                  >
-                    {s.label}
-                  </a>
-                ))}
+            {visibleLinks({ instagram: resource.instagram_url, facebook: resource.facebook_url, youtube: resource.youtube_url, website: resource.website_url }).length > 0 && (
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <EventLinks
+                  title="Links"
+                  links={{ instagram: resource.instagram_url, facebook: resource.facebook_url, youtube: resource.youtube_url, website: resource.website_url }}
+                />
               </div>
             )}
 

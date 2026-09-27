@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
 import ShopSection from '../components/products/ShopSection';
+import EventLinks from '../components/EventLinks';
+import { visibleLinks } from '../lib/socialLinks';
 import VendorApplicationForm from '../components/VendorApplicationForm';
 import SeatPicker from '../components/SeatPicker';
 import { resolveFeatureIcon } from '../lib/featureIconMap';
@@ -658,48 +660,34 @@ export default function PublicEventDetail() {
           </div>
         )}
 
-        {/* Extras: lighter-weight, lower on the page since they support the
-            event rather than define it. */}
-        {((event.sponsors && event.sponsors.some((t) => t.sponsors?.length > 0)) ||
-          (event.social_links && (event.social_links.instagram || event.social_links.facebook || event.social_links.website))) && (
-          <div className="mt-10 border-t border-gray-100 pt-8">
-            {event.sponsors && event.sponsors.some((t) => t.sponsors?.length > 0) && (
-              <div>
-                <p className="text-sm font-medium text-gray-500">Sponsors</p>
-                <div className="mt-2 flex flex-col gap-3">
-                  {event.sponsors
-                    .filter((t) => t.sponsors?.length > 0)
-                    .map((tier) => (
-                      <div key={tier.tier_name} className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-medium text-gray-400">{tier.tier_name}:</span>
-                        {tier.sponsors.map((s) => (
-                          s.website ? (
-                            <a key={s.name} href={s.website} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-700 underline-offset-2 hover:text-marigold hover:underline">
-                              {s.name}
-                            </a>
-                          ) : (
-                            <span key={s.name} className="text-sm font-medium text-gray-700">{s.name}</span>
-                          )
-                        ))}
-                      </div>
+        {/* Extras: lower on the page since they support the event rather than define it. */}
+        {event.sponsors && event.sponsors.some((t) => t.sponsors?.length > 0) && (
+          <div className="mt-10">
+            <h2 className="font-display text-xl font-bold text-gray-900">Sponsors</h2>
+            <div className="mt-3 flex flex-col gap-3">
+              {event.sponsors
+                .filter((t) => t.sponsors?.length > 0)
+                .map((tier) => (
+                  <div key={tier.tier_name} className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{tier.tier_name}</span>
+                    {tier.sponsors.map((s) => (
+                      s.website ? (
+                        <a key={s.name} href={s.website} target="_blank" rel="noopener noreferrer" className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+                          {s.name}
+                        </a>
+                      ) : (
+                        <span key={s.name} className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700">{s.name}</span>
+                      )
                     ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
 
-            {event.social_links && (event.social_links.instagram || event.social_links.facebook || event.social_links.website) && (
-              <div className="mt-4 flex flex-wrap gap-3">
-                {event.social_links.instagram && (
-                  <a href={event.social_links.instagram} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:border-marigold hover:text-marigold">Instagram</a>
-                )}
-                {event.social_links.facebook && (
-                  <a href={event.social_links.facebook} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:border-marigold hover:text-marigold">Facebook</a>
-                )}
-                {event.social_links.website && (
-                  <a href={event.social_links.website} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:border-marigold hover:text-marigold">Website</a>
-                )}
-              </div>
-            )}
+        {visibleLinks(event.social_links).length > 0 && (
+          <div className="mt-10">
+            <EventLinks links={event.social_links} subtitle="Updates, photos, and more from the organizer." />
           </div>
         )}
 

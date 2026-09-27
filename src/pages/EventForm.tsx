@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import type { EventType } from '../lib/types';
 import { AVAILABLE_FEATURES, type EventFeature } from '../lib/eventFeatures';
 import FlyerMaker from '../components/flyer/FlyerMaker';
+import { normalizeLink, PLATFORMS, type LinkKey } from '../lib/socialLinks';
 
 interface SponsorEntry {
   name: string;
@@ -113,9 +114,8 @@ export default function EventForm() {
     setPosterPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [posterFile]);
-  const [instagramUrl, setInstagramUrl] = useState('');
-  const [facebookUrl, setFacebookUrl] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
+  // Social and website links, keyed by platform (see lib/socialLinks).
+  const [links, setLinks] = useState<Record<LinkKey, string>>({ instagram: '', tiktok: '', facebook: '', youtube: '', x: '', website: '' });
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
 
   const [loading, setLoading] = useState(isEdit);
@@ -250,9 +250,14 @@ export default function EventForm() {
       );
       setOriginalBookedSeats(Array.isArray(data.booked_seats) ? data.booked_seats : []);
       setPosterUrl(data.poster_url ?? null);
-      setInstagramUrl(data.social_links?.instagram ?? '');
-      setFacebookUrl(data.social_links?.facebook ?? '');
-      setWebsiteUrl(data.social_links?.website ?? '');
+      setLinks({
+        instagram: data.social_links?.instagram ?? '',
+        tiktok: data.social_links?.tiktok ?? '',
+        facebook: data.social_links?.facebook ?? '',
+        youtube: data.social_links?.youtube ?? '',
+        x: data.social_links?.x ?? data.social_links?.twitter ?? '',
+        website: data.social_links?.website ?? '',
+      });
       setStatus(data.status === 'published' ? 'published' : 'draft');
       setIsRecurring(!!data.is_recurring);
       setWasAlreadyRecurring(!!data.is_recurring);
@@ -387,7 +392,7 @@ export default function EventForm() {
       series_pass_enabled: (isRecurring || wasAlreadyRecurring) ? seriesPassEnabled : false,
       series_pass_discount: (isRecurring || wasAlreadyRecurring) && seriesPassEnabled ? Number(seriesPassDiscount) || 0 : null,
       poster_url: uploadedPosterUrl,
-      social_links: { instagram: instagramUrl || null, facebook: facebookUrl || null, website: websiteUrl || null },
+      social_links: Object.fromEntries(PLATFORMS.map((p) => [p.key, normalizeLink(p.key, links[p.key])])),
       status,
     };
     // Ownership is only ever set on creation. An edit must never touch
@@ -1124,16 +1129,29 @@ export default function EventForm() {
               />
             )}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Field label="Instagram">
-                <input value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} className={inputClass} placeholder="https://" />
-              </Field>
-              <Field label="Facebook">
-                <input value={facebookUrl} onChange={(e) => setFacebookUrl(e.target.value)} className={inputClass} placeholder="https://" />
-              </Field>
-              <Field label="Website">
-                <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className={inputClass} placeholder="https://" />
-              </Field>
+            <div>
+              <p className="text-sm font-medium text-bone">Links</p>
+              <p className="text-xs text-muted">Shown on your event page so people can follow along. Paste a link or type an @handle.</p>
+              <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {PLATFORMS.map((p) => {
+                  const value = links[p.key];
+                  const invalid = value.trim() !== '' && !normalizeLink(p.key, value);
+                  return (
+                    <Field key={p.key} label={p.label}>
+                      <input
+                        value={value}
+                        onChange={(e) => setLinks((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                        className={inputClass}
+                        placeholder={p.placeholder}
+                        inputMode="url"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                      />
+                      {invalid && <p className="mt-1 text-xs text-magenta">That doesn't look like a link. It won't be shown.</p>}
+                    </Field>
+                  );
+                })}
+              </div>
             </div>
           </>
         )}
