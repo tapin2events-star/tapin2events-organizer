@@ -215,6 +215,11 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
     setDismissed((prev) => new Set(prev).add(key));
     await supabase.from('dismissed_alerts').insert({ alert_key: key });
   }
+  async function dismissAll(keys: string[]) {
+    setDismissed((prev) => new Set([...prev, ...keys]));
+    // Ignore keys already saved (e.g. dismissed on another device).
+    await supabase.from('dismissed_alerts').upsert(keys.map((k) => ({ alert_key: k })), { onConflict: 'user_id,alert_key', ignoreDuplicates: true });
+  }
   async function restoreDismissed(keys: string[]) {
     setDismissed((prev) => {
       const next = new Set(prev);
@@ -247,6 +252,11 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
       <div className="flex items-center gap-2">
         <p className="font-semibold text-bone">Needs attention</p>
         <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{visible.length}</span>
+        {visible.length > 1 && (
+          <button type="button" onClick={() => dismissAll(visible.map((a) => a.key))} className="-my-2 ml-auto py-2 text-sm font-medium text-gray-500 hover:text-gray-800">
+            Dismiss all
+          </button>
+        )}
       </div>
       <div className="mt-3 flex flex-col gap-2">
         {shown.map((a) => (
