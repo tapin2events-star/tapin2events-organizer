@@ -96,7 +96,7 @@ export default function ProductDetail() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <button onClick={() => navigate(-1)} className="text-sm text-marigold">&larr; Back</button>
+      <button onClick={() => navigate(-1)} className="-my-2 py-2 text-sm text-marigold">&larr; Back</button>
 
       <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>

@@ -243,9 +243,9 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
           Paste a link from {SUPPORTED_PLATFORMS}. It shows as a player on your profile, so organizers can listen or watch without leaving TapIN.
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://open.spotify.com/album/…" className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900" />
-          <input value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} maxLength={200} placeholder="Title (optional)" className="rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 sm:w-48" />
-          <button type="button" onClick={addLink} disabled={!linkUrl.trim()} className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button>
+          <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://open.spotify.com/album/…" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900" />
+          <input value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} maxLength={200} placeholder="Title (optional)" className="rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 sm:w-40" />
+          <button type="button" onClick={addLink} disabled={!linkUrl.trim()} className="shrink-0 rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button>
         </div>
         {linkError && <p className="mt-1 text-sm text-magenta">{linkError}</p>}
         {links.length > 0 && (
@@ -259,13 +259,13 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
                     <p className="min-w-0 flex-1 truncate text-sm text-gray-900">{l.caption || l.media_url}</p>
                     <div className="flex shrink-0 items-center gap-1">
                       {parsed?.embedUrl && (
-                        <button type="button" onClick={() => setPreviewId(previewId === l.id ? null : l.id)} className="rounded px-2 py-1 text-xs font-medium text-marigold hover:bg-indigo-50">
+                        <button type="button" onClick={() => setPreviewId(previewId === l.id ? null : l.id)} className="rounded px-2.5 py-2 text-xs font-medium text-marigold hover:bg-indigo-50">
                           {previewId === l.id ? 'Hide' : 'Preview'}
                         </button>
                       )}
-                      <button type="button" onClick={() => moveLink(i, -1)} disabled={i === 0} aria-label="Move up" className="rounded px-1.5 py-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30">↑</button>
-                      <button type="button" onClick={() => moveLink(i, 1)} disabled={i === links.length - 1} aria-label="Move down" className="rounded px-1.5 py-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30">↓</button>
-                      <button type="button" onClick={() => removeItem(l.id)} className="rounded px-2 py-1 text-xs font-medium text-magenta hover:bg-red-50">Remove</button>
+                      <button type="button" onClick={() => moveLink(i, -1)} disabled={i === 0} aria-label="Move up" className="rounded px-2.5 py-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30">↑</button>
+                      <button type="button" onClick={() => moveLink(i, 1)} disabled={i === links.length - 1} aria-label="Move down" className="rounded px-2.5 py-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30">↓</button>
+                      <button type="button" onClick={() => removeItem(l.id)} className="rounded px-2.5 py-2 text-xs font-medium text-magenta hover:bg-red-50">Remove</button>
                     </div>
                   </div>
                   {previewId === l.id && parsed && <div className="mt-3"><MediaPlayer embed={parsed} url={l.media_url} /></div>}
@@ -294,7 +294,7 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
                 <div key={v.id} className={`overflow-hidden rounded-xl border bg-white ${on ? 'border-purple-300' : 'border-gray-200'}`}>
                   <Link to={`/feed?post=${v.id}`} className="relative block aspect-[9/16] bg-gray-100">
                     {v.thumbnail_url ? <img src={v.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-2xl">🎥</span>}
-                    {on && <span className="absolute left-1.5 top-1.5 rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-semibold text-white">On profile</span>}
+                    {on && <span className="absolute left-1.5 top-1.5 rounded-full bg-purple-600 px-2 py-0.5 text-[11px] font-semibold text-white">On profile</span>}
                   </Link>
                   <div className="p-2">
                     <p className="truncate text-xs text-gray-700">{v.caption || 'No caption'}</p>
@@ -310,8 +310,8 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
                       />
                     </label>
                     <div className="mt-1.5 flex gap-3 text-xs">
-                      <button type="button" onClick={() => setEditingVideoId(v.id)} className="font-medium text-marigold">Edit</button>
-                      <button type="button" onClick={() => deleteVideo(v.id)} disabled={busyVideoId === v.id} className="font-medium text-magenta disabled:opacity-50">Delete</button>
+                      <button type="button" onClick={() => setEditingVideoId(v.id)} className="-mx-1 -my-1.5 px-1 py-1.5 font-medium text-marigold">Edit</button>
+                      <button type="button" onClick={() => deleteVideo(v.id)} disabled={busyVideoId === v.id} className="-my-1.5 py-1.5 font-medium text-magenta disabled:opacity-50">Delete</button>
                     </div>
                   </div>
                 </div>
@@ -341,18 +341,18 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
                 <div className="flex items-center gap-2">
                   <input defaultValue={album.title} onBlur={(e) => renameAlbum(album, e.target.value)} maxLength={60} aria-label="Album name" className="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 font-semibold text-gray-900 hover:border-gray-200 focus:border-marigold" />
                   <span className="shrink-0 text-xs text-gray-500">{photos.length} photo{photos.length === 1 ? '' : 's'}</span>
-                  <button type="button" onClick={() => deleteAlbum(album)} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-magenta hover:bg-red-50">Delete album</button>
+                  <button type="button" onClick={() => deleteAlbum(album)} className="shrink-0 rounded px-2.5 py-2 text-xs font-medium text-magenta hover:bg-red-50">Delete album</button>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {photos.map((p, pi) => (
                     <div key={p.id} className="group relative">
                       <img src={p.media_url} alt={p.caption ?? ''} className="aspect-square w-full rounded-lg object-cover" />
-                      {pi === 0 && <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 text-[10px] font-semibold text-white">Cover</span>}
+                      {pi === 0 && <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white">Cover</span>}
                       <div className="absolute right-1 top-1 flex gap-1">
                         {pi !== 0 && (
-                          <button type="button" onClick={() => makeCover(p, album.id)} className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">Make cover</button>
+                          <button type="button" onClick={() => makeCover(p, album.id)} className="rounded bg-black/60 px-2 py-1 text-xs text-white">Make cover</button>
                         )}
-                        <button type="button" onClick={() => deletePhoto(p)} aria-label="Delete photo" className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">✕</button>
+                        <button type="button" onClick={() => deletePhoto(p)} aria-label="Delete photo" className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-black/60 text-xs text-white">✕</button>
                       </div>
                       <input defaultValue={p.caption ?? ''} onBlur={(e) => saveCaption(p, e.target.value)} maxLength={200} placeholder="Caption" className="mt-1 w-full rounded border border-gray-200 px-1.5 py-1 text-xs text-gray-900" />
                     </div>

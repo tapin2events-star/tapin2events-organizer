@@ -569,7 +569,7 @@ export default function EventForm() {
                   >
                     {quickFilling ? 'Reading…' : 'Fill in the form'}
                   </button>
-                  <button type="button" onClick={() => setQuickOpen(false)} className="text-sm text-muted hover:text-bone">
+                  <button type="button" onClick={() => setQuickOpen(false)} className="-my-2 py-2 text-sm text-muted hover:text-bone">
                     I'll fill it in myself
                   </button>
                 </div>
@@ -662,7 +662,7 @@ export default function EventForm() {
                   <button
                     type="button"
                     onClick={() => setShowAiNotes((v) => !v)}
-                    className="text-sm font-medium text-muted hover:text-bone"
+                    className="-my-2 py-2 text-sm font-medium text-muted hover:text-bone"
                   >
                     {showAiNotes ? 'Hide extra context' : '+ Add context for the AI'}
                   </button>

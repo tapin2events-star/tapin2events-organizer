@@ -118,7 +118,7 @@ export default function ResourceDiscovery() {
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">
                     <span className="text-gray-500">
-                      {r.review_count > 0 ? `\u2605 ${r.average_rating.toFixed(1)} (${r.review_count})` : 'No reviews yet'}
+                      {r.review_count > 0 ? `\u2605 ${Number(r.average_rating ?? 0).toFixed(1)} (${r.review_count})` : 'No reviews yet'}
                     </span>
                     <span className="font-medium text-gray-900">{pricingLabel(r)}</span>
                   </div>

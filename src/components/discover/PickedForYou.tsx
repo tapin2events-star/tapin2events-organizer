@@ -168,7 +168,7 @@ export default function PickedForYou({
     <div className="mt-6">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-display text-xl font-bold text-gray-900">✨ Picked for you</h2>
-        <button type="button" onClick={() => setEditing(true)} className="shrink-0 text-sm font-medium text-marigold hover:underline">
+        <button type="button" onClick={() => setEditing(true)} className="-my-2 shrink-0 py-2 text-sm font-medium text-marigold hover:underline">
           Edit interests
         </button>
       </div>

@@ -169,7 +169,7 @@ export default function Layout() {
               <p className="truncate text-xs text-muted">{user.email}</p>
               <button
                 onClick={() => signOut()}
-                className="mt-2 text-xs font-medium text-magenta hover:text-magenta/80"
+                className="mt-1 py-2 text-xs font-medium text-magenta hover:text-magenta/80"
               >
                 Sign out
               </button>

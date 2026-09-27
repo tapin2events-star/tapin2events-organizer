@@ -53,22 +53,22 @@ export default function EventDetail() {
         </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>
           <h1 className="font-display text-3xl font-extrabold text-bone">{event.title}</h1>
           <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${event.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
             {event.status === 'published' ? 'Published' : 'Draft'}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 lg:shrink-0 lg:flex-nowrap">
           <button
             onClick={async () => {
               const nextStatus = event.status === 'published' ? 'draft' : 'published';
               const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', id);
               if (!error) setEvent({ ...event, status: nextStatus });
             }}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold ${
               event.status === 'published'
                 ? 'border border-gray-300 text-bone hover:border-magenta hover:text-magenta'
                 : 'bg-mint text-ink hover:bg-mint/90'
@@ -78,13 +78,13 @@ export default function EventDetail() {
           </button>
           <Link
             to={`/organizer/events/${id}/checkin`}
-            className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
+            className="whitespace-nowrap rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
           >
             Check in guests
           </Link>
           <Link
             to={`/organizer/events/${id}/edit`}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold"
+            className="whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold"
           >
             Edit event
           </Link>
@@ -115,7 +115,7 @@ export default function EventDetail() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition ${
               tab === t
                 ? 'border-b-2 border-marigold text-marigold'
                 : 'text-muted hover:text-bone'

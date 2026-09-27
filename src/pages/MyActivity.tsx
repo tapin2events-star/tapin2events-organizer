@@ -273,13 +273,13 @@ export default function MyActivity() {
               const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=1`;
               return (
                 <div key={t.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                  <div className="flex flex-col gap-4 p-5 sm:flex-row">
+                  <div className="flex flex-col gap-4 p-5 sm:flex-row md:flex-col lg:flex-row">
                     {t.event_poster_url ? (
-                      <div className="h-32 w-full shrink-0 overflow-hidden rounded-lg sm:w-32">
+                      <div className="h-32 w-full shrink-0 overflow-hidden rounded-lg sm:w-32 md:w-full lg:w-32">
                         <img src={t.event_poster_url} alt="" className="h-full w-full object-cover" />
                       </div>
                     ) : (
-                      <div className="h-32 w-full shrink-0 rounded-lg bg-gradient-to-br from-indigo-100 to-teal-100 sm:w-32" />
+                      <div className="h-32 w-full shrink-0 rounded-lg bg-gradient-to-br from-indigo-100 to-teal-100 sm:w-32 md:w-full lg:w-32" />
                     )}
 
                     <div className="min-w-0 flex-1">

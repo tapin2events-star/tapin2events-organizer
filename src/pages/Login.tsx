@@ -141,13 +141,13 @@ export default function Login() {
                 {busy ? 'Sending\u2026' : 'Email me a sign-in code'}
               </button>
               <p className="text-center text-xs leading-relaxed text-muted">
-                No password needed. We\u2019ll email a link and a 6-digit code \u2014 use whichever is handier.
+                No password needed. We’ll email a link and a 6-digit code — use whichever is handier.
                 New here? Your account is created automatically.
               </p>
               <button
                 type="button"
                 onClick={() => { setStep('password'); setError(null); }}
-                className="text-center text-xs text-gray-300 hover:text-muted"
+                className="py-2 text-center text-xs text-gray-500 hover:text-gray-700"
               >
                 Use a password instead
               </button>

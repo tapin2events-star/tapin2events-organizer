@@ -102,7 +102,7 @@ export default function CreatorEvents({ events }: { events: CreatorEvent[] }) {
           <p className="mb-2 text-sm font-semibold text-bone">Past</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{pastShown.map(card)}</div>
           {past.length > PAST_PREVIEW && (
-            <button onClick={() => setShowAllPast((v) => !v)} className="mt-2 text-sm font-medium text-marigold hover:underline">
+            <button onClick={() => setShowAllPast((v) => !v)} className="mt-1 py-2 text-sm font-medium text-marigold hover:underline">
               {showAllPast ? 'Show fewer' : `Show all ${past.length} past events`}
             </button>
           )}

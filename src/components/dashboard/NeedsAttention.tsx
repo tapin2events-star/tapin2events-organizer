@@ -228,7 +228,7 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
         ))}
       </div>
       {alerts.length > PREVIEW && (
-        <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 text-sm font-medium text-marigold hover:underline">
+        <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-1 py-2 text-sm font-medium text-marigold hover:underline">
           {showAll ? 'Show fewer' : `Show all ${alerts.length}`}
         </button>
       )}

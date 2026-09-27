@@ -336,11 +336,11 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
                 <p className="truncate font-medium text-gray-900">{p.name}</p>
                 <p className="text-sm text-gray-500">${p.price} &middot; {p.stock_quantity - p.sold_quantity} in stock</p>
                 <div className="mt-1 flex gap-2">
-                  <button onClick={() => startEdit(p)} className="text-xs font-medium text-marigold hover:underline">Edit</button>
-                  <button onClick={() => toggleActive(p)} className="text-xs font-medium text-gray-500 hover:underline">
+                  <button onClick={() => startEdit(p)} className="-mx-1 -my-1.5 px-1 py-1.5 text-xs font-medium text-marigold hover:underline">Edit</button>
+                  <button onClick={() => toggleActive(p)} className="-my-1.5 py-1.5 text-xs font-medium text-gray-500 hover:underline">
                     {p.is_active ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button onClick={() => deleteProduct(p.id)} className="text-xs font-medium text-magenta hover:underline">Delete</button>
+                  <button onClick={() => deleteProduct(p.id)} className="-my-1.5 py-1.5 text-xs font-medium text-magenta hover:underline">Delete</button>
                 </div>
               </div>
             </div>

@@ -192,7 +192,7 @@ export default function Discover() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`flex-1 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium transition sm:flex-none sm:px-4 ${
                 tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -217,7 +217,7 @@ export default function Discover() {
             </p>
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
             {tabFiltered.map((event) => (
               <DiscoverEventCard
                 key={event.id}

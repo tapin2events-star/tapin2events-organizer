@@ -158,7 +158,7 @@ export default function VendorApplicationsTab({ eventId }: { eventId: string }) 
                   <p className="font-mono text-xs text-muted">{app.resource_email}</p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide ${STATUS_STYLES[app.status]}`}
+                  className={`shrink-0 rounded-full px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-wide ${STATUS_STYLES[app.status]}`}
                 >
                   {app.status}
                 </span>

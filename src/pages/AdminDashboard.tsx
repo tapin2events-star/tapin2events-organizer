@@ -146,7 +146,7 @@ export default function AdminDashboard() {
   if (loading) return <p className="text-muted">Loading…</p>;
 
   const pendingResources = resources.filter((r) => r.verification_status === 'pending');
-  const fieldClass = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-ink';
+  const fieldClass = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900';
 
   return (
     <div>
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`shrink-0 px-4 py-2 text-sm font-medium transition ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition ${
               tab === t ? 'border-b-2 border-marigold text-marigold' : 'text-muted hover:text-bone'
             }`}
           >

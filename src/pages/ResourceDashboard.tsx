@@ -236,8 +236,8 @@ export default function ResourceDashboard() {
 
         {tab === 'Bookings' && (
           <>
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
+        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 text-center sm:gap-2 sm:p-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-50">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
                 <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
@@ -248,7 +248,7 @@ export default function ResourceDashboard() {
             </p>
             <p className="text-xs text-gray-500">Completed</p>
           </div>
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
+          <div className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 text-center sm:gap-2 sm:p-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#fb923c" stroke="#fb923c" strokeWidth="1">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -259,7 +259,7 @@ export default function ResourceDashboard() {
             </p>
             <p className="text-xs text-gray-500">{reviewStats.count > 0 ? `${reviewStats.count} review${reviewStats.count === 1 ? '' : 's'}` : 'No reviews yet'}</p>
           </div>
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 text-center">
+          <div className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 text-center sm:gap-2 sm:p-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-marigold/10">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="2">
                 <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" strokeLinecap="round" strokeLinejoin="round" />
