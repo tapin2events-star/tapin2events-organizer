@@ -40,6 +40,7 @@ function whenLabel(days: number) {
 export default function NeedsAttention({ events, userId, userEmail }: { events: TapEvent[]; userId: string; userEmail: string }) {
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -59,18 +60,20 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
       });
       const soonIds = upcoming.filter((e) => new Date(e.start_date!).getTime() - now <= 14 * DAY).map((e) => e.id);
 
-      const [apps, tickets, bookings, orders] = await Promise.all([
+      const [apps, tickets, bookings, orders, dismissedRows] = await Promise.all([
         ids.length
-          ? supabase.from('event_vendor_applications').select('event_id, created_at').in('event_id', ids).eq('status', 'pending')
-          : Promise.resolve({ data: [] as { event_id: string; created_at: string }[] }),
+          ? supabase.from('event_vendor_applications').select('id, event_id, created_at').in('event_id', ids).eq('status', 'pending')
+          : Promise.resolve({ data: [] as { id: string; event_id: string; created_at: string }[] }),
         soonIds.length
           ? supabase.from('tickets').select('event_id, quantity').in('event_id', soonIds).in('status', ['confirmed', 'checked_in'])
           : Promise.resolve({ data: [] as { event_id: string; quantity: number | null }[] }),
         supabase.from('resource_bookings').select('id, event_id, status').eq('organizer_email', userEmail).in('status', ['pending', 'counter_offered']),
         ids.length
-          ? supabase.from('orders').select('event_id, items').in('event_id', ids).eq('payment_status', 'paid').eq('fulfillment_status', 'pending')
-          : Promise.resolve({ data: [] as { event_id: string; items: unknown }[] }),
+          ? supabase.from('orders').select('id, event_id, items, created_at').in('event_id', ids).eq('payment_status', 'paid').eq('fulfillment_status', 'pending')
+          : Promise.resolve({ data: [] as { id: string; event_id: string; items: unknown; created_at: string }[] }),
+        supabase.from('dismissed_alerts').select('alert_key'),
       ]);
+      setDismissed(new Set(((dismissedRows.data ?? []) as { alert_key: string }[]).map((r) => r.alert_key)));
       if (cancelled) return;
 
       const out: Alert[] = [];
@@ -91,18 +94,19 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
       }
 
       // 2. Vendor applications waiting 3+ days, grouped per event.
-      const waiting = new Map<string, { count: number; oldest: number }>();
+      const waiting = new Map<string, { count: number; oldest: number; newestId: string; newestAt: number }>();
       for (const a of apps.data ?? []) {
-        const age = now - new Date(a.created_at).getTime();
+        const created = new Date(a.created_at).getTime();
+        const age = now - created;
         if (age < 3 * DAY) continue;
-        const w = waiting.get(a.event_id) ?? { count: 0, oldest: 0 };
-        waiting.set(a.event_id, { count: w.count + 1, oldest: Math.max(w.oldest, age) });
+        const w = waiting.get(a.event_id) ?? { count: 0, oldest: 0, newestId: a.id, newestAt: 0 };
+        waiting.set(a.event_id, { count: w.count + 1, oldest: Math.max(w.oldest, age), newestId: created >= w.newestAt ? a.id : w.newestId, newestAt: Math.max(w.newestAt, created) });
       }
       waiting.forEach((w, eventId) => {
         const e = byId.get(eventId);
         if (!e) return;
         out.push({
-          key: `vendors-${eventId}`,
+          key: `vendors-${eventId}-${w.newestId}`,
           level: 'warning',
           tag: 'Vendors waiting',
           message: `${w.count} vendor application${w.count === 1 ? '' : 's'} for "${e.title}" ${w.count === 1 ? 'has' : 'have'} been waiting ${Math.floor(w.oldest / DAY)}+ days.`,
@@ -147,7 +151,7 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
         if (days < 0 || days > 10) continue;
         const yourMove = b.status === 'counter_offered';
         out.push({
-          key: `booking-${b.id}`,
+          key: `booking-${b.id}-${b.status}`,
           level: yourMove ? 'urgent' : 'warning',
           tag: yourMove ? 'Your reply needed' : 'Booking pending',
           message: yourMove
@@ -160,16 +164,19 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
 
       // 5. Paid product orders waiting to be fulfilled.
       const toFulfill = new Map<string, number>();
+      const newestOrder = new Map<string, { id: string; at: number }>();
       for (const o of orders.data ?? []) {
         const items = Array.isArray(o.items) ? (o.items as { type?: string }[]) : [];
         if (!items.some((i) => i?.type === 'product')) continue;
         toFulfill.set(o.event_id, (toFulfill.get(o.event_id) ?? 0) + 1);
+        const at = new Date(o.created_at).getTime();
+        if (at >= (newestOrder.get(o.event_id)?.at ?? 0)) newestOrder.set(o.event_id, { id: o.id, at });
       }
       toFulfill.forEach((count, eventId) => {
         const e = byId.get(eventId);
         if (!e) return;
         out.push({
-          key: `orders-${eventId}`,
+          key: `orders-${eventId}-${newestOrder.get(eventId)?.id ?? ''}`,
           level: 'warning',
           tag: 'Orders to fulfill',
           message: `${count} order${count === 1 ? '' : 's'} for "${e.title}" ${count === 1 ? 'is' : 'are'} paid and waiting to be fulfilled.`,
@@ -203,20 +210,47 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
   }, [events, userId, userEmail]);
 
   if (!alerts) return null;
-  if (alerts.length === 0) {
-    return <p className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800">✓ You're all caught up. Nothing needs your attention right now.</p>;
+
+  async function dismiss(key: string) {
+    setDismissed((prev) => new Set(prev).add(key));
+    await supabase.from('dismissed_alerts').insert({ alert_key: key });
+  }
+  async function restoreDismissed(keys: string[]) {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      keys.forEach((k) => next.delete(k));
+      return next;
+    });
+    if (keys.length) await supabase.from('dismissed_alerts').delete().in('alert_key', keys);
   }
 
-  const shown = showAll ? alerts : alerts.slice(0, PREVIEW);
+  const visible = alerts.filter((a) => !dismissed.has(a.key));
+  const hiddenKeys = alerts.filter((a) => dismissed.has(a.key)).map((a) => a.key);
+  const restoreLink = hiddenKeys.length > 0 && (
+    <button type="button" onClick={() => restoreDismissed(hiddenKeys)} className="py-2 text-sm font-medium text-marigold hover:underline">
+      Show {hiddenKeys.length} dismissed
+    </button>
+  );
+
+  if (visible.length === 0) {
+    return (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-1.5">
+        <p className="py-1 text-sm font-medium text-green-800">✓ You're all caught up. Nothing needs your attention right now.</p>
+        {restoreLink}
+      </div>
+    );
+  }
+
+  const shown = showAll ? visible : visible.slice(0, PREVIEW);
   return (
     <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4">
       <div className="flex items-center gap-2">
         <p className="font-semibold text-bone">Needs attention</p>
-        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{alerts.length}</span>
+        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{visible.length}</span>
       </div>
       <div className="mt-3 flex flex-col gap-2">
         {shown.map((a) => (
-          <div key={a.key} className={`flex flex-col gap-2 rounded-lg border border-l-4 border-gray-100 bg-gray-50 px-3 py-2.5 sm:flex-row sm:items-center ${LEVEL_STYLE[a.level].bar}`}>
+          <div key={a.key} className={`relative flex flex-col gap-2 rounded-lg border border-l-4 border-gray-100 bg-gray-50 py-2.5 pl-3 pr-10 sm:flex-row sm:items-center ${LEVEL_STYLE[a.level].bar}`}>
             <div className="min-w-0 flex-1">
               <span className={`mr-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${LEVEL_STYLE[a.level].tag}`}>{a.tag}</span>
               <span className="text-sm text-bone">{a.message}</span>
@@ -224,14 +258,26 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
             <Link to={a.action.to} className="shrink-0 self-start rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-marigold shadow-sm ring-1 ring-gray-200 hover:ring-marigold sm:self-auto">
               {a.action.label}
             </Link>
+            <button
+              type="button"
+              onClick={() => dismiss(a.key)}
+              aria-label={`Dismiss: ${a.tag}`}
+              title="Dismiss"
+              className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+            >
+              ✕
+            </button>
           </div>
         ))}
       </div>
-      {alerts.length > PREVIEW && (
-        <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-1 py-2 text-sm font-medium text-marigold hover:underline">
-          {showAll ? 'Show fewer' : `Show all ${alerts.length}`}
-        </button>
-      )}
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+        {visible.length > PREVIEW ? (
+          <button type="button" onClick={() => setShowAll((v) => !v)} className="py-2 text-sm font-medium text-marigold hover:underline">
+            {showAll ? 'Show fewer' : `Show all ${visible.length}`}
+          </button>
+        ) : <span />}
+        {restoreLink}
+      </div>
     </div>
   );
 }

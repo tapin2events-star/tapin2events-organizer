@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 interface FollowListEntry {
   email: string;
@@ -20,6 +21,7 @@ interface FollowListModalProps {
 
 export default function FollowListModal({ email, direction, isPrivate, isOwnList, onClose }: FollowListModalProps) {
   const [entries, setEntries] = useState<FollowListEntry[]>([]);
+  useEscapeKey(onClose);
   const [loading, setLoading] = useState(true);
 
   // Someone else's private profile hides who follows them and who they

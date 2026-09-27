@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import type { TapEvent } from '../../lib/types';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 // The ⋯ menu on an organizer's own event card. Events with no tickets,
 // registrations, or payments can be deleted; events with any are cancelled
@@ -24,6 +25,7 @@ export default function EventActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  useEscapeKey(() => { setOpen(false); if (!busy) setConfirm(null); }, open || !!confirm);
 
   useEffect(() => {
     if (!open) return;

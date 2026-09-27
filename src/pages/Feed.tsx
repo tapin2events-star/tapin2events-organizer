@@ -7,6 +7,7 @@ import HlsVideo from '../components/feed/HlsVideo';
 import CreatePostModal from '../components/feed/CreatePostModal';
 import TipModal from '../components/feed/TipModal';
 import EditPostModal from '../components/feed/EditPostModal';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface Post {
   id: string;
@@ -353,6 +354,12 @@ export default function Feed() {
   }
 
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  // Escape closes the top-most feed popup (tip, create, and edit popups handle their own).
+  useEscapeKey(() => {
+    if (reportingCommentId) setReportingCommentId(null);
+    else if (reportingId) setReportingId(null);
+    else if (openComments) setOpenComments(null);
+  }, !tippingPost && !showCreateModal && !editingPostId && !!(reportingCommentId || reportingId || openComments));
 
   // After an edit, refresh just that post's caption, role, and the Book /
   // event buttons, without reloading the feed (which would lose your place).

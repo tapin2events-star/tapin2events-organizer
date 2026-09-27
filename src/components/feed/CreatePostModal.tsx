@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { POST_CATEGORIES as CATEGORIES } from '../../lib/postOptions';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 interface EventOption {
   id: string;
@@ -27,6 +28,14 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   const [stage, setStage] = useState<'pick' | 'uploading' | 'processing' | 'error'>('pick');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Tapping outside or pressing Escape closes, but never mid-upload, and
+  // asks first if a video or caption would be lost.
+  function requestClose() {
+    if (stage === 'uploading' || stage === 'processing') return;
+    if ((file || caption.trim()) && !window.confirm('Discard this post?')) return;
+    onClose();
+  }
+  useEscapeKey(requestClose);
 
   useEffect(() => {
     if (eventSearch.trim().length < 2 || selectedEvent) {
@@ -170,8 +179,8 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   }
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-surface p-5">
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/60 p-4" onClick={requestClose}>
+      <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-surface p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div>
             <p className="font-display text-lg font-bold text-bone">Create New Post</p>

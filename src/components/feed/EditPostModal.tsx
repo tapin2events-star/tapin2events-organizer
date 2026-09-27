@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { POST_CATEGORIES } from '../../lib/postOptions';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 interface EventOption {
   id: string;
@@ -25,6 +26,7 @@ export default function EditPostModal({ postId, onClose, onSaved }: { postId: st
   const [myEvents, setMyEvents] = useState<EventOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEscapeKey(onClose);
 
   useEffect(() => {
     (async () => {

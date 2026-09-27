@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface Notification {
   id: string;
@@ -45,6 +46,7 @@ export default function NotificationBell() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  useEscapeKey(() => setOpen(false), open);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   // The header renders a bell for desktop and one for mobile, so each needs

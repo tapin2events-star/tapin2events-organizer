@@ -3,6 +3,7 @@ import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
 import BottomTabBar from './BottomTabBar';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Discover', end: true },
@@ -27,6 +28,7 @@ const ORGANIZER_NAV_ITEMS = [
 export default function Layout() {
   const { user, isAdmin, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  useEscapeKey(() => setMenuOpen(false), menuOpen);
 
   return (
     <div className="flex min-h-screen bg-ink text-bone">

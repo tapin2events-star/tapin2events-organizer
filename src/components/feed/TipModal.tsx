@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 const PRESETS = [5, 10, 20, 50];
 const MIN_TIP = 1;
@@ -17,6 +18,7 @@ interface TipModalProps {
 // account, with the service fee shown there as its own line.
 export default function TipModal({ postId, creatorName, onClose }: TipModalProps) {
   const [preset, setPreset] = useState<number | null>(null);
+  useEscapeKey(onClose);
   const [custom, setCustom] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);

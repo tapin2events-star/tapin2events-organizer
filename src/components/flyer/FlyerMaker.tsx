@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { supabase } from '../../lib/supabaseClient';
 import { drawFlyer, PALETTES, SIZES, type FlyerSize, type FlyerStyle } from './renderFlyer';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 export interface FlyerEventInfo {
   id?: string;
@@ -78,6 +79,7 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
   const [aiError, setAiError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'download' | 'poster' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  useEscapeKey(onClose);
 
   // The flyer fonts (Big Shoulders Display, Public Sans) are loaded by the
   // page; wait for them so the first render isn't in a fallback font.
@@ -197,17 +199,20 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
     `rounded-full px-3 py-1.5 text-sm font-medium ${active ? 'bg-marigold text-white' : 'bg-gray-100 text-muted hover:bg-gray-200'}`;
 
   return (
-    <div className="fixed inset-0 z-[1100] overflow-y-auto bg-black/60 p-3 sm:p-6" onClick={onClose}>
-      <div className="mx-auto flex max-w-5xl flex-col gap-5 rounded-2xl bg-surface p-4 shadow-2xl sm:p-6 md:flex-row" onClick={(e) => e.stopPropagation()}>
+    // Tap the dimmed area (including the band at the top on phones) or press
+    // Escape to close; the close button stays pinned at the top while scrolling.
+    <div className="fixed inset-0 z-[1100] overflow-y-auto bg-black/60 px-3 pb-3 pt-14 sm:p-6" onClick={onClose}>
+      <div className="mx-auto max-w-5xl rounded-2xl bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Make a flyer">
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-gray-200 bg-surface px-4 py-3 sm:px-6">
+          <p className="font-display text-xl font-bold text-bone">Make a flyer</p>
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-muted hover:bg-gray-100 hover:text-bone">✕</button>
+        </div>
+      <div className="flex flex-col gap-5 p-4 sm:p-6 md:flex-row">
         <div className="flex flex-1 items-start justify-center rounded-xl bg-gray-100 p-3">
           <canvas ref={canvasRef} className="h-auto max-h-[70vh] w-auto max-w-full rounded-lg shadow-lg" />
         </div>
 
         <div className="flex w-full flex-col gap-4 md:w-80">
-          <div className="flex items-start justify-between">
-            <p className="font-display text-xl font-bold text-bone">Make a flyer</p>
-            <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-bone">✕</button>
-          </div>
 
           <div>
             <div className="flex items-center justify-between">
@@ -300,7 +305,8 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
             </button>
             {exportError && <p className="text-sm text-magenta">{exportError}</p>}
           </div>
-        </div>
+                </div>
+      </div>
       </div>
     </div>
   );
