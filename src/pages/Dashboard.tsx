@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import NeedsAttention from '../components/dashboard/NeedsAttention';
+import EventActions from '../components/dashboard/EventActions';
+import { loadEarnings, money, summarize } from '../lib/earnings';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import TicketStubCard from '../components/TicketStubCard';
@@ -34,6 +36,23 @@ export default function Dashboard() {
   const [eventsWithBookedResources, setEventsWithBookedResources] = useState<Set<string>>(new Set());
   const [eventsWithSeriesPasses, setEventsWithSeriesPasses] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useState('');
+  // Which of your events have tickets/registrations/payments (can't be deleted),
+  // plus headline earnings for the summary card.
+  const [salesEventIds, setSalesEventIds] = useState<Set<string> | null>(null);
+  const [earnings, setEarnings] = useState<{ all: number; month: number; tickets: number } | null>(null);
+  useEffect(() => {
+    if (!user?.id || !user.email) return;
+    loadEarnings(user.id, user.email)
+      .then((d) => {
+        setSalesEventIds(new Set([...d.tickets.map((t) => t.event_id), ...d.orders.map((o) => o.event_id), ...d.vendorFees.map((v) => v.event_id)]));
+        const all = summarize(d, 'all');
+        setEarnings({ all: all.earned, month: summarize(d, 'month').earned, tickets: all.totals.ticketsSold });
+      })
+      // If this can't load, still offer Delete: the database refuses to delete
+      // any event with sales and explains why, so nothing can be lost.
+      .catch(() => setSalesEventIds(new Set()));
+  }, [user?.id, user?.email]);
 
   useEffect(() => {
     if (!user) return;
@@ -135,8 +154,16 @@ export default function Dashboard() {
         if (timeFilter === 'all' || !e.start_date) return true;
         const isUpcoming = new Date(e.start_date) >= now;
         return timeFilter === 'upcoming' ? isUpcoming : !isUpcoming;
+      })
+      .filter((e) => {
+        // Every word must match the title, venue, category, or date.
+        const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        if (!words.length) return true;
+        const date = e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+        const hay = [e.title, e.location_name, e.location_address, e.category, date, e.is_online ? 'online virtual' : '', e.status].filter(Boolean).join(' ').toLowerCase();
+        return words.every((w) => hay.includes(w));
       });
-  }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, bookingFilter, eventsWithPendingBookings, eventsWithBookedResources, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
+  }, [search, events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, bookingFilter, eventsWithPendingBookings, eventsWithBookedResources, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
 
   const location = useLocation();
   useEffect(() => {
@@ -184,8 +211,33 @@ export default function Dashboard() {
 
       {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
+      {!loading && earnings && (
+        <Link to="/organizer/earnings" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Earnings</p>
+            <p className="font-display text-2xl font-extrabold text-gray-900">{money(earnings.all)} <span className="text-sm font-medium text-gray-500">all time</span></p>
+            <p className="text-xs text-gray-500">{money(earnings.month)} this month · {earnings.tickets} tickets &amp; registrations</p>
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-marigold">See details &rarr;</span>
+        </Link>
+      )}
+
       {!loading && events.length > 0 && (
         <div className="mb-4">
+          <div className="flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search your events"
+              aria-label="Search your events"
+              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-base text-gray-900 outline-none focus:border-marigold"
+            />
+          </div>
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${
@@ -197,6 +249,7 @@ export default function Dashboard() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 5h16M7 12h10M10 19h4" strokeLinecap="round" /></svg>
             Filters
           </button>
+          </div>
 
           {showFilters && (
             <div className="mt-3 flex flex-col gap-4 rounded-xl border border-gray-200 bg-surface2 p-4">
@@ -279,7 +332,10 @@ export default function Dashboard() {
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
-          <p className="text-muted">No events match these filters.</p>
+          <p className="text-muted">{search.trim() ? `No events match "${search.trim()}".` : 'No events match these filters.'}</p>
+          {search.trim() && (
+            <button type="button" onClick={() => setSearch('')} className="mt-2 py-2 text-sm font-medium text-marigold hover:underline">Clear search</button>
+          )}
           {vendorFilter === 'vendor_manager' && (
             <p className="mt-2 text-sm text-muted">
               To assign one, open an event, go to its <span className="font-medium text-bone">Team</span> tab, and invite someone with the <span className="font-medium text-bone">Vendor Manager</span> role.
@@ -316,6 +372,15 @@ export default function Dashboard() {
                 >
                   Vendor Manager Assigned
                 </span>
+              )}
+              {event.organizer_id === user?.id && (
+                <EventActions
+                  event={event}
+                  seriesChildren={events.filter((c) => c.parent_event_id === event.id)}
+                  hasSales={salesEventIds === null ? undefined : [event.id, ...events.filter((c) => c.parent_event_id === event.id).map((c) => c.id)].some((id) => salesEventIds.has(id))}
+                  onDeleted={(ids) => setEvents((prev) => prev.filter((e) => !ids.includes(e.id)))}
+                  onCancelled={(id) => setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, status: 'cancelled' } : e)))}
+                />
               )}
               <TicketStubCard event={event} />
             </div>

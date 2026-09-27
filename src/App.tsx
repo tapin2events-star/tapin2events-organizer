@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import EventForm from './pages/EventForm';
 import ImportEvents from './pages/ImportEvents';
+import Earnings from './pages/Earnings';
 import EventDetail from './pages/EventDetail';
 import Discover from './pages/Discover';
 import PublicEventDetail from './pages/PublicEventDetail';
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/organizer/vendor-applications" element={<ProtectedRoute><OrganizerVendorApplicationsPage /></ProtectedRoute>} />
             <Route path="/organizer/new" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
             <Route path="/organizer/import" element={<ProtectedRoute><ImportEvents /></ProtectedRoute>} />
+            <Route path="/organizer/earnings" element={<ProtectedRoute><Earnings /></ProtectedRoute>} />
             <Route path="/organizer/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route
               path="/organizer/events/:id/checkin"
