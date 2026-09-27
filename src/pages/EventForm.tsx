@@ -199,6 +199,8 @@ export default function EventForm() {
     setQuickOpen(false);
   }
   const [saving, setSaving] = useState(false);
+  // Set by the Preview button: save, then open the event page instead of the dashboard.
+  const previewAfterSave = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [originalBookedSeats, setOriginalBookedSeats] = useState<string[]>([]);
 
@@ -316,6 +318,8 @@ export default function EventForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const previewing = previewAfterSave.current;
+    previewAfterSave.current = false;
     if (!user) return;
     if (!title.trim()) {
       setError('Event title is required.');
@@ -404,6 +408,8 @@ export default function EventForm() {
     if (!isEdit) {
       payload.organizer_id = user.id;
       payload.organizer_email = user.email;
+      // Previewing a brand-new event never publishes it.
+      if (previewing) payload.status = 'draft';
     }
 
     const { data, error } = isEdit
@@ -490,7 +496,7 @@ export default function EventForm() {
     }
 
     setSaving(false);
-    navigate(`/organizer/events/${data.id}`);
+    navigate(previewing ? `/events/${data.id}` : `/organizer/events/${data.id}`);
   }
 
   if (loading) return <p className="text-muted">Loading…</p>;
@@ -1196,6 +1202,20 @@ export default function EventForm() {
               {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create event'}
             </button>
           )}
+          <button
+            type="button"
+            disabled={saving}
+            onClick={(e) => {
+              previewAfterSave.current = true;
+              handleSubmit(e as unknown as FormEvent);
+            }}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-5 py-2.5 font-semibold text-bone hover:border-marigold hover:text-marigold disabled:opacity-50"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" /><circle cx="12" cy="12" r="3" />
+            </svg>
+            {!isEdit ? 'Save draft & preview' : status === 'draft' ? 'Save & preview' : 'Save & view page'}
+          </button>
           <button type="button" onClick={() => navigate(-1)} className="rounded-lg px-5 py-2.5 font-semibold text-muted hover:text-bone">
             Cancel
           </button>

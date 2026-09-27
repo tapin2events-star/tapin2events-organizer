@@ -89,6 +89,9 @@ export default function EventActions({
         {open && (
           <div className="mt-1 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-lg">
             <Link to={`/organizer/events/${event.id}/edit`} className="block px-4 py-2.5 text-gray-800 hover:bg-gray-50">Edit event</Link>
+            <Link to={`/events/${event.id}`} className="block px-4 py-2.5 text-gray-800 hover:bg-gray-50">
+              {event.status === 'draft' ? 'Preview' : 'View live page'}
+            </Link>
             {hasSales === undefined ? (
               <p className="px-4 py-2.5 text-gray-400">Checking…</p>
             ) : hasSales ? (

@@ -123,7 +123,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleRegister() {
-    if (!id || !event || !user?.email) return;
+    if (!id || !event || !user?.email || event.status === 'draft') return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -208,7 +208,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleBuyTicket() {
-    if (!id || !event) return;
+    if (!id || !event || event.status === 'draft') return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -230,7 +230,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleBuySeats() {
-    if (!id || !event || !selectedSectionName || selectedSeats.length === 0) return;
+    if (!id || !event || !selectedSectionName || selectedSeats.length === 0 || event.status === 'draft') return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -259,7 +259,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleBuySeriesPass() {
-    if (!id || !event) return;
+    if (!id || !event || event.status === 'draft') return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -285,9 +285,38 @@ export default function PublicEventDetail() {
 
   const isFull = !!event.max_capacity && confirmedCount >= event.max_capacity && !myTicket;
   const isFree = event.event_type === 'free';
+  // Drafts are only visible to their organizer and team (enforced by the
+  // database), so viewing one is a preview: ticket buttons are switched off.
+  const isPreview = event.status === 'draft';
+  const canPublish = isPreview && user?.id === event.organizer_id;
+
+  async function publishFromPreview() {
+    if (!event) return;
+    const { error } = await supabase.from('events').update({ status: 'published' }).eq('id', event.id);
+    if (!error) setEvent({ ...event, status: 'published' });
+  }
 
   return (
     <div className="min-h-screen bg-ink">
+      {isPreview && (
+        <div className="sticky top-0 z-40 border-b border-amber-300 bg-amber-100 px-4 py-2.5 sm:px-6">
+          <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-amber-900">
+              <span className="font-semibold">Draft preview.</span> Only you and your team can see this page. Ticket buttons turn on once it's published.
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Link to={`/organizer/events/${event.id}/edit`} className="rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-50">
+                Keep editing
+              </Link>
+              {canPublish && (
+                <button type="button" onClick={publishFromPreview} className="rounded-lg bg-mint px-3 py-1.5 text-sm font-semibold text-white hover:bg-mint/90">
+                  Publish
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Hero: title and key facts live directly on the image, editorial-style,
           instead of a separate text block below a plain picture frame. */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900 sm:aspect-[21/9]">
@@ -346,14 +375,14 @@ export default function PublicEventDetail() {
             {event.is_online ? 'Virtual event' : (event.location_name || 'Venue TBD')}
           </span>
           <span className="ml-auto flex items-center gap-3">
-            <button onClick={handleShare} className="-my-2 flex items-center gap-1.5 py-2 text-sm font-medium text-gray-500 hover:text-marigold">
+            {!isPreview && <button onClick={handleShare} className="-my-2 flex items-center gap-1.5 py-2 text-sm font-medium text-gray-500 hover:text-marigold">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
               {shareCopied ? 'Copied!' : 'Share'}
-            </button>
-            <button onClick={toggleSave} className={`-my-2 flex items-center gap-1.5 py-2 text-sm font-medium ${id && savedIds.includes(id) ? 'text-marigold' : 'text-gray-500 hover:text-marigold'}`}>
+            </button>}
+            {!isPreview && (<button onClick={toggleSave} className={`-my-2 flex items-center gap-1.5 py-2 text-sm font-medium ${id && savedIds.includes(id) ? 'text-marigold' : 'text-gray-500 hover:text-marigold'}`}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill={id && savedIds.includes(id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" strokeLinejoin="round" /></svg>
               {id && savedIds.includes(id) ? 'Saved' : 'Save'}
-            </button>
+            </button>)}
           </span>
         </div>
 
@@ -405,14 +434,18 @@ export default function PublicEventDetail() {
               </p>
               <p className="mt-0.5 text-xs text-gray-400">{isFree ? 'RSVP' : 'Sold'} on {ticketSiteName(event.external_ticket_url!)}</p>
             </div>
-            <a
-              href={safeTicketUrl(event.external_ticket_url)!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-center text-sm font-semibold text-white hover:opacity-90"
-            >
-              {isFree ? 'RSVP' : 'Get tickets'} on {ticketSiteName(event.external_ticket_url!)} ↗
-            </a>
+            {isPreview ? (
+              <span className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-center text-sm font-semibold text-white opacity-50">Available once published</span>
+            ) : (
+              <a
+                href={safeTicketUrl(event.external_ticket_url)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-center text-sm font-semibold text-white hover:opacity-90"
+              >
+                {isFree ? 'RSVP' : 'Get tickets'} on {ticketSiteName(event.external_ticket_url!)} ↗
+              </a>
+            )}
           </div>
         ) : event.is_seating_enabled && event.seating_sections && event.seating_sections.length > 0 ? (
           <div className="mt-6 rounded-2xl bg-gray-900 p-5 sm:p-6">
@@ -486,10 +519,10 @@ export default function PublicEventDetail() {
                         <span />
                         <button
                           onClick={() => handleBuySeats()}
-                          disabled={registering}
+                          disabled={registering || isPreview}
                           className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                         >
-                          {registering ? 'Please wait…' : `Buy ${selectedSeats.length} seat${selectedSeats.length === 1 ? '' : 's'} — $${total.toFixed(2)}`}
+                          {isPreview ? 'Available once published' : registering ? 'Please wait…' : `Buy ${selectedSeats.length} seat${selectedSeats.length === 1 ? '' : 's'} — $${total.toFixed(2)}`}
                         </button>
                       </div>
                     </div>
@@ -525,10 +558,10 @@ export default function PublicEventDetail() {
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 <button
                   onClick={isFree ? handleRegister : handleBuyTicket}
-                  disabled={registering}
+                  disabled={registering || isPreview}
                   className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
+                  {isPreview ? 'Available once published' : registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
                 </button>
                 {registerError && <p className="text-sm text-magenta">{registerError}</p>}
               </div>
@@ -577,10 +610,10 @@ export default function PublicEventDetail() {
                   ) : (
                     <button
                       onClick={handleBuySeriesPass}
-                      disabled={registering}
+                      disabled={registering || isPreview}
                       className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50"
                     >
-                      {registering ? 'Please wait…' : 'Buy series pass'}
+                      {isPreview ? 'Available once published' : registering ? 'Please wait…' : 'Buy series pass'}
                     </button>
                   )}
                 </div>
