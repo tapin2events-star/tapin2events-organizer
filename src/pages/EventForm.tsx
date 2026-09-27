@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { EventType } from '../lib/types';
@@ -101,6 +101,8 @@ export default function EventForm() {
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [showFlyerMaker, setShowFlyerMaker] = useState(false);
+  const [searchParams] = useSearchParams();
+  const flyerOpened = useRef(false);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   useEffect(() => {
     if (!posterFile) {
@@ -117,6 +119,15 @@ export default function EventForm() {
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
 
   const [loading, setLoading] = useState(isEdit);
+
+  // From the dashboard's "Make a flyer" shortcut: jump to the last step and
+  // open the flyer maker once the event has loaded.
+  useEffect(() => {
+    if (loading || !isEdit || flyerOpened.current || searchParams.get('flyer') !== '1') return;
+    flyerOpened.current = true;
+    setStep(STEPS.length);
+    setShowFlyerMaker(true);
+  }, [loading, isEdit, searchParams]);
 
   async function handleFlyerUpload(file: File) {
     if (!user) return;

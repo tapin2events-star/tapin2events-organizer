@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
+import NeedsAttention from '../components/dashboard/NeedsAttention';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import TicketStubCard from '../components/TicketStubCard';
@@ -137,6 +138,12 @@ export default function Dashboard() {
       });
   }, [events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, bookingFilter, eventsWithPendingBookings, eventsWithBookedResources, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
 
+  const location = useLocation();
+  useEffect(() => {
+    if (loading || location.hash !== '#resource-bookings') return;
+    setTimeout(() => document.getElementById('resource-bookings')?.scrollIntoView({ behavior: 'smooth' }), 150);
+  }, [loading, location.hash]);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -151,6 +158,8 @@ export default function Dashboard() {
           + Create event
         </Link>
       </div>
+
+      {!loading && user?.id && user.email && <NeedsAttention events={events} userId={user.id} userEmail={user.email} />}
 
       <Link
         to="/organizer/vendor-applications"
@@ -309,7 +318,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      <MyResourceBookings />
+      <div id="resource-bookings" className="scroll-mt-24">
+        <MyResourceBookings />
+      </div>
     </div>
   );
 }
