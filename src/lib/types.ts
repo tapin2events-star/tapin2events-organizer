@@ -237,6 +237,7 @@ export interface ProductOrder {
   shipping_address: { name?: string; address_line1?: string; address_line2?: string; city?: string; state?: string; postal_code?: string; country?: string } | null;
   tracking_number: string | null;
   tracking_carrier: string | null;
+  pickup_instructions?: string | null;
   created_at: string;
 }
 

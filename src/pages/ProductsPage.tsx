@@ -140,7 +140,7 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {tab === 'My Orders' && <MyProductOrders />}
+      {tab === 'My Orders' && <MyProductOrders title="My Orders" />}
       {tab === 'My Products' && <MyProducts />}
     </div>
   );

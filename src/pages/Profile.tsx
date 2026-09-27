@@ -357,7 +357,7 @@ export default function Profile() {
         {tab === 'notifs' && (
           <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
             {([
-              { key: 'event_updates', label: 'Event updates', desc: "Changes to events you're attending or organizing" },
+              { key: 'event_updates', label: 'Event reminders & updates', desc: "Reminders the day before, and changes to events you're attending" },
               { key: 'new_followers', label: 'New followers', desc: 'When someone follows your profile' },
               { key: 'email_notifications', label: 'Email notifications', desc: 'Receive these updates by email' },
               { key: 'collaboration_invites', label: 'Collaboration invites', desc: "When you're invited to help manage an event" },
