@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import type { TapEvent } from '../../lib/types';
 import { useEscapeKey } from '../../lib/useEscapeKey';
+import CancelEventDialog from './CancelEventDialog';
 
 // The ⋯ menu on an organizer's own event card. Events with no tickets,
 // registrations, or payments can be deleted; events with any are cancelled
@@ -36,7 +37,6 @@ export default function EventActions({
 
   const isSeries = seriesChildren.length > 0;
   const cancelled = event.status === 'cancelled';
-  const paidEvent = event.event_type === 'paid' && !event.external_ticket_url;
 
   async function doDelete() {
     setBusy(true);
@@ -61,18 +61,6 @@ export default function EventActions({
     onDeleted(ids);
   }
 
-  async function doCancel() {
-    setBusy(true);
-    setError(null);
-    const { error: upErr } = await supabase.from('events').update({ status: 'cancelled' }).eq('id', event.id);
-    setBusy(false);
-    if (upErr) {
-      setError("Couldn't cancel this event. Please try again.");
-      return;
-    }
-    setConfirm(null);
-    onCancelled(event.id);
-  }
 
   return (
     <>
@@ -109,36 +97,26 @@ export default function EventActions({
         )}
       </div>
 
-      {confirm && (
+      {confirm === 'cancel' && (
+        <CancelEventDialog eventId={event.id} eventTitle={event.title} onClose={() => setConfirm(null)} onCancelled={() => onCancelled(event.id)} />
+      )}
+
+      {confirm === 'delete' && (
         <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" onClick={() => !busy && setConfirm(null)}>
           <div className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            {confirm === 'delete' ? (
               <>
                 <p className="font-display text-lg font-bold text-gray-900">{isSeries ? 'Delete this series?' : 'Delete this event?'}</p>
                 <p className="mt-1 text-sm text-gray-600">
                   "{event.title}" {isSeries ? `and all ${seriesChildren.length + 1} of its dates` : ''} will be permanently removed. This can't be undone.
                 </p>
               </>
-            ) : (
-              <>
-                <p className="font-display text-lg font-bold text-gray-900">Cancel this event?</p>
-                <p className="mt-1 text-sm text-gray-600">
-                  "{event.title}" has tickets or registrations, so it can't be deleted. Cancelling keeps those records, marks the event as cancelled on its page, and alerts everyone holding a ticket.
-                </p>
-                {paidEvent && (
-                  <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                    Refunds aren't automatic yet. Issue refunds for paid tickets from your Stripe dashboard.
-                  </p>
-                )}
-              </>
-            )}
             {error && <p className="mt-2 text-sm text-magenta">{error}</p>}
             <div className="mt-4 grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setConfirm(null)} disabled={busy} className="rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-800">
                 Keep it
               </button>
-              <button type="button" onClick={confirm === 'delete' ? doDelete : doCancel} disabled={busy} className="rounded-lg bg-magenta py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-                {busy ? 'Working…' : confirm === 'delete' ? 'Delete' : 'Cancel event'}
+              <button type="button" onClick={doDelete} disabled={busy} className="rounded-lg bg-magenta py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                {busy ? 'Working…' : 'Delete'}
               </button>
             </div>
           </div>
