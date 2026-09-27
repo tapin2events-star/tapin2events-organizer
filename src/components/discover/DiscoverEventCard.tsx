@@ -39,11 +39,15 @@ export default function DiscoverEventCard({
   event,
   isSaved,
   onToggleSave,
+  myTicket = null,
 }: {
   event: TapEvent;
   isSaved: boolean;
   onToggleSave: (eventId: string) => void;
+  // Set when the signed-in person already has a ticket for this event.
+  myTicket?: { ticketId: string; count: number } | null;
 }) {
+  const ticketLabel = event.event_type === 'free' ? 'Registered' : myTicket && myTicket.count > 1 ? `${myTicket.count} tickets` : 'Ticket purchased';
   const isOver = !event.is_recurring && event.start_date ? new Date(event.start_date) < new Date() : false;
   const price = displayPrice(event);
   const hasMultipleSections = event.is_seating_enabled && (event.seating_sections?.length ?? 0) > 1;
@@ -89,6 +93,9 @@ export default function DiscoverEventCard({
             <span className="rounded-full bg-blue-600 px-2.5 py-1 text-xs font-medium text-white">Online</span>
           )}
         </div>
+        {myTicket && (
+          <span className="absolute bottom-3 left-3 rounded-full bg-green-600 px-2.5 py-1 text-xs font-semibold text-white shadow">✓ {ticketLabel}</span>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 p-5">
@@ -126,6 +133,13 @@ export default function DiscoverEventCard({
 
           {isOver ? (
             <span className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-400">Event ended</span>
+          ) : myTicket ? (
+            <Link
+              to={`/pass/${myTicket.ticketId}`}
+              className="rounded-lg bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+            >
+              {myTicket.count > 1 ? 'View tickets' : 'View ticket'}
+            </Link>
           ) : (
             <Link
               to={`/events/${event.id}`}

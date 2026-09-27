@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DiscoverEventCard from '../components/discover/DiscoverEventCard';
 import PickedForYou from '../components/discover/PickedForYou';
+import { useMyTickets } from '../lib/useMyTickets';
 import DiscoverMap from '../components/discover/DiscoverMap';
 
 type DiscoverTab = 'all' | 'map' | 'today' | 'saved';
@@ -21,6 +22,7 @@ export default function Discover() {
   const [priceFilter, setPriceFilter] = useState<'' | 'free' | 'paid'>('');
   const [showFilters, setShowFilters] = useState(false);
   const [tab, setTab] = useState<DiscoverTab>('all');
+  const myTickets = useMyTickets(user?.email);
 
   useEffect(() => {
     (async () => {
@@ -222,6 +224,7 @@ export default function Discover() {
                 event={event}
                 isSaved={savedIds.includes(event.id)}
                 onToggleSave={toggleSave}
+                myTicket={myTickets.get(event.id) ?? null}
               />
             ))}
           </div>

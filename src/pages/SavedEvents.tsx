@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DiscoverEventCard from '../components/discover/DiscoverEventCard';
+import { useMyTickets } from '../lib/useMyTickets';
 
 type When = 'upcoming' | 'past' | 'all';
 type Price = 'any' | 'free' | 'paid';
@@ -30,6 +31,7 @@ export default function SavedEvents() {
   const [sort, setSort] = useState<Sort>('date');
   const [undo, setUndo] = useState<{ id: string; index: number } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const myTickets = useMyTickets(user?.email);
 
   useEffect(() => {
     if (!user?.email) return;
@@ -202,7 +204,7 @@ export default function SavedEvents() {
                   )}
                   {/* Faded so a cancelled event's buttons don't read as available. */}
                   <div className={e.status === 'cancelled' ? 'opacity-60 grayscale' : ''}>
-                    <DiscoverEventCard event={e} isSaved onToggleSave={unsave} />
+                    <DiscoverEventCard event={e} isSaved onToggleSave={unsave} myTicket={myTickets.get(e.id) ?? null} />
                   </div>
                 </div>
               ))}
