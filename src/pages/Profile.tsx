@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FollowListModal from '../components/profile/FollowListModal';
 import PayoutsCard from '../components/PayoutsCard';
+import InterestPicker from '../components/discover/InterestPicker';
+import { normalizeInterests, type InterestGroup } from '../lib/interests';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
@@ -21,6 +23,7 @@ interface ProfileRow {
   country: string | null;
   phone_number: string | null;
   is_profile_private: boolean | null;
+  interests: string[] | null;
   preferred_home_page: string | null;
   stripe_account_id: string | null;
   stripe_charges_enabled: boolean | null;
@@ -42,6 +45,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [savedEvents, setSavedEvents] = useState<TapEvent[]>([]);
   const [myResourceId, setMyResourceId] = useState<string | null>(null);
+  const [interestsSaved, setInterestsSaved] = useState(false);
   const [vendorAppCounts, setVendorAppCounts] = useState({ needsPayment: 0, pending: 0 });
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +70,7 @@ export default function Profile() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select(
-          'full_name, email, bio, profile_photo, is_organizer, is_resource, saved_event_ids, followers_count, following_count, location, city, state, country, phone_number, is_profile_private, preferred_home_page, notification_preferences, stripe_account_id, stripe_charges_enabled'
+          'full_name, email, bio, profile_photo, is_organizer, is_resource, saved_event_ids, interests, followers_count, following_count, location, city, state, country, phone_number, is_profile_private, preferred_home_page, notification_preferences, stripe_account_id, stripe_charges_enabled'
         )
         .eq('id', user.id)
         .single();
@@ -332,6 +336,21 @@ export default function Profile() {
               </span>
               <input type="checkbox" checked={!!profile.is_profile_private} onChange={togglePrivate} className="h-5 w-5 accent-marigold" />
             </label>
+            <div className="border-t border-gray-200 pt-3">
+              <span className="block text-sm font-medium text-bone">Your interests</span>
+              <span className="mb-2 block text-xs text-muted">Used for "Picked for you" on Discover</span>
+              <InterestPicker
+                key={(profile.interests ?? []).join('|')}
+                initial={normalizeInterests(profile.interests)}
+                saveLabel={interestsSaved ? 'Saved ✓' : 'Save interests'}
+                onSave={async (groups: InterestGroup[]) => {
+                  await supabase.from('profiles').update({ interests: groups }).eq('id', user!.id);
+                  setProfile({ ...profile, interests: groups });
+                  setInterestsSaved(true);
+                  setTimeout(() => setInterestsSaved(false), 2000);
+                }}
+              />
+            </div>
           </div>
         )}
 

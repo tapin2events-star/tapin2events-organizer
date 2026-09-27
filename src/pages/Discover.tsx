@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DiscoverEventCard from '../components/discover/DiscoverEventCard';
+import PickedForYou from '../components/discover/PickedForYou';
 import DiscoverMap from '../components/discover/DiscoverMap';
 
 type DiscoverTab = 'all' | 'map' | 'today' | 'saved';
@@ -197,6 +198,10 @@ export default function Discover() {
             </button>
           ))}
         </div>
+
+        {tab === 'all' && !loading && user?.id && user.email && !search.trim() && !category && !priceFilter && (
+          <PickedForYou events={events} savedIds={savedIds} userId={user.id} userEmail={user.email} onToggleSave={toggleSave} />
+        )}
 
         {tab === 'map' ? (
           <DiscoverMap events={filtered} />
