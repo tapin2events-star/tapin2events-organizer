@@ -8,13 +8,14 @@ import { supabase } from '../lib/supabaseClient';
 import type { TapEvent } from '../lib/types';
 import OverviewTab from '../components/tabs/OverviewTab';
 import SalesTab from '../components/tabs/SalesTab';
+import MessagesTab from '../components/tabs/MessagesTab';
 import TasksTab from '../components/tabs/TasksTab';
 import TeamTab from '../components/tabs/TeamTab';
 import VendorApplicationsTab from '../components/tabs/VendorApplicationsTab';
 import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 
-const TABS = ['Overview', 'Ticket Sales', 'Products', 'Tasks', 'Team', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Ticket Sales', 'Messages', 'Products', 'Tasks', 'Team', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -210,6 +211,7 @@ export default function EventDetail() {
 
       {tab === 'Overview' && <OverviewTab event={event} />}
       {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
+      {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (
         <>
           <ProductManager ownerType="event" ownerId={id} sellerEmail={event.organizer_email} />
