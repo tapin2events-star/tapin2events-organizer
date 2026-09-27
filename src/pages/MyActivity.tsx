@@ -3,6 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import MyProductOrders from '../components/products/MyProductOrders';
+import MyVendorApplications from '../components/MyVendorApplications';
+import MyResourceBookings from '../components/resources/MyResourceBookings';
+import MyTipsSent from '../components/MyTipsSent';
+import { seatText } from '../lib/seats';
 
 interface MyTicket {
   id: string;
@@ -65,6 +69,34 @@ export default function MyActivity() {
   const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'general' | 'seated' | 'series_pass'>('all');
   const [search, setSearch] = useState('');
+  // One place for everything you've done on TapIN, filtered by chips. The view
+  // lives in the URL hash so email links (e.g. /activity#orders) open it.
+  type View = 'all' | 'tickets' | 'orders' | 'bookings' | 'vendor' | 'tips';
+  const viewFromHash = (): View => {
+    const h = window.location.hash.replace('#', '');
+    return (['tickets', 'orders', 'bookings', 'vendor', 'tips'] as string[]).includes(h) ? (h as View) : 'all';
+  };
+  const [view, setViewState] = useState<View>(viewFromHash);
+  const [counts, setCounts] = useState<{ orders: number; bookings: number; vendor: number; tips: number } | null>(null);
+  function setView(v: View) {
+    setViewState(v);
+    window.history.replaceState(null, '', v === 'all' ? window.location.pathname : `${window.location.pathname}#${v}`);
+  }
+  useEffect(() => {
+    const onHash = () => setViewState(viewFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => {
+    if (!user?.email) return;
+    const email = user.email;
+    Promise.all([
+      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('customer_email', email).contains('items', JSON.stringify([{ type: 'product' }])),
+      supabase.from('resource_bookings').select('id', { count: 'exact', head: true }).eq('organizer_email', email),
+      supabase.from('event_vendor_applications').select('id', { count: 'exact', head: true }).eq('resource_email', email),
+      supabase.from('tips').select('id', { count: 'exact', head: true }).eq('tipper_email', email).in('payment_status', ['paid', 'refunded']),
+    ]).then(([o, b, v, t]) => setCounts({ orders: o.count ?? 0, bookings: b.count ?? 0, vendor: v.count ?? 0, tips: t.count ?? 0 }));
+  }, [user?.email]);
 
   useEffect(() => {
     if (authLoading) return; // don't judge auth state until it's actually finished checking
@@ -172,8 +204,42 @@ export default function MyActivity() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-3xl px-4 py-10">
         <h1 className="font-display text-3xl font-extrabold text-gray-900">My Activity</h1>
-        <p className="mt-1 text-gray-500">Every event you've registered for or bought a ticket to.</p>
+        <p className="mt-1 text-gray-500">Your tickets, orders, bookings, and more, all in one place.</p>
 
+        {(() => {
+          const chips: { key: View; label: string; count: number }[] = [
+            { key: 'tickets', label: 'Tickets', count: tickets.length },
+            { key: 'orders', label: 'Orders', count: counts?.orders ?? 0 },
+            { key: 'bookings', label: 'Bookings', count: counts?.bookings ?? 0 },
+            { key: 'vendor', label: 'Vendor spots', count: counts?.vendor ?? 0 },
+            { key: 'tips', label: 'Tips', count: counts?.tips ?? 0 },
+          ];
+          const shown = chips.filter((c) => c.key === 'tickets' || c.count > 0 || view === c.key);
+          if (shown.length < 2) return null;
+          return (
+            <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter your activity">
+              {[{ key: 'all' as View, label: 'All', count: -1 }, ...shown].map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === c.key}
+                  onClick={() => setView(c.key)}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${view === c.key ? 'bg-marigold text-white' : 'border border-gray-200 bg-white text-gray-700 hover:border-marigold'}`}
+                >
+                  {c.label}
+                  {c.count >= 0 && <span className={`ml-1.5 ${view === c.key ? 'text-white/80' : 'text-gray-400'}`}>{c.count}</span>}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
+        {(view === 'all' || view === 'tickets') && (
+        <div id="tickets">
+        {view === 'all' && tickets.length > 0 && (counts?.orders || counts?.bookings || counts?.vendor || counts?.tips) ? (
+          <h2 className="mt-8 font-display text-xl font-bold text-gray-900">Tickets</h2>
+        ) : null}
         {loading ? (
           <p className="mt-6 text-gray-500">Loading…</p>
         ) : tickets.length === 0 ? (
@@ -267,9 +333,9 @@ export default function MyActivity() {
                         </p>
                         <p>{t.event_is_online ? 'Virtual event' : (t.event_location_name || 'Venue TBD')}</p>
                         <p>
-                          {t.ticket_type === 'series_pass' ? 'Series Pass' : 'General admission'} &middot; Qty {t.quantity}
+                          {t.ticket_type === 'series_pass' ? 'Series pass' : t.ticket_type === 'seated' ? 'Reserved seat' : t.ticket_type === 'vip' ? 'VIP' : t.ticket_type === 'early_bird' ? 'Early bird' : 'General admission'} &middot; Qty {t.quantity}
                           {t.price_paid > 0 ? ` \u00b7 $${t.price_paid}` : ' \u00b7 Free'}
-                          {(t.section_name || t.seat_assignment) && ` \u00b7 ${[t.section_name, t.seat_assignment].filter(Boolean).join(' ')}`}
+                          {(t.section_name || t.seat_assignment) && ` \u00b7 ${seatText(t.section_name, t.seat_assignment)}`}
                         </p>
                       </div>
                       <Link to={`/pass/${t.id}`} className="mt-3 inline-block text-sm font-medium text-marigold hover:underline">
@@ -304,7 +370,15 @@ export default function MyActivity() {
             )}
           </>
         )}
-        <MyProductOrders />
+        </div>
+        )}
+        {(view === 'all' || view === 'orders') && <MyProductOrders title="Orders" />}
+        {(view === 'all' || view === 'vendor') && <div id="vendor" className="scroll-mt-20"><MyVendorApplications title="Vendor Spots" /></div>}
+        {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><MyResourceBookings title="Bookings" /></div>}
+        {(view === 'all' || view === 'tips') && <MyTipsSent />}
+        {view !== 'all' && view !== 'tickets' && counts && counts[view] === 0 && (
+          <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-12 text-center text-gray-500">Nothing here yet.</div>
+        )}
       </div>
     </div>
   );

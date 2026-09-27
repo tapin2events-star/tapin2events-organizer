@@ -20,7 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
   withdrawn: 'bg-gray-100 text-gray-600',
 };
 
-export default function MyVendorApplications() {
+export default function MyVendorApplications({ title = 'My Vendor Applications' }: { title?: string }) {
   const { user } = useAuth();
   const [apps, setApps] = useState<(VendorApp & { event_title: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +73,7 @@ export default function MyVendorApplications() {
 
   return (
     <div className="mt-10">
-      <h2 className="font-display text-xl font-bold text-gray-900">My Vendor Applications</h2>
+      <h2 className="font-display text-xl font-bold text-gray-900">{title}</h2>
       <div className="mt-3 flex flex-col gap-3">
         {apps.map((app) => (
           <div key={app.id} className="rounded-xl border border-gray-200 bg-white p-4">

@@ -55,7 +55,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (n: number) 
   );
 }
 
-export default function MyResourceBookings() {
+export default function MyResourceBookings({ title = 'My Resource Bookings' }: { title?: string }) {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('booking');
@@ -182,7 +182,7 @@ export default function MyResourceBookings() {
 
   return (
     <div className="mt-10">
-      <h2 className="font-display text-xl font-bold text-gray-900">My Resource Bookings</h2>
+      <h2 className="font-display text-xl font-bold text-gray-900">{title}</h2>
       <p className="mt-1 text-sm text-gray-500">Requests you've sent to artists and vendors.</p>
       {actionError && <p className="mt-2 text-sm text-magenta">{actionError}</p>}
       <div className="mt-4 flex flex-col gap-3">
