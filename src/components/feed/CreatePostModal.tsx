@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
-
-const CATEGORIES = ['Music', 'Comedy', 'Art', 'Food', 'Community', 'Business', 'Sports', 'Other'];
+import { POST_CATEGORIES as CATEGORIES } from '../../lib/postOptions';
 
 interface EventOption {
   id: string;

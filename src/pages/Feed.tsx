@@ -6,6 +6,7 @@ import BottomTabBar from '../components/BottomTabBar';
 import HlsVideo from '../components/feed/HlsVideo';
 import CreatePostModal from '../components/feed/CreatePostModal';
 import TipModal from '../components/feed/TipModal';
+import EditPostModal from '../components/feed/EditPostModal';
 
 interface Post {
   id: string;
@@ -351,6 +352,36 @@ export default function Feed() {
     setReportingId(null);
   }
 
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+
+  // After an edit, refresh just that post's caption, role, and the Book /
+  // event buttons, without reloading the feed (which would lose your place).
+  async function refreshPost(postId: string) {
+    const { data: p } = await supabase.from('posts').select('author_email, caption, poster_type, event_id').eq('id', postId).single();
+    if (!p) return;
+    const [{ data: res }, { data: ev }] = await Promise.all([
+      p.poster_type === 'resource' ? supabase.from('resources').select('id, display_name').eq('email', p.author_email).maybeSingle() : Promise.resolve({ data: null }),
+      p.event_id ? supabase.from('events').select('title, start_date, status').eq('id', p.event_id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+    const evPublic = ev && (ev.status === 'published' || ev.status === 'completed');
+    setPosts((prev) =>
+      prev.map((x) =>
+        x.id === postId
+          ? {
+              ...x,
+              caption: p.caption,
+              poster_type: p.poster_type,
+              event_id: p.event_id,
+              resource_id: res?.id ?? null,
+              resource_name: res?.display_name?.trim() || null,
+              event_title: evPublic ? ev!.title : null,
+              event_date: evPublic ? ev!.start_date : null,
+            }
+          : x
+      )
+    );
+  }
+
   async function deletePost(postId: string) {
     if (!window.confirm('Delete this post? This can\'t be undone.')) return;
     // Runs server-side so the post, its video in Gumlet, and any custom
@@ -548,6 +579,11 @@ export default function Feed() {
                 </svg>
                 <span className="text-xs font-medium">{shareCopiedId === post.id ? 'Copied!' : 'Share'}</span>
               </button>
+              {user?.email === post.author_email && (
+                <button onClick={() => setEditingPostId(post.id)} aria-label="Edit post" className="text-white/70">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+              )}
               {user?.email === post.author_email ? (
                 <button onClick={() => deletePost(post.id)} aria-label="Delete post" className="text-white/70">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -748,6 +784,9 @@ export default function Feed() {
       {showCreateModal && (
         <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
       )}
+      {editingPostId && (
+        <EditPostModal postId={editingPostId} onClose={() => setEditingPostId(null)} onSaved={() => refreshPost(editingPostId)} />
+      )}
       {tippingPost && (
         <TipModal postId={tippingPost.id} creatorName={tippingPost.creatorName} onClose={() => setTippingPost(null)} />
       )}
@@ -756,7 +795,7 @@ export default function Feed() {
           💖 Tip sent! Thanks for supporting creators.
         </div>
       )}
-      {isPaused && !openComments && !reportingId && !reportingCommentId && !showCreateModal && !tippingPost && <BottomTabBar />}
+      {isPaused && !openComments && !reportingId && !reportingCommentId && !showCreateModal && !tippingPost && !editingPostId && <BottomTabBar />}
     </div>
   );
 }

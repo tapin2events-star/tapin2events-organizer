@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { parseMediaLink, SUPPORTED_PLATFORMS } from '../../lib/mediaEmbeds';
 import type { ResourceAlbum, ResourceMedia } from '../../lib/types';
 import MediaPlayer from './MediaPlayer';
+import EditPostModal from '../feed/EditPostModal';
 
 const MAX_LINKS = 12;
 const MAX_ALBUMS = 10;
@@ -42,6 +43,9 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
   const [albumError, setAlbumError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<{ albumId: string; done: number; total: number } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [videos, setVideos] = useState<{ id: string; thumbnail_url: string | null; caption: string | null; poster_type: string | null }[]>([]);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [busyVideoId, setBusyVideoId] = useState<string | null>(null);
 
   async function load() {
     const [{ data: m }, { data: a }] = await Promise.all([
@@ -51,6 +55,43 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
     setItems((m ?? []) as ResourceMedia[]);
     setAlbums((a ?? []) as ResourceAlbum[]);
     setLoading(false);
+  }
+
+  async function loadVideos() {
+    if (!user?.email) return;
+    const { data } = await supabase
+      .from('posts')
+      .select('id, thumbnail_url, caption, poster_type')
+      .eq('author_email', user.email)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+    setVideos(data ?? []);
+  }
+
+  useEffect(() => {
+    loadVideos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email]);
+
+  // Videos posted as a resource appear on the resource profile; the switch
+  // flips a video between "Resource" and no role.
+  async function toggleOnProfile(id: string, on: boolean) {
+    setBusyVideoId(id);
+    const { error } = await supabase.from('posts').update({ poster_type: on ? 'resource' : null }).eq('id', id);
+    setBusyVideoId(null);
+    if (!error) setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, poster_type: on ? 'resource' : null } : v)));
+  }
+
+  async function deleteVideo(id: string) {
+    if (!window.confirm("Delete this video? It's removed from the feed and your profile. This can't be undone.")) return;
+    setBusyVideoId(id);
+    const { data, error } = await supabase.functions.invoke('delete-post', { body: { post_id: id } });
+    setBusyVideoId(null);
+    if (error || !data?.success) {
+      window.alert('Could not delete this video. Please try again.');
+      return;
+    }
+    setVideos((prev) => prev.filter((v) => v.id !== id));
   }
 
   useEffect(() => {
@@ -236,6 +277,52 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
       </section>
 
       <section>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold text-gray-900">Videos on TapIN</h2>
+          <Link to="/feed" className="shrink-0 text-sm font-medium text-marigold">Post a video &rarr;</Link>
+        </div>
+        <p className="text-sm text-gray-500">
+          Videos switched on here appear on your resource profile, with a Book button on the video in the feed. When you post, choosing <span className="font-medium text-gray-900">Resource</span> under "Posting as" switches it on automatically.
+        </p>
+        {videos.length === 0 ? (
+          <p className="mt-3 rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">You haven't posted any videos yet.</p>
+        ) : (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {videos.map((v) => {
+              const on = v.poster_type === 'resource';
+              return (
+                <div key={v.id} className={`overflow-hidden rounded-xl border bg-white ${on ? 'border-purple-300' : 'border-gray-200'}`}>
+                  <Link to={`/feed?post=${v.id}`} className="relative block aspect-[9/16] bg-gray-100">
+                    {v.thumbnail_url ? <img src={v.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-2xl">🎥</span>}
+                    {on && <span className="absolute left-1.5 top-1.5 rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-semibold text-white">On profile</span>}
+                  </Link>
+                  <div className="p-2">
+                    <p className="truncate text-xs text-gray-700">{v.caption || 'No caption'}</p>
+                    <label className="mt-1.5 flex cursor-pointer items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-gray-900">Show on profile</span>
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        checked={on}
+                        disabled={busyVideoId === v.id}
+                        onChange={(e) => toggleOnProfile(v.id, e.target.checked)}
+                        className="h-4 w-4 accent-purple-600"
+                      />
+                    </label>
+                    <div className="mt-1.5 flex gap-3 text-xs">
+                      <button type="button" onClick={() => setEditingVideoId(v.id)} className="font-medium text-marigold">Edit</button>
+                      <button type="button" onClick={() => deleteVideo(v.id)} disabled={busyVideoId === v.id} className="font-medium text-magenta disabled:opacity-50">Delete</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {editingVideoId && <EditPostModal postId={editingVideoId} onClose={() => setEditingVideoId(null)} onSaved={loadVideos} />}
+      </section>
+
+      <section>
         <h2 className="font-display text-lg font-semibold text-gray-900">Photo albums</h2>
         <p className="text-sm text-gray-500">Group photos into albums, like "Live shows" or "Past events." The first photo is the album cover.</p>
         <div className="mt-3 flex gap-2">
@@ -295,13 +382,7 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
         </div>
       </section>
 
-      <section className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
-        <p className="font-semibold text-gray-900">Videos on TapIN</p>
-        <p className="mt-0.5">
-          Videos you post to the feed as a resource show up on your profile automatically. When you create a post, choose <span className="font-medium text-gray-900">Resource</span> under "Posting as."{' '}
-          <Link to="/feed" className="font-medium text-marigold">Post a video &rarr;</Link>
-        </p>
-      </section>
+
     </div>
   );
 }

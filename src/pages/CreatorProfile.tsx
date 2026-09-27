@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import FollowListModal from '../components/profile/FollowListModal';
+import EditPostModal from '../components/feed/EditPostModal';
 import CreatorEvents, { type CreatorEvent } from '../components/profile/CreatorEvents';
 import CreatorProducts, { type CreatorProduct } from '../components/profile/CreatorProducts';
 
@@ -41,6 +42,7 @@ export default function CreatorProfile() {
 
   const decodedEmail = decodeURIComponent(email ?? '');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
 
   // Same server-side delete the feed uses, so the post, its Gumlet video,
   // and any custom thumbnail are all removed together.
@@ -216,6 +218,15 @@ export default function CreatorProfile() {
                 </Link>
                 {isOwnProfile && (
                   <button
+                    onClick={() => setEditingPostId(post.id)}
+                    aria-label="Edit post"
+                    className="absolute right-11 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-marigold"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </button>
+                )}
+                {isOwnProfile && (
+                  <button
                     onClick={() => deletePost(post.id)}
                     disabled={deletingId === post.id}
                     aria-label="Delete post"
@@ -229,6 +240,8 @@ export default function CreatorProfile() {
           </div>
         ))}
       </div>
+
+      {editingPostId && <EditPostModal postId={editingPostId} onClose={() => setEditingPostId(null)} onSaved={() => {}} />}
 
       {openList && (
         <FollowListModal
