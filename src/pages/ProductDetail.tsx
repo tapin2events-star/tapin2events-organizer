@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Product } from '../lib/types';
+import { Link } from 'react-router-dom';
 
 interface Variant {
   id: string;
@@ -212,6 +213,7 @@ export default function ProductDetail() {
               <button onClick={handleCheckout} disabled={submitting} className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50">
                 {submitting ? 'Redirecting…' : 'Checkout'}
               </button>
+              <p className="mt-2 text-xs text-gray-500">Service and processing fees are non-refundable. For returns or exchanges, contact the seller. <Link to="/refund-policy" className="underline hover:text-gray-700">Refund policy</Link></p>
             </div>
           )}
           {error && !canBuy && <p className="mt-2 text-xs text-magenta">{error}</p>}

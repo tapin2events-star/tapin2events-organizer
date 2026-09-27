@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 interface VendorApp {
   id: string;
@@ -97,6 +98,7 @@ export default function MyVendorApplications() {
                 {payingId === app.id ? 'Please wait…' : `Pay vendor fee — $${app.agreed_fee.toFixed(2)}`}
               </button>
             )}
+            {app.status === 'approved' && app.agreed_fee > 0 && <p className="mt-2 text-xs text-gray-500">Service fees are non-refundable. If the event is cancelled, your vendor fee is refunded. <Link to="/refund-policy" className="underline hover:text-gray-700">Refund policy</Link></p>}
           </div>
         ))}
       </div>

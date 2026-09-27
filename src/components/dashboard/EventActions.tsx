@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
 import type { TapEvent } from '../../lib/types';
 import { useEscapeKey } from '../../lib/useEscapeKey';
 import CancelEventDialog from './CancelEventDialog';
+import DeleteEventDialog from './DeleteEventDialog';
 
 // The ⋯ menu on an organizer's own event card. Events with no tickets,
 // registrations, or payments can be deleted; events with any are cancelled
@@ -23,10 +23,8 @@ export default function EventActions({
 }) {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState<'delete' | 'cancel' | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
-  useEscapeKey(() => { setOpen(false); if (!busy) setConfirm(null); }, open || !!confirm);
+  useEscapeKey(() => setOpen(false), open);
 
   useEffect(() => {
     if (!open) return;
@@ -38,28 +36,6 @@ export default function EventActions({
   const isSeries = seriesChildren.length > 0;
   const cancelled = event.status === 'cancelled';
 
-  async function doDelete() {
-    setBusy(true);
-    setError(null);
-    const ids = [...seriesChildren.map((c) => c.id), event.id];
-    // Delete the other dates first so none are left pointing at a missing series.
-    if (isSeries) {
-      const { error: childErr } = await supabase.from('events').delete().in('id', seriesChildren.map((c) => c.id));
-      if (childErr) {
-        setBusy(false);
-        setError('One of the dates in this series has tickets or registrations, so the series can\'t be deleted. Cancel it instead.');
-        return;
-      }
-    }
-    const { error: delErr } = await supabase.from('events').delete().eq('id', event.id);
-    setBusy(false);
-    if (delErr) {
-      setError(/tickets|registrations|payments/i.test(delErr.message) ? delErr.message : "Couldn't delete this event. Please try again.");
-      return;
-    }
-    setConfirm(null);
-    onDeleted(ids);
-  }
 
 
   return (
@@ -102,25 +78,7 @@ export default function EventActions({
       )}
 
       {confirm === 'delete' && (
-        <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" onClick={() => !busy && setConfirm(null)}>
-          <div className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-              <>
-                <p className="font-display text-lg font-bold text-gray-900">{isSeries ? 'Delete this series?' : 'Delete this event?'}</p>
-                <p className="mt-1 text-sm text-gray-600">
-                  "{event.title}" {isSeries ? `and all ${seriesChildren.length + 1} of its dates` : ''} will be permanently removed. This can't be undone.
-                </p>
-              </>
-            {error && <p className="mt-2 text-sm text-magenta">{error}</p>}
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setConfirm(null)} disabled={busy} className="rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-800">
-                Keep it
-              </button>
-              <button type="button" onClick={doDelete} disabled={busy} className="rounded-lg bg-magenta py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-                {busy ? 'Working…' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteEventDialog event={event} seriesChildren={seriesChildren} onClose={() => setConfirm(null)} onDeleted={(ids) => { setConfirm(null); onDeleted(ids); }} />
       )}
     </>
   );

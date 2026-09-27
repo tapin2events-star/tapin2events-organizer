@@ -622,6 +622,9 @@ export default function PublicEventDetail() {
             {registerError && <p className="mt-2 text-sm text-magenta">{registerError}</p>}
           </div>
         )}
+        {event.event_type === 'paid' && !event.external_ticket_url && (
+          <p className="mt-2 text-xs text-gray-500">Service and processing fees are non-refundable. If the organizer cancels, you'll be refunded the ticket price. <Link to="/refund-policy" className="underline hover:text-gray-700">Refund policy</Link></p>
+        )}
 
         {/* What to expect: description and features together, since both
             answer the same question ("what is this actually like?"). */}
