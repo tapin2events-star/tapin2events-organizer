@@ -39,8 +39,8 @@ export default function Discover() {
       return;
     }
     (async () => {
-      const { data } = await supabase.from('profiles').select('interests').eq('email', user.email).single();
-      setSavedIds((data?.interests as string[]) ?? []);
+      const { data } = await supabase.from('profiles').select('saved_event_ids').eq('email', user.email).single();
+      setSavedIds((data?.saved_event_ids as string[]) ?? []);
     })();
   }, [user?.email]);
 
@@ -116,7 +116,7 @@ export default function Discover() {
       ? savedIds.filter((id) => id !== eventId)
       : [...savedIds, eventId];
     setSavedIds(next);
-    await supabase.from('profiles').update({ interests: next }).eq('email', user.email);
+    await supabase.from('profiles').update({ saved_event_ids: next }).eq('email', user.email);
   }
 
   return (

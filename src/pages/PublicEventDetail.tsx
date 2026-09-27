@@ -88,8 +88,8 @@ export default function PublicEventDetail() {
       setSavedIds([]);
       return;
     }
-    supabase.from('profiles').select('interests').eq('email', user.email).single().then(({ data }) => {
-      setSavedIds((data?.interests as string[]) ?? []);
+    supabase.from('profiles').select('saved_event_ids').eq('email', user.email).single().then(({ data }) => {
+      setSavedIds((data?.saved_event_ids as string[]) ?? []);
     });
   }, [user?.email]);
 
@@ -101,7 +101,7 @@ export default function PublicEventDetail() {
     }
     const next = savedIds.includes(id) ? savedIds.filter((x) => x !== id) : [...savedIds, id];
     setSavedIds(next);
-    await supabase.from('profiles').update({ interests: next }).eq('email', user.email);
+    await supabase.from('profiles').update({ saved_event_ids: next }).eq('email', user.email);
   }
 
   async function handleShare() {

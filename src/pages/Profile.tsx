@@ -66,7 +66,7 @@ export default function Profile() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select(
-          'full_name, email, bio, profile_photo, is_organizer, is_resource, interests, followers_count, following_count, location, city, state, country, phone_number, is_profile_private, preferred_home_page, notification_preferences, stripe_account_id, stripe_charges_enabled'
+          'full_name, email, bio, profile_photo, is_organizer, is_resource, saved_event_ids, followers_count, following_count, location, city, state, country, phone_number, is_profile_private, preferred_home_page, notification_preferences, stripe_account_id, stripe_charges_enabled'
         )
         .eq('id', user.id)
         .single();
@@ -77,7 +77,7 @@ export default function Profile() {
       setState(profileData?.state ?? '');
       setPhone(profileData?.phone_number ?? '');
 
-      const savedIds = (profileData?.interests as string[]) ?? [];
+      const savedIds = (profileData?.saved_event_ids as string[]) ?? [];
       if (savedIds.length > 0) {
         const { data: events } = await supabase.from('events').select('*').in('id', savedIds);
         setSavedEvents((events ?? []) as TapEvent[]);

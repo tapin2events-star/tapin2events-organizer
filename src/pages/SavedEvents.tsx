@@ -15,7 +15,7 @@ function isPast(e: TapEvent, now: number) {
   return !!end && new Date(end).getTime() < now;
 }
 
-// Saved events live in profiles.interests (a list of event IDs, newest
+// Saved events live in profiles.saved_event_ids (a list of event IDs, newest
 // last) -- the same list Discover and event pages update, so this page and
 // every save button stay in sync.
 export default function SavedEvents() {
@@ -34,8 +34,8 @@ export default function SavedEvents() {
   useEffect(() => {
     if (!user?.email) return;
     (async () => {
-      const { data: profile } = await supabase.from('profiles').select('interests').eq('email', user.email!).single();
-      const ids = (profile?.interests as string[]) ?? [];
+      const { data: profile } = await supabase.from('profiles').select('saved_event_ids').eq('email', user.email!).single();
+      const ids = (profile?.saved_event_ids as string[]) ?? [];
       setSavedIds(ids);
       if (ids.length) {
         const { data } = await supabase.from('events').select('*').in('id', ids);
@@ -47,7 +47,7 @@ export default function SavedEvents() {
 
   async function persist(next: string[]) {
     setSavedIds(next);
-    if (user?.email) await supabase.from('profiles').update({ interests: next }).eq('email', user.email);
+    if (user?.email) await supabase.from('profiles').update({ saved_event_ids: next }).eq('email', user.email);
   }
 
   function unsave(id: string) {
