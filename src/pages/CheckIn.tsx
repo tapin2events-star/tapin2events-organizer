@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 type ScanResult = {
   id: number;
   outcome: 'success' | 'already_used' | 'invalid' | 'not_found' | 'error';
+  detail?: string;
   message: string;
   attendeeEmail?: string;
   time: string;
@@ -50,7 +51,13 @@ export default function CheckIn() {
     scannerRef.current?.pause(true);
 
     const ticketId = extractTicketId(decodedText);
-    const { data, error } = await supabase.functions.invoke('check-in-ticket', { body: { ticket_id: ticketId } });
+    // Sending the event lets one code check in a whole group, and a series
+    // pass check in this event's date.
+    const { data, error } = await supabase.functions.invoke('check-in-ticket', { body: { ticket_id: ticketId, event_id: eventId } });
+    const g = data?.group as { total: number; checked_now: number; already: number; seats: string[]; series_pass: boolean } | undefined;
+    const unit = g && g.seats.length ? 'seat' : 'ticket';
+    const plural = (n: number) => `${n} ${unit}${n === 1 ? '' : 's'}`;
+    const seatsLine = g && g.seats.length ? g.seats.join(' · ') : undefined;
 
     let result: ScanResult;
     if (error || !data) {
@@ -58,9 +65,14 @@ export default function CheckIn() {
     } else if (data.error && !data.result) {
       result = { id: Date.now(), outcome: 'error', message: data.error, time: new Date().toLocaleTimeString() };
     } else if (data.result === 'success') {
-      result = { id: Date.now(), outcome: 'success', message: 'Checked in', attendeeEmail: data.ticket?.attendee_email, time: new Date().toLocaleTimeString() };
+      const msg = g && g.total > 1
+        ? (g.already > 0 ? `Checked in ${g.checked_now} more · ${g.total} of ${g.total} ${unit}s` : `Checked in · ${plural(g.total)}`)
+        : g?.series_pass ? 'Checked in · series pass' : 'Checked in';
+      result = { id: Date.now(), outcome: 'success', message: msg, detail: seatsLine, attendeeEmail: data.ticket?.attendee_email, time: new Date().toLocaleTimeString() };
     } else if (data.result === 'already_used') {
-      result = { id: Date.now(), outcome: 'already_used', message: `Already checked in at ${new Date(data.checked_in_at).toLocaleTimeString()}`, attendeeEmail: data.ticket?.attendee_email, time: new Date().toLocaleTimeString() };
+      result = { id: Date.now(), outcome: 'already_used', message: `Already checked in at ${new Date(data.checked_in_at).toLocaleTimeString()}${g && g.total > 1 ? ` · ${plural(g.total)}` : ''}`, detail: seatsLine, attendeeEmail: data.ticket?.attendee_email, time: new Date().toLocaleTimeString() };
+    } else if (data.result === 'wrong_event') {
+      result = { id: Date.now(), outcome: 'invalid', message: 'Wrong event', detail: data.error, attendeeEmail: data.ticket?.attendee_email, time: new Date().toLocaleTimeString() };
     } else if (data.result === 'invalid') {
       result = { id: Date.now(), outcome: 'invalid', message: data.error, attendeeEmail: data.ticket?.attendee_email, time: new Date().toLocaleTimeString() };
     } else {
@@ -143,6 +155,7 @@ export default function CheckIn() {
         {lastResult && (
           <div className={`w-full max-w-sm rounded-xl border p-4 text-center ${outcomeStyles[lastResult.outcome]}`}>
             <p className="text-lg font-bold">{lastResult.message}</p>
+            {lastResult.detail && <p className="mt-1 text-sm font-medium">{lastResult.detail}</p>}
             {lastResult.attendeeEmail && <p className="mt-1 text-sm">{lastResult.attendeeEmail}</p>}
           </div>
         )}

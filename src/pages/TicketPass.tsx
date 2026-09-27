@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { seatGroups, seatText } from '../lib/seats';
 
 interface PassData {
   ticket: {
@@ -23,6 +24,10 @@ interface PassData {
     organizer_email: string;
   };
   organizerName: string | null;
+  // The rest of the same order: a group's seats at this event, and a series
+  // pass's dates. One QR code covers all of them.
+  group?: { id: string; section_name: string | null; seat_assignment: string | null; quantity: number; status: string; checked_in_at: string | null }[];
+  dates?: { event_id: string; title: string; start_date: string | null; event_status: string; checked_in: boolean }[];
 }
 
 export default function TicketPass() {
@@ -61,10 +66,10 @@ export default function TicketPass() {
   async function handleEmailTicket() {
     if (!ticketId) return;
     setEmailState('sending');
-    const { data: result, error: fnError } = await supabase.functions.invoke('email-ticket', {
-      body: { ticket_id: ticketId },
+    const { data: result, error: fnError } = await supabase.functions.invoke('send-app-email', {
+      body: { kind: 'ticket_copy', ticket_id: ticketId },
     });
-    if (fnError?.context?.status === 401 || result?.error === 'Unauthorized') {
+    if (fnError?.context?.status === 401 || result?.error === 'Unauthorized' || result?.error === 'Please sign in.') {
       setEmailState('signin_required');
     } else if (fnError || result?.error) {
       setEmailState('error');
@@ -77,6 +82,10 @@ export default function TicketPass() {
   if (error || !data) return <div className="p-10 text-center text-magenta">{error || 'Ticket not found.'}</div>;
 
   const { ticket, event, organizerName } = data;
+  const group = (data.group ?? []).filter((t) => t.status !== 'cancelled');
+  const people = group.reduce((n, t) => n + (Number(t.quantity) || 1), 0);
+  const seated = group.some((t) => t.seat_assignment);
+  const dates = data.dates ?? [];
   const passUrl = window.location.origin + import.meta.env.BASE_URL + 'pass/' + ticket.id;
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=2`;
   const isCancelled = ticket.status !== 'confirmed';
@@ -107,7 +116,9 @@ export default function TicketPass() {
                 <div className="mt-6 flex justify-center">
                   <img src={qrUrl} width={200} height={200} alt="QR code" className="rounded-2xl border border-gray-200 p-2" />
                 </div>
-                <p className="mt-2 text-center text-xs text-gray-400">Scan this code at the entrance</p>
+                <p className="mt-2 text-center text-xs text-gray-400">
+                  {dates.length > 1 ? 'Show this same code at every date' : people > 1 ? `One code checks in your whole group (${people} ${seated ? 'seats' : 'tickets'})` : 'Scan this code at the entrance'}
+                </p>
               </>
             )}
 
@@ -124,12 +135,42 @@ export default function TicketPass() {
                 <span className="text-gray-400">Where</span>
                 <span className="font-medium text-gray-900">{event.is_online ? 'Virtual event' : (event.location_name || 'TBD')}</span>
               </div>
-              {(ticket.section_name || ticket.seat_assignment) && (
+              {seated && people > 1 ? (
+                <div>
+                  <span className="text-gray-400">Seats</span>
+                  {seatGroups(group).map((g) => (
+                    <div key={g.label} className="mt-1">
+                      <p className="text-xs font-semibold text-gray-700">{g.label}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {g.seats.map((s) => <span key={s} className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">Seat {s}</span>)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (ticket.section_name || ticket.seat_assignment) ? (
                 <div className="flex justify-between">
                   <span className="text-gray-400">Seat</span>
-                  <span className="font-medium text-gray-900">
-                    {[ticket.section_name, ticket.seat_assignment].filter(Boolean).join(' · ')}
-                  </span>
+                  <span className="font-medium text-gray-900">{seatText(ticket.section_name, ticket.seat_assignment)}</span>
+                </div>
+              ) : people > 1 ? (
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Tickets</span>
+                  <span className="font-medium text-gray-900">{people}</span>
+                </div>
+              ) : null}
+              {dates.length > 1 && (
+                <div>
+                  <span className="text-gray-400">Series pass · {dates.length} dates</span>
+                  <ul className="mt-1 flex flex-col gap-1">
+                    {dates.map((d) => (
+                      <li key={d.event_id} className="flex justify-between text-xs">
+                        <span className={`font-medium ${d.event_status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                          {d.start_date ? new Date(d.start_date).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Date TBA'}
+                        </span>
+                        <span className={d.checked_in ? 'font-semibold text-green-700' : 'text-gray-400'}>{d.checked_in ? '✓ Attended' : d.event_status === 'cancelled' ? 'Cancelled' : ''}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
               <div className="flex justify-between">
