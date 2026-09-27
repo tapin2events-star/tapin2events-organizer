@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { TapEvent } from '../../lib/types';
+import { safeTicketUrl } from '../../lib/externalTickets';
 
 // Same category-color hashing approach as the real Base44 EventCard,
 // so categories land on consistent, distinct colors.
@@ -47,6 +48,7 @@ export default function DiscoverEventCard({
   // Set when the signed-in person already has a ticket for this event.
   myTicket?: { ticketId: string; count: number } | null;
 }) {
+  const externalUrl = safeTicketUrl(event.external_ticket_url);
   const ticketLabel = event.event_type === 'free' ? 'Registered' : myTicket && myTicket.count > 1 ? `${myTicket.count} tickets` : 'Ticket purchased';
   const isOver = !event.is_recurring && event.start_date ? new Date(event.start_date) < new Date() : false;
   const price = displayPrice(event);
@@ -124,9 +126,11 @@ export default function DiscoverEventCard({
         <div className="flex items-center justify-between border-t border-gray-100 pt-3">
           {event.event_type === 'free' ? (
             <span className="rounded-full border border-green-600 px-2.5 py-0.5 text-sm font-medium text-green-600">Free</span>
+          ) : externalUrl && !price ? (
+            <span className="text-sm font-medium text-gray-500">See tickets</span>
           ) : (
             <span className="text-lg font-bold text-gray-900">
-              ${price}
+              {externalUrl && 'From '}${price}
               {hasMultipleSections && <span className="ml-1 text-xs font-normal text-gray-400">+</span>}
             </span>
           )}
@@ -140,6 +144,15 @@ export default function DiscoverEventCard({
             >
               {myTicket.count > 1 ? 'View tickets' : 'View ticket'}
             </Link>
+          ) : externalUrl ? (
+            <a
+              href={externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
+            >
+              {event.event_type === 'free' ? 'RSVP' : 'Get Tickets'} ↗
+            </a>
           ) : (
             <Link
               to={`/events/${event.id}`}

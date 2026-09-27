@@ -90,6 +90,7 @@ export default function EventForm() {
   const [locationName, setLocationName] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
   const [ticketPrice, setTicketPrice] = useState('0');
+  const [externalTicketUrl, setExternalTicketUrl] = useState('');
   const [maxCapacity, setMaxCapacity] = useState('');
   const [features, setFeatures] = useState<EventFeature[]>([]);
   const [vendorApplicationsEnabled, setVendorApplicationsEnabled] = useState(false);
@@ -219,6 +220,7 @@ export default function EventForm() {
       setDescription(data.description ?? '');
       setCategory(data.category ?? CATEGORIES[0]);
       setEventType(data.event_type ?? 'free');
+      setExternalTicketUrl(data.external_ticket_url ?? '');
       setStartDate(data.start_date ? data.start_date.slice(0, 16) : '');
       setEndDate(data.end_date ? data.end_date.slice(0, 16) : '');
       setIsOnline(!!data.is_online);
@@ -378,6 +380,7 @@ export default function EventForm() {
       location_name: locationName,
       location_address: locationAddress,
       ticket_price: eventType === 'free' ? 0 : Number(ticketPrice) || 0,
+      external_ticket_url: normalizeLink('website', externalTicketUrl),
       max_capacity: maxCapacity ? Number(maxCapacity) : null,
       features,
       vendor_applications_enabled: vendorApplicationsEnabled,
@@ -714,6 +717,25 @@ export default function EventForm() {
                 <input type="number" min="0" value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} className={inputClass} />
               </Field>
             </div>
+
+            <Field label="Tickets sold elsewhere? (optional)">
+              <input
+                value={externalTicketUrl}
+                onChange={(e) => setExternalTicketUrl(e.target.value)}
+                className={inputClass}
+                placeholder="eventbrite.com/e/your-event"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+              />
+              {externalTicketUrl.trim() && !normalizeLink('website', externalTicketUrl) ? (
+                <p className="mt-1 text-xs text-magenta">That doesn't look like a link.</p>
+              ) : externalTicketUrl.trim() ? (
+                <p className="mt-1 text-xs text-muted">Your event page will send people to this link for tickets. TapIN checkout is turned off for this event.</p>
+              ) : (
+                <p className="mt-1 text-xs text-muted">Paste your Eventbrite or ticket link to send people there instead of selling tickets on TapIN.</p>
+              )}
+            </Field>
 
             <div className="border-t border-gray-200 pt-4">
               {eventType === 'free' ? (

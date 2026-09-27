@@ -6,6 +6,7 @@ import type { TapEvent, Ticket } from '../lib/types';
 import ShopSection from '../components/products/ShopSection';
 import EventLinks from '../components/EventLinks';
 import { visibleLinks } from '../lib/socialLinks';
+import { safeTicketUrl, ticketSiteName } from '../lib/externalTickets';
 import VendorApplicationForm from '../components/VendorApplicationForm';
 import SeatPicker from '../components/SeatPicker';
 import { resolveFeatureIcon } from '../lib/featureIconMap';
@@ -394,7 +395,26 @@ export default function PublicEventDetail() {
 
         {/* The CTA is the lead of the page — everything above just orients
             the visitor, everything below is supporting detail. */}
-        {event.is_seating_enabled && event.seating_sections && event.seating_sections.length > 0 ? (
+        {safeTicketUrl(event.external_ticket_url) ? (
+          // Tickets are sold on another site: send people there.
+          <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div>
+              <p className="text-sm text-gray-400">{isFree ? 'Free to attend' : 'Tickets'}</p>
+              <p className="font-display text-2xl font-extrabold text-white">
+                {isFree ? 'Free' : event.ticket_price > 0 ? `From $${event.ticket_price}` : 'See ticket options'}
+              </p>
+              <p className="mt-0.5 text-xs text-gray-400">{isFree ? 'RSVP' : 'Sold'} on {ticketSiteName(event.external_ticket_url!)}</p>
+            </div>
+            <a
+              href={safeTicketUrl(event.external_ticket_url)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-center text-sm font-semibold text-white hover:opacity-90"
+            >
+              {isFree ? 'RSVP' : 'Get tickets'} on {ticketSiteName(event.external_ticket_url!)} ↗
+            </a>
+          </div>
+        ) : event.is_seating_enabled && event.seating_sections && event.seating_sections.length > 0 ? (
           <div className="mt-6 rounded-2xl bg-gray-900 p-5 sm:p-6">
             <p className="text-sm font-semibold text-white">Select Your Seats</p>
             {myTicket ? (

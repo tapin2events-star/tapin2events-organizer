@@ -115,7 +115,7 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
       const sold = new Map<string, number>();
       for (const t of tickets.data ?? []) sold.set(t.event_id, (sold.get(t.event_id) ?? 0) + (t.quantity ?? 1));
       for (const e of nextOfEachSeries) {
-        if (e.status !== 'published' || e.event_type === 'private') continue;
+        if (e.status !== 'published' || e.event_type === 'private' || e.external_ticket_url) continue; // sales on other sites aren't visible to TapIN
         const days = daysUntil(e.start_date!, now);
         if (days > 14 || days < 2) continue; // today/tomorrow are covered by "Happening soon"
         const count = sold.get(e.id) ?? 0;

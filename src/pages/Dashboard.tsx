@@ -151,12 +151,17 @@ export default function Dashboard() {
           <h1 className="font-display text-3xl font-extrabold text-bone">Organizer Dashboard</h1>
           <p className="text-sm text-muted">Everything you're organizing, in one place.</p>
         </div>
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <Link to="/organizer/import" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold">
+            Import events
+          </Link>
         <Link
           to="/organizer/new"
           className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"
         >
           + Create event
         </Link>
+        </div>
       </div>
 
       {!loading && user?.id && user.email && <NeedsAttention events={events} userId={user.id} userEmail={user.email} />}
