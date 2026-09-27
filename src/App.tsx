@@ -12,6 +12,7 @@ import Discover from './pages/Discover';
 import PublicEventDetail from './pages/PublicEventDetail';
 import TicketPass from './pages/TicketPass';
 import MyActivity from './pages/MyActivity';
+import SavedEvents from './pages/SavedEvents';
 import Profile from './pages/Profile';
 import CreatorProfile from './pages/CreatorProfile';
 import ProductDetail from './pages/ProductDetail';
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/events/:id" element={<PublicEventDetail />} />
             <Route path="/pass/:ticketId" element={<TicketPass />} />
             <Route path="/activity" element={<MyActivity />} />
+            <Route path="/saved" element={<SavedEvents />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/creator/:email" element={<CreatorProfile />} />
             <Route path="/products/:id" element={<ProductDetail />} />

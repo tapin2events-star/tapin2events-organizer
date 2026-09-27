@@ -153,6 +153,10 @@ export default function Profile() {
 
   const notifs = profile.notification_preferences ?? {};
 
+  const upcomingSaved = savedEvents
+    .filter((e) => !e.start_date || new Date(e.end_date ?? e.start_date).getTime() >= Date.now())
+    .sort((a, b) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999'));
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center gap-4">
@@ -216,6 +220,15 @@ export default function Profile() {
         <Link to="/activity" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
           <p className="font-medium text-bone">My Activity</p>
           <p className="text-xs text-muted">Tickets and registrations</p>
+        </Link>
+        <Link to="/saved" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-medium text-bone">Saved Events</p>
+            {savedEvents.length > 0 && (
+              <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-marigold">{savedEvents.length}</span>
+            )}
+          </div>
+          <p className="text-xs text-muted">Events you've bookmarked</p>
         </Link>
         <Link to="/vendor-applications" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
           <div className="flex items-start justify-between gap-2">
@@ -348,14 +361,23 @@ export default function Profile() {
       </div>
 
       <div className="mt-10">
-        <h2 className="font-display text-lg font-semibold text-bone">Saved Events</h2>
-        {savedEvents.length === 0 ? (
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-lg font-semibold text-bone">Saved Events</h2>
+          {savedEvents.length > 0 && (
+            <Link to="/saved" className="text-sm font-medium text-marigold">See all {savedEvents.length} &rarr;</Link>
+          )}
+        </div>
+        {savedEvents.length > 0 && upcomingSaved.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">
+            None of your saved events are coming up. <Link to="/saved" className="font-medium text-marigold">View past saved events</Link>
+          </p>
+        ) : savedEvents.length === 0 ? (
           <p className="mt-2 text-sm text-muted">
             Nothing saved yet — tap the bookmark icon on any event to keep track of it here.
           </p>
         ) : (
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {savedEvents.map((e) => (
+            {upcomingSaved.slice(0, 4).map((e) => (
               <Link key={e.id} to={`/events/${e.id}`} className="flex gap-3 rounded-xl border border-gray-200 bg-surface2 p-3 hover:border-marigold">
                 {e.poster_url ? (
                   <img src={e.poster_url} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
