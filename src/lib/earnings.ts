@@ -46,11 +46,19 @@ const itemTotal = (i: OrderItem) => Number(i.total_price ?? (Number(i.unit_price
 // include shipping on product orders, so anything beyond the ticket items is
 // counted as merchandise & shipping.
 export const orderSplit = (o: OrderRow) => {
+  const items = o.items ?? [];
   let tickets = 0, products = 0;
-  for (const i of o.items ?? []) (i.type === 'product' ? (products += itemTotal(i)) : (tickets += itemTotal(i)));
+  for (const i of items) (i.type === 'product' ? (products += itemTotal(i)) : (tickets += itemTotal(i)));
   const subtotal = Number(o.subtotal);
-  if (Number.isFinite(subtotal) && o.subtotal !== null && subtotal >= tickets) products = subtotal - tickets;
-  return { tickets, products };
+  if (o.subtotal === null || !Number.isFinite(subtotal)) return { tickets, products };
+  const hasProducts = items.some((i) => i.type === 'product');
+  // No products: the whole subtotal is ticket sales. (Orders migrated from
+  // the original app list ticket items without prices.)
+  if (!hasProducts) return { tickets: subtotal, products: 0 };
+  // Products with unpriced ticket items: tickets are whatever isn't products.
+  if (tickets === 0 && items.some((i) => i.type !== 'product')) return { tickets: Math.max(subtotal - products, 0), products };
+  // Otherwise anything beyond the tickets is merchandise, including shipping.
+  return { tickets, products: Math.max(subtotal - tickets, 0) };
 };
 
 export function rangeStart(range: Range, now = new Date()): Date | null {
@@ -120,15 +128,8 @@ export function monthly(d: EarningsData) {
 
 export const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 
-// CSV cells: quote everything, and neutralize spreadsheet formulas
-// (a cell starting with = + - @ could run as a formula in Excel/Sheets).
-const cell = (v: unknown) => {
-  let s = String(v ?? '');
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-  return `"${s.replace(/"/g, '""')}"`;
-};
 
-export function earningsCsv(d: EarningsData, range: Range) {
+export function earningsRows(d: EarningsData, range: Range): (string | number)[][] {
   const start = rangeStart(range);
   const title = new Map(d.events.map((e) => [e.id, e.title]));
   const rows: (string | number)[][] = [['Date', 'Type', 'Event', 'Reference', 'From', 'Tickets', 'Merchandise & shipping', 'Vendor fees', 'Tips', 'Total earned']];
@@ -145,5 +146,5 @@ export function earningsCsv(d: EarningsData, range: Range) {
     const amt = Number(t.amount ?? 0);
     rows.push([date(t.created_at), 'Tip', '', '', t.tipper_name ?? '', '0.00', '0.00', '0.00', amt.toFixed(2), amt.toFixed(2)]);
   }
-  return rows.map((r) => r.map(cell).join(',')).join('\r\n');
+  return rows;
 }

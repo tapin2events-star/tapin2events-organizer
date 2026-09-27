@@ -69,6 +69,7 @@ export interface Ticket {
   quantity: number;
   status: TicketStatus;
   occurrence_date: string | null;
+  checked_in_at?: string | null;
   section_name: string | null;
   seat_assignment: string | null;
   created_at: string;

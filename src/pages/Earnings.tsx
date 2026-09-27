@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { earningsCsv, loadEarnings, money, monthly, RANGE_LABELS, summarize, type EarningsData, type Range } from '../lib/earnings';
+import { earningsRows, loadEarnings, money, monthly, RANGE_LABELS, summarize, type EarningsData, type Range } from '../lib/earnings';
+import { downloadCsv } from '../lib/csv';
 
 function Stat({ label, value, sub, big = false }: { label: string; value: string; sub?: string; big?: boolean }) {
   return (
@@ -26,16 +27,9 @@ export default function Earnings() {
   const summary = useMemo(() => (data ? summarize(data, range) : null), [data, range]);
   const months = useMemo(() => (data ? monthly(data) : []), [data]);
 
-  function downloadCsv() {
+  function exportCsv() {
     if (!data) return;
-    const blob = new Blob([earningsCsv(data, range)], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `tapin-earnings-${range}-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    downloadCsv(`tapin-earnings-${range}-${new Date().toISOString().slice(0, 10)}.csv`, earningsRows(data, range));
   }
 
   if (!data || !summary) return <div className="mx-auto max-w-5xl"><p className="text-muted">Loading your earnings…</p></div>;
@@ -58,7 +52,7 @@ export default function Earnings() {
           <h1 className="font-display text-3xl font-extrabold text-bone">Earnings</h1>
           <p className="mt-1 text-muted">What you've earned across all your events.</p>
         </div>
-        <button type="button" onClick={downloadCsv} disabled={!hasActivity} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-bone hover:border-marigold disabled:opacity-50">
+        <button type="button" onClick={exportCsv} disabled={!hasActivity} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-bone hover:border-marigold disabled:opacity-50">
           Download CSV
         </button>
       </div>

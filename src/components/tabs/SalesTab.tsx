@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import type { Ticket } from '../../lib/types';
+import { downloadCsv, fileSlug } from '../../lib/csv';
 
 const STATUS_STYLES: Record<string, string> = {
   confirmed: 'bg-green-100 text-green-800',
@@ -12,6 +13,7 @@ const STATUS_STYLES: Record<string, string> = {
 export default function SalesTab({ eventId }: { eventId: string }) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -38,26 +40,46 @@ export default function SalesTab({ eventId }: { eventId: string }) {
   const seriesPassCount = new Set(seriesPassTickets.map((t) => t.order_id)).size;
   const seriesPassRevenue = seriesPassTickets.reduce((sum, t) => sum + (t.price_paid || 0) * (t.quantity || 1), 0);
 
-  function exportCsv() {
-    const rows = [
-      ['Attendee email', 'Ticket type', 'Quantity', 'Amount', 'Status', 'Purchased'],
-      ...tickets.map((t) => [
-        t.attendee_email,
-        t.ticket_type,
-        String(t.quantity),
-        (t.price_paid * t.quantity).toFixed(2),
-        t.status,
-        new Date(t.created_at).toLocaleString(),
-      ]),
+  // Attendee list for door lists, follow-ups, and sponsors. Tickets don't
+  // store names, so each row uses the name on the order, then the profile.
+  async function exportCsv() {
+    setExporting(true);
+    const orderIds = [...new Set(tickets.map((t) => t.order_id).filter(Boolean))] as string[];
+    const emails = [...new Set(tickets.map((t) => t.attendee_email))];
+    const [{ data: orders }, { data: profiles }, { data: ev }] = await Promise.all([
+      orderIds.length ? supabase.from('orders').select('id, order_number, customer_name').in('id', orderIds) : Promise.resolve({ data: [] }),
+      emails.length ? supabase.from('public_profiles').select('email, full_name').in('email', emails) : Promise.resolve({ data: [] }),
+      supabase.from('events').select('title').eq('id', eventId).maybeSingle(),
+    ]);
+    const orderById = new Map(((orders ?? []) as { id: string; order_number: string | null; customer_name: string | null }[]).map((o) => [o.id, o]));
+    const nameByEmail = new Map(((profiles ?? []) as { email: string; full_name: string | null }[]).map((p) => [p.email, p.full_name]));
+    const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '');
+    const rows: unknown[][] = [
+      ['Name', 'Email', 'Ticket type', 'Section', 'Seat', 'Quantity', 'Price per ticket', 'Total paid', 'Status', 'Checked in', 'Checked in at', 'Registered', 'Order #', 'Event date'],
+      ...tickets.map((t) => {
+        const order = t.order_id ? orderById.get(t.order_id) : undefined;
+        const qty = Number(t.quantity) || 1;
+        const price = Number(t.price_paid) || 0;
+        return [
+          order?.customer_name || nameByEmail.get(t.attendee_email) || '',
+          t.attendee_email,
+          t.ticket_type,
+          t.section_name ?? '',
+          t.seat_assignment ?? '',
+          qty,
+          price.toFixed(2),
+          (price * qty).toFixed(2),
+          t.status,
+          t.checked_in_at ? 'Yes' : 'No',
+          when(t.checked_in_at),
+          when(t.created_at),
+          order?.order_number ?? '',
+          t.occurrence_date ? new Date(t.occurrence_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '',
+        ];
+      }),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'attendees.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`${fileSlug(ev?.title ?? 'event')}-attendees-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    setExporting(false);
   }
 
   return (
@@ -85,9 +107,10 @@ export default function SalesTab({ eventId }: { eventId: string }) {
         {tickets.length > 0 && (
           <button
             onClick={exportCsv}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-bone hover:border-marigold hover:text-marigold"
+            disabled={exporting}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-bone hover:border-marigold hover:text-marigold disabled:opacity-50"
           >
-            Export CSV
+            {exporting ? 'Preparing…' : 'Download attendee list'}
           </button>
         )}
       </div>
