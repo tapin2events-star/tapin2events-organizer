@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Resource, TapEvent, ResourceReview } from '../lib/types';
@@ -125,6 +125,14 @@ export default function ResourceProfile() {
       .catch(() => { /* request already succeeded; notification is best-effort */ });
   }
 
+  // Arriving from the feed's "Book [Name]" button (/resources/:id#book).
+  // Declared before the early returns below: hooks must run on every render.
+  const location = useLocation();
+  useEffect(() => {
+    if (loading || !resource || location.hash !== '#book') return;
+    setTimeout(() => document.getElementById('book')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  }, [loading, resource, location.hash]);
+
   if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
   if (!resource) return <div className="p-10 text-center text-magenta">Resource not found.</div>;
 
@@ -215,7 +223,7 @@ export default function ResourceProfile() {
           </div>
 
           <div className="md:sticky md:top-6 md:self-start">
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs uppercase tracking-widest text-gray-400">Book this resource</p>
               <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
               <p className="text-sm text-gray-500">{pricingLabel(resource)}</p>

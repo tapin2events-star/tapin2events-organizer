@@ -18,6 +18,12 @@ interface Post {
   author_name: string;
   author_photo: string | null;
   author_can_receive_tips: boolean;
+  // Approved resource profile to book, for posts made as a resource.
+  resource_id: string | null;
+  resource_name: string | null;
+  // The event a post was tagged with, when it's public.
+  event_title: string | null;
+  event_date: string | null;
   like_count: number;
   comment_count: number;
   liked_by_me: boolean;
@@ -154,17 +160,31 @@ export default function Feed() {
     // Counts are fetched only for the posts on screen -- fetching every like
     // and comment in the database would silently undercount once the site
     // passes Supabase's 1,000-rows-per-request cap.
-    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }] = await Promise.all([
+    const resourceEmails = [...new Set(rows.filter((p) => p.poster_type === 'resource').map((p) => p.author_email))];
+    const taggedEventIds = [...new Set(rows.map((p) => p.event_id).filter((id): id is string => !!id))];
+    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }, { data: resourceRows }, { data: taggedEvents }] = await Promise.all([
       authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo, can_receive_tips').in('email', authorEmails) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_likes').select('post_id').in('post_id', postIds) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active').in('post_id', postIds) : Promise.resolve({ data: [] }),
       user?.email && postIds.length ? supabase.from('post_likes').select('post_id').eq('user_email', user.email).in('post_id', postIds) : Promise.resolve({ data: [] }),
+      // Only approved (active + verified) resource profiles come back for
+      // other viewers, so the Book button never leads to a hidden page.
+      resourceEmails.length ? supabase.from('resources').select('id, email, display_name').in('email', resourceEmails) : Promise.resolve({ data: [] }),
+      taggedEventIds.length ? supabase.from('events').select('id, title, start_date, status').in('id', taggedEventIds) : Promise.resolve({ data: [] }),
     ]);
     if (loadId !== loadIdRef.current) return;
 
     const namesByEmail = new Map((profiles ?? []).map((p) => [p.email, p.full_name]));
     const photosByEmail = new Map((profiles ?? []).map((p) => [p.email, p.profile_photo]));
     const tippableEmails = new Set((profiles ?? []).filter((p) => p.can_receive_tips).map((p) => p.email));
+    const resourceByEmail = new Map(
+      ((resourceRows ?? []) as { id: string; email: string; display_name: string | null }[]).map((r) => [r.email, r])
+    );
+    const eventById = new Map(
+      ((taggedEvents ?? []) as { id: string; title: string; start_date: string | null; status: string }[])
+        .filter((e) => e.status === 'published' || e.status === 'completed')
+        .map((e) => [e.id, e])
+    );
     const likeCountByPost = new Map<string, number>();
     (likes ?? []).forEach((l) => likeCountByPost.set(l.post_id, (likeCountByPost.get(l.post_id) ?? 0) + 1));
     const commentCountByPost = new Map<string, number>();
@@ -177,6 +197,10 @@ export default function Feed() {
         author_name: namesByEmail.get(p.author_email) || p.author_email,
         author_photo: photosByEmail.get(p.author_email) ?? null,
         author_can_receive_tips: tippableEmails.has(p.author_email),
+        resource_id: p.poster_type === 'resource' ? resourceByEmail.get(p.author_email)?.id ?? null : null,
+        resource_name: p.poster_type === 'resource' ? resourceByEmail.get(p.author_email)?.display_name?.trim() || null : null,
+        event_title: p.event_id ? eventById.get(p.event_id)?.title ?? null : null,
+        event_date: p.event_id ? eventById.get(p.event_id)?.start_date ?? null : null,
         like_count: likeCountByPost.get(p.id) ?? 0,
         comment_count: commentCountByPost.get(p.id) ?? 0,
         liked_by_me: myLikedSet.has(p.id),
@@ -546,8 +570,32 @@ export default function Feed() {
                 )}
                 <span className="font-semibold">{post.author_name}</span>
               </Link>
-              {post.poster_type && (
-                <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs">{post.poster_type}</span>
+              {(post.resource_id || (post.event_id && post.event_title)) ? (
+                <div className="mt-2 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-2">
+                  {post.resource_id && (
+                    <Link
+                      to={`/resources/${post.resource_id}#book`}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-gradient-to-r from-purple to-pink px-3 py-1.5 text-sm font-semibold text-white shadow-lg"
+                    >
+                      <span aria-hidden>⭐</span>
+                      <span className="truncate">Book {post.resource_name || post.author_name}</span>
+                    </Link>
+                  )}
+                  {post.event_id && post.event_title && (
+                    <Link
+                      to={`/events/${post.event_id}`}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30"
+                    >
+                      <span aria-hidden>📅</span>
+                      <span className="truncate">
+                        {post.event_title}
+                        {post.event_date && ` · ${new Date(post.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                      </span>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                post.poster_type && <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs">{post.poster_type}</span>
               )}
               {post.caption && <p className="mt-1 text-sm">{post.caption}</p>}
             </div>
