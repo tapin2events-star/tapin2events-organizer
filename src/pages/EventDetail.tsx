@@ -53,7 +53,7 @@ export default function EventDetail() {
         </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>
           <h1 className="font-display text-3xl font-extrabold text-bone">{event.title}</h1>
@@ -61,7 +61,7 @@ export default function EventDetail() {
             {event.status === 'published' ? 'Published' : 'Draft'}
           </span>
         </div>
-        <div className="flex flex-wrap gap-2 lg:shrink-0 lg:flex-nowrap">
+        <div className="flex flex-wrap gap-2 xl:shrink-0 xl:flex-nowrap">
           <button
             onClick={async () => {
               const nextStatus = event.status === 'published' ? 'draft' : 'published';
@@ -87,6 +87,16 @@ export default function EventDetail() {
             className="whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold"
           >
             Edit event
+          </Link>
+          {/* Drafts open as a preview (banner, ticket buttons off); published events show the live page. */}
+          <Link
+            to={`/events/${id}`}
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" /><circle cx="12" cy="12" r="3" />
+            </svg>
+            {event.status === 'draft' ? 'Preview' : 'View live page'}
           </Link>
         </div>
       </div>
