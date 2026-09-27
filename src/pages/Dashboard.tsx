@@ -193,6 +193,19 @@ export default function Dashboard() {
 
       {!loading && user?.id && user.email && <NeedsAttention events={events} userId={user.id} userEmail={user.email} />}
 
+      {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
+
+      {!loading && earnings && (
+        <Link to="/organizer/earnings" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Earnings</p>
+            <p className="font-display text-2xl font-extrabold text-gray-900">{money(earnings.all)} <span className="text-sm font-medium text-gray-500">all time</span></p>
+            <p className="text-xs text-gray-500">{money(earnings.month)} this month · {earnings.tickets} tickets &amp; registrations</p>
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-marigold">See details &rarr;</span>
+        </Link>
+      )}
+
       <Link
         to="/organizer/vendor-applications"
         className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface2 px-4 py-3 hover:border-marigold"
@@ -208,19 +221,6 @@ export default function Dashboard() {
           <span className="text-muted">&rarr;</span>
         </div>
       </Link>
-
-      {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
-
-      {!loading && earnings && (
-        <Link to="/organizer/earnings" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Earnings</p>
-            <p className="font-display text-2xl font-extrabold text-gray-900">{money(earnings.all)} <span className="text-sm font-medium text-gray-500">all time</span></p>
-            <p className="text-xs text-gray-500">{money(earnings.month)} this month · {earnings.tickets} tickets &amp; registrations</p>
-          </div>
-          <span className="shrink-0 text-sm font-semibold text-marigold">See details &rarr;</span>
-        </Link>
-      )}
 
       {!loading && events.length > 0 && (
         <div className="mb-4">
