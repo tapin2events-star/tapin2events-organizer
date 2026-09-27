@@ -16,6 +16,8 @@ import TicketPass from './pages/TicketPass';
 import MyActivity from './pages/MyActivity';
 import SavedEvents from './pages/SavedEvents';
 import RefundPolicy from './pages/RefundPolicy';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Profile from './pages/Profile';
 import CreatorProfile from './pages/CreatorProfile';
 import ProductDetail from './pages/ProductDetail';
@@ -61,6 +63,8 @@ export default function App() {
             <Route path="/activity" element={<MyActivity />} />
             <Route path="/saved" element={<SavedEvents />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/creator/:email" element={<CreatorProfile />} />
             <Route path="/products/:id" element={<ProductDetail />} />

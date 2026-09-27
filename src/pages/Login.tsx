@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -143,6 +143,10 @@ export default function Login() {
               <p className="text-center text-xs leading-relaxed text-muted">
                 No password needed. We’ll email a link and a 6-digit code — use whichever is handier.
                 New here? Your account is created automatically.
+              </p>
+              <p className="text-center text-xs leading-relaxed text-muted">
+                By continuing, you agree to TapIN's <Link to="/terms" className="underline hover:text-bone">Terms of Service</Link> and{' '}
+                <Link to="/privacy" className="underline hover:text-bone">Privacy Policy</Link>.
               </p>
               <button
                 type="button"

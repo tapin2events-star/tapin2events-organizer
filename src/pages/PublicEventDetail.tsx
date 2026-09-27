@@ -174,37 +174,10 @@ export default function PublicEventDetail() {
 
     // Best-effort: the registration itself has already succeeded regardless
     // of whether this email actually goes out, so failures here are swallowed.
-    const eventDate = event.start_date
-      ? new Date(event.start_date).toLocaleString('en-US', {
-          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
-        })
-      : 'Date to be announced';
-    const passUrl = `${window.location.origin}${import.meta.env.BASE_URL}pass/${ticket.id}`;
-    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=2`;
-    const html = `
-      <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-        <div style="background:#4f46e5;padding:24px;color:white;">
-          <div style="font-size:20px;font-weight:800;">TapIN</div>
-          <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">You're registered</div>
-        </div>
-        ${event.poster_url ? `<img src="${event.poster_url}" style="width:100%;display:block;max-height:200px;object-fit:cover;" />` : ''}
-        <div style="padding:24px;">
-          <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${event.title}</h1>
-          <table style="width:100%;font-size:14px;color:#374151;">
-            <tr><td style="padding:4px 0;color:#6b7280;width:80px;">When</td><td style="padding:4px 0;font-weight:600;">${eventDate}</td></tr>
-            <tr><td style="padding:4px 0;color:#6b7280;">Where</td><td style="padding:4px 0;font-weight:600;">${event.is_online ? 'Virtual event' : (event.location_name || 'Venue TBD')}</td></tr>
-            <tr><td style="padding:4px 0;color:#6b7280;">Holder</td><td style="padding:4px 0;font-weight:600;">${user.email}</td></tr>
-          </table>
-          <div style="text-align:center;margin:24px 0 16px;">
-            <img src="${qrUrl}" width="180" height="180" alt="QR code" style="border:1px solid #e5e7eb;border-radius:16px;padding:8px;background:#ffffff;" />
-            <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Scan this code at the entrance</p>
-          </div>
-          <a href="${passUrl}" style="display:block;text-align:center;background:#4f46e5;color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">View Your Ticket Online</a>
-        </div>
-      </div>`;
+    // The server builds the confirmation email and only sends it to the ticket holder.
     supabase.functions
-      .invoke('send-ticket-confirmation', { body: { to: user.email, subject: `You're registered: ${event.title}`, html } })
-      .catch(() => { /* registration already succeeded; email is best-effort */ });
+      .invoke('send-app-email', { body: { kind: 'registration_confirmation', ticket_id: ticket.id } })
+      .catch(() => {});
   }
 
   async function handleBuyTicket() {

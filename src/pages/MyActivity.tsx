@@ -51,34 +51,6 @@ async function downloadBlob(url: string, filename: string, init?: RequestInit) {
   }
 }
 
-function buildTicketEmailHtml(t: MyTicket, qrUrl: string, passUrl: string) {
-  const eventDate = t.event_start_date
-    ? new Date(t.event_start_date).toLocaleString('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
-      })
-    : 'Date to be announced';
-  return `
-    <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-      <div style="background:#4f46e5;padding:24px;color:white;">
-        <div style="font-size:20px;font-weight:800;">TapIN</div>
-        <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">Your ticket</div>
-      </div>
-      ${t.event_poster_url ? `<img src="${t.event_poster_url}" style="width:100%;display:block;max-height:200px;object-fit:cover;" />` : ''}
-      <div style="padding:24px;">
-        <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${t.event_title}</h1>
-        <table style="width:100%;font-size:14px;color:#374151;">
-          <tr><td style="padding:4px 0;color:#6b7280;width:80px;">When</td><td style="padding:4px 0;font-weight:600;">${eventDate}</td></tr>
-          <tr><td style="padding:4px 0;color:#6b7280;">Where</td><td style="padding:4px 0;font-weight:600;">${t.event_is_online ? 'Virtual event' : (t.event_location_name || 'Venue TBD')}</td></tr>
-          <tr><td style="padding:4px 0;color:#6b7280;">Holder</td><td style="padding:4px 0;font-weight:600;">${t.attendee_email}</td></tr>
-        </table>
-        <div style="text-align:center;margin:24px 0 16px;">
-          <img src="${qrUrl}" width="180" height="180" alt="QR code" style="border:1px solid #e5e7eb;border-radius:16px;padding:8px;background:#ffffff;" />
-          <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Scan this code at the entrance</p>
-        </div>
-        <a href="${passUrl}" style="display:block;text-align:center;background:#4f46e5;color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">View Your Ticket Online</a>
-      </div>
-    </div>`;
-}
 
 export default function MyActivity() {
   const { user, loading: authLoading } = useAuth();
@@ -187,12 +159,7 @@ export default function MyActivity() {
 
   async function handleEmail(t: MyTicket) {
     setBusyId(t.id);
-    const passUrl = `${window.location.origin}${import.meta.env.BASE_URL}pass/${t.id}`;
-    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(passUrl)}&size=300&margin=1`;
-    const html = buildTicketEmailHtml(t, qrUrl, passUrl);
-    const { error } = await supabase.functions.invoke('send-ticket-confirmation', {
-      body: { to: t.attendee_email, subject: `Your ticket: ${t.event_title}`, html },
-    });
+    const { error } = await supabase.functions.invoke('send-app-email', { body: { kind: 'ticket_copy', ticket_id: t.id } });
     setBusyId(null);
     if (!error) {
       setEmailedId(t.id);

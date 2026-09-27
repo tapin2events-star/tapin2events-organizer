@@ -9,7 +9,7 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
   completed: 'Completed',
 };
 
-export default function TasksTab({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
+export default function TasksTab({ eventId }: { eventId: string; eventTitle?: string }) {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<EventTask[]>([]);
   const [title, setTitle] = useState('');
@@ -34,39 +34,24 @@ export default function TasksTab({ eventId, eventTitle }: { eventId: string; eve
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
     if (!title.trim() || !user?.email) return;
-    await supabase.from('event_tasks').insert({
+    const { data: inserted } = await supabase.from('event_tasks').insert({
       event_id: eventId,
       title,
       assigned_to: assignedTo || null,
       assigned_by: user.email,
       due_date: dueDate || null,
-    });
-    const taskTitle = title;
+    }).select('id').single();
     const taskAssignee = assignedTo;
-    const taskDueDate = dueDate;
     setTitle('');
     setAssignedTo('');
     setDueDate('');
     load();
 
     if (taskAssignee.trim()) {
-      const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-        <div style="background:#4f46e5;padding:24px;color:white;">
-          <div style="font-size:20px;font-weight:800;">TapIN</div>
-          <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">New task assigned to you</div>
-        </div>
-        <div style="padding:24px;">
-          <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${taskTitle}</h1>
-          <table style="width:100%;font-size:14px;color:#374151;">
-            <tr><td style="padding:4px 0;color:#6b7280;width:80px;">Event</td><td style="padding:4px 0;font-weight:600;">${eventTitle}</td></tr>
-            <tr><td style="padding:4px 0;color:#6b7280;">Assigned by</td><td style="padding:4px 0;font-weight:600;">${user.email}</td></tr>
-            ${taskDueDate ? `<tr><td style="padding:4px 0;color:#6b7280;">Due</td><td style="padding:4px 0;font-weight:600;">${taskDueDate}</td></tr>` : ''}
-          </table>
-        </div>
-      </div>`;
       try {
-        await supabase.functions.invoke('send-ticket-confirmation', {
-          body: { to: taskAssignee, subject: `New task for ${eventTitle}: ${taskTitle}`, html },
+        // The server builds the email and checks you're on the event's team.
+        await supabase.functions.invoke('send-app-email', {
+          body: { kind: 'task_assigned', task_id: inserted?.id },
         });
       } catch (e) {
         console.error('Task assignment email failed:', e);

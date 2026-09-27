@@ -99,26 +99,12 @@ export default function ResourceProfile() {
       })
       .then(() => {});
 
-    const html = `
-      <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-        <div style="background:#4f46e5;padding:24px;color:white;">
-          <div style="font-size:20px;font-weight:800;">TapIN</div>
-          <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">New booking request</div>
-        </div>
-        <div style="padding:24px;">
-          <p style="margin:0 0 12px;color:#374151;">You've received a new booking request for <strong>${selectedEvent?.title ?? 'an event'}</strong>.</p>
-          <table style="width:100%;font-size:14px;color:#374151;">
-            <tr><td style="padding:4px 0;color:#6b7280;width:100px;">Offered rate</td><td style="padding:4px 0;font-weight:600;">$${offeredRate}</td></tr>
-            ${serviceDate ? `<tr><td style="padding:4px 0;color:#6b7280;">Date</td><td style="padding:4px 0;font-weight:600;">${serviceDate}</td></tr>` : ''}
-            <tr><td style="padding:4px 0;color:#6b7280;">From</td><td style="padding:4px 0;font-weight:600;">${user.email}</td></tr>
-          </table>
-          ${message ? `<p style="margin:16px 0 0;color:#374151;">"${message}"</p>` : ''}
-          <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">Log in to your Resource Dashboard on TapIN to accept or decline.</p>
-        </div>
-      </div>`;
-    supabase.functions
-      .invoke('send-ticket-confirmation', { body: { to: resource.email, subject: `New booking request: ${selectedEvent?.title ?? 'an event'}`, html } })
-      .catch(() => { /* request already succeeded; notification is best-effort */ });
+    // The server builds the email and checks you're the organizer who made the booking.
+    if (newBooking?.id) {
+      supabase.functions
+        .invoke('send-app-email', { body: { kind: 'booking_request', booking_id: newBooking.id } })
+        .catch(() => { /* request already succeeded; email is best-effort */ });
+    }
   }
 
   // Arriving from the feed's "Book [Name]" button (/resources/:id#book).

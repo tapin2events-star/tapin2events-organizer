@@ -187,6 +187,11 @@ export default function Layout() {
               Sign in
             </Link>
           )}
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
+            <Link to="/terms" onClick={() => setMenuOpen(false)} className="py-1 hover:text-bone">Terms</Link>
+            <Link to="/privacy" onClick={() => setMenuOpen(false)} className="py-1 hover:text-bone">Privacy</Link>
+            <Link to="/refund-policy" onClick={() => setMenuOpen(false)} className="py-1 hover:text-bone">Refunds</Link>
+          </div>
         </div>
       </aside>
 

@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { CollaborationRole, EventCollaboration } from '../../lib/types';
 
-export default function TeamTab({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
+export default function TeamTab({ eventId }: { eventId: string; eventTitle?: string }) {
   const { user } = useAuth();
   const [collabs, setCollabs] = useState<EventCollaboration[]>([]);
   const [email, setEmail] = useState('');
@@ -27,30 +27,17 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
     load();
   }, [eventId]);
 
-  async function sendInviteEmail(invitedEmail: string, invitedRole: string) {
-    const eventUrl = `${window.location.origin}${import.meta.env.BASE_URL}organizer/events/${eventId}`;
-    const html = `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
-      <div style="background:#4f46e5;padding:24px;color:white;">
-        <div style="font-size:20px;font-weight:800;">TapIN</div>
-        <div style="margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.9;">You've been invited to help organize an event</div>
-      </div>
-      <div style="padding:24px;">
-        <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">${eventTitle}</h1>
-        <p style="font-size:14px;color:#374151;">${user?.email} has invited you to help manage this event on TapIN as a <strong>${invitedRole}</strong>.</p>
-        <p style="margin-top:8px;font-size:13px;color:#6b7280;">Sign in with this email address (${invitedEmail}) to access it.</p>
-        <a href="${eventUrl}" style="display:block;text-align:center;margin-top:16px;background:#4f46e5;color:#ffffff;padding:12px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;">Go to Event</a>
-      </div>
-    </div>`;
-    await supabase.functions.invoke('send-ticket-confirmation', {
-      body: { to: invitedEmail, subject: `You've been invited to help organize ${eventTitle}`, html },
-    });
+  // The server builds the invite email and checks you're the organizer.
+  async function sendInviteEmail(collaborationId: string) {
+    const { error } = await supabase.functions.invoke('send-app-email', { body: { kind: 'team_invite', collaboration_id: collaborationId } });
+    if (error) throw error;
   }
 
-  async function resendInvite(collabId: string, collaboratorEmail: string, collabRole: string) {
+  async function resendInvite(collabId: string) {
     setResendingId(collabId);
     setResentId(null);
     try {
-      await sendInviteEmail(collaboratorEmail, collabRole);
+      await sendInviteEmail(collabId);
       setResentId(collabId);
     } catch (e) {
       console.error('Resend invite email failed:', e);
@@ -95,23 +82,22 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
       }
     }
 
-    const { error } = await supabase.from('event_collaborations').insert({
+    const { data: inserted, error } = await supabase.from('event_collaborations').insert({
       event_id: eventId,
       collaborator_email: invitedEmail,
       role,
       permissions: role === 'vendor_manager' ? ['manage_vendors'] : [],
       invited_by: user.email,
-    });
+    }).select('id').single();
     if (error) {
       setError(error.message);
       return;
     }
-    const invitedRole = role;
     setEmail('');
     load();
 
     try {
-      await sendInviteEmail(invitedEmail, invitedRole);
+      if (inserted?.id) await sendInviteEmail(inserted.id);
     } catch (e) {
       console.error('Team invite email failed:', e);
     }
@@ -180,7 +166,7 @@ export default function TeamTab({ eventId, eventTitle }: { eventId: string; even
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => resendInvite(c.id, c.collaborator_email, c.role)}
+                  onClick={() => resendInvite(c.id)}
                   disabled={resendingId === c.id}
                   className="text-xs text-marigold hover:text-marigold/80 disabled:opacity-50"
                 >

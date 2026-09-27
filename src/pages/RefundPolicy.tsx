@@ -55,7 +55,11 @@ export default function RefundPolicy() {
         <p>Contact us at <a href="mailto:tapin2events@gmail.com" className="font-medium text-marigold hover:underline">tapin2events@gmail.com</a>.</p>
       </Section>
 
-      <p className="mt-8 text-sm"><Link to="/" className="font-medium text-marigold hover:underline">&larr; Back to TapIN</Link></p>
+      <p className="mt-10 flex flex-wrap gap-x-4 gap-y-1 border-t border-gray-200 pt-4 text-sm">
+        <Link to="/terms" className="font-medium text-marigold hover:underline">Terms of Service</Link>
+        <Link to="/privacy" className="font-medium text-marigold hover:underline">Privacy Policy</Link>
+        <Link to="/" className="font-medium text-marigold hover:underline">Back to TapIN</Link>
+      </p>
     </div>
   );
 }
