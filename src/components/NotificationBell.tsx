@@ -12,6 +12,25 @@ interface Notification {
   created_at: string;
 }
 
+// An icon for each kind of alert (matched by type prefix).
+const ICONS: [string, string][] = [
+  ['new_follower', '👤'],
+  ['post_comment', '💬'],
+  ['tip_received', '💖'],
+  ['vendor_application_new', '🛍️'],
+  ['vendor_application_approved', '✅'],
+  ['vendor_application_rejected', '📋'],
+  ['vendor_fee_paid', '💵'],
+  ['team_invite', '🤝'],
+  ['event_reminder', '⏰'],
+  ['booking', '📅'],
+  ['counter_offer', '📅'],
+  ['order', '📦'],
+];
+function iconFor(type: string) {
+  return ICONS.find(([prefix]) => type.startsWith(prefix))?.[1] ?? '🔔';
+}
+
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -28,6 +47,9 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  // The header renders a bell for desktop and one for mobile, so each needs
+  // its own live-channel name.
+  const channelName = useRef(`notifications-${Math.random().toString(36).slice(2)}`);
 
   async function loadNotifications() {
     if (!user?.email) return;
@@ -36,17 +58,32 @@ export default function NotificationBell() {
       .select('id, type, message, link, is_read, created_at')
       .eq('user_email', user.email)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(30);
     if (!error) setNotifications((data ?? []) as Notification[]);
   }
 
   useEffect(() => {
+    if (!user?.email) return;
     loadNotifications();
-    // Light polling rather than a full realtime subscription for now —
-    // good enough to surface new notifications without a page reload.
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
+    // New alerts arrive instantly over realtime (which still enforces
+    // row-level security); a slow poll is a fallback if the connection drops.
+    const channel = supabase
+      .channel(channelName.current)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_email=eq.${user.email}` }, () => loadNotifications())
+      .subscribe();
+    const interval = setInterval(loadNotifications, 60000);
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
+
+  async function markAllRead() {
+    if (!user?.email) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    await supabase.from('notifications').update({ is_read: true }).eq('user_email', user.email).eq('is_read', false);
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -96,11 +133,16 @@ export default function NotificationBell() {
           <div className="fixed inset-x-3 top-16 z-50 max-h-[75vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg md:absolute md:inset-x-auto md:right-0 md:top-auto md:mt-2 md:w-80 md:max-h-none">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
               <span className="text-sm font-semibold text-gray-900">Notifications</span>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button onClick={markAllRead} className="text-xs font-medium text-marigold hover:underline">Mark all read</button>
+                )}
               <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 md:hidden">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 4l12 12M16 4L4 16" strokeLinecap="round" />
                 </svg>
               </button>
+              </div>
             </div>
             {notifications.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-gray-400">Nothing yet</p>
@@ -110,10 +152,14 @@ export default function NotificationBell() {
                   <li key={n.id}>
                     <button
                       onClick={() => handleClick(n)}
-                      className={`block w-full px-4 py-3.5 text-left text-sm hover:bg-gray-50 ${n.is_read ? 'text-gray-500' : 'font-medium text-gray-900'}`}
+                      className={`flex w-full gap-3 px-4 py-3.5 text-left text-sm hover:bg-gray-50 ${n.is_read ? 'text-gray-500' : 'bg-indigo-50/40 font-medium text-gray-900'}`}
                     >
-                      <p>{n.message}</p>
-                      <p className="mt-0.5 text-xs text-gray-400">{timeAgo(n.created_at)}</p>
+                      <span className="mt-0.5 shrink-0 text-base leading-none" aria-hidden>{iconFor(n.type)}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block">{n.message}</span>
+                        <span className="mt-0.5 block text-xs font-normal text-gray-400">{timeAgo(n.created_at)}</span>
+                      </span>
+                      {!n.is_read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-marigold" aria-label="Unread" />}
                     </button>
                   </li>
                 ))}
