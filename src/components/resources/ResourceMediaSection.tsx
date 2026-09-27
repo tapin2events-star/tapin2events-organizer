@@ -27,7 +27,9 @@ export default function ResourceMediaSection({ resourceId, resourceEmail }: { re
     Promise.all([
       supabase.from('resource_media').select('*').eq('resource_id', resourceId).order('display_order', { ascending: true }),
       supabase.from('resource_albums').select('*').eq('resource_id', resourceId).order('display_order', { ascending: true }),
-      supabase.from('posts').select('id, thumbnail_url, caption').eq('author_email', resourceEmail).eq('status', 'active').order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1),
+      // Only videos the creator posted as a resource ("Posting as: Resource"),
+      // not ones posted as an organizer or with no role chosen.
+      supabase.from('posts').select('id, thumbnail_url, caption').eq('author_email', resourceEmail).eq('poster_type', 'resource').eq('status', 'active').order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1),
     ]).then(([{ data: m }, { data: a }, { data: p }]) => {
       setItems((m ?? []) as ResourceMedia[]);
       setAlbums((a ?? []) as ResourceAlbum[]);

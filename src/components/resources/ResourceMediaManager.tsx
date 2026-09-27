@@ -297,7 +297,10 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
 
       <section className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
         <p className="font-semibold text-gray-900">Videos on TapIN</p>
-        <p className="mt-0.5">Videos you post to the TapIN feed show up on your profile automatically. <Link to="/feed" className="font-medium text-marigold">Post a video &rarr;</Link></p>
+        <p className="mt-0.5">
+          Videos you post to the feed as a resource show up on your profile automatically. When you create a post, choose <span className="font-medium text-gray-900">Resource</span> under "Posting as."{' '}
+          <Link to="/feed" className="font-medium text-marigold">Post a video &rarr;</Link>
+        </p>
       </section>
     </div>
   );
