@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { POST_CATEGORIES } from '../../lib/postOptions';
 import { useEscapeKey } from '../../lib/useEscapeKey';
+import { loadTags, type TaggedPerson } from '../../lib/postTags';
+import TagCreatorsField from './TagCreatorsField';
 
 interface EventOption {
   id: string;
@@ -19,6 +21,8 @@ export default function EditPostModal({ postId, onClose, onSaved }: { postId: st
   const [posterType, setPosterType] = useState<'organizer' | 'resource' | null>(null);
   const [category, setCategory] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [tagged, setTagged] = useState<TaggedPerson[]>([]);
+  const [initialTagged, setInitialTagged] = useState<TaggedPerson[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(null);
   const [changingEvent, setChangingEvent] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
@@ -41,6 +45,9 @@ export default function EditPostModal({ postId, onClose, onSaved }: { postId: st
           if (ev) setSelectedEvent(ev);
         }
       }
+      const tagMap = await loadTags([postId]);
+      setTagged(tagMap.get(postId) ?? []);
+      setInitialTagged(tagMap.get(postId) ?? []);
       if (user?.email) {
         const { data: mine } = await supabase
           .from('events')
@@ -87,12 +94,31 @@ export default function EditPostModal({ postId, onClose, onSaved }: { postId: st
         event_id: selectedEvent?.id ?? null,
       })
       .eq('id', postId);
-    setSaving(false);
     if (updateError) {
+      setSaving(false);
       setError("Couldn't save your changes. Please try again.");
       return;
     }
+
+    // Tags: untag people who were removed, tag the new ones. A person who
+    // opted out of this post earlier can't be tagged again.
+    const before = new Set(initialTagged.map((p) => p.email));
+    const now = new Set(tagged.map((p) => p.email));
+    const toRemove = [...before].filter((e) => !now.has(e));
+    const toAdd = tagged.filter((p) => !before.has(p.email));
+    if (toRemove.length > 0) await supabase.from('post_tags').delete().eq('post_id', postId).eq('status', 'active').in('tagged_email', toRemove);
+    const added = await Promise.all(toAdd.map((p) => supabase.from('post_tags').insert({ post_id: postId, tagged_email: p.email })));
+    const failed = toAdd.filter((_, i) => added[i].error);
+    setSaving(false);
     onSaved();
+    if (failed.length > 0) {
+      // Everything else was saved; keep the editor open so this isn't missed.
+      const failedEmails = new Set(failed.map((p) => p.email));
+      setTagged((prev) => prev.filter((p) => !failedEmails.has(p.email)));
+      setInitialTagged(tagged.filter((p) => !failedEmails.has(p.email)));
+      setError(`Your changes were saved, but ${failed.map((p) => p.name).join(', ')} couldn't be tagged. They may have opted out of this post.`);
+      return;
+    }
     onClose();
   }
 
@@ -178,6 +204,8 @@ export default function EditPostModal({ postId, onClose, onSaved }: { postId: st
               <span className="text-sm font-medium text-bone">Tags <span className="font-normal text-muted">(comma separated)</span></span>
               <input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="poetry, live music" className={`${field} mt-1`} />
             </label>
+
+            <TagCreatorsField value={tagged} onChange={setTagged} selfEmail={user?.email} inputClassName={field} />
 
             {error && <p className="text-sm text-magenta">{error}</p>}
             <div className="grid grid-cols-2 gap-3">

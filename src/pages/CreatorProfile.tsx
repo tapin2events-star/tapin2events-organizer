@@ -25,6 +25,14 @@ interface Post {
   caption: string | null;
 }
 
+// A post someone else tagged this person in.
+interface TaggedTile {
+  post_id: string;
+  thumbnail_url: string | null;
+  caption: string | null;
+  author_name: string;
+}
+
 export default function CreatorProfile() {
   const { email } = useParams<{ email: string }>();
   const { user } = useAuth();
@@ -35,7 +43,9 @@ export default function CreatorProfile() {
   const [events, setEvents] = useState<CreatorEvent[]>([]);
   const [products, setProducts] = useState<CreatorProduct[]>([]);
   const [resourceId, setResourceId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'posts' | 'events' | 'shop'>('posts');
+  const [tab, setTab] = useState<'posts' | 'tagged' | 'events' | 'shop'>('posts');
+  const [tagged, setTagged] = useState<TaggedTile[]>([]);
+  const [removingTagId, setRemovingTagId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
@@ -56,6 +66,20 @@ export default function CreatorProfile() {
       return;
     }
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }
+
+  // A tagged person can take themselves off a post. The author can't tag
+  // them in that post again.
+  async function removeMyTag(postId: string) {
+    if (!window.confirm("Remove yourself from this post? The creator won't be able to tag you in it again.")) return;
+    setRemovingTagId(postId);
+    const { error } = await supabase.from('post_tags').update({ status: 'removed' }).eq('post_id', postId).eq('tagged_email', decodedEmail);
+    setRemovingTagId(null);
+    if (error) {
+      window.alert("Couldn't remove the tag. Please try again.");
+      return;
+    }
+    setTagged((prev) => prev.filter((t) => t.post_id !== postId));
   }
 
   useEffect(() => {
@@ -98,6 +122,21 @@ export default function CreatorProfile() {
       setEvents((eventRows ?? []) as CreatorEvent[]);
       setProducts((productRows ?? []) as CreatorProduct[]);
       setResourceId(resourceRow?.id ?? null);
+
+      // Posts other creators tagged this person in (active posts only).
+      const { data: tagRows } = await supabase
+        .from('post_tags')
+        .select('post_id, created_at, posts!inner(id, thumbnail_url, caption, author_email, status)')
+        .eq('tagged_email', decodedEmail)
+        .eq('status', 'active')
+        .eq('posts.status', 'active')
+        .order('created_at', { ascending: false });
+      type TagRow = { post_id: string; posts: { thumbnail_url: string | null; caption: string | null; author_email: string } | { thumbnail_url: string | null; caption: string | null; author_email: string }[] };
+      const rows = ((tagRows ?? []) as unknown as TagRow[]).map((r) => ({ post_id: r.post_id, post: Array.isArray(r.posts) ? r.posts[0] : r.posts })).filter((r) => r.post);
+      const authorEmails = [...new Set(rows.map((r) => r.post.author_email))];
+      const { data: authors } = authorEmails.length ? await supabase.from('public_profiles').select('email, full_name').in('email', authorEmails) : { data: [] };
+      const authorName = new Map((authors ?? []).map((a) => [a.email as string, (a.full_name as string | null)?.trim() || 'Creator']));
+      setTagged(rows.map((r) => ({ post_id: r.post_id, thumbnail_url: r.post.thumbnail_url, caption: r.post.caption, author_name: authorName.get(r.post.author_email) ?? 'Creator' })));
       // Open on whichever tab has something to show.
       setTab((postRows ?? []).length > 0 ? 'posts' : (eventRows ?? []).length > 0 ? 'events' : (productRows ?? []).length > 0 ? 'shop' : 'posts');
       setIsFollowing(!!followRow);
@@ -188,6 +227,7 @@ export default function CreatorProfile() {
         <div className="flex gap-1 border-b border-gray-200">
           {([
             { id: 'posts', label: `Posts (${posts.length})` },
+            ...(tagged.length > 0 ? [{ id: 'tagged' as const, label: `Tagged (${tagged.length})` }] : []),
             { id: 'events', label: `Events (${new Set(events.map((e) => e.parent_event_id ?? e.id)).size})` },
             { id: 'shop', label: `Shop (${products.length})` },
           ] as const).map((t) => (
@@ -201,6 +241,35 @@ export default function CreatorProfile() {
           ))}
         </div>
 
+        {tab === 'tagged' && (
+          <div className="mt-3 grid grid-cols-3 gap-1">
+            {tagged.map((t) => (
+              <div key={t.post_id} className="relative">
+                <Link to={`/feed?post=${t.post_id}`} className="relative block aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
+                  {t.thumbnail_url ? (
+                    <img src={t.thumbnail_url} alt={t.caption ?? ''} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl">🎥</div>
+                  )}
+                  <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-6 text-xs font-medium text-white">
+                    by {t.author_name}
+                  </span>
+                </Link>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => removeMyTag(t.post_id)}
+                    disabled={removingTagId === t.post_id}
+                    aria-label="Remove me from this post"
+                    title="Remove me from this post"
+                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-magenta disabled:opacity-50"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {tab === 'events' && <CreatorEvents events={events} />}
         {tab === 'shop' && <CreatorProducts products={products} />}
         {tab === 'posts' && (posts.length === 0 ? (

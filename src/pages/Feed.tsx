@@ -7,6 +7,8 @@ import HlsVideo from '../components/feed/HlsVideo';
 import CreatePostModal from '../components/feed/CreatePostModal';
 import TipModal from '../components/feed/TipModal';
 import EditPostModal from '../components/feed/EditPostModal';
+import ExpandableCaption from '../components/feed/ExpandableCaption';
+import { loadTags, type TaggedPerson } from '../lib/postTags';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface Post {
@@ -30,6 +32,8 @@ interface Post {
   comment_count: number;
   liked_by_me: boolean;
   event_id: string | null;
+  // Creators the author tagged in this post.
+  tagged: TaggedPerson[];
 }
 
 interface Comment {
@@ -164,7 +168,7 @@ export default function Feed() {
     // passes Supabase's 1,000-rows-per-request cap.
     const resourceEmails = [...new Set(rows.filter((p) => p.poster_type === 'resource').map((p) => p.author_email))];
     const taggedEventIds = [...new Set(rows.map((p) => p.event_id).filter((id): id is string => !!id))];
-    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }, { data: resourceRows }, { data: taggedEvents }] = await Promise.all([
+    const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }, { data: resourceRows }, { data: taggedEvents }, tagsByPost] = await Promise.all([
       authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo, can_receive_tips').in('email', authorEmails) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_likes').select('post_id').in('post_id', postIds) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_comments').select('post_id').eq('status', 'active').in('post_id', postIds) : Promise.resolve({ data: [] }),
@@ -173,6 +177,7 @@ export default function Feed() {
       // other viewers, so the Book button never leads to a hidden page.
       resourceEmails.length ? supabase.from('resources').select('id, email, display_name').in('email', resourceEmails) : Promise.resolve({ data: [] }),
       taggedEventIds.length ? supabase.from('events').select('id, title, start_date, status').in('id', taggedEventIds) : Promise.resolve({ data: [] }),
+      loadTags(postIds),
     ]);
     if (loadId !== loadIdRef.current) return;
 
@@ -206,6 +211,7 @@ export default function Feed() {
         like_count: likeCountByPost.get(p.id) ?? 0,
         comment_count: commentCountByPost.get(p.id) ?? 0,
         liked_by_me: myLikedSet.has(p.id),
+        tagged: tagsByPost.get(p.id) ?? [],
       }))
     );
     setLoading(false);
@@ -366,9 +372,10 @@ export default function Feed() {
   async function refreshPost(postId: string) {
     const { data: p } = await supabase.from('posts').select('author_email, caption, poster_type, event_id').eq('id', postId).single();
     if (!p) return;
-    const [{ data: res }, { data: ev }] = await Promise.all([
+    const [{ data: res }, { data: ev }, tagMap] = await Promise.all([
       p.poster_type === 'resource' ? supabase.from('resources').select('id, display_name').eq('email', p.author_email).maybeSingle() : Promise.resolve({ data: null }),
       p.event_id ? supabase.from('events').select('title, start_date, status').eq('id', p.event_id).maybeSingle() : Promise.resolve({ data: null }),
+      loadTags([postId]),
     ]);
     const evPublic = ev && (ev.status === 'published' || ev.status === 'completed');
     setPosts((prev) =>
@@ -383,6 +390,7 @@ export default function Feed() {
               resource_name: res?.display_name?.trim() || null,
               event_title: evPublic ? ev!.title : null,
               event_date: evPublic ? ev!.start_date : null,
+              tagged: tagMap.get(postId) ?? [],
             }
           : x
       )
@@ -602,7 +610,7 @@ export default function Feed() {
               )}
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 p-4 pb-6 text-white" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
+            <div className="absolute inset-x-0 bottom-0 p-4 pb-6 text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
               <Link to={`/creator/${encodeURIComponent(post.author_email)}`} className="flex items-center gap-2">
                 {post.author_photo ? (
                   <img src={post.author_photo} alt="" className="h-8 w-8 rounded-full object-cover" />
@@ -613,6 +621,20 @@ export default function Feed() {
                 )}
                 <span className="font-semibold">{post.author_name}</span>
               </Link>
+              {post.tagged.length > 0 && (
+                <div className="mt-2 flex max-w-[calc(100%-4.5rem)] flex-wrap items-center gap-1.5 text-xs text-white/90">
+                  <span aria-hidden>🏷️ With</span>
+                  {post.tagged.map((t) => (
+                    <Link
+                      key={t.email}
+                      to={`/creator/${encodeURIComponent(t.email)}`}
+                      className="rounded-full bg-white/20 px-2.5 py-1 font-semibold text-white backdrop-blur-sm hover:bg-white/30"
+                    >
+                      {t.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
               {(post.resource_id || (post.event_id && post.event_title)) ? (
                 <div className="mt-2 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-2">
                   {post.resource_id && (
@@ -640,7 +662,7 @@ export default function Feed() {
               ) : (
                 post.poster_type && <span className="mt-1 inline-block rounded-full bg-white/15 px-2 py-0.5 text-xs">{post.poster_type}</span>
               )}
-              {post.caption && <p className="mt-1 text-sm">{post.caption}</p>}
+              {post.caption && <ExpandableCaption text={post.caption} className="mt-1 max-w-[calc(100%-4.5rem)]" />}
             </div>
           </div>
         ))}

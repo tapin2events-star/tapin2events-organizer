@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { POST_CATEGORIES as CATEGORIES } from '../../lib/postOptions';
 import { useEscapeKey } from '../../lib/useEscapeKey';
+import TagCreatorsField from './TagCreatorsField';
+import type { TaggedPerson } from '../../lib/postTags';
 
 interface EventOption {
   id: string;
@@ -21,6 +23,7 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   const [posterType, setPosterType] = useState<'organizer' | 'resource' | null>(null);
   const [category, setCategory] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [taggedPeople, setTaggedPeople] = useState<TaggedPerson[]>([]);
   const [eventSearch, setEventSearch] = useState('');
   const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(null);
@@ -158,7 +161,7 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
 
     // Step 4: the post only becomes visible in the feed once we have a
     // real, working playback URL -- never before.
-    const { error: insertError } = await supabase.from('posts').insert({
+    const { data: created, error: insertError } = await supabase.from('posts').insert({
       author_email: user.email,
       poster_type: posterType,
       caption: caption.trim() || null,
@@ -168,11 +171,18 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
       category: category || null,
       tags: tags.length > 0 ? tags : null,
       event_id: selectedEvent?.id ?? null,
-    });
-    if (insertError) {
+    }).select('id').single();
+    if (insertError || !created) {
       setError('Your video processed successfully, but saving the post failed. Please try again.');
       setStage('error');
       return;
+    }
+
+    // Tag creators one by one, so one person who can't be tagged doesn't
+    // stop the others. The post itself is already live either way.
+    if (taggedPeople.length > 0) {
+      const results = await Promise.all(taggedPeople.map((p) => supabase.from('post_tags').insert({ post_id: created.id, tagged_email: p.email })));
+      results.forEach((r, i) => r.error && console.error('Could not tag', taggedPeople[i].email, r.error.message));
     }
 
     onPosted();
@@ -262,6 +272,13 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
                 className="rounded-lg border border-gray-300 bg-surface2 px-3 py-2 text-sm text-bone outline-none focus-visible:border-marigold"
               />
             </label>
+
+            <TagCreatorsField
+              value={taggedPeople}
+              onChange={setTaggedPeople}
+              selfEmail={user?.email}
+              inputClassName="rounded-lg border border-gray-300 bg-surface2 px-3 py-2 text-sm text-bone outline-none focus-visible:border-marigold"
+            />
 
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-bone">Tag an Event <span className="text-muted font-normal">(Optional)</span></span>
