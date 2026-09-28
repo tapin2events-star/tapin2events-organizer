@@ -193,6 +193,7 @@ export default function Dashboard() {
       </div>
 
       {!loading && user?.id && user.email && <NeedsAttention events={events} userId={user.id} userEmail={user.email} />}
+      <BookingsSummary />
 
       {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
@@ -389,7 +390,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <BookingsSummary />
     </div>
   );
 }

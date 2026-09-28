@@ -9,6 +9,7 @@ export interface TapEvent {
   event_type: EventType;
   start_date: string | null;
   end_date: string | null;
+  date_tbd: boolean | null;
   location_name: string | null;
   location_address: string | null;
   latitude: number | null;

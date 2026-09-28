@@ -6,6 +6,7 @@ import type { Resource, ResourceBooking } from '../lib/types';
 import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import ResourceMediaManager from '../components/resources/ResourceMediaManager';
+import BookingThread from '../components/bookings/BookingThread';
 
 interface BookingRow extends ResourceBooking {
   event_title: string;
@@ -65,6 +66,7 @@ export default function ResourceDashboard() {
   const [reviewStats, setReviewStats] = useState({ count: 0, average: 0 });
   const [counteringId, setCounteringId] = useState<string | null>(null);
   const [counterRate, setCounterRate] = useState('');
+  const [openThread, setOpenThread] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
@@ -293,6 +295,18 @@ export default function ResourceDashboard() {
                   <p className="mt-2 text-sm italic text-gray-600">"{b.message_from_organizer}"</p>
                 )}
                 <p className="mt-1 text-xs text-gray-400">From {b.organizer_email}</p>
+
+                <button
+                  onClick={() => setOpenThread((prev) => { const n = new Set(prev); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })}
+                  className="mt-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold"
+                >
+                  💬 {openThread.has(b.id) ? 'Hide messages' : 'Message'}
+                </button>
+                {openThread.has(b.id) && (
+                  <div className="mt-2">
+                    <BookingThread bookingId={b.id} otherPartyName={b.organizer_email} />
+                  </div>
+                )}
 
                 {b.status === 'pending' && (
                   <>

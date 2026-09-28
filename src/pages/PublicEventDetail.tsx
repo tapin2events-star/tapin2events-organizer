@@ -124,7 +124,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleRegister() {
-    if (!id || !event || !user?.email || event.status === 'draft') return;
+    if (!id || !event || !user?.email || event.status === 'draft' || hasEnded) return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -182,7 +182,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleBuyTicket() {
-    if (!id || !event || event.status === 'draft') return;
+    if (!id || !event || event.status === 'draft' || hasEnded) return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -204,7 +204,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleBuySeats() {
-    if (!id || !event || !selectedSectionName || selectedSeats.length === 0 || event.status === 'draft') return;
+    if (!id || !event || !selectedSectionName || selectedSeats.length === 0 || event.status === 'draft' || hasEnded) return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -233,7 +233,7 @@ export default function PublicEventDetail() {
   }
 
   async function handleBuySeriesPass() {
-    if (!id || !event || event.status === 'draft') return;
+    if (!id || !event || event.status === 'draft' || hasEnded) return;
     setRegistering(true);
     setRegisterError(null);
 
@@ -263,6 +263,11 @@ export default function PublicEventDetail() {
   // database), so viewing one is a preview: ticket buttons are switched off.
   const isPreview = event.status === 'draft';
   const canPublish = isPreview && user?.id === event.organizer_id;
+  // Mirrors public.event_has_ended() in the database, which is what actually
+  // blocks registration -- this just keeps the page honest about it without
+  // waiting on a page refresh after the event flips to 'completed'.
+  const effectiveEnd = event.end_date ?? event.start_date;
+  const hasEnded = !event.date_tbd && !!effectiveEnd && new Date(effectiveEnd).getTime() < Date.now();
 
   async function publishFromPreview() {
     if (!event) return;
@@ -289,6 +294,13 @@ export default function PublicEventDetail() {
               )}
             </div>
           </div>
+        </div>
+      )}
+      {!isPreview && hasEnded && event.status !== 'cancelled' && (
+        <div className="sticky top-0 z-40 border-b border-gray-300 bg-gray-100 px-4 py-2.5 sm:px-6">
+          <p className="mx-auto max-w-3xl text-sm text-gray-700">
+            <span className="font-semibold">This event has ended.</span> New registrations and ticket purchases are closed.
+          </p>
         </div>
       )}
       {/* Hero: title and key facts live directly on the image, editorial-style,
@@ -375,18 +387,22 @@ export default function PublicEventDetail() {
             <Link to={`/organizer/events/${event.id}`} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white hover:bg-marigold/90">
               Dashboard
             </Link>
-            <button
-              onClick={async () => {
-                const nextStatus = event.status === 'published' ? 'draft' : 'published';
-                const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', event.id);
-                if (!error) setEvent({ ...event, status: nextStatus });
-              }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                event.status === 'published' ? 'border border-gray-300 text-gray-700 hover:border-magenta hover:text-magenta' : 'bg-mint text-white hover:bg-mint/90'
-              }`}
-            >
-              {event.status === 'published' ? 'Unpublish' : 'Publish event'}
-            </button>
+            {event.status === 'completed' ? (
+              <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500">Ended</span>
+            ) : (
+              <button
+                onClick={async () => {
+                  const nextStatus = event.status === 'published' ? 'draft' : 'published';
+                  const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', event.id);
+                  if (!error) setEvent({ ...event, status: nextStatus });
+                }}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                  event.status === 'published' ? 'border border-gray-300 text-gray-700 hover:border-magenta hover:text-magenta' : 'bg-mint text-white hover:bg-mint/90'
+                }`}
+              >
+                {event.status === 'published' ? 'Unpublish' : 'Publish event'}
+              </button>
+            )}
             <Link to={`/organizer/events/${event.id}/edit`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold">
               Edit
             </Link>
@@ -410,6 +426,8 @@ export default function PublicEventDetail() {
             </div>
             {isPreview ? (
               <span className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-center text-sm font-semibold text-white opacity-50">Available once published</span>
+            ) : hasEnded ? (
+              <span className="rounded-xl bg-gray-700 px-6 py-3 text-center text-sm font-semibold text-white opacity-70">Event has ended</span>
             ) : (
               <a
                 href={safeTicketUrl(event.external_ticket_url)!}
@@ -493,10 +511,10 @@ export default function PublicEventDetail() {
                         <span />
                         <button
                           onClick={() => handleBuySeats()}
-                          disabled={registering || isPreview}
+                          disabled={registering || isPreview || hasEnded}
                           className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                         >
-                          {isPreview ? 'Available once published' : registering ? 'Please wait…' : `Buy ${selectedSeats.length} seat${selectedSeats.length === 1 ? '' : 's'} — $${total.toFixed(2)}`}
+                          {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : `Buy ${selectedSeats.length} seat${selectedSeats.length === 1 ? '' : 's'} — $${total.toFixed(2)}`}
                         </button>
                       </div>
                     </div>
@@ -526,16 +544,18 @@ export default function PublicEventDetail() {
               >
                 Sign in to {isFree ? 'register' : 'buy a ticket'}
               </button>
+            ) : hasEnded ? (
+              <p className="text-sm font-medium text-gray-400">This event has ended.</p>
             ) : isFull ? (
               <p className="text-sm font-medium text-gray-400">This event is full.</p>
             ) : (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 <button
                   onClick={isFree ? handleRegister : handleBuyTicket}
-                  disabled={registering || isPreview}
+                  disabled={registering || isPreview || hasEnded}
                   className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {isPreview ? 'Available once published' : registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
+                  {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
                 </button>
                 {registerError && <p className="text-sm text-magenta">{registerError}</p>}
               </div>
@@ -584,10 +604,10 @@ export default function PublicEventDetail() {
                   ) : (
                     <button
                       onClick={handleBuySeriesPass}
-                      disabled={registering || isPreview}
+                      disabled={registering || isPreview || hasEnded}
                       className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50"
                     >
-                      {isPreview ? 'Available once published' : registering ? 'Please wait…' : 'Buy series pass'}
+                      {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : 'Buy series pass'}
                     </button>
                   )}
                 </div>

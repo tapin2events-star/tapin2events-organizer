@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import BookingThread from './BookingThread';
 import type { ResourceBooking } from '../../lib/types';
 import {
   BOOKING_FILTER_LABELS, BOOKING_STATUS_BORDER, BOOKING_STATUS_LABELS, BOOKING_STATUS_STYLES, OPEN_BOOKING_STATUSES,
@@ -45,6 +46,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [openDetails, setOpenDetails] = useState<Set<string>>(new Set(highlightId ? [highlightId] : []));
+  const [openThread, setOpenThread] = useState<Set<string>>(new Set());
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -227,6 +229,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
               const open = OPEN_BOOKING_STATUSES.includes(b.status);
               const listedEligible = ['accepted', 'confirmed', 'completed'].includes(b.status);
               const detailsOpen = openDetails.has(b.id);
+              const threadOpen = openThread.has(b.id);
               const times = [formatClock(d.start_time), formatClock(d.end_time)].filter(Boolean).join(' – ');
               return (
                 <div
@@ -315,6 +318,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                   ) : (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <button onClick={() => setOpenDetails((prev) => { const n = new Set(prev); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })} className={btn} aria-expanded={detailsOpen}>{detailsOpen ? 'Hide details' : 'Details'}</button>
+                      <button onClick={() => setOpenThread((prev) => { const n = new Set(prev); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })} className={btn} aria-expanded={threadOpen}>💬 {threadOpen ? 'Hide messages' : 'Message'}</button>
                       {(b.status === 'accepted' || b.status === 'confirmed') && (
                         <button onClick={() => update(b, { status: 'completed' }, { status: 'completed' }, 'Could not update this booking. Please try again.')} disabled={busyId === b.id} className={btn}>Mark completed</button>
                       )}
@@ -325,6 +329,12 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                       {open && (
                         <button onClick={() => { setCancellingId(b.id); setCancelReason(''); }} className="ml-auto rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">Cancel booking</button>
                       )}
+                    </div>
+                  )}
+
+                  {threadOpen && (
+                    <div className="mt-3">
+                      <BookingThread bookingId={b.id} otherPartyName={b.resource_name} />
                     </div>
                   )}
 
