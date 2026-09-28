@@ -7,6 +7,8 @@ import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import ResourceMediaManager from '../components/resources/ResourceMediaManager';
 import BookingThread from '../components/bookings/BookingThread';
+import { MessageButton, ThreadPreview } from '../components/bookings/ThreadEntry';
+import { useThreadSummaries } from '../lib/bookingThreads';
 
 interface BookingRow extends ResourceBooking {
   event_title: string;
@@ -66,7 +68,16 @@ export default function ResourceDashboard() {
   const [reviewStats, setReviewStats] = useState({ count: 0, average: 0 });
   const [counteringId, setCounteringId] = useState<string | null>(null);
   const [counterRate, setCounterRate] = useState('');
-  const [openThread, setOpenThread] = useState<Set<string>>(new Set());
+  const [openThread, setOpenThread] = useState<Set<string>>(new Set(highlightId && searchParams.get('messages') ? [highlightId] : []));
+  const { summaries, applyLocal } = useThreadSummaries(bookings.map((b) => b.id));
+  const unreadTotal = [...summaries.values()].reduce((n, s) => n + s.unread_count, 0);
+  function toggleThread(id: string, forceOpen = false) {
+    setOpenThread((prev) => {
+      const n = new Set(prev);
+      if (n.has(id) && !forceOpen) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
 
   useEffect(() => {
     if (authLoading) return;
@@ -102,12 +113,17 @@ export default function ResourceDashboard() {
         ? await supabase.from('events').select('id, title, start_date').in('id', eventIds)
         : { data: [] };
       const eventsById = new Map((events ?? []).map((e) => [e.id, e]));
+      const organizerEmails = [...new Set((bookingRows ?? []).map((b) => b.organizer_email))];
+      const { data: organizers } = organizerEmails.length
+        ? await supabase.from('public_profiles').select('email, full_name').in('email', organizerEmails)
+        : { data: [] };
+      const organizerNames = new Map((organizers ?? []).map((o) => [o.email as string, (o.full_name as string | null)?.trim() || null]));
 
       const mapped = (bookingRows ?? []).map((b: any) => ({
         ...b,
         event_title: eventsById.get(b.event_id)?.title ?? 'Untitled event',
         event_start_date: eventsById.get(b.event_id)?.start_date ?? null,
-        organizer_name: null,
+        organizer_name: organizerNames.get(b.organizer_email) ?? null,
       }));
       setBookings(mapped);
 
@@ -143,7 +159,7 @@ export default function ResourceDashboard() {
           user_email: booking.organizer_email,
           type: `booking_${status}`,
           message: `${resource?.display_name} has ${status} your booking request for ${booking.event_title}`,
-          link: `/organizer?booking=${booking.id}`,
+          link: `/organizer/bookings?booking=${booking.id}`,
         })
         .then(() => {});
 
@@ -181,7 +197,7 @@ export default function ResourceDashboard() {
           user_email: booking.organizer_email,
           type: 'booking_counter_offered',
           message: `${resource?.display_name} proposed $${rate} instead of $${booking.offered_rate} for ${booking.event_title}`,
-          link: `/organizer?booking=${booking.id}`,
+          link: `/organizer/bookings?booking=${booking.id}`,
         })
         .then(() => {});
     }
@@ -223,6 +239,9 @@ export default function ResourceDashboard() {
               }`}
             >
               {t}
+              {t === 'Bookings' && unreadTotal > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-magenta px-1.5 text-[11px] font-bold leading-5 text-white">{unreadTotal}</span>
+              )}
             </button>
           ))}
         </div>
@@ -291,79 +310,70 @@ export default function ResourceDashboard() {
                     {STATUS_LABELS[b.status] ?? b.status}
                   </span>
                 </div>
+                <p className="mt-1 text-sm text-gray-600">From <span className="font-medium text-gray-800">{b.organizer_name ?? b.organizer_email}</span></p>
                 {b.message_from_organizer && (
                   <p className="mt-2 text-sm italic text-gray-600">"{b.message_from_organizer}"</p>
                 )}
-                <p className="mt-1 text-xs text-gray-400">From {b.organizer_email}</p>
 
-                <button
-                  onClick={() => setOpenThread((prev) => { const n = new Set(prev); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })}
-                  className="mt-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold"
-                >
-                  💬 {openThread.has(b.id) ? 'Hide messages' : 'Message'}
-                </button>
-                {openThread.has(b.id) && (
-                  <div className="mt-2">
-                    <BookingThread bookingId={b.id} otherPartyName={b.organizer_email} />
+                {openThread.has(b.id) ? (
+                  <div className="mt-3">
+                    <BookingThread
+                      bookingId={b.id}
+                      otherPartyName={b.organizer_name ?? b.organizer_email}
+                      starters={b.status === 'pending'
+                        ? ['Thanks for the request! A couple of questions first:', 'What time should I arrive for setup?', 'Is equipment provided at the venue?']
+                        : ['What time should I arrive for setup?', 'Is parking available at the venue?', 'Who is my day-of contact?']}
+                      onChange={(info) => applyLocal(b.id, info)}
+                    />
                   </div>
+                ) : (
+                  <ThreadPreview summary={summaries.get(b.id)} myEmail={user?.email ?? undefined} otherName={b.organizer_name ?? b.organizer_email} onOpen={() => toggleThread(b.id, true)} />
                 )}
 
-                {b.status === 'pending' && (
-                  <>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        onClick={() => respond(b, 'accepted')}
-                        disabled={busyId === b.id}
-                        className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-                      >
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {b.status === 'pending' && (
+                    <>
+                      <button onClick={() => respond(b, 'accepted')} disabled={busyId === b.id} className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
                         Accept
                       </button>
-                      <button
-                        onClick={() => setCounteringId(counteringId === b.id ? null : b.id)}
-                        disabled={busyId === b.id}
-                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50"
-                      >
+                      <button onClick={() => setCounteringId(counteringId === b.id ? null : b.id)} disabled={busyId === b.id} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50">
                         Counter offer
                       </button>
-                      <button
-                        onClick={() => respond(b, 'rejected')}
-                        disabled={busyId === b.id}
-                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-magenta hover:text-magenta disabled:opacity-50"
-                      >
+                      <button onClick={() => respond(b, 'rejected')} disabled={busyId === b.id} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-magenta hover:text-magenta disabled:opacity-50">
                         Decline
                       </button>
+                    </>
+                  )}
+                  {b.status === 'accepted' && (
+                    <button onClick={() => markCompleted(b)} disabled={busyId === b.id} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50">
+                      Mark as completed
+                    </button>
+                  )}
+                  <MessageButton summary={summaries.get(b.id)} open={openThread.has(b.id)} onToggle={() => toggleThread(b.id)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50" />
+                </div>
+                {b.status === 'pending' && counteringId === b.id && (
+                  <div className="mt-2 rounded-lg bg-gray-50 p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">Propose $</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={counterRate}
+                        onChange={(e) => setCounterRate(e.target.value)}
+                        className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-base text-gray-900"
+                        placeholder={String(b.offered_rate)}
+                      />
+                      <button
+                        onClick={() => sendCounterOffer(b)}
+                        disabled={busyId === b.id || !counterRate}
+                        className="rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50"
+                      >
+                        Send
+                      </button>
                     </div>
-                    {counteringId === b.id && (
-                      <div className="mt-2 flex items-center gap-2 rounded-lg bg-gray-50 p-3">
-                        <span className="text-sm text-gray-500">Propose $</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={counterRate}
-                          onChange={(e) => setCounterRate(e.target.value)}
-                          className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900"
-                          placeholder={String(b.offered_rate)}
-                        />
-                        <button
-                          onClick={() => sendCounterOffer(b)}
-                          disabled={busyId === b.id || !counterRate}
-                          className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-ink hover:bg-marigold/90 disabled:opacity-50"
-                        >
-                          Send
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-                {b.status === 'accepted' && (
-                  <button
-                    onClick={() => markCompleted(b)}
-                    disabled={busyId === b.id}
-                    className="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50"
-                  >
-                    Mark as completed
-                  </button>
+                    <p className="mt-1.5 text-xs text-gray-500">Want to explain your rate? Open the conversation and add a note.</p>
+                  </div>
                 )}
               </div>
             ))}

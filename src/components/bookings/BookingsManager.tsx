@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import BookingThread from './BookingThread';
+import { MessageButton, ThreadPreview } from './ThreadEntry';
+import { useThreadSummaries } from '../../lib/bookingThreads';
 import type { ResourceBooking } from '../../lib/types';
 import {
   BOOKING_FILTER_LABELS, BOOKING_STATUS_BORDER, BOOKING_STATUS_LABELS, BOOKING_STATUS_STYLES, OPEN_BOOKING_STATUSES,
@@ -46,7 +48,15 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [openDetails, setOpenDetails] = useState<Set<string>>(new Set(highlightId ? [highlightId] : []));
-  const [openThread, setOpenThread] = useState<Set<string>>(new Set());
+  const [openThread, setOpenThread] = useState<Set<string>>(new Set(highlightId && searchParams.get('messages') ? [highlightId] : []));
+  const { summaries, applyLocal } = useThreadSummaries(bookings.map((b) => b.id));
+  function toggleThread(id: string, forceOpen = false) {
+    setOpenThread((prev) => {
+      const n = new Set(prev);
+      if (n.has(id) && !forceOpen) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -267,6 +277,21 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                     </div>
                   </div>
 
+                  {threadOpen ? (
+                    <div className="mt-3">
+                      <BookingThread
+                        bookingId={b.id}
+                        otherPartyName={b.resource_name}
+                        starters={b.status === 'counter_offered'
+                          ? [...(Number(b.offered_rate) > 0 ? [`Could you do ${money(b.offered_rate)}?`] : []), 'Can we meet in the middle?', 'What does that rate include?']
+                          : ['Is this date still available?', 'What do you need for setup?', 'Is there flexibility on the rate?']}
+                        onChange={(info) => applyLocal(b.id, info)}
+                      />
+                    </div>
+                  ) : (
+                    <ThreadPreview summary={summaries.get(b.id)} myEmail={user?.email} otherName={b.resource_name} onOpen={() => toggleThread(b.id, true)} />
+                  )}
+
                   {b.status === 'counter_offered' && (
                     <div className="mt-3 rounded-lg bg-blue-50 p-3">
                       <p className="text-sm text-blue-800">{b.resource_name} proposed <strong>{money(b.counter_offer_rate)}</strong> instead of {money(b.offered_rate)}.</p>
@@ -274,6 +299,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button onClick={() => respondToCounter(b, true)} disabled={busyId === b.id} className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">Accept {money(b.counter_offer_rate)}</button>
                         <button onClick={() => respondToCounter(b, false)} disabled={busyId === b.id} className={btn}>Decline</button>
+                        {!threadOpen && !summaries.get(b.id)?.message_count && <button onClick={() => toggleThread(b.id, true)} className={btn}>💬 Discuss</button>}
                       </div>
                     </div>
                   )}
@@ -318,7 +344,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                   ) : (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <button onClick={() => setOpenDetails((prev) => { const n = new Set(prev); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })} className={btn} aria-expanded={detailsOpen}>{detailsOpen ? 'Hide details' : 'Details'}</button>
-                      <button onClick={() => setOpenThread((prev) => { const n = new Set(prev); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })} className={btn} aria-expanded={threadOpen}>💬 {threadOpen ? 'Hide messages' : 'Message'}</button>
+                      <MessageButton summary={summaries.get(b.id)} open={threadOpen} onToggle={() => toggleThread(b.id)} className={btn} />
                       {(b.status === 'accepted' || b.status === 'confirmed') && (
                         <button onClick={() => update(b, { status: 'completed' }, { status: 'completed' }, 'Could not update this booking. Please try again.')} disabled={busyId === b.id} className={btn}>Mark completed</button>
                       )}
@@ -332,11 +358,6 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                     </div>
                   )}
 
-                  {threadOpen && (
-                    <div className="mt-3">
-                      <BookingThread bookingId={b.id} otherPartyName={b.resource_name} />
-                    </div>
-                  )}
 
                   {reviewingId === b.id && (
                     <div className="mt-3 rounded-lg bg-gray-50 p-3">
