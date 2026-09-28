@@ -157,7 +157,7 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
           message: yourMove
             ? `A resource sent a counter-offer for "${e.title}", which starts ${whenLabel(days)}.`
             : `A resource hasn't confirmed their booking for "${e.title}" yet, and it starts ${whenLabel(days)}.`,
-          action: { label: yourMove ? 'Respond' : 'View booking', to: '/organizer#resource-bookings' },
+          action: { label: yourMove ? 'Respond' : 'View booking', to: '/organizer/bookings' },
           sortTime: new Date(e.start_date).getTime(),
         });
       }

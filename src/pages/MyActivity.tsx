@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import MyProductOrders from '../components/products/MyProductOrders';
 import MyVendorApplications from '../components/MyVendorApplications';
-import MyResourceBookings from '../components/resources/MyResourceBookings';
+import BookingsManager from '../components/bookings/BookingsManager';
 import MyTipsSent from '../components/MyTipsSent';
 import { seatText } from '../lib/seats';
 
@@ -374,7 +374,7 @@ export default function MyActivity() {
         )}
         {(view === 'all' || view === 'orders') && <MyProductOrders title="Orders" />}
         {(view === 'all' || view === 'vendor') && <div id="vendor" className="scroll-mt-20"><MyVendorApplications title="Vendor Spots" /></div>}
-        {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><MyResourceBookings title="Bookings" /></div>}
+        {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><BookingsManager title="Bookings" /></div>}
         {(view === 'all' || view === 'tips') && <MyTipsSent />}
         {view !== 'all' && view !== 'tickets' && counts && counts[view] === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-12 text-center text-gray-500">Nothing here yet.</div>

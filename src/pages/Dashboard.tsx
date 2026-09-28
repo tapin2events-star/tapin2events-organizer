@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import NeedsAttention from '../components/dashboard/NeedsAttention';
 import EventActions from '../components/dashboard/EventActions';
 import { loadEarnings, money, summarize } from '../lib/earnings';
@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import TicketStubCard from '../components/TicketStubCard';
 import PayoutsCard from '../components/PayoutsCard';
-import MyResourceBookings from '../components/resources/MyResourceBookings';
+import BookingsSummary from '../components/bookings/BookingsSummary';
 import FilterPillGroup from '../components/FilterPillGroup';
 import type { TapEvent } from '../lib/types';
 
@@ -166,10 +166,11 @@ export default function Dashboard() {
   }, [search, events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, bookingFilter, eventsWithPendingBookings, eventsWithBookedResources, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
 
   const location = useLocation();
+  const navigate = useNavigate();
+  // Older links (emails, alerts) point here; bookings now have their own page.
   useEffect(() => {
-    if (loading || location.hash !== '#resource-bookings') return;
-    setTimeout(() => document.getElementById('resource-bookings')?.scrollIntoView({ behavior: 'smooth' }), 150);
-  }, [loading, location.hash]);
+    if (location.hash === '#resource-bookings') navigate('/organizer/bookings', { replace: true });
+  }, [location.hash, navigate]);
 
   return (
     <div>
@@ -388,9 +389,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div id="resource-bookings" className="scroll-mt-24">
-        <MyResourceBookings />
-      </div>
+      <BookingsSummary />
     </div>
   );
 }

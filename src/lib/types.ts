@@ -152,10 +152,16 @@ export interface ResourceBooking {
     service_date?: string;
     start_time?: string;
     end_time?: string;
+    setup_time?: string;
+    breakdown_time?: string;
     special_requirements?: string;
   };
   offered_rate: number;
   counter_offer_rate: number | null;
+  final_rate?: number | null;
+  cancellation_reason?: string | null;
+  // Whether a confirmed booking is listed on the public event page.
+  show_on_event_page?: boolean;
   message_from_organizer: string | null;
   response_from_resource: string | null;
   status: ResourceBookingStatus;

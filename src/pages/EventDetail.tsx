@@ -9,13 +9,14 @@ import type { TapEvent } from '../lib/types';
 import OverviewTab from '../components/tabs/OverviewTab';
 import SalesTab from '../components/tabs/SalesTab';
 import MessagesTab from '../components/tabs/MessagesTab';
+import BookingsManager from '../components/bookings/BookingsManager';
 import TasksTab from '../components/tabs/TasksTab';
 import TeamTab from '../components/tabs/TeamTab';
 import VendorApplicationsTab from '../components/tabs/VendorApplicationsTab';
 import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 
-const TABS = ['Overview', 'Ticket Sales', 'Messages', 'Products', 'Tasks', 'Team', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Tasks', 'Team', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -36,6 +37,8 @@ export default function EventDetail() {
   const [hasSales, setHasSales] = useState<boolean | undefined>(undefined);
   useEscapeKey(() => setManageOpen(false), manageOpen);
   const isOwner = !!event && !!user && event.organizer_id === user.id;
+  // Bookings belong to whoever made them, so only the event's owner sees this tab.
+  const visibleTabs = TABS.filter((t) => t !== 'Bookings' || isOwner);
   useEffect(() => {
     if (!isOwner || !event) return;
     (async () => {
@@ -194,7 +197,7 @@ export default function EventDetail() {
       )}
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-300">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -218,6 +221,7 @@ export default function EventDetail() {
           <ProductOrdersPanel ownerType="event" ownerId={id} />
         </>
       )}
+      {tab === 'Bookings' && isOwner && <BookingsManager eventId={id} />}
       {tab === 'Tasks' && <TasksTab eventId={id} eventTitle={event.title} />}
       {tab === 'Team' && <TeamTab eventId={id} eventTitle={event.title} />}
       {tab === 'Vendor applications' && <VendorApplicationsTab eventId={id} />}

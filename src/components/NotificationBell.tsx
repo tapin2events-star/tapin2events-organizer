@@ -28,6 +28,7 @@ const ICONS: [string, string][] = [
   ['refund_issued', '💸'],
   ['event_message', '📣'],
   ['tagged_in_post', '🏷️'],
+  ['booking_cancelled', '🚫'],
   ['event_updated', '📝'],
   ['booking', '📅'],
   ['counter_offer', '📅'],
