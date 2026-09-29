@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import type { TapEvent } from '../../lib/types';
+import { NeedsAttentionSkeleton } from '../../components/ui/Skeleton';
 
 type Level = 'urgent' | 'warning' | 'info';
 
@@ -37,8 +38,12 @@ function whenLabel(days: number) {
 
 // Surfaces things organizers commonly miss, each with a button that goes
 // straight to the fix. Pure database checks -- no AI, so it costs nothing.
-export default function NeedsAttention({ events, userId, userEmail }: { events: TapEvent[]; userId: string; userEmail: string }) {
+export default function NeedsAttention({ events, userId, userEmail, onReady }: { events: TapEvent[]; userId: string; userEmail: string; onReady?: () => void }) {
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
+  const onReadyRef = useRef(onReady);
+  useEffect(() => { onReadyRef.current = onReady; });
+  // Before paint, so the dashboard reveals everything below in the same frame.
+  useLayoutEffect(() => { if (alerts) onReadyRef.current?.(); }, [alerts]);
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -209,7 +214,7 @@ export default function NeedsAttention({ events, userId, userEmail }: { events: 
     };
   }, [events, userId, userEmail]);
 
-  if (!alerts) return null;
+  if (!alerts) return <NeedsAttentionSkeleton />;
 
   async function dismiss(key: string) {
     setDismissed((prev) => new Set(prev).add(key));

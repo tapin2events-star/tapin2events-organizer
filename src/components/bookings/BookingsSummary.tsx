@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import { RowSkeleton } from '../../components/ui/Skeleton';
 
 // Compact row on the Organizer Dashboard (styled like the Earnings and Vendor
 // Applications rows around it) that leads to the Bookings page.
-export default function BookingsSummary() {
+export default function BookingsSummary({ show = true, onReady }: { show?: boolean; onReady?: () => void }) {
   const { user } = useAuth();
+  const onReadyRef = useRef(onReady);
+  useEffect(() => { onReadyRef.current = onReady; });
   const [counts, setCounts] = useState<{ reply: number; waiting: number; booked: number; total: number; unread: number } | null>(null);
 
   useEffect(() => {
@@ -27,7 +30,9 @@ export default function BookingsSummary() {
     })();
   }, [user?.email]);
 
-  if (!counts) return null;
+  useLayoutEffect(() => { if (counts) onReadyRef.current?.(); }, [counts]);
+
+  if (!counts || !show) return <RowSkeleton twoLine />;
   const empty = counts.total === 0;
   return (
     <Link

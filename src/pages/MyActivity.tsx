@@ -7,6 +7,7 @@ import MyVendorApplications from '../components/MyVendorApplications';
 import BookingsManager from '../components/bookings/BookingsManager';
 import MyTipsSent from '../components/MyTipsSent';
 import { seatText } from '../lib/seats';
+import { ListSkeleton, LoadingRegion, Skeleton } from '../components/ui/Skeleton';
 
 interface MyTicket {
   id: string;
@@ -95,7 +96,8 @@ export default function MyActivity() {
       supabase.from('resource_bookings').select('id', { count: 'exact', head: true }).eq('organizer_email', email),
       supabase.from('event_vendor_applications').select('id', { count: 'exact', head: true }).eq('resource_email', email),
       supabase.from('tips').select('id', { count: 'exact', head: true }).eq('tipper_email', email).in('payment_status', ['paid', 'refunded']),
-    ]).then(([o, b, v, t]) => setCounts({ orders: o.count ?? 0, bookings: b.count ?? 0, vendor: v.count ?? 0, tips: t.count ?? 0 }));
+    ]).then(([o, b, v, t]) => setCounts({ orders: o.count ?? 0, bookings: b.count ?? 0, vendor: v.count ?? 0, tips: t.count ?? 0 }))
+      .catch(() => setCounts({ orders: 0, bookings: 0, vendor: 0, tips: 0 }));
   }, [user?.email]);
 
   useEffect(() => {
@@ -200,13 +202,26 @@ export default function MyActivity() {
     }
   }
 
+  const holdTop = loading || counts === null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-3xl px-4 py-10">
         <h1 className="font-display text-3xl font-extrabold text-gray-900">My Activity</h1>
         <p className="mt-1 text-gray-500">Your tickets, orders, bookings, and more, all in one place.</p>
 
-        {(() => {
+        {/* The filter chips and your tickets appear together, so the chips
+            can't push the tickets down when their counts arrive. */}
+        {holdTop && (
+          <LoadingRegion label="Loading your activity">
+            <div className="mt-5 flex flex-wrap gap-2">
+              {['w-14', 'w-24', 'w-20', 'w-24'].map((w, i) => <Skeleton key={i} className={`h-9 rounded-full ${w}`} />)}
+            </div>
+            <ListSkeleton />
+          </LoadingRegion>
+        )}
+
+        {!holdTop && (() => {
           const chips: { key: View; label: string; count: number }[] = [
             { key: 'tickets', label: 'Tickets', count: tickets.length },
             { key: 'orders', label: 'Orders', count: counts?.orders ?? 0 },
@@ -235,13 +250,13 @@ export default function MyActivity() {
           );
         })()}
 
-        {(view === 'all' || view === 'tickets') && (
+        {!holdTop && (view === 'all' || view === 'tickets') && (
         <div id="tickets">
         {view === 'all' && tickets.length > 0 && (counts?.orders || counts?.bookings || counts?.vendor || counts?.tips) ? (
           <h2 className="mt-8 font-display text-xl font-bold text-gray-900">Tickets</h2>
         ) : null}
         {loading ? (
-          <p className="mt-6 text-gray-500">Loading…</p>
+          <ListSkeleton />
         ) : tickets.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
             <p className="text-lg font-semibold text-gray-500">No tickets yet</p>
@@ -372,10 +387,15 @@ export default function MyActivity() {
         )}
         </div>
         )}
-        {(view === 'all' || view === 'orders') && <MyProductOrders title="Orders" />}
-        {(view === 'all' || view === 'vendor') && <div id="vendor" className="scroll-mt-20"><MyVendorApplications title="Vendor Spots" /></div>}
-        {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><BookingsManager title="Bookings" /></div>}
-        {(view === 'all' || view === 'tips') && <MyTipsSent />}
+        {/* On "All", these wait for your tickets so they don't get pushed down when the tickets arrive. */}
+        {!(holdTop && view === 'all') && (
+          <>
+            {(view === 'all' || view === 'orders') && <MyProductOrders title="Orders" />}
+            {(view === 'all' || view === 'vendor') && <div id="vendor" className="scroll-mt-20"><MyVendorApplications title="Vendor Spots" /></div>}
+            {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><BookingsManager title="Bookings" /></div>}
+            {(view === 'all' || view === 'tips') && <MyTipsSent />}
+          </>
+        )}
         {view !== 'all' && view !== 'tickets' && counts && counts[view] === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-12 text-center text-gray-500">Nothing here yet.</div>
         )}

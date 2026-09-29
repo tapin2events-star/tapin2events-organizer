@@ -10,6 +10,7 @@ import EditPostModal from '../components/feed/EditPostModal';
 import ExpandableCaption from '../components/feed/ExpandableCaption';
 import { loadTags, type TaggedPerson } from '../lib/postTags';
 import { useEscapeKey } from '../lib/useEscapeKey';
+import { FeedSkeleton } from '../components/ui/Skeleton';
 
 interface Post {
   id: string;
@@ -409,7 +410,7 @@ export default function Feed() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }
 
-  if (loading) return <div className="flex h-[100dvh] items-center justify-center text-muted">Loading…</div>;
+  if (loading) return <FeedSkeleton />;
 
   if (posts.length === 0 && feedMode === 'for_you' && !eventFilterId) {
     return (

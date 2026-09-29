@@ -7,6 +7,7 @@ import ShopSection from '../components/products/ShopSection';
 import ResourceMediaSection from '../components/resources/ResourceMediaSection';
 import EventLinks from '../components/EventLinks';
 import { visibleLinks } from '../lib/socialLinks';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for a quote';
@@ -115,7 +116,7 @@ export default function ResourceProfile() {
     setTimeout(() => document.getElementById('book')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
   }, [loading, resource, location.hash]);
 
-  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (loading) return <DetailSkeleton className="mx-auto max-w-5xl px-4 py-10" label="Loading profile" />;
   if (!resource) return <div className="p-10 text-center text-magenta">Resource not found.</div>;
   // Inactive or suspended profiles (including deleted accounts) are hidden
   // from everyone except the owner and admins.

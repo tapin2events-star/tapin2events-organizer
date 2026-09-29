@@ -12,6 +12,7 @@ import VendorApplicationForm from '../components/VendorApplicationForm';
 import SeatPicker from '../components/SeatPicker';
 import { resolveFeatureIcon } from '../lib/featureIconMap';
 import CommunityPosts from '../components/discover/CommunityPosts';
+import { EventPageSkeleton } from '../components/ui/Skeleton';
 
 export default function PublicEventDetail() {
   const location = useLocation();
@@ -254,7 +255,7 @@ export default function PublicEventDetail() {
     window.location.href = data.url;
   }
 
-  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (loading) return <EventPageSkeleton />;
   if (!event) return <div className="p-10 text-center text-magenta">Event not found.</div>;
 
   const isFull = !!event.max_capacity && confirmedCount >= event.max_capacity && !myTicket;

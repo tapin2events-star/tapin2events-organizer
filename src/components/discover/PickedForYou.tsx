@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import type { TapEvent } from '../../lib/types';
 import { groupsFor, normalizeInterests, type InterestGroup } from '../../lib/interests';
@@ -30,14 +30,19 @@ export default function PickedForYou({
   userId,
   userEmail,
   onToggleSave,
+  onReady,
 }: {
   events: TapEvent[];
   savedIds: string[];
   userId: string;
   userEmail: string;
   onToggleSave: (eventId: string) => void;
+  onReady?: () => void;
 }) {
   const [signals, setSignals] = useState<Signals | null>(null);
+  const onReadyRef = useRef(onReady);
+  useEffect(() => { onReadyRef.current = onReady; });
+  useEffect(() => { if (signals) onReadyRef.current?.(); }, [signals]);
   const [editing, setEditing] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     try {

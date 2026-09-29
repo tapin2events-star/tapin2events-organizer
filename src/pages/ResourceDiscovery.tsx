@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { RESOURCE_CATEGORIES, type Resource } from '../lib/types';
+import { EventCardGridSkeleton } from '../components/ui/Skeleton';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for quote';
@@ -81,10 +82,12 @@ export default function ResourceDiscovery() {
         </div>
 
         <p className="mt-6 text-sm text-gray-500">
-          {loading ? 'Loading…' : `${filtered.length} resource${filtered.length === 1 ? '' : 's'} found`}
+          {loading ? <span aria-hidden className="inline-block h-4 w-28 rounded-md bg-gray-200/80 align-middle motion-safe:animate-pulse" /> : `${filtered.length} resource${filtered.length === 1 ? '' : 's'} found`}
         </p>
 
-        {!loading && filtered.length === 0 ? (
+        {loading ? (
+          <EventCardGridSkeleton count={6} className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3" />
+        ) : filtered.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
             <p className="text-lg font-semibold text-gray-500">No resources found</p>
             <p className="mt-1 text-gray-400">Try a different search or category</p>

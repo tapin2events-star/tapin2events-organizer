@@ -7,6 +7,7 @@ import DiscoverEventCard from '../components/discover/DiscoverEventCard';
 import PickedForYou from '../components/discover/PickedForYou';
 import { useMyTickets } from '../lib/useMyTickets';
 import DiscoverMap from '../components/discover/DiscoverMap';
+import { EventCardGridSkeleton } from '../components/ui/Skeleton';
 
 type DiscoverTab = 'all' | 'map' | 'today' | 'saved';
 
@@ -17,6 +18,9 @@ export default function Discover() {
   const [events, setEvents] = useState<TapEvent[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  // 'waiting' until Picked for you is ready; 'skipped' if it took too long,
+  // so it never appears late and pushes the list down.
+  const [picksState, setPicksState] = useState<'waiting' | 'ready' | 'skipped'>('waiting');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [priceFilter, setPriceFilter] = useState<'' | 'free' | 'paid'>('');
@@ -122,6 +126,16 @@ export default function Discover() {
     await supabase.from('profiles').update({ saved_event_ids: next }).eq('email', user.email);
   }
 
+  // "Picked for you" sits above the list; keep the list's placeholders up
+  // until it's ready so it doesn't push the list down after it appears.
+  const showPicks = tab === 'all' && !loading && !!user?.id && !!user?.email && !search.trim() && !category && !priceFilter;
+  // Never let a slow or failed "Picked for you" hold the list back for long.
+  useEffect(() => {
+    if (!showPicks || picksState !== 'waiting') return;
+    const timer = setTimeout(() => setPicksState('skipped'), 2500);
+    return () => clearTimeout(timer);
+  }, [showPicks, picksState]);
+
   return (
     <div className="min-h-screen bg-ink">
       <div className="mx-auto max-w-6xl px-4 py-10">
@@ -179,7 +193,7 @@ export default function Discover() {
         )}
 
         <p className="mt-6 text-sm text-gray-500">
-          {loading ? 'Loading…' : `${filtered.length} event${filtered.length === 1 ? '' : 's'} found`}
+          {loading ? <span aria-hidden className="inline-block h-4 w-28 rounded-md bg-gray-200/80 align-middle motion-safe:animate-pulse" /> : `${filtered.length} event${filtered.length === 1 ? '' : 's'} found`}
         </p>
 
         <div className="mt-3 flex gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1">
@@ -201,13 +215,15 @@ export default function Discover() {
           ))}
         </div>
 
-        {tab === 'all' && !loading && user?.id && user.email && !search.trim() && !category && !priceFilter && (
-          <PickedForYou events={events} savedIds={savedIds} userId={user.id} userEmail={user.email} onToggleSave={toggleSave} />
+        {showPicks && picksState !== 'skipped' && user?.id && user.email && (
+          <PickedForYou events={events} savedIds={savedIds} userId={user.id} userEmail={user.email} onToggleSave={toggleSave} onReady={() => setPicksState((st) => (st === 'waiting' ? 'ready' : st))} />
         )}
 
         {tab === 'map' ? (
           <DiscoverMap events={filtered} />
-        ) : !loading && tabFiltered.length === 0 ? (
+        ) : loading || (showPicks && picksState === 'waiting') ? (
+          <EventCardGridSkeleton />
+        ) : tabFiltered.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
             <p className="text-lg font-semibold text-gray-500">
               {tab === 'saved' ? 'No saved events yet' : tab === 'today' ? 'Nothing happening today' : 'No events found'}

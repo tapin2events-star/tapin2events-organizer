@@ -9,6 +9,7 @@ import ResourceMediaManager from '../components/resources/ResourceMediaManager';
 import BookingThread from '../components/bookings/BookingThread';
 import { MessageButton, ThreadPreview } from '../components/bookings/ThreadEntry';
 import { useThreadSummaries } from '../lib/bookingThreads';
+import { LoadingRegion, Skeleton, ListSkeleton } from '../components/ui/Skeleton';
 
 interface BookingRow extends ResourceBooking {
   event_title: string;
@@ -203,7 +204,18 @@ export default function ResourceDashboard() {
     }
   }
 
-  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (loading) {
+    return (
+      <LoadingRegion label="Loading your dashboard" className="mx-auto max-w-3xl px-4 py-10">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="mt-2 h-4 w-40" />
+        <Skeleton className="mt-4 h-10 w-28 rounded-lg" />
+        <div className="mt-6 flex gap-6 border-b border-gray-200 pb-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-4 w-16" />)}</div>
+        <div className="mt-6 grid grid-cols-3 gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
+        <ListSkeleton rows={3} />
+      </LoadingRegion>
+    );
+  }
 
   if (!resource) {
     return (

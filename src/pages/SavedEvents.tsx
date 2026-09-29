@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DiscoverEventCard from '../components/discover/DiscoverEventCard';
 import { useMyTickets } from '../lib/useMyTickets';
+import { EventCardGridSkeleton } from '../components/ui/Skeleton';
 
 type When = 'upcoming' | 'past' | 'all';
 type Price = 'any' | 'free' | 'paid';
@@ -124,7 +125,7 @@ export default function SavedEvents() {
       <p className="mt-1 text-muted">Events you've bookmarked. Tap the bookmark on any card to remove it.</p>
 
       {loading ? (
-        <p className="mt-6 text-muted">Loading…</p>
+        <EventCardGridSkeleton count={3} />
       ) : saved.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-14 text-center">
           <p className="font-display text-lg font-semibold text-bone">No saved events yet</p>

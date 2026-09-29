@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { PRODUCT_CATEGORIES, type Product } from '../lib/types';
 import MyProductOrders from '../components/products/MyProductOrders';
 import MyProducts from '../components/products/MyProducts';
+import { EventCardGridSkeleton } from '../components/ui/Skeleton';
 
 interface ProductWithSeller extends Product {
   sellerName: string;
@@ -102,7 +103,7 @@ export default function ProductsPage() {
           </div>
 
           {loading ? (
-            <p className="mt-6 text-sm text-gray-500">Loading…</p>
+            <EventCardGridSkeleton count={6} className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" />
           ) : filtered.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
               <p className="text-lg font-semibold text-gray-500">No products found</p>

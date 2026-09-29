@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { seatGroups, seatText } from '../lib/seats';
+import { TicketSkeleton } from '../components/ui/Skeleton';
 
 interface PassData {
   ticket: {
@@ -78,7 +79,7 @@ export default function TicketPass() {
     }
   }
 
-  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (loading) return <TicketSkeleton />;
   if (error || !data) return <div className="p-10 text-center text-magenta">{error || 'Ticket not found.'}</div>;
 
   const { ticket, event, organizerName } = data;

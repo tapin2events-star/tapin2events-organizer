@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Product } from '../lib/types';
 import { Link } from 'react-router-dom';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 
 interface Variant {
   id: string;
@@ -44,7 +45,7 @@ export default function ProductDetail() {
     })();
   }, [id]);
 
-  if (loading) return <p className="p-6 text-muted">Loading…</p>;
+  if (loading) return <DetailSkeleton label="Loading product" />;
   if (!product) return <p className="p-6 text-muted">This product could not be found.</p>;
 
   const hasVariants = variants.length > 0;

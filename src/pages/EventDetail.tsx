@@ -15,6 +15,7 @@ import TeamTab from '../components/tabs/TeamTab';
 import VendorApplicationsTab from '../components/tabs/VendorApplicationsTab';
 import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
+import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
 const TABS = ['Overview', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Tasks', 'Team', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
@@ -77,7 +78,7 @@ export default function EventDetail() {
       });
   }, [id]);
 
-  if (loading) return <p className="text-muted">Loading…</p>;
+  if (loading) return <OrganizerEventSkeleton />;
   if (!event || !id) return <p className="text-magenta">Event not found.</p>;
 
   return (

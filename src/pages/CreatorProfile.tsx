@@ -6,6 +6,7 @@ import FollowListModal from '../components/profile/FollowListModal';
 import MyPostsManager from '../components/profile/MyPostsManager';
 import CreatorEvents, { type CreatorEvent } from '../components/profile/CreatorEvents';
 import CreatorProducts, { type CreatorProduct } from '../components/profile/CreatorProducts';
+import { ProfileSkeleton } from '../components/ui/Skeleton';
 
 interface CreatorProfile {
   email: string;
@@ -143,7 +144,7 @@ export default function CreatorProfile() {
     setFollowBusy(false);
   }
 
-  if (loading) return <p className="p-6 text-muted">Loading…</p>;
+  if (loading) return <ProfileSkeleton />;
   if (!profile) return <p className="p-6 text-muted">This profile could not be found.</p>;
 
   const isOwnProfile = user?.email === profile.email;

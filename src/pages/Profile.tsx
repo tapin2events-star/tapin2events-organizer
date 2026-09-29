@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DeleteAccountSection from '../components/DeleteAccountSection';
+import { ProfileSkeleton } from '../components/ui/Skeleton';
 
 interface ProfileRow {
   full_name: string | null;
@@ -153,7 +154,7 @@ export default function Profile() {
     await supabase.from('profiles').update({ notification_preferences: next }).eq('id', user.id);
   }
 
-  if (loading) return <p className="text-muted">Loading…</p>;
+  if (loading) return <ProfileSkeleton withBack={false} className="mx-auto max-w-3xl" />;
   if (!profile) return <p className="text-muted">Couldn't load your profile.</p>;
 
   const notifs = profile.notification_preferences ?? {};

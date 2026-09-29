@@ -10,11 +10,14 @@ import PayoutsCard from '../components/PayoutsCard';
 import BookingsSummary from '../components/bookings/BookingsSummary';
 import FilterPillGroup from '../components/FilterPillGroup';
 import type { TapEvent } from '../lib/types';
+import { Skeleton, RowSkeleton, DashboardEventsSkeleton, NeedsAttentionSkeleton } from '../components/ui/Skeleton';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [events, setEvents] = useState<TapEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [alertsReady, setAlertsReady] = useState(false);
+  const [bookingsReady, setBookingsReady] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [chargesEnabled, setChargesEnabled] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
@@ -172,6 +175,16 @@ export default function Dashboard() {
     if (location.hash === '#resource-bookings') navigate('/organizer/bookings', { replace: true });
   }, [location.hash, navigate]);
 
+  // Everything below "Needs attention" appears together, once it and the
+  // bookings row are ready, so nothing gets pushed down after it shows.
+  // Capped, so a slow check never holds the page for long.
+  const revealed = !loading && alertsReady && bookingsReady;
+  useEffect(() => {
+    if (loading || revealed) return;
+    const timer = setTimeout(() => { setAlertsReady(true); setBookingsReady(true); }, 2500);
+    return () => clearTimeout(timer);
+  }, [loading, revealed]);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -192,11 +205,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {!loading && user?.id && user.email && <NeedsAttention events={events} userId={user.id} userEmail={user.email} />}
+      {!loading && user?.id && user.email ? <NeedsAttention events={events} userId={user.id} userEmail={user.email} onReady={() => setAlertsReady(true)} /> : <NeedsAttentionSkeleton />}
 
-      {!loading && <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
+      {!revealed ? <Skeleton className="mb-4 h-12 w-full rounded-xl" /> : <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
-      {!loading && earnings && (
+      {!revealed && <RowSkeleton tall />}
+      {revealed && earnings && (
         <Link to="/organizer/earnings" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Earnings</p>
@@ -207,8 +221,9 @@ export default function Dashboard() {
         </Link>
       )}
 
-      <BookingsSummary />
+      <BookingsSummary show={revealed} onReady={() => setBookingsReady(true)} />
 
+      {!revealed ? <RowSkeleton subtitle /> : (
       <Link
         to="/organizer/vendor-applications"
         className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface2 px-4 py-3 hover:border-marigold"
@@ -224,8 +239,9 @@ export default function Dashboard() {
           <span className="text-muted">&rarr;</span>
         </div>
       </Link>
+      )}
 
-      {!loading && events.length > 0 && (
+      {revealed && events.length > 0 && (
         <div className="mb-4">
           <div className="flex gap-2">
           <div className="relative min-w-0 flex-1">
@@ -320,8 +336,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {loading ? (
-        <p className="text-muted">Loading…</p>
+      {!revealed ? (
+        <DashboardEventsSkeleton />
       ) : events.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-16 text-center">
           <p className="font-display text-xl font-semibold text-bone">No events yet</p>
