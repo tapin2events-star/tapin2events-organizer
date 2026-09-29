@@ -10,6 +10,19 @@ function pricingLabel(r: Resource) {
   return `$${r.base_rate}`;
 }
 
+type Sort = 'rating' | 'price' | 'distance' | 'newest';
+
+// Straight-line distance in miles.
+function milesBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 3958.8 * 2 * Math.asin(Math.sqrt(h));
+}
+
+const selectClass = 'rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base text-gray-900 outline-none focus-visible:border-marigold';
+
 export default function ResourceDiscovery() {
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
@@ -17,6 +30,25 @@ export default function ResourceDiscovery() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [sort, setSort] = useState<Sort>('rating');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [radius, setRadius] = useState('');
+  const [minRating, setMinRating] = useState('');
+  const [here, setHere] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
+
+  function requestLocation(then?: () => void) {
+    if (here) { then?.(); return; }
+    if (!navigator.geolocation) { setLocError("Your browser can't share your location."); return; }
+    setLocating(true);
+    setLocError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setHere({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocating(false); then?.(); },
+      () => { setLocating(false); setLocError('Location is off, so we can\u2019t sort by distance. You can still search by city.'); },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
+    );
+  }
 
   useEffect(() => {
     (async () => {
@@ -30,15 +62,39 @@ export default function ResourceDiscovery() {
     })();
   }, []);
 
+  const distanceOf = (r: Resource) =>
+    here && r.latitude != null && r.longitude != null ? milesBetween(here, { lat: Number(r.latitude), lng: Number(r.longitude) }) : null;
+
   const filtered = useMemo(() => {
-    return resources
+    const q = search.trim().toLowerCase();
+    const cap = maxPrice ? Number(maxPrice) : null;
+    const within = radius ? Number(radius) : null;
+    const stars = minRating ? Number(minRating) : null;
+    const list = resources
       .filter((r) => {
-        if (!search.trim()) return true;
-        const q = search.toLowerCase();
-        return r.display_name.toLowerCase().includes(q) || r.bio.toLowerCase().includes(q);
+        if (!q) return true;
+        const hay = [r.display_name, r.bio, r.city, r.state, ...(r.categories ?? [])].filter(Boolean).join(' ').toLowerCase();
+        return hay.includes(q);
       })
-      .filter((r) => !category || r.categories.includes(category));
-  }, [resources, search, category]);
+      .filter((r) => !category || (r.categories ?? []).includes(category))
+      // "Contact for quote" has no listed price, so it's kept out only when a price cap is set.
+      .filter((r) => cap == null || (r.pricing_type !== 'contact_quote' && Number(r.base_rate ?? 0) <= cap))
+      .filter((r) => stars == null || (r.review_count > 0 && Number(r.average_rating ?? 0) >= stars))
+      .filter((r) => {
+        if (within == null || !here) return true;
+        const d = distanceOf(r);
+        return d != null && d <= within;
+      });
+    const priceOf = (r: Resource) => (r.pricing_type === 'contact_quote' ? Infinity : Number(r.base_rate ?? 0));
+    return [...list].sort((a, b) => {
+      if (sort === 'price') return priceOf(a) - priceOf(b);
+      if (sort === 'distance') return (distanceOf(a) ?? Infinity) - (distanceOf(b) ?? Infinity);
+      if (sort === 'newest') return String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''));
+      return Number(b.average_rating ?? 0) - Number(a.average_rating ?? 0) || (b.review_count ?? 0) - (a.review_count ?? 0);
+    });
+  }, [resources, search, category, maxPrice, radius, minRating, sort, here]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtersOn = !!(category || maxPrice || radius || minRating || search);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
@@ -66,13 +122,16 @@ export default function ResourceDiscovery() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or specialty"
-            className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none placeholder:text-gray-400 focus-visible:border-marigold"
+            placeholder="Search by name, specialty, or city"
+            type="search"
+            aria-label="Search resources"
+            className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base text-gray-900 outline-none placeholder:text-gray-400 focus-visible:border-marigold"
           />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none focus-visible:border-marigold"
+            aria-label="Category"
+            className={selectClass}
           >
             <option value="">All categories</option>
             {RESOURCE_CATEGORIES.map((c) => (
@@ -81,8 +140,48 @@ export default function ResourceDiscovery() {
           </select>
         </div>
 
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+          <select value={sort} aria-label="Sort by" className={selectClass}
+            onChange={(e) => { const v = e.target.value as Sort; if (v === 'distance') requestLocation(() => setSort('distance')); else setSort(v); }}>
+            <option value="rating">Top rated</option>
+            <option value="price">Lowest price</option>
+            <option value="distance">Nearest to me</option>
+            <option value="newest">Newest</option>
+          </select>
+          <select value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} aria-label="Price" className={selectClass}>
+            <option value="">Any price</option>
+            <option value="100">Up to $100</option>
+            <option value="250">Up to $250</option>
+            <option value="500">Up to $500</option>
+            <option value="1000">Up to $1,000</option>
+          </select>
+          <select value={radius} aria-label="Distance" className={selectClass}
+            onChange={(e) => { const v = e.target.value; if (v) requestLocation(() => setRadius(v)); else setRadius(''); }}>
+            <option value="">Any distance</option>
+            <option value="10">Within 10 miles</option>
+            <option value="25">Within 25 miles</option>
+            <option value="50">Within 50 miles</option>
+            <option value="100">Within 100 miles</option>
+          </select>
+          <select value={minRating} onChange={(e) => setMinRating(e.target.value)} aria-label="Rating" className={selectClass}>
+            <option value="">Any rating</option>
+            <option value="4">4★ and up</option>
+            <option value="4.5">4.5★ and up</option>
+          </select>
+        </div>
+        {locating && <p className="mt-2 text-sm text-gray-500">Finding your location…</p>}
+        {locError && <p className="mt-2 text-sm text-orange-700">{locError}</p>}
+
         <p className="mt-6 text-sm text-gray-500">
-          {loading ? <span aria-hidden className="inline-block h-4 w-28 rounded-md bg-gray-200/80 align-middle motion-safe:animate-pulse" /> : `${filtered.length} resource${filtered.length === 1 ? '' : 's'} found`}
+          {loading ? <span aria-hidden className="inline-block h-4 w-28 rounded-md bg-gray-200/80 align-middle motion-safe:animate-pulse" /> : <>
+            {filtered.length} resource{filtered.length === 1 ? '' : 's'} found
+            {filtersOn && (
+              <button type="button" className="ml-2 font-medium text-marigold hover:underline"
+                onClick={() => { setSearch(''); setCategory(''); setMaxPrice(''); setRadius(''); setMinRating(''); }}>
+                Clear filters
+              </button>
+            )}
+          </>}
         </p>
 
         {loading ? (
@@ -111,12 +210,15 @@ export default function ResourceDiscovery() {
                 )}
                 <div className="p-5">
                   <p className="font-display text-lg font-bold text-gray-900">{r.display_name}</p>
-                  {(r.city || r.state) && (
-                    <p className="mt-0.5 text-xs text-gray-400">{[r.city, r.state].filter(Boolean).join(', ')}</p>
+                  {(r.city || r.state || distanceOf(r) != null) && (
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {[r.city, r.state].filter(Boolean).join(', ')}
+                      {distanceOf(r) != null && `${r.city || r.state ? ' · ' : ''}${Math.round(distanceOf(r)!)} mi away`}
+                    </p>
                   )}
                   <p className="mt-1 line-clamp-2 text-sm text-gray-500">{r.bio}</p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {r.categories.slice(0, 2).map((c) => (
+                    {(r.categories ?? []).slice(0, 2).map((c) => (
                       <span key={c} className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">{c}</span>
                     ))}
                   </div>
