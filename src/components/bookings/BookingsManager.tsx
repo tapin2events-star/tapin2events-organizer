@@ -5,10 +5,11 @@ import { useAuth } from '../../context/AuthContext';
 import BookingThread from './BookingThread';
 import { MessageButton, ThreadPreview } from './ThreadEntry';
 import { useThreadSummaries } from '../../lib/bookingThreads';
+import { functionError } from '../../lib/functionError';
 import type { ResourceBooking } from '../../lib/types';
 import {
   BOOKING_FILTER_LABELS, BOOKING_STATUS_BORDER, BOOKING_STATUS_LABELS, BOOKING_STATUS_STYLES, OPEN_BOOKING_STATUSES,
-  agreedRate, bookingPriority, filterOf, formatClock, formatServiceDate, money, tidy, type BookingFilter,
+  agreedRate, bookingFees, bookingPriority, filterOf, formatClock, formatServiceDate, money, tidy, type BookingFilter,
 } from '../../lib/bookings';
 
 interface BookingRow extends ResourceBooking {
@@ -57,6 +58,10 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
       return n;
     });
   }
+  const [payReady, setPayReady] = useState<Map<string, boolean>>(new Map());
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payNotice, setPayNotice] = useState<string | null>(null);
+  const justPaid = searchParams.get('paid') === '1';
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -100,10 +105,23 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
         };
       })
     );
+    // Which unpaid, agreed bookings can actually be paid (the resource has payouts connected)?
+    const unpaidIds = (rows ?? []).filter((b) => ['accepted', 'confirmed'].includes(b.status) && b.payment_status !== 'paid').map((b) => b.id);
+    if (unpaidIds.length) {
+      const { data: ready } = await supabase.rpc('booking_payment_ready', { p_booking_ids: unpaidIds });
+      setPayReady(new Map(((ready ?? []) as { booking_id: string; resource_can_receive: boolean }[]).map((r) => [r.booking_id, r.resource_can_receive])));
+    }
     setLoading(false);
   }
 
   useEffect(() => { load(); }, [user?.email, eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Coming back from Stripe: the payment is recorded a moment later by the webhook, so refresh shortly.
+  useEffect(() => {
+    if (!justPaid) return;
+    const t = window.setTimeout(load, 3500);
+    return () => window.clearTimeout(t);
+  }, [justPaid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (highlightId && itemRefs.current[highlightId]) itemRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -157,7 +175,44 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
     }
   }
 
+  async function payBooking(b: BookingRow) {
+    setPayingId(b.id);
+    setActionError(null);
+    setPayNotice(null);
+    const base = window.location.origin + import.meta.env.BASE_URL;
+    const { data, error } = await supabase.functions.invoke('create-booking-checkout', {
+      body: { booking_id: b.id, successUrl: `${base}organizer/bookings?paid=1&booking=${b.id}`, cancelUrl: `${base}organizer/bookings?booking=${b.id}` },
+    });
+    setPayingId(null);
+    if (error || !data?.url) {
+      const e = await functionError(error, "Couldn't start checkout. Please try again.");
+      if (e.code === 'payee_not_connected') {
+        setPayReady((prev) => new Map(prev).set(b.id, false));
+        setPayNotice(e.message);
+      } else {
+        setActionError(e.message);
+      }
+      return;
+    }
+    window.location.href = data.url;
+  }
+
+  async function cancelPaidBooking(b: BookingRow) {
+    const reason = cancelReason.trim().slice(0, 300);
+    setBusyId(b.id);
+    setActionError(null);
+    const { data, error } = await supabase.functions.invoke('cancel-booking', { body: { booking_id: b.id, reason } });
+    setBusyId(null);
+    if (error || !data?.ok) {
+      setActionError((await functionError(error, 'Could not cancel and refund this booking. Please try again.')).message);
+      return;
+    }
+    patchLocal(b.id, { status: 'cancelled', payment_status: 'refunded', cancellation_reason: reason || null, refund_amount: data.refunded_cents ? data.refunded_cents / 100 : b.amount_paid ?? null });
+    setCancellingId(null); setCancelReason('');
+  }
+
   async function cancelBooking(b: BookingRow) {
+    if (b.payment_status === 'paid') return cancelPaidBooking(b);
     const reason = cancelReason.trim().slice(0, 300);
     const ok = await update(b, { status: 'cancelled', cancellation_reason: reason || null }, { status: 'cancelled', cancellation_reason: reason || null }, 'Could not cancel this booking. Please try again.');
     if (ok) { setCancellingId(null); setCancelReason(''); }
@@ -203,8 +258,14 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
       </div>
 
       <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-        TapIN doesn't handle payment for bookings. Once a resource accepts, agree on payment with them directly.
+        Once a resource accepts, you can pay them securely through TapIN. They receive the full agreed price; you pay a small service fee on top. If a paid booking is cancelled, the booking price is refunded.
       </p>
+      {justPaid && (
+        <p role="status" className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          Thanks! Your payment went through. It can take a few seconds to show up below.
+        </p>
+      )}
+      {payNotice && <p role="alert" className="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800">{payNotice}</p>}
 
       {bookings.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 px-6 py-12 text-center">
@@ -259,7 +320,11 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                           <Link to={`/resources/${b.resource_id}`} className="font-semibold text-gray-900 hover:text-marigold">{b.resource_name}</Link>
                           {b.resource_categories.length > 0 && <p className="truncate text-xs text-gray-500">{b.resource_categories.slice(0, 3).join(' · ')}</p>}
                         </div>
-                        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${BOOKING_STATUS_STYLES[b.status] ?? BOOKING_STATUS_STYLES.pending}`}>{BOOKING_STATUS_LABELS[b.status] ?? b.status}</span>
+                        <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                          {b.payment_status === 'paid' && <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Paid</span>}
+                          {b.payment_status === 'refunded' && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Refunded</span>}
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${BOOKING_STATUS_STYLES[b.status] ?? BOOKING_STATUS_STYLES.pending}`}>{BOOKING_STATUS_LABELS[b.status] ?? b.status}</span>
+                        </span>
                       </div>
                       <p className="mt-1 text-sm text-gray-600">
                         {!eventId && (
@@ -304,6 +369,36 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                     </div>
                   )}
 
+                  {['accepted', 'confirmed'].includes(b.status) && b.payment_status !== 'paid' && agreed != null && agreed > 0 && (() => {
+                    const fees = bookingFees(agreed);
+                    const ready = payReady.get(b.id);
+                    return (
+                      <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
+                        <p className="text-sm font-semibold text-emerald-900">Pay {b.resource_name} through TapIN</p>
+                        <dl className="mt-2 space-y-0.5 text-sm text-gray-700">
+                          <div className="flex justify-between"><dt>Booking</dt><dd>{money(agreed)}</dd></div>
+                          <div className="flex justify-between"><dt>Service fee</dt><dd>{money(fees.service)}</dd></div>
+                          <div className="flex justify-between"><dt>Payment processing</dt><dd>{money(fees.processing)}</dd></div>
+                          <div className="flex justify-between border-t border-emerald-200 pt-1 font-semibold text-gray-900"><dt>Total</dt><dd>{money(fees.total)}</dd></div>
+                        </dl>
+                        {ready === false ? (
+                          <p className="mt-2 text-xs text-orange-800">{b.resource_name} hasn't connected payouts yet, so they can't be paid through TapIN. Tap Pay and we'll let them know.</p>
+                        ) : (
+                          <p className="mt-2 text-xs text-gray-500">Service and processing fees are non-refundable. The booking price is refunded if you cancel.</p>
+                        )}
+                        <button onClick={() => payBooking(b)} disabled={payingId === b.id} className="mt-2 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 sm:w-auto">
+                          {payingId === b.id ? 'Opening checkout…' : `Pay ${money(fees.total)}`}
+                        </button>
+                      </div>
+                    );
+                  })()}
+
+                  {b.payment_status === 'paid' && b.event_status === 'cancelled' && b.status !== 'cancelled' && (
+                    <p className="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800">
+                      This event was cancelled. Use <strong>Cancel booking</strong> below to get your {money(b.amount_paid ?? b.final_rate ?? 0)} back.
+                    </p>
+                  )}
+
                   {listedEligible && (
                     <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg bg-gray-50 px-3 py-2.5">
                       <input type="checkbox" checked={b.show_on_event_page ?? true} onChange={() => toggleListed(b)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
@@ -318,6 +413,8 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
 
                   {detailsOpen && (
                     <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 rounded-lg border border-gray-100 p-3 text-sm sm:grid-cols-2">
+                      {b.payment_status === 'paid' && <div><dt className="text-xs text-gray-400">Paid</dt><dd className="text-gray-800">{money(b.amount_paid ?? b.final_rate)} + {money(b.platform_fee)} fees{b.paid_at ? ` on ${new Date(b.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}</dd></div>}
+                      {b.payment_status === 'refunded' && b.refund_amount != null && <div><dt className="text-xs text-gray-400">Refunded</dt><dd className="text-gray-800">{money(b.refund_amount)} (fees kept)</dd></div>}
                       {d.setup_time && <div><dt className="text-xs text-gray-400">Setup</dt><dd className="text-gray-800">{formatClock(d.setup_time)}</dd></div>}
                       {d.breakdown_time && <div><dt className="text-xs text-gray-400">Breakdown</dt><dd className="text-gray-800">{formatClock(d.breakdown_time)}</dd></div>}
                       <div><dt className="text-xs text-gray-400">Requested</dt><dd className="text-gray-800">{new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
@@ -334,10 +431,11 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                   {cancellingId === b.id ? (
                     <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
                       <p className="text-sm font-semibold text-red-800">Cancel this booking?</p>
+                      {b.payment_status === 'paid' && <p className="mt-0.5 text-xs font-medium text-red-800">You'll be refunded {money(b.amount_paid ?? b.final_rate ?? 0)} to your card. Service and processing fees aren't refundable.</p>}
                       <p className="mt-0.5 text-xs text-red-700">{b.resource_name} will be told right away{b.status === 'accepted' || b.status === 'confirmed' ? ", and will no longer be listed on your event page" : ''}. This can't be undone.</p>
                       <textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} maxLength={300} rows={2} placeholder="Reason (optional). They'll see this." className="mt-2 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-base text-gray-900" />
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <button onClick={() => cancelBooking(b)} disabled={busyId === b.id} className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">{busyId === b.id ? 'Cancelling…' : 'Cancel booking'}</button>
+                        <button onClick={() => cancelBooking(b)} disabled={busyId === b.id} className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">{busyId === b.id ? (b.payment_status === 'paid' ? 'Refunding…' : 'Cancelling…') : b.payment_status === 'paid' ? 'Cancel & refund' : 'Cancel booking'}</button>
                         <button onClick={() => { setCancellingId(null); setCancelReason(''); }} disabled={busyId === b.id} className={btn}>Keep it</button>
                       </div>
                     </div>

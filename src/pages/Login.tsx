@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, SUSPENDED_MESSAGE } from '../context/AuthContext';
 
 export default function Login() {
   const { user, sendCode, verifyCode, signInWithPassword } = useAuth();
@@ -29,7 +29,7 @@ export default function Login() {
     setBusy(true);
     const { error } = await signInWithPassword(email, password);
     setBusy(false);
-    if (error) setError('Incorrect email or password.');
+    if (error) setError(error === SUSPENDED_MESSAGE ? error : 'Incorrect email or password.');
   }
 
   const code = digits.join('');
@@ -54,7 +54,7 @@ export default function Login() {
     const { error } = await verifyCode(email, fullCode);
     setBusy(false);
     if (error) {
-      setError('That code didn\u2019t work. It may have expired \u2014 request a new one below.');
+      setError(error === SUSPENDED_MESSAGE ? error : 'That code didn\u2019t work. It may have expired \u2014 request a new one below.');
       setDigits(['', '', '', '', '', '']);
       inputs.current[0]?.focus();
     }
@@ -118,6 +118,11 @@ export default function Login() {
         {new URLSearchParams(location.search).get('deleted') === '1' && (
           <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-center text-sm text-green-800">
             Your account has been deleted. Thanks for being part of TapIN.
+          </div>
+        )}
+        {new URLSearchParams(location.search).get('suspended') === '1' && (
+          <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
+            {SUSPENDED_MESSAGE}
           </div>
         )}
         <div className="bg-surface rounded-2xl shadow-sm border border-gray-200 p-8">

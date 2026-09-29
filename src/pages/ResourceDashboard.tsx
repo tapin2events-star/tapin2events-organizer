@@ -10,6 +10,8 @@ import BookingThread from '../components/bookings/BookingThread';
 import { MessageButton, ThreadPreview } from '../components/bookings/ThreadEntry';
 import { useThreadSummaries } from '../lib/bookingThreads';
 import { LoadingRegion, Skeleton, ListSkeleton } from '../components/ui/Skeleton';
+import PayoutsCard from '../components/PayoutsCard';
+import { money } from '../lib/bookings';
 
 interface BookingRow extends ResourceBooking {
   event_title: string;
@@ -67,6 +69,7 @@ export default function ResourceDashboard() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reviewStats, setReviewStats] = useState({ count: 0, average: 0 });
+  const [payouts, setPayouts] = useState<{ hasAccount: boolean; chargesEnabled: boolean } | null>(null);
   const [counteringId, setCounteringId] = useState<string | null>(null);
   const [counterRate, setCounterRate] = useState('');
   const [openThread, setOpenThread] = useState<Set<string>>(new Set(highlightId && searchParams.get('messages') ? [highlightId] : []));
@@ -91,6 +94,9 @@ export default function ResourceDashboard() {
       const { data: res, error: resError } = await supabase.from('resources').select('*').eq('email', user.email).maybeSingle();
       if (resError) console.error('Failed to load resource profile:', resError);
       setResource((res as Resource) ?? null);
+      supabase.from('profiles').select('stripe_account_id, stripe_charges_enabled').eq('id', user.id).maybeSingle().then(({ data }) => {
+        setPayouts({ hasAccount: !!data?.stripe_account_id, chargesEnabled: !!data?.stripe_charges_enabled });
+      });
       if (!res) {
         setLoading(false);
         return;
@@ -260,6 +266,11 @@ export default function ResourceDashboard() {
 
         {tab === 'Bookings' && (
           <>
+        {payouts && (
+          <div className="mt-6">
+            <PayoutsCard hasAccount={payouts.hasAccount} chargesEnabled={payouts.chargesEnabled} variant="resource" />
+          </div>
+        )}
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
           <div className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 text-center sm:gap-2 sm:p-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-50">
@@ -318,11 +329,30 @@ export default function ResourceDashboard() {
                       {' \u00b7 '}Offered ${b.offered_rate}
                     </p>
                   </div>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[b.status] ?? STATUS_STYLES.pending}`}>
-                    {STATUS_LABELS[b.status] ?? b.status}
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {b.payment_status === 'paid' && <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Paid</span>}
+                    {b.payment_status === 'refunded' && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Refunded</span>}
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[b.status] ?? STATUS_STYLES.pending}`}>
+                      {STATUS_LABELS[b.status] ?? b.status}
+                    </span>
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-600">From <span className="font-medium text-gray-800">{b.organizer_name ?? b.organizer_email}</span></p>
+                {b.payment_status === 'paid' && (
+                  <p className="mt-1 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                    You were paid <strong>{money(b.amount_paid ?? b.final_rate)}</strong>{b.paid_at ? ` on ${new Date(b.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}. It's on its way to your bank through Stripe.
+                  </p>
+                )}
+                {b.payment_status === 'refunded' && (
+                  <p className="mt-1 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">This booking was cancelled and the payment was returned to the organizer.</p>
+                )}
+                {['accepted', 'confirmed'].includes(b.status) && b.payment_status !== 'paid' && (
+                  <p className="mt-1 rounded-lg bg-orange-50 px-3 py-2 text-sm text-orange-800">
+                    {payouts?.chargesEnabled
+                      ? 'Waiting for the organizer to pay. You\'ll be notified as soon as they do.'
+                      : 'Connect payouts above so the organizer can pay you through TapIN.'}
+                  </p>
+                )}
                 {b.message_from_organizer && (
                   <p className="mt-2 text-sm italic text-gray-600">"{b.message_from_organizer}"</p>
                 )}
@@ -356,7 +386,7 @@ export default function ResourceDashboard() {
                       </button>
                     </>
                   )}
-                  {b.status === 'accepted' && (
+                  {(b.status === 'accepted' || b.status === 'confirmed') && (
                     <button onClick={() => markCompleted(b)} disabled={busyId === b.id} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50">
                       Mark as completed
                     </button>

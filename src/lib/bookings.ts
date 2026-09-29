@@ -92,3 +92,12 @@ export function agreedRate(b: { status: string; final_rate?: number | null; offe
 export function tidy(s: unknown): string {
   return String(s ?? '').replace(/\s+/g, ' ').trim();
 }
+
+// Same fees as tickets: 3.7% + $1.79 service fee and 2.9% payment processing,
+// paid by the organizer on top of the agreed price (the resource receives it in full).
+export function bookingFees(rate: number) {
+  const cents = Math.round((Number(rate) || 0) * 100);
+  const service = Math.round(cents * 0.037) + 179;
+  const processing = Math.round(cents * 0.029);
+  return { service: service / 100, processing: processing / 100, total: (cents + service + processing) / 100 };
+}

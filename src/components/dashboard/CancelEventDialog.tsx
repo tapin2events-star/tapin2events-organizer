@@ -25,12 +25,18 @@ export default function CancelEventDialog({ eventId, eventTitle, onClose, onCanc
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [paidBookings, setPaidBookings] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
   useEscapeKey(() => !busy && onClose());
 
   useEffect(() => {
     supabase.functions.invoke('cancel-event-refunds', { body: { action: 'preview', event_id: eventId } }).then(({ data, error }) => {
       if (error || !data || data.error) setLoadError("Couldn't check this event's payments. Please try again.");
       else setPreview(data as Preview);
+    });
+    // Paid resource bookings aren't refunded automatically; the organizer cancels each one so it can be refunded.
+    supabase.from('resource_bookings').select('final_rate, amount_paid').eq('event_id', eventId).eq('payment_status', 'paid').then(({ data }) => {
+      const rows = data ?? [];
+      setPaidBookings({ count: rows.length, total: rows.reduce((n, r) => n + Number(r.amount_paid ?? r.final_rate ?? 0), 0) });
     });
   }, [eventId]);
 
@@ -124,6 +130,11 @@ export default function CancelEventDialog({ eventId, eventTitle, onClose, onCanc
                   </p>
                 )}
               </div>
+            )}
+            {preview && paidBookings.count > 0 && (
+              <p className="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800">
+                You've paid {paidBookings.count} resource booking{paidBookings.count === 1 ? '' : 's'} ({money(paidBookings.total)}) for this event. Those aren't refunded automatically. After cancelling, open <strong>Bookings</strong> and choose <strong>Cancel booking</strong> on each one to get the booking price back.
+              </p>
             )}
             {preview && ManualList}
             {loadError && <p className="mt-2 text-sm text-magenta">{loadError}</p>}

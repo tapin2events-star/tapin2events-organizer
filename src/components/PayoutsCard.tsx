@@ -10,9 +10,10 @@ export default function PayoutsCard({
 }: {
   hasAccount: boolean;
   chargesEnabled: boolean;
-  variant?: 'organizer' | 'creator';
+  variant?: 'organizer' | 'creator' | 'resource';
 }) {
   const creator = variant === 'creator';
+  const resource = variant === 'resource';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +35,9 @@ export default function PayoutsCard({
   if (chargesEnabled) {
     return (
       <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-        {creator
+        {resource
+          ? '✓ Payouts are set up — organizers can pay your bookings through TapIN, and the money goes straight to your bank account.'
+          : creator
           ? '✓ Payouts are set up — people can tip your videos, and tips go straight to your bank account.'
           : '✓ Payouts are set up — ticket sales for your events go straight to your bank account.'}
       </div>
@@ -46,10 +49,14 @@ export default function PayoutsCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-bone">
-            {hasAccount ? 'Finish setting up payouts' : creator ? 'Set up payouts to receive tips' : 'Get paid for your paid events'}
+            {hasAccount ? 'Finish setting up payouts' : resource ? 'Set up payouts to get paid for bookings' : creator ? 'Set up payouts to receive tips' : 'Get paid for your paid events'}
           </p>
           <p className="text-xs text-muted">
-            {creator
+            {resource
+              ? hasAccount
+                ? "Your Stripe setup isn't finished yet. Finish it so organizers can pay you through TapIN."
+                : 'Connect a bank account through Stripe so organizers can pay your bookings through TapIN. You receive the full agreed price.'
+              : creator
               ? hasAccount
                 ? "Your Stripe setup isn't finished yet. Finish it so people can start tipping your videos."
                 : 'Connect a bank account through Stripe so people can tip your videos. Tips are deposited directly to you.'

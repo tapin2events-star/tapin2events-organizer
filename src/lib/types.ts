@@ -160,6 +160,12 @@ export interface ResourceBooking {
   offered_rate: number;
   counter_offer_rate: number | null;
   final_rate?: number | null;
+  // Set when the organizer pays through TapIN ('paid'), or after a refund ('refunded').
+  payment_status?: string | null;
+  amount_paid?: number | null;
+  platform_fee?: number | null;
+  refund_amount?: number | null;
+  paid_at?: string | null;
   cancellation_reason?: string | null;
   // Whether a confirmed booking is listed on the public event page.
   show_on_event_page?: boolean;

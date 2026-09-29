@@ -25,6 +25,15 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+export const SUSPENDED_MESSAGE =
+  'This account has been suspended. If you think this is a mistake, email tapin2events@gmail.com.';
+
+// Supabase reports a banned login as "User is banned"; show something people can act on.
+function friendlyAuthError(message: string | undefined | null): string | null {
+  if (!message) return null;
+  return /banned/i.test(message) ? SUSPENDED_MESSAGE : message;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,12 +70,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     supabase
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, is_banned')
       .eq('id', userId)
       .single()
       .then(({ data, error }) => {
         if (error) {
           console.error('Failed to check admin status:', error);
+        } else if (data?.is_banned) {
+          // Suspended while signed in: end the session and explain why.
+          supabase.auth.signOut().finally(() => {
+            window.location.assign(import.meta.env.BASE_URL + 'login?suspended=1');
+          });
+          return;
         } else {
           setIsAdmin(!!data?.is_admin);
         }
@@ -84,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
       },
     });
-    return { error: error?.message ?? null };
+    return { error: friendlyAuthError(error?.message) };
   }
 
   async function verifyCode(email: string, code: string) {
@@ -93,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token: code.trim(),
       type: 'email',
     });
-    return { error: error?.message ?? null };
+    return { error: friendlyAuthError(error?.message) };
   }
 
   async function signInWithPassword(email: string, password: string) {
@@ -101,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: email.trim().toLowerCase(),
       password,
     });
-    return { error: error?.message ?? null };
+    return { error: friendlyAuthError(error?.message) };
   }
 
   async function signOut() {
