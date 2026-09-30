@@ -120,10 +120,17 @@ function ItemForm({ initial, defaultDate, lineup, onSave, onCancel }: {
           {(Object.keys(KIND_LABELS) as ScheduleKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
         </select>
       </label>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <label className="text-sm font-medium text-gray-700">Date<input type="date" className={input} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-        <label className="text-sm font-medium text-gray-700">Starts<input type="time" className={input} value={start} onChange={(e) => setStart(e.target.value)} /></label>
-        <label className="text-sm font-medium text-gray-700">Ends <span className="font-normal text-gray-400">(optional)</span><input type="time" className={input} value={end} onChange={(e) => setEnd(e.target.value)} /></label>
+      {/* Phone: date on its own row, start and end side by side. Wider screens: all three in a row. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <label className="col-span-2 min-w-0 text-sm font-medium text-gray-700 sm:col-span-1">Date<input type="date" className={input} value={date} onChange={(e) => setDate(e.target.value)} /></label>
+        <label className="min-w-0 text-sm font-medium text-gray-700">Starts
+          <input type="time" className={input} value={start} onChange={(e) => setStart(e.target.value)} aria-describedby="start-hint" />
+          {!start && <span id="start-hint" className="mt-0.5 block text-xs font-normal text-gray-400">Tap to choose</span>}
+        </label>
+        <label className="min-w-0 text-sm font-medium text-gray-700">Ends <span className="font-normal text-gray-400">(optional)</span>
+          <input type="time" className={input} value={end} onChange={(e) => setEnd(e.target.value)} />
+          {end && <button type="button" onClick={() => setEnd('')} className="mt-0.5 block text-xs font-normal text-marigold hover:underline">Clear end time</button>}
+        </label>
       </div>
       <label className="text-sm font-medium text-gray-700">Where <span className="font-normal text-gray-400">(optional)</span><input className={input} value={area} maxLength={80} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Main stage, Room B, Courtyard" /></label>
       <label className="text-sm font-medium text-gray-700">Details <span className="font-normal text-gray-400">(optional)</span><textarea className={input} rows={2} maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} /></label>

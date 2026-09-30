@@ -8,23 +8,36 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 export default function ScrollToTop() {
   const { pathname, hash } = useLocation();
   const navType = useNavigationType();
-  const [visible, setVisible] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     if (navType === 'POP' || hash) return;
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
   }, [pathname, hash, navType]);
 
+  // Hidden while someone is filling in a field, so it never covers inputs.
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const isField = (el: Element | null) => !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+    const onIn = () => setTyping(isField(document.activeElement));
+    const onOut = () => window.setTimeout(() => setTyping(isField(document.activeElement)), 0);
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => { document.removeEventListener('focusin', onIn); document.removeEventListener('focusout', onOut); };
+  }, []);
+
   useEffect(() => {
     let frame = 0;
     const onScroll = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setVisible(window.scrollY > 600));
+      frame = requestAnimationFrame(() => setScrolled(window.scrollY > 600));
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
   }, []);
+
+  const visible = scrolled && !typing;
 
   function toTop() {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
