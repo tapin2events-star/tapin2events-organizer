@@ -11,6 +11,7 @@ import { MessageButton, ThreadPreview } from '../components/bookings/ThreadEntry
 import { useThreadSummaries } from '../lib/bookingThreads';
 import { LoadingRegion, Skeleton, ListSkeleton } from '../components/ui/Skeleton';
 import PayoutsCard from '../components/PayoutsCard';
+import BookingListing, { type Listing } from '../components/bookings/BookingListing';
 import { money } from '../lib/bookings';
 
 interface BookingRow extends ResourceBooking {
@@ -70,6 +71,7 @@ export default function ResourceDashboard() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reviewStats, setReviewStats] = useState({ count: 0, average: 0 });
   const [payouts, setPayouts] = useState<{ hasAccount: boolean; chargesEnabled: boolean } | null>(null);
+  const [listings, setListings] = useState<Map<string, Listing>>(new Map());
   const [counteringId, setCounteringId] = useState<string | null>(null);
   const [counterRate, setCounterRate] = useState('');
   const [openThread, setOpenThread] = useState<Set<string>>(new Set(highlightId && searchParams.get('messages') ? [highlightId] : []));
@@ -133,6 +135,11 @@ export default function ResourceDashboard() {
         organizer_name: organizerNames.get(b.organizer_email) ?? null,
       }));
       setBookings(mapped);
+      if (mapped.length) {
+        supabase.rpc('booking_listing', { p_booking_ids: mapped.map((b) => b.id) }).then(({ data }) => {
+          setListings(new Map(((data ?? []) as ({ booking_id: string } & Listing)[]).map((l) => [l.booking_id, l])));
+        });
+      }
 
       // Stats computed live from real data rather than trusting stored
       // counters, which nothing currently keeps in sync.
@@ -338,6 +345,7 @@ export default function ResourceDashboard() {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-600">From <span className="font-medium text-gray-800">{b.organizer_name ?? b.organizer_email}</span></p>
+                <BookingListing listing={listings.get(b.id)} audience="resource" />
                 {b.payment_status === 'paid' && (
                   <p className="mt-1 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                     You were paid <strong>{money(b.amount_paid ?? b.final_rate)}</strong>{b.paid_at ? ` on ${new Date(b.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}. It's on its way to your bank through Stripe.

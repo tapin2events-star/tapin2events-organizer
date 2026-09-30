@@ -6,6 +6,7 @@ import BookingThread from './BookingThread';
 import { MessageButton, ThreadPreview } from './ThreadEntry';
 import { useThreadSummaries } from '../../lib/bookingThreads';
 import { functionError } from '../../lib/functionError';
+import BookingListing, { type Listing } from './BookingListing';
 import type { ResourceBooking } from '../../lib/types';
 import {
   BOOKING_FILTER_LABELS, BOOKING_STATUS_BORDER, BOOKING_STATUS_LABELS, BOOKING_STATUS_STYLES, OPEN_BOOKING_STATUSES,
@@ -64,6 +65,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
     });
   }
   const [payReady, setPayReady] = useState<Map<string, boolean>>(new Map());
+  const [listings, setListings] = useState<Map<string, Listing>>(new Map());
   const [payingId, setPayingId] = useState<string | null>(null);
   const [payNotice, setPayNotice] = useState<string | null>(null);
   const justPaid = searchParams.get('paid') === '1';
@@ -110,6 +112,11 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
         };
       })
     );
+    if (rows?.length) {
+      supabase.rpc('booking_listing', { p_booking_ids: rows.map((b) => b.id) }).then(({ data }) => {
+        setListings(new Map(((data ?? []) as ({ booking_id: string } & Listing)[]).map((l) => [l.booking_id, l])));
+      });
+    }
     // Which unpaid, agreed bookings can actually be paid (the resource has payouts connected)?
     const unpaidIds = (rows ?? []).filter((b) => ['accepted', 'confirmed', 'completed'].includes(b.status) && !['paid', 'captured', 'paid_out', 'refunded'].includes(b.payment_status ?? '')).map((b) => b.id);
     if (unpaidIds.length) {
@@ -410,11 +417,12 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                       <span className="text-sm text-gray-700">
                         <span className="font-medium">List on the event page</span>
                         <span className="block text-xs text-gray-500">
-                          Shows {b.resource_name} under "Featured artists &amp; services"{b.event_status && !['published', 'completed'].includes(b.event_status) ? ' once the event is published' : ''}.
+                          Adds {b.resource_name} to the event's lineup{b.event_status && !['published', 'completed'].includes(b.event_status) ? ' once the event is published' : ''}. Set their role and time in the event's <Link to={`/organizer/events/${b.event_id}`} className="text-marigold hover:underline">Lineup &amp; schedule</Link> tab.
                         </span>
                       </span>
                     </label>
                   )}
+                  {listedEligible && b.show_on_event_page && <BookingListing listing={listings.get(b.id)} audience="organizer" />}
 
                   {detailsOpen && (
                     <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 rounded-lg border border-gray-100 p-3 text-sm sm:grid-cols-2">

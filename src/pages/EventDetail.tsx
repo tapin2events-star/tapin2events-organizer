@@ -13,11 +13,12 @@ import BookingsManager from '../components/bookings/BookingsManager';
 import TasksTab from '../components/tabs/TasksTab';
 import TeamTab from '../components/tabs/TeamTab';
 import VendorApplicationsTab from '../components/tabs/VendorApplicationsTab';
+import LineupScheduleTab from '../components/tabs/LineupScheduleTab';
 import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
-const TABS = ['Overview', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Tasks', 'Team', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Lineup & schedule', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Tasks', 'Team', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -214,6 +215,7 @@ export default function EventDetail() {
       </div>
 
       {tab === 'Overview' && <OverviewTab event={event} />}
+      {tab === 'Lineup & schedule' && <LineupScheduleTab event={event} isOwner={isOwner} />}
       {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
 import ShopSection from '../components/products/ShopSection';
 import EventLinks from '../components/EventLinks';
-import EventLineup from '../components/EventLineup';
+import EventProgram from '../components/EventProgram';
 import { visibleLinks } from '../lib/socialLinks';
 import { safeTicketUrl, ticketSiteName } from '../lib/externalTickets';
 import VendorApplicationForm from '../components/VendorApplicationForm';
@@ -647,7 +647,7 @@ export default function PublicEventDetail() {
           </div>
         )}
 
-        <EventLineup eventId={event.id} />
+        <EventProgram eventId={event.id} />
 
         <CommunityPosts eventId={event.id} />
 
