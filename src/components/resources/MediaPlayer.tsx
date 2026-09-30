@@ -34,6 +34,13 @@ export default function MediaPlayer({ embed, url, title }: { embed: ParsedEmbed;
         : embed.aspect === 'tall'
           ? <div className="mx-auto w-full max-w-[325px]">{frame('aspect-[9/16] w-full rounded-xl border-0 bg-black')}</div>
           : frame('aspect-video w-full rounded-xl border-0 bg-black')}
+      {/* Some videos can't play inside other sites (the owner turned embedding off,
+          age limits, or YouTube's sign-in check), so there's always a way to watch. */}
+      {embed.kind === 'video' && (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-block text-xs font-medium text-marigold hover:underline">
+          Not playing? Watch on {embed.label} &rarr;
+        </a>
+      )}
     </div>
   );
 }
