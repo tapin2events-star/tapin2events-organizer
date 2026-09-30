@@ -162,6 +162,7 @@ export interface ResourceBooking {
   final_rate?: number | null;
   // Set when the organizer pays through TapIN ('paid'), or after a refund ('refunded').
   payment_status?: string | null;
+  legacy_id?: string | null; // set on bookings brought over from the old app
   amount_paid?: number | null;
   platform_fee?: number | null;
   refund_amount?: number | null;

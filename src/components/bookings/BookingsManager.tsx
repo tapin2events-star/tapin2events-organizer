@@ -37,6 +37,11 @@ function StarPicker({ value, onChange }: { value: number; onChange: (n: number) 
 // they've booked: status, dates, rates, cancelling, completing, reviewing, and
 // whether each confirmed booking is listed on the public event page.
 // Pass eventId to show just one event's bookings (the event's Bookings tab).
+// Paid through TapIN (or the old app), or there's no price to pay.
+function isPaidOrFree(b: { payment_status?: string | null }, agreed: number | null): boolean {
+  return ['paid', 'captured', 'paid_out'].includes(b.payment_status ?? '') || !(agreed && agreed > 0);
+}
+
 export default function BookingsManager({ eventId, title }: { eventId?: string; title?: string }) {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -106,7 +111,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
       })
     );
     // Which unpaid, agreed bookings can actually be paid (the resource has payouts connected)?
-    const unpaidIds = (rows ?? []).filter((b) => ['accepted', 'confirmed'].includes(b.status) && b.payment_status !== 'paid').map((b) => b.id);
+    const unpaidIds = (rows ?? []).filter((b) => ['accepted', 'confirmed', 'completed'].includes(b.status) && !['paid', 'captured', 'paid_out', 'refunded'].includes(b.payment_status ?? '')).map((b) => b.id);
     if (unpaidIds.length) {
       const { data: ready } = await supabase.rpc('booking_payment_ready', { p_booking_ids: unpaidIds });
       setPayReady(new Map(((ready ?? []) as { booking_id: string; resource_can_receive: boolean }[]).map((r) => [r.booking_id, r.resource_can_receive])));
@@ -369,7 +374,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                     </div>
                   )}
 
-                  {['accepted', 'confirmed'].includes(b.status) && b.payment_status !== 'paid' && agreed != null && agreed > 0 && (() => {
+                  {(['accepted', 'confirmed'].includes(b.status) || (b.status === 'completed' && !b.legacy_id)) && !isPaidOrFree(b, agreed) && agreed != null && agreed > 0 && (() => {
                     const fees = bookingFees(agreed);
                     const ready = payReady.get(b.id);
                     return (
@@ -444,7 +449,9 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                       <button onClick={() => setOpenDetails((prev) => { const n = new Set(prev); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })} className={btn} aria-expanded={detailsOpen}>{detailsOpen ? 'Hide details' : 'Details'}</button>
                       <MessageButton summary={summaries.get(b.id)} open={threadOpen} onToggle={() => toggleThread(b.id)} className={btn} />
                       {(b.status === 'accepted' || b.status === 'confirmed') && (
-                        <button onClick={() => update(b, { status: 'completed' }, { status: 'completed' }, 'Could not update this booking. Please try again.')} disabled={busyId === b.id} className={btn}>Mark completed</button>
+                        isPaidOrFree(b, agreed)
+                          ? <button onClick={() => update(b, { status: 'completed' }, { status: 'completed' }, 'Could not update this booking. Please try again.')} disabled={busyId === b.id} className={btn}>Mark completed</button>
+                          : <span className="text-xs text-gray-500">Pay for this booking to mark it completed</span>
                       )}
                       {b.status === 'completed' && !b.has_review && reviewingId !== b.id && (
                         <button onClick={() => setReviewingId(b.id)} className={btn}>Leave a review</button>
