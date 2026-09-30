@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FollowListModal from '../components/profile/FollowListModal';
 import PayoutsCard from '../components/PayoutsCard';
+import PasswordSection from '../components/PasswordSection';
 import InterestPicker from '../components/discover/InterestPicker';
 import { normalizeInterests, type InterestGroup } from '../lib/interests';
 import { supabase } from '../lib/supabaseClient';
@@ -104,8 +105,9 @@ export default function Profile() {
         setMyResourceId(resource?.id ?? null);
       }
       setLoading(false);
-      if (window.location.hash === '#payouts') {
-        setTimeout(() => document.getElementById('payouts')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+      const hash = window.location.hash.slice(1);
+      if (hash === 'payouts' || hash === 'password') {
+        setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
       }
     })();
   }, [user, authLoading, navigate, location.pathname]);
@@ -269,6 +271,11 @@ export default function Profile() {
             <p className="text-xs text-muted">What others see when they find you</p>
           </Link>
         )}
+      </div>
+
+      <div id="password" className="mt-8 scroll-mt-20">
+        <h2 className="mb-2 font-display text-lg font-semibold text-bone">Password</h2>
+        <PasswordSection email={user?.email ?? ''} />
       </div>
 
       <div id="payouts" className="mt-8">

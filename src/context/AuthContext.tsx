@@ -52,6 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // an explicit SIGNED_OUT should be treated as a real logout below.
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      // "Forgot password" sign-ins that come back through the email link (not the
+      // typed code) still land on the set-a-new-password form.
+      if (event === 'SIGNED_IN' && newSession) {
+        try {
+          const pending = localStorage.getItem('tapin_after_signin');
+          if (pending) {
+            localStorage.removeItem('tapin_after_signin');
+            // On the login screen itself, Login sends them there without a reload.
+            if (pending === 'password' && !/\/(profile|login)\/?$/.test(window.location.pathname)) {
+              window.setTimeout(() => window.location.assign(import.meta.env.BASE_URL + 'profile#password'), 0);
+            }
+          }
+        } catch { /* storage unavailable */ }
+      }
       if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
         setAdminChecked(false);

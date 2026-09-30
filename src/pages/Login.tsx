@@ -6,7 +6,9 @@ export default function Login() {
   const { user, sendCode, verifyCode, signInWithPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo = (location.state as { from?: string } | null)?.from || '/organizer';
+  const [resetting, setResetting] = useState(false);
+  // Forgot password: sign in with an email code, then land on the password form.
+  const returnTo = resetting ? '/profile#password' : (location.state as { from?: string } | null)?.from || '/organizer';
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,6 +40,10 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     setBusy(true);
+    try {
+      if (resetting) localStorage.setItem('tapin_after_signin', 'password');
+      else localStorage.removeItem('tapin_after_signin');
+    } catch { /* storage unavailable */ }
     const { error } = await sendCode(email);
     setBusy(false);
     if (error) {
@@ -148,8 +154,13 @@ export default function Login() {
                 disabled={busy}
                 className="mt-2 h-11 rounded-lg bg-marigold px-4 text-sm font-medium text-white transition hover:bg-marigold/90 disabled:opacity-50"
               >
-                {busy ? 'Sending\u2026' : 'Email me a sign-in code'}
+                {busy ? 'Sending\u2026' : resetting ? 'Email me a code to reset my password' : 'Email me a sign-in code'}
               </button>
+              {resetting && (
+                <p className="rounded-lg bg-marigold/10 px-3 py-2 text-center text-xs text-marigold">
+                  We'll email you a code to sign in. Right after, you'll be taken to a page to set your new password.
+                </p>
+              )}
               <p className="text-center text-xs leading-relaxed text-muted">
                 No password needed. We’ll email a link and a 6-digit code — use whichever is handier.
                 New here? Your account is created automatically.
@@ -204,7 +215,17 @@ export default function Login() {
               </button>
               <button
                 type="button"
-                onClick={() => { setStep('email'); setError(null); setPassword(''); }}
+                onClick={() => { setResetting(true); setStep('email'); setError(null); setPassword(''); }}
+                className="text-center text-sm font-medium text-marigold hover:underline"
+              >
+                Forgot your password?
+              </button>
+              <p className="text-center text-xs leading-relaxed text-muted">
+                Used the old TapIN app? Passwords didn't move over to the new site. Tap <strong>Forgot your password?</strong> to sign in with an email code and set a new one.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setResetting(false); setStep('email'); setError(null); setPassword(''); }}
                 className="text-center text-xs text-muted hover:text-gray-900"
               >
                 &larr; Use email code instead
