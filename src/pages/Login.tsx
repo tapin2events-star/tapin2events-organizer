@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, SUSPENDED_MESSAGE } from '../context/AuthContext';
-import { isStandalone } from '../lib/displayMode';
+import { isAppMode } from '../lib/displayMode';
 
 export default function Login() {
   const { user, sendCode, verifyCode, signInWithPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [resetting, setResetting] = useState(false);
-  const standalone = isStandalone();
+  const standalone = isAppMode();
   // Forgot password: sign in with an email code, then land on the password form.
   const returnTo = resetting ? '/profile#password' : (location.state as { from?: string } | null)?.from || '/organizer';
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');

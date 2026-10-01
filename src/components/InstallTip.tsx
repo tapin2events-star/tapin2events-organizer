@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { isIOS, isInAppBrowser, isPhoneSized, isStandalone } from '../lib/displayMode';
+import { isAppMode, isIOS, isInAppBrowser, isPhoneSized } from '../lib/displayMode';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -39,7 +39,8 @@ export default function InstallTip() {
   }, []);
 
   useEffect(() => {
-    if (isStandalone() || !isPhoneSized() || isInAppBrowser() || snoozed()) return;
+    // Never inside the app itself (Home Screen or app-store version).
+    if (isAppMode() || !isPhoneSized() || isInAppBrowser() || snoozed()) return;
     // Give people a moment with the app first.
     const t = window.setTimeout(() => setShow(true), 20000);
     return () => window.clearTimeout(t);
