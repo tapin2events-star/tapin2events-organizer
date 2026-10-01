@@ -67,7 +67,7 @@ export default function AdminDashboard() {
       {notice && (
         <div
           role={notice.kind === 'err' ? 'alert' : 'status'}
-          className={`fixed inset-x-4 bottom-20 z-[1200] mx-auto max-w-md rounded-xl px-4 py-3 text-sm font-medium shadow-lg md:bottom-6 ${notice.kind === 'err' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}
+          className={`fixed inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] z-[1200] mx-auto max-w-md rounded-xl px-4 py-3 text-sm font-medium shadow-lg md:bottom-6 ${notice.kind === 'err' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}
         >
           {notice.text}
         </div>

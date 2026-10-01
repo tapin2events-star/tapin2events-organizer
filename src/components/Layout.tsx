@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
 import BottomTabBar from './BottomTabBar';
 import ScrollToTop from './ScrollToTop';
+import InstallTip from './InstallTip';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 const NAV_ITEMS = [
@@ -35,7 +36,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen bg-ink text-bone">
       {/* Mobile top bar: only visible below md */}
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden">
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
         <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           <span className="bg-gradient-to-r from-marigold to-teal bg-clip-text text-transparent">TapIN</span>
         </Link>
@@ -197,9 +198,10 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 py-6 pt-20 pb-24 md:px-8 md:py-8 md:pt-8 md:pb-8">
+      <main className="min-w-0 flex-1 px-4 py-6 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:px-8 md:py-8 md:pt-8 md:pb-8">
         <Outlet />
         <ScrollToTop />
+        <InstallTip />
       </main>
 
       <BottomTabBar />

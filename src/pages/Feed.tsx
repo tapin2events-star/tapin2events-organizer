@@ -465,7 +465,7 @@ export default function Feed() {
       className="fixed inset-0 z-30 bg-black"
       style={dragX ? { transform: `translateX(${dragX}px)`, transition: leaving ? 'transform 180ms ease-out' : 'none', boxShadow: '-12px 0 30px rgba(0,0,0,0.25)' } : { transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)' }}
     >
-      <div className="absolute inset-x-0 top-4 z-40 flex items-center justify-between gap-2 px-4">
+      <div className="absolute inset-x-0 z-40 flex items-center justify-between gap-2 px-4" style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}>
         {eventFilterId ? (
           <div className="flex min-w-0 items-center gap-2">
             <Link to={`/events/${eventFilterId}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white">
@@ -584,7 +584,7 @@ export default function Feed() {
               </svg>
             )}
 
-            <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
+            <div className="absolute right-3 flex flex-col items-center gap-5" style={{ bottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}>
               <button onClick={() => toggleLike(post)} className="flex flex-col items-center gap-1 text-white">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill={post.liked_by_me ? '#EC4899' : 'none'} stroke={post.liked_by_me ? '#EC4899' : 'white'} strokeWidth="2">
                   <path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.8 4.8 0 0 1 8.8-2.7 4.8 4.8 0 0 1 8.8 2.7z" strokeLinejoin="round" />
@@ -644,7 +644,7 @@ export default function Feed() {
               )}
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 p-4 pb-6 text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
+            <div className="absolute inset-x-0 bottom-0 p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
               <Link to={`/creator/${encodeURIComponent(post.author_email)}`} className="flex items-center gap-2">
                 {post.author_photo ? (
                   <img src={post.author_photo} alt="" className="h-8 w-8 rounded-full object-cover" />

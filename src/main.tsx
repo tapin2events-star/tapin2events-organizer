@@ -2,6 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
+import { markDisplayMode } from './lib/displayMode';
+
+markDisplayMode();
 
 // Old links from tapin2events-star.github.io/tapin2events-organizer/... arrive here
 // with that folder still in the path; drop it so they open the right page.

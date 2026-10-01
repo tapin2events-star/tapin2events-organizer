@@ -1,12 +1,14 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, SUSPENDED_MESSAGE } from '../context/AuthContext';
+import { isStandalone } from '../lib/displayMode';
 
 export default function Login() {
   const { user, sendCode, verifyCode, signInWithPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [resetting, setResetting] = useState(false);
+  const standalone = isStandalone();
   // Forgot password: sign in with an email code, then land on the password form.
   const returnTo = resetting ? '/profile#password' : (location.state as { from?: string } | null)?.from || '/organizer';
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
@@ -237,8 +239,10 @@ export default function Login() {
             <div className="flex flex-col gap-5">
               <p className="text-center text-sm text-muted">
                 We sent a code to{' '}
-                <span className="text-gray-900 font-medium">{email}</span>. Enter it below, or tap the link in that
-                same email.
+                <span className="text-gray-900 font-medium">{email}</span>.{' '}
+                {standalone
+                  ? <>Type the 6-digit code below. (The link in the email opens your browser instead of this app.)</>
+                  : <>Enter it below, or tap the link in that same email.</>}
               </p>
 
               <div className="flex justify-center gap-2" onPaste={onPaste}>

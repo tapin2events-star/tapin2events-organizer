@@ -52,7 +52,7 @@ export default function ScrollToTop() {
       title="Back to top"
       tabIndex={visible ? 0 : -1}
       aria-hidden={!visible}
-      className={`fixed bottom-24 right-4 z-[999] flex h-12 w-12 items-center justify-center rounded-full bg-marigold text-white shadow-lg ring-1 ring-black/5 transition-all duration-200 hover:bg-marigold/90 md:bottom-8 md:right-8 ${
+      className={`fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-[999] flex h-12 w-12 items-center justify-center rounded-full bg-marigold text-white shadow-lg ring-1 ring-black/5 transition-all duration-200 hover:bg-marigold/90 md:bottom-8 md:right-8 ${
         visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
       }`}
     >

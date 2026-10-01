@@ -215,7 +215,7 @@ export default function SavedEvents() {
       )}
 
       {undo && (
-        <div className="fixed inset-x-0 bottom-24 z-[1200] mx-auto flex w-fit max-w-[90vw] items-center gap-4 rounded-full bg-gray-900 px-5 py-2.5 text-sm text-white shadow-xl md:bottom-8">
+        <div className="fixed inset-x-0 bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] z-[1200] mx-auto flex w-fit max-w-[90vw] items-center gap-4 rounded-full bg-gray-900 px-5 py-2.5 text-sm text-white shadow-xl md:bottom-8">
           <span>Removed from saved</span>
           <button type="button" onClick={undoUnsave} className="font-semibold text-teal-300 hover:underline">Undo</button>
         </div>
