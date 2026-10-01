@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSwipeRight } from '../lib/useSwipeRight';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -108,6 +109,19 @@ export default function Feed() {
   const lastTapRef = useRef<Record<string, number>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const feedRootRef = useRef<HTMLDivElement>(null);
+  // One-time tip on phones: swipes aren't visible, so say it once.
+  const [showSwipeTip, setShowSwipeTip] = useState(false);
+  useEffect(() => {
+    if (eventFilterId || !window.matchMedia?.('(pointer: coarse)').matches) return;
+    try {
+      if (localStorage.getItem('tapin_feed_swipe_tip')) return;
+      localStorage.setItem('tapin_feed_swipe_tip', '1');
+    } catch { return; }
+    const show = window.setTimeout(() => setShowSwipeTip(true), 1200);
+    const hide = window.setTimeout(() => setShowSwipeTip(false), 6200);
+    return () => { window.clearTimeout(show); window.clearTimeout(hide); };
+  }, [eventFilterId]);
 
   // The database query itself scopes posts to the event or to the people
   // you follow, so what's loaded is exactly what should be shown.
@@ -410,6 +424,11 @@ export default function Feed() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }
 
+  // Swipe right (phones) to open Discover. Paused while a sheet or dialog is open.
+  const swipeEnabled = !loading && posts.length > 0 && !openComments && !reportingId && !reportingCommentId && !showCreateModal && !tippingPost && !editingPostId;
+  const { dragX, leaving, dragging } = useSwipeRight(feedRootRef, () => navigate('/'), swipeEnabled);
+  const swipeProgress = Math.min(dragX / (typeof window !== 'undefined' ? window.innerWidth * 0.33 : 1), 1);
+
   if (loading) return <FeedSkeleton />;
 
   if (posts.length === 0 && feedMode === 'for_you' && !eventFilterId) {
@@ -431,7 +450,21 @@ export default function Feed() {
   }
 
   return (
-    <div className="fixed inset-0 z-30 bg-black">
+    <>
+    {/* Revealed behind the feed while swiping right toward Discover */}
+    {dragging && (
+      <div className="fixed inset-0 z-20 flex items-center bg-gray-50" aria-hidden="true">
+        <div className="flex items-center gap-2 pl-6 text-gray-900" style={{ opacity: 0.4 + swipeProgress * 0.6, transform: `scale(${0.9 + swipeProgress * 0.1})` }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" /></svg>
+          <span className="font-display text-lg font-bold">{swipeProgress >= 1 ? 'Let go for Discover' : 'Discover'}</span>
+        </div>
+      </div>
+    )}
+    <div
+      ref={feedRootRef}
+      className="fixed inset-0 z-30 bg-black"
+      style={dragX ? { transform: `translateX(${dragX}px)`, transition: leaving ? 'transform 180ms ease-out' : 'none', boxShadow: '-12px 0 30px rgba(0,0,0,0.25)' } : { transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)' }}
+    >
       <div className="absolute inset-x-0 top-4 z-40 flex items-center justify-between gap-2 px-4">
         {eventFilterId ? (
           <div className="flex min-w-0 items-center gap-2">
@@ -826,6 +859,16 @@ export default function Feed() {
         </div>
       )}
       {isPaused && !openComments && !reportingId && !reportingCommentId && !showCreateModal && !tippingPost && !editingPostId && <BottomTabBar />}
+      {showSwipeTip && (
+        <button
+          type="button"
+          onClick={() => setShowSwipeTip(false)}
+          className="fixed inset-x-0 top-1/2 z-[1100] mx-auto flex w-fit -translate-y-1/2 items-center gap-2 rounded-full bg-black/75 px-5 py-3 text-sm font-semibold text-white shadow-xl backdrop-blur-sm"
+        >
+          <span aria-hidden="true" className="inline-block animate-pulse">👉</span> Swipe right for Discover
+        </button>
+      )}
     </div>
+    </>
   );
 }
