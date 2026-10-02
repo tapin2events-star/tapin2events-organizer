@@ -264,12 +264,12 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
     <div>
       {title && <h2 className="font-display text-xl font-bold text-gray-900">{title}</h2>}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${title ? 'mt-2' : ''}`}>
         <p className="text-sm text-muted">Artists, vendors, and services you've requested for {eventId ? 'this event' : 'your events'}.</p>
         <Link to={findLink} className="rounded-lg bg-marigold px-4 py-2.5 text-sm font-semibold text-white hover:bg-marigold/90">Find &amp; book a resource</Link>
       </div>
 
-      <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+      <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
         Once a resource accepts, you can pay them securely through TapIN. They receive the full agreed price; you pay a small service fee on top. If a paid booking is cancelled, the booking price is refunded.
       </p>
       {justPaid && (

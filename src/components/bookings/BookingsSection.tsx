@@ -11,18 +11,19 @@ export default function BookingsSection({ mine, received, pending }: { mine: num
 
   if (!both) {
     return received > 0 && mine === 0
-      ? <div><h2 className="mb-3 font-display text-xl font-bold text-gray-900">Bookings</h2><BookingsReceived /></div>
-      : <BookingsManager title="Bookings" />;
+      ? <div className="mt-8"><h2 className="mb-3 font-display text-xl font-bold text-gray-900">Bookings</h2><BookingsReceived /></div>
+      : <div className="mt-8"><BookingsManager title="Bookings" /></div>;
   }
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="mt-8">
+      {/* Phone: title, then a full-width switch underneath. Wider screens: side by side. */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-xl font-bold text-gray-900">Bookings</h2>
-        <div className="inline-flex rounded-full border border-gray-200 bg-white p-1" role="tablist" aria-label="Which bookings">
+        <div className="flex w-full rounded-full border border-gray-200 bg-white p-1 sm:inline-flex sm:w-auto" role="tablist" aria-label="Which bookings">
           {([['mine', 'I booked', 0], ['received', 'Booked me', pending]] as const).map(([key, label, dot]) => (
             <button key={key} role="tab" aria-selected={side === key} onClick={() => setSide(key)}
-              className={`relative rounded-full px-4 py-2 text-sm font-medium transition ${side === key ? 'bg-marigold text-white' : 'text-gray-600'}`}>
+              className={`relative flex-1 rounded-full px-4 py-2 text-sm font-medium transition sm:flex-none ${side === key ? 'bg-marigold text-white' : 'text-gray-600'}`}>
               {label}
               {dot > 0 && <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold text-white" aria-label={`${dot} need your reply`}>{dot}</span>}
             </button>
