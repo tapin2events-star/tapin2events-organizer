@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { blockUser } from '../lib/blocks';
+import BlockConfirm from '../components/BlockConfirm';
 import { useSwipeRight } from '../lib/useSwipeRight';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -92,6 +94,12 @@ export default function Feed() {
   const [feedMode, setFeedMode] = useState<FeedMode>('for_you');
   const [followingEmails, setFollowingEmails] = useState<Set<string>>(new Set());
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [feedNotice, setFeedNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!feedNotice) return;
+    const t = window.setTimeout(() => setFeedNotice(null), 3500);
+    return () => window.clearTimeout(t);
+  }, [feedNotice]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -368,6 +376,19 @@ export default function Feed() {
     setTimeout(() => setShareCopiedId(null), 1500);
   }
 
+  // Block from a post or comment: hide everything from that person right away.
+  async function blockAuthor(email: string, name: string) {
+    if (!user?.email || email === user.email) return;
+    const ok = await blockUser(user.email, email);
+    setReportingId(null);
+    setReportingCommentId(null);
+    if (!ok) { setFeedNotice("Couldn't block them. Please try again."); return; }
+    setPosts((prev) => prev.filter((p) => p.author_email !== email));
+    setComments((prev) => prev.filter((c) => c.author_email !== email));
+    if (openComments && posts.find((p) => p.id === openComments)?.author_email === email) setOpenComments(null);
+    setFeedNotice(`${name} is blocked.`);
+  }
+
   async function submitReport(postId: string, reason: string) {
     if (!user?.email) return;
     await supabase.from('post_reports').insert({ post_id: postId, reporter_email: user.email, reason });
@@ -638,7 +659,7 @@ export default function Feed() {
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </button>
               ) : (
-                <button onClick={() => setReportingId(post.id)} aria-label="Report post" className="-m-2 p-2 text-white/70">
+                <button onClick={() => setReportingId(post.id)} aria-label="Report or block" className="-m-2 p-2 text-white/70">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 8v5M12 16h.01" strokeLinecap="round" /></svg>
                 </button>
               )}
@@ -754,7 +775,7 @@ export default function Feed() {
                           {user?.email === c.author_email ? (
                             <button onClick={() => deleteComment(c.id)} className="text-xs text-muted">Delete</button>
                           ) : user ? (
-                            <button onClick={() => setReportingCommentId(c.id)} className="text-xs text-muted">Report</button>
+                            <button onClick={() => setReportingCommentId(c.id)} className="text-xs text-muted">Report or block</button>
                           ) : null}
                         </div>
                       </div>
@@ -809,7 +830,7 @@ export default function Feed() {
       {reportingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-surface p-5">
-            <p className="font-semibold text-bone">Report this post</p>
+            <p className="font-semibold text-bone">Report or block</p>
             <div className="mt-3 flex flex-col gap-2">
               {['Spam', 'Inappropriate content', 'Harassment', 'Other'].map((reason) => (
                 <button
@@ -821,6 +842,12 @@ export default function Feed() {
                 </button>
               ))}
             </div>
+            {(() => {
+              const p = posts.find((x) => x.id === reportingId);
+              return p && user && p.author_email !== user.email ? (
+                <div className="mt-3 border-t border-gray-200 pt-3"><BlockConfirm name={p.author_name} onBlock={() => blockAuthor(p.author_email, p.author_name)} /></div>
+              ) : null;
+            })()}
             <button onClick={() => setReportingId(null)} className="mt-3 text-sm text-muted">Cancel</button>
           </div>
         </div>
@@ -828,7 +855,7 @@ export default function Feed() {
       {reportingCommentId && (
         <div className="fixed inset-0 z-[1060] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-surface p-5">
-            <p className="font-semibold text-bone">Report this comment</p>
+            <p className="font-semibold text-bone">Report or block</p>
             <div className="mt-3 flex flex-col gap-2">
               {['Spam', 'Inappropriate content', 'Harassment', 'Other'].map((reason) => (
                 <button
@@ -840,6 +867,12 @@ export default function Feed() {
                 </button>
               ))}
             </div>
+            {(() => {
+              const c = comments.find((x) => x.id === reportingCommentId);
+              return c && user && c.author_email !== user.email ? (
+                <div className="mt-3 border-t border-gray-200 pt-3"><BlockConfirm name={c.author_name} onBlock={() => blockAuthor(c.author_email, c.author_name)} /></div>
+              ) : null;
+            })()}
             <button onClick={() => setReportingCommentId(null)} className="mt-3 text-sm text-muted">Cancel</button>
           </div>
         </div>
@@ -852,6 +885,9 @@ export default function Feed() {
       )}
       {tippingPost && (
         <TipModal postId={tippingPost.id} creatorName={tippingPost.creatorName} onClose={() => setTippingPost(null)} />
+      )}
+      {feedNotice && (
+        <div role="status" className="fixed inset-x-0 top-16 z-[1200] mx-auto w-fit max-w-[90vw] rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-bone shadow-xl">{feedNotice}</div>
       )}
       {tipThanks && (
         <div className="fixed inset-x-0 top-16 z-[1200] mx-auto w-fit max-w-[90vw] rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-bone shadow-xl">

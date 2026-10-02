@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent } from '../lib/types';
 import DeleteAccountSection from '../components/DeleteAccountSection';
+import BlockedAccounts from '../components/BlockedAccounts';
 import { ProfileSkeleton } from '../components/ui/Skeleton';
 
 interface ProfileRow {
@@ -422,6 +423,11 @@ export default function Profile() {
             ))}
           </div>
         )}
+      </div>
+
+      <div id="blocked" className="mt-8">
+        <h2 className="mb-2 font-display text-lg font-semibold text-bone">Blocked accounts</h2>
+        <BlockedAccounts />
       </div>
 
       <DeleteAccountSection />

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { blockUser, hasBlocked, unblockUser } from '../lib/blocks';
+import BlockConfirm from '../components/BlockConfirm';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -50,8 +52,15 @@ export default function CreatorProfile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [showBlock, setShowBlock] = useState(false);
 
   const decodedEmail = decodeURIComponent(email ?? '');
+
+  useEffect(() => {
+    if (!user?.email || user.email === decodedEmail) { setBlocked(false); return; }
+    hasBlocked(user.email, decodedEmail).then(setBlocked);
+  }, [user?.email, decodedEmail]);
 
   // A tagged person can take themselves off a post. The author can't tag
   // them in that post again.
@@ -195,7 +204,7 @@ export default function CreatorProfile() {
           <p className="text-xs text-muted">Following</p>
         </button>
 
-        {!isOwnProfile && user && (
+        {!isOwnProfile && user && !blocked && (
           <button
             onClick={toggleFollow}
             disabled={followBusy}
@@ -207,6 +216,24 @@ export default function CreatorProfile() {
           </button>
         )}
       </div>
+
+      {!isOwnProfile && user && (
+        blocked ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            <span>You blocked {profile.full_name || 'this person'}. You won't see their posts or comments.</span>
+            <button onClick={async () => { if (user?.email && await unblockUser(user.email, profile.email)) { setBlocked(false); window.location.reload(); } }} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold">Unblock</button>
+          </div>
+        ) : showBlock ? (
+          <div className="mt-4 max-w-sm">
+            <BlockConfirm name={profile.full_name || 'this person'} onBlock={async () => {
+              if (user?.email && await blockUser(user.email, profile.email)) { setBlocked(true); setIsFollowing(false); setPosts([]); setShowBlock(false); }
+            }} />
+            <button onClick={() => setShowBlock(false)} className="mt-1 text-xs text-muted">Never mind</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowBlock(true)} className="mt-3 text-xs text-muted hover:text-red-600">Block</button>
+        )
+      )}
 
       <div className="mt-8">
         <div className="flex gap-1 border-b border-gray-200">
