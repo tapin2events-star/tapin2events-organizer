@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import MyProductOrders from '../components/products/MyProductOrders';
 import MyVendorApplications from '../components/MyVendorApplications';
-import BookingsManager from '../components/bookings/BookingsManager';
+import BookingsSection from '../components/bookings/BookingsSection';
 import MyTipsSent from '../components/MyTipsSent';
 import { seatText } from '../lib/seats';
 import { ListSkeleton, LoadingRegion, Skeleton } from '../components/ui/Skeleton';
@@ -79,6 +79,7 @@ export default function MyActivity() {
   };
   const [view, setViewState] = useState<View>(viewFromHash);
   const [counts, setCounts] = useState<{ orders: number; bookings: number; vendor: number; tips: number } | null>(null);
+  const [bookingSplit, setBookingSplit] = useState({ mine: 0, received: 0, pending: 0 });
   function setView(v: View) {
     setViewState(v);
     window.history.replaceState(null, '', v === 'all' ? window.location.pathname : `${window.location.pathname}#${v}`);
@@ -96,7 +97,12 @@ export default function MyActivity() {
       supabase.from('resource_bookings').select('id', { count: 'exact', head: true }).eq('organizer_email', email),
       supabase.from('event_vendor_applications').select('id', { count: 'exact', head: true }).eq('resource_email', email),
       supabase.from('tips').select('id', { count: 'exact', head: true }).eq('tipper_email', email).in('payment_status', ['paid', 'refunded']),
-    ]).then(([o, b, v, t]) => setCounts({ orders: o.count ?? 0, bookings: b.count ?? 0, vendor: v.count ?? 0, tips: t.count ?? 0 }))
+      supabase.from('resource_bookings').select('id', { count: 'exact', head: true }).eq('resource_email', email).neq('status', 'deleted'),
+      supabase.from('resource_bookings').select('id', { count: 'exact', head: true }).eq('resource_email', email).eq('status', 'pending'),
+    ]).then(([o, b, v, t, r, rp]) => {
+      setBookingSplit({ mine: b.count ?? 0, received: r.count ?? 0, pending: rp.count ?? 0 });
+      setCounts({ orders: o.count ?? 0, bookings: (b.count ?? 0) + (r.count ?? 0), vendor: v.count ?? 0, tips: t.count ?? 0 });
+    })
       .catch(() => setCounts({ orders: 0, bookings: 0, vendor: 0, tips: 0 }));
   }, [user?.email]);
 
@@ -244,6 +250,9 @@ export default function MyActivity() {
                 >
                   {c.label}
                   {c.count >= 0 && <span className={`ml-1.5 ${view === c.key ? 'text-white/80' : 'text-gray-400'}`}>{c.count}</span>}
+                  {c.key === 'bookings' && bookingSplit.pending > 0 && (
+                    <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-orange-500 align-middle" aria-label={`${bookingSplit.pending} booking request${bookingSplit.pending === 1 ? '' : 's'} need your reply`} />
+                  )}
                 </button>
               ))}
             </div>
@@ -392,7 +401,7 @@ export default function MyActivity() {
           <>
             {(view === 'all' || view === 'orders') && <MyProductOrders title="Orders" />}
             {(view === 'all' || view === 'vendor') && <div id="vendor" className="scroll-mt-20"><MyVendorApplications title="Vendor Spots" /></div>}
-            {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><BookingsManager title="Bookings" /></div>}
+            {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><BookingsSection mine={bookingSplit.mine} received={bookingSplit.received} pending={bookingSplit.pending} /></div>}
             {(view === 'all' || view === 'tips') && <MyTipsSent />}
           </>
         )}
