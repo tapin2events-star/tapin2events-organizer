@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
 import BottomTabBar from './BottomTabBar';
 import ScrollToTop from './ScrollToTop';
-import InstallTip from './InstallTip';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 const NAV_ITEMS = [
@@ -201,7 +200,6 @@ export default function Layout() {
       <main className="min-w-0 flex-1 px-4 py-6 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:px-8 md:py-8 md:pt-8 md:pb-8">
         <Outlet />
         <ScrollToTop />
-        <InstallTip />
       </main>
 
       <BottomTabBar />
