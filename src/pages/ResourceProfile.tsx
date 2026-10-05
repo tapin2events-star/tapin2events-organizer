@@ -9,6 +9,8 @@ import ResourceMediaSection from '../components/resources/ResourceMediaSection';
 import EventLinks from '../components/EventLinks';
 import { visibleLinks } from '../lib/socialLinks';
 import { DetailSkeleton } from '../components/ui/Skeleton';
+import GroupMembersSection from '../components/groups/GroupMembersSection';
+import GroupBadges from '../components/groups/GroupBadges';
 
 function pricingLabel(r: Resource) {
   if (r.pricing_type === 'contact_quote') return 'Contact for a quote';
@@ -24,6 +26,12 @@ export default function ResourceProfile() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
+  const [groupRole, setGroupRole] = useState<string | null>(null);
+  const isGroup = resource?.kind === 'group';
+  useEffect(() => {
+    if (!user || !id) { setGroupRole(null); return; }
+    supabase.rpc('group_role', { p_group: id }).then(({ data }) => setGroupRole((data as string) ?? null));
+  }, [user, id]);
   const [loading, setLoading] = useState(true);
   const [myEvents, setMyEvents] = useState<TapEvent[]>([]);
   const [selectedEventId, setSelectedEventId] = useState('');
@@ -138,8 +146,8 @@ export default function ResourceProfile() {
       <div className="mx-auto max-w-5xl px-4 py-10">
         <BackButton fallback="/resources" fallbackLabel="Artists & Resources" />
 
-        {resource.profile_image ? (
-          <img src={resource.profile_image} alt="" className="mt-4 aspect-[21/9] w-full rounded-2xl object-cover" />
+        {(resource.cover_image || resource.profile_image) ? (
+          <img src={resource.cover_image || resource.profile_image!} alt="" className="mt-4 aspect-[21/9] w-full rounded-2xl object-cover" />
         ) : (
           <div className="mt-4 flex aspect-[21/9] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-teal-100">
             <span className="font-display text-6xl font-extrabold text-indigo-300">{resource.display_name.charAt(0)}</span>
@@ -150,14 +158,25 @@ export default function ResourceProfile() {
           <div className="md:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="font-display text-2xl font-bold text-gray-900">{resource.display_name}</h1>
+                <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl font-bold text-gray-900">
+                  {isGroup && resource.cover_image && resource.profile_image && <img src={resource.profile_image} alt="" className="h-10 w-10 rounded-full object-cover" />}
+                  {resource.display_name}
+                  {isGroup && <span className="rounded-full bg-purple-100 px-2.5 py-0.5 font-sans text-xs font-semibold text-purple-800">Group</span>}
+                </h1>
                 <p className="mt-1 text-sm text-gray-500">
                   {[resource.city, resource.state].filter(Boolean).join(', ') || resource.location || 'Location not listed'}
                 </p>
               </div>
-              <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">
-                {pricingLabel(resource)}
-              </span>
+              {!isGroup && (
+                <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">
+                  {pricingLabel(resource)}
+                </span>
+              )}
+              {isGroup && groupRole && (
+                <Link to={`/groups/${resource.id}/manage`} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold">
+                  {groupRole === 'member' ? 'Group settings' : 'Manage group'}
+                </Link>
+              )}
             </div>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -165,6 +184,8 @@ export default function ResourceProfile() {
                 <span key={c} className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">{c}</span>
               ))}
             </div>
+
+            {!isGroup && <GroupBadges email={resource.email} className="mt-3" />}
 
             <p className="mt-2 text-sm text-gray-500">
               {reviews.length > 0 ? `\u2605 ${averageRating.toFixed(1)} average (${reviews.length} review${reviews.length === 1 ? '' : 's'})` : 'No reviews yet'}
@@ -174,6 +195,8 @@ export default function ResourceProfile() {
               <h2 className="font-display text-lg font-semibold text-gray-900">About</h2>
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
+
+            {isGroup && <GroupMembersSection groupId={resource.id} />}
 
             <ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} />
 
@@ -211,6 +234,15 @@ export default function ResourceProfile() {
           </div>
 
           <div className="md:sticky md:top-6 md:self-start">
+            {isGroup ? (
+            <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="text-xs uppercase tracking-widest text-gray-400">Book this group</p>
+              <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
+              <p className="mt-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
+                Booking groups directly is coming soon. For now, you can book members individually from their profiles above.
+              </p>
+            </div>
+            ) : (
             <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs uppercase tracking-widest text-gray-400">Book this resource</p>
               <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
@@ -268,6 +300,7 @@ export default function ResourceProfile() {
                 </form>
               )}
             </div>
+            )}
           </div>
         </div>
       </div>

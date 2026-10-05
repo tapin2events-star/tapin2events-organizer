@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import GroupBadges from '../components/groups/GroupBadges';
 import BackButton from '../components/BackButton';
 import { blockUser, hasBlocked, unblockUser } from '../lib/blocks';
 import BlockConfirm from '../components/BlockConfirm';
@@ -180,6 +181,8 @@ export default function CreatorProfile() {
       </div>
 
       {profile.bio && <p className="mt-3 text-sm text-muted">{profile.bio}</p>}
+
+      <GroupBadges email={profile.email} className="mt-3" />
 
       {resourceId && (
         <Link

@@ -266,6 +266,10 @@ export default function Profile() {
             <p className="text-xs text-muted">Your bookings and listing</p>
           </Link>
         )}
+        <Link to="/groups" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
+          <p className="font-medium text-bone">Groups</p>
+          <p className="text-xs text-muted">Bands, crews, and collectives you're in</p>
+        </Link>
         {profile.is_resource && myResourceId && (
           <Link to={`/resources/${myResourceId}`} className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
             <p className="font-medium text-bone">View My Resource Page</p>

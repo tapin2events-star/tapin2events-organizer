@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { ListSkeleton } from '../ui/Skeleton';
 import { Badge, Chips, ConfirmDialog, Empty, FormDialog, PAGE_SIZE, Pager, Row, SearchBox, actionBtn, dangerBtn, fmtDate, safeSearch, useDebounced, type Notify } from './shared';
 
-interface ResourceRow { id: string; display_name: string; bio: string | null; email: string; verification_status: string; status: string; created_at: string; average_rating: number | null; review_count: number | null; total_bookings: number | null }
+interface ResourceRow { id: string; display_name: string; bio: string | null; email: string; verification_status: string; status: string; created_at: string; average_rating: number | null; review_count: number | null; total_bookings: number | null; kind?: string }
 type Filter = 'all' | 'verified' | 'pending' | 'rejected' | 'suspended' | 'inactive';
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'verified', label: 'Approved' }, { id: 'pending', label: 'Pending' }, { id: 'rejected', label: 'Rejected' }, { id: 'suspended', label: 'Suspended' }, { id: 'inactive', label: 'Paused' },
@@ -26,7 +26,7 @@ export default function ResourcesTab({ notify }: { notify: Notify }) {
   useEffect(() => {
     let stale = false;
     setLoading(true);
-    let query = supabase.from('resources').select('id, display_name, bio, email, verification_status, status, created_at, average_rating, review_count, total_bookings', { count: 'exact' });
+    let query = supabase.from('resources').select('id, display_name, bio, email, verification_status, status, created_at, average_rating, review_count, total_bookings, kind', { count: 'exact' });
     if (filter === 'verified' || filter === 'pending' || filter === 'rejected') query = query.eq('verification_status', filter);
     if (filter === 'suspended' || filter === 'inactive') query = query.eq('status', filter);
     if (q) query = query.or(`display_name.ilike.%${q}%,email.ilike.%${q}%`);
@@ -59,7 +59,7 @@ export default function ResourcesTab({ notify }: { notify: Notify }) {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <Link to={`/resources/${r.id}`} className="font-medium text-gray-900 hover:text-marigold">{r.display_name}</Link>
-                  <p className="truncate text-xs text-gray-500">{r.email} · joined {fmtDate(r.created_at)}</p>
+                  <p className="truncate text-xs text-gray-500">{r.kind === 'group' ? 'Group' : r.email} · joined {fmtDate(r.created_at)}</p>
                   <p className="text-xs text-gray-400">{r.total_bookings ?? 0} booking{r.total_bookings === 1 ? '' : 's'}{r.review_count ? ` · ${Number(r.average_rating).toFixed(1)}★ (${r.review_count})` : ''}</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">

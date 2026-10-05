@@ -134,6 +134,8 @@ export interface Resource {
   verification_status: VerificationStatus;
   status: ResourceStatus;
   created_at: string;
+  kind?: 'individual' | 'group';
+  cover_image?: string | null;
 }
 
 export const RESOURCE_CATEGORIES = [

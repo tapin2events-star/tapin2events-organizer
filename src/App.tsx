@@ -28,6 +28,9 @@ import ResourceDiscovery from './pages/ResourceDiscovery';
 import ResourceProfile from './pages/ResourceProfile';
 import ResourceSignup from './pages/ResourceSignup';
 import ResourceDashboard from './pages/ResourceDashboard';
+import MyGroups from './pages/MyGroups';
+import GroupCreate from './pages/GroupCreate';
+import GroupManage from './pages/GroupManage';
 import ProductsPage from './pages/ProductsPage';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -74,6 +77,9 @@ export default function App() {
             <Route path="/resources/new" element={<ResourceSignup />} />
             <Route path="/resources/dashboard" element={<ResourceDashboard />} />
             <Route path="/resources/:id" element={<ResourceProfile />} />
+            <Route path="/groups" element={<ProtectedRoute><MyGroups /></ProtectedRoute>} />
+            <Route path="/groups/new" element={<ProtectedRoute><GroupCreate /></ProtectedRoute>} />
+            <Route path="/groups/:id/manage" element={<ProtectedRoute><GroupManage /></ProtectedRoute>} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 

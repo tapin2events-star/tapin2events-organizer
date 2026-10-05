@@ -35,6 +35,7 @@ export default function ResourceDiscovery() {
   const [maxPrice, setMaxPrice] = useState('');
   const [radius, setRadius] = useState('');
   const [minRating, setMinRating] = useState('');
+  const [kind, setKind] = useState<'' | 'individual' | 'group'>('');
   const [here, setHere] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function ResourceDiscovery() {
       // "Contact for quote" has no listed price, so it's kept out only when a price cap is set.
       .filter((r) => cap == null || (r.pricing_type !== 'contact_quote' && Number(r.base_rate ?? 0) <= cap))
       .filter((r) => stars == null || (r.review_count > 0 && Number(r.average_rating ?? 0) >= stars))
+      .filter((r) => !kind || (r.kind ?? 'individual') === kind)
       .filter((r) => {
         if (within == null || !here) return true;
         const d = distanceOf(r);
@@ -93,9 +95,9 @@ export default function ResourceDiscovery() {
       if (sort === 'newest') return String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''));
       return Number(b.average_rating ?? 0) - Number(a.average_rating ?? 0) || (b.review_count ?? 0) - (a.review_count ?? 0);
     });
-  }, [resources, search, category, maxPrice, radius, minRating, sort, here]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resources, search, category, maxPrice, radius, minRating, sort, here, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtersOn = !!(category || maxPrice || radius || minRating || search);
+  const filtersOn = !!(category || maxPrice || radius || minRating || search || kind);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
@@ -170,6 +172,11 @@ export default function ResourceDiscovery() {
             <option value="4">4★ and up</option>
             <option value="4.5">4.5★ and up</option>
           </select>
+          <select value={kind} onChange={(e) => setKind(e.target.value as '' | 'individual' | 'group')} aria-label="Individuals or groups" className={selectClass}>
+            <option value="">Individuals &amp; groups</option>
+            <option value="individual">Individuals</option>
+            <option value="group">Groups</option>
+          </select>
         </div>
         {locating && <p className="mt-2 text-sm text-gray-500">Finding your location…</p>}
         {locError && <p className="mt-2 text-sm text-orange-700">{locError}</p>}
@@ -179,7 +186,7 @@ export default function ResourceDiscovery() {
             {filtered.length} resource{filtered.length === 1 ? '' : 's'} found
             {filtersOn && (
               <button type="button" className="ml-2 font-medium text-marigold hover:underline"
-                onClick={() => { setSearch(''); setCategory(''); setMaxPrice(''); setRadius(''); setMinRating(''); }}>
+                onClick={() => { setSearch(''); setCategory(''); setMaxPrice(''); setRadius(''); setMinRating(''); setKind(''); }}>
                 Clear filters
               </button>
             )}
@@ -211,7 +218,10 @@ export default function ResourceDiscovery() {
                   </div>
                 )}
                 <div className="p-5">
-                  <p className="font-display text-lg font-bold text-gray-900">{r.display_name}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-gray-900">
+                    {r.display_name}
+                    {r.kind === 'group' && <span className="rounded-full bg-purple-100 px-2 py-0.5 font-sans text-[11px] font-semibold text-purple-800">Group</span>}
+                  </p>
                   {(r.city || r.state || distanceOf(r) != null) && (
                     <p className="mt-0.5 text-xs text-gray-400">
                       {[r.city, r.state].filter(Boolean).join(', ')}
