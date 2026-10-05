@@ -7,6 +7,17 @@ import { AVAILABLE_FEATURES, type EventFeature } from '../lib/eventFeatures';
 import FlyerMaker from '../components/flyer/FlyerMaker';
 import { normalizeLink, PLATFORMS, type LinkKey } from '../lib/socialLinks';
 
+// Saved times are UTC ("2026-10-31T23:00:00+00:00"). The date/time field needs the
+// viewer's local wall-clock time ("2026-10-31T19:00"); cutting the UTC string
+// would show (and re-save) the event 4-5 hours late.
+function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 interface SponsorEntry {
   name: string;
   logo_url?: string;
@@ -223,8 +234,8 @@ export default function EventForm() {
       setCategory(data.category ?? CATEGORIES[0]);
       setEventType(data.event_type ?? 'free');
       setExternalTicketUrl(data.external_ticket_url ?? '');
-      setStartDate(data.start_date ? data.start_date.slice(0, 16) : '');
-      setEndDate(data.end_date ? data.end_date.slice(0, 16) : '');
+      setStartDate(toLocalInput(data.start_date));
+      setEndDate(toLocalInput(data.end_date));
       setIsOnline(!!data.is_online);
       setLocationName(data.location_name ?? '');
       setLocationAddress(data.location_address ?? '');
