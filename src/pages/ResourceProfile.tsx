@@ -167,11 +167,9 @@ export default function ResourceProfile() {
                   {[resource.city, resource.state].filter(Boolean).join(', ') || resource.location || 'Location not listed'}
                 </p>
               </div>
-              {!isGroup && (
-                <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">
-                  {pricingLabel(resource)}
-                </span>
-              )}
+              <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">
+                {pricingLabel(resource)}
+              </span>
               {isGroup && groupRole && (
                 <Link to={`/groups/${resource.id}/manage`} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold">
                   {groupRole === 'member' ? 'Group settings' : 'Manage group'}
@@ -237,7 +235,8 @@ export default function ResourceProfile() {
             <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs uppercase tracking-widest text-gray-400">{isGroup ? 'Book this group' : 'Book this resource'}</p>
               <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
-              <p className="text-sm text-gray-500">{isGroup ? 'Send an offer. Payment is shared among the members.' : pricingLabel(resource)}</p>
+              <p className="text-sm text-gray-500">{pricingLabel(resource)}</p>
+              {isGroup && <p className="mt-1 text-xs text-gray-400">Payment is shared among the group's members.</p>}
 
               {requestSent ? (
                 <div className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">

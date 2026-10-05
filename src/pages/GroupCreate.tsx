@@ -15,10 +15,12 @@ export default function GroupCreate() {
     e.preventDefault();
     if (fields.name.trim().length < 2) return setError('Give your group a name.');
     if (!fields.bio.trim()) return setError('Add a short description of the group.');
+    if (fields.pricing_type !== 'contact_quote' && !(parseFloat(fields.base_rate) >= 0)) return setError('Enter your rate, or choose Contact for a quote.');
     setBusy(true); setError(null);
     const { data, error: err } = await supabase.rpc('create_group', {
       p_name: fields.name, p_bio: fields.bio, p_categories: fields.categories, p_city: fields.city, p_state: fields.state,
       p_profile_image: fields.profile_image, p_cover_image: fields.cover_image, p_instagram: fields.instagram, p_website: fields.website,
+      p_pricing_type: fields.pricing_type, p_base_rate: parseFloat(fields.base_rate) || 0, p_pricing_details: fields.pricing_details,
     });
     setBusy(false);
     if (err || !data) return setError(rpcError(err, "Couldn't create the group. Please try again."));

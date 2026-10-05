@@ -4,8 +4,9 @@ import { RESOURCE_CATEGORIES } from '../../lib/types';
 export interface GroupFields {
   name: string; bio: string; categories: string[]; city: string; state: string;
   profile_image: string | null; cover_image: string | null; instagram: string; website: string;
+  pricing_type: 'fixed' | 'hourly' | 'contact_quote'; base_rate: string; pricing_details: string;
 }
-export const EMPTY_GROUP: GroupFields = { name: '', bio: '', categories: [], city: '', state: '', profile_image: null, cover_image: null, instagram: '', website: '' };
+export const EMPTY_GROUP: GroupFields = { name: '', bio: '', categories: [], city: '', state: '', profile_image: null, cover_image: null, instagram: '', website: '', pricing_type: 'contact_quote', base_rate: '', pricing_details: '' };
 
 const input = 'mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 
@@ -41,6 +42,26 @@ export default function GroupProfileFields({ value, onChange }: { value: GroupFi
         <label className="text-sm font-medium text-gray-700">City<input className={input} value={value.city} maxLength={80} onChange={(e) => set({ city: e.target.value })} /></label>
         <label className="text-sm font-medium text-gray-700">State<input className={input} value={value.state} maxLength={40} onChange={(e) => set({ state: e.target.value })} placeholder="NC" /></label>
       </div>
+      <fieldset className="rounded-xl border border-gray-200 bg-white p-3">
+        <legend className="px-1 text-sm font-medium text-gray-700">Pricing</legend>
+        <div className="flex flex-wrap gap-2">
+          {([['fixed', 'Flat rate'], ['hourly', 'Hourly'], ['contact_quote', 'Contact for a quote']] as const).map(([k, label]) => (
+            <button type="button" key={k} aria-pressed={value.pricing_type === k} onClick={() => set({ pricing_type: k })}
+              className={`rounded-full border px-3 py-1.5 text-sm ${value.pricing_type === k ? 'border-marigold bg-marigold text-white' : 'border-gray-300 bg-white text-gray-700'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {value.pricing_type !== 'contact_quote' && (
+          <label className="mt-3 block text-sm font-medium text-gray-700">{value.pricing_type === 'hourly' ? 'Rate per hour ($)' : 'Flat rate ($)'}
+            <input type="number" min="0" step="0.01" inputMode="decimal" className={input} value={value.base_rate} onChange={(e) => set({ base_rate: e.target.value })} placeholder="e.g. 500" />
+          </label>
+        )}
+        <label className="mt-3 block text-sm font-medium text-gray-700">Pricing details <span className="font-normal text-gray-400">(optional)</span>
+          <textarea className={input} rows={2} maxLength={2000} value={value.pricing_details} onChange={(e) => set({ pricing_details: e.target.value })} placeholder="e.g. 2-hour minimum, travel fee outside Wake County, packages available" />
+        </label>
+        <p className="mt-2 text-xs text-gray-500">Organizers see this on the group's page. The final price is agreed per booking, then shared among members.</p>
+      </fieldset>
       <label className="text-sm font-medium text-gray-700">Instagram <span className="font-normal text-gray-400">(optional)</span>
         <input className={input} value={value.instagram} onChange={(e) => set({ instagram: e.target.value })} placeholder="https://instagram.com/yourgroup" inputMode="url" />
       </label>

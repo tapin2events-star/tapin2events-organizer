@@ -15,7 +15,7 @@ const btn = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-m
 const input = 'mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 
 function toFields(r: Resource): GroupFields {
-  return { name: r.display_name, bio: r.bio ?? '', categories: r.categories ?? [], city: r.city ?? '', state: r.state ?? '', profile_image: r.profile_image, cover_image: r.cover_image ?? null, instagram: r.instagram_url ?? '', website: r.website_url ?? '' };
+  return { name: r.display_name, bio: r.bio ?? '', categories: r.categories ?? [], city: r.city ?? '', state: r.state ?? '', profile_image: r.profile_image, cover_image: r.cover_image ?? null, instagram: r.instagram_url ?? '', website: r.website_url ?? '', pricing_type: (r.pricing_type as GroupFields['pricing_type']) ?? 'contact_quote', base_rate: r.pricing_type === 'contact_quote' ? '' : String(r.base_rate ?? ''), pricing_details: r.pricing_details ?? '' };
 }
 
 interface Person { email: string; full_name: string | null; profile_photo: string | null; is_resource: boolean }
@@ -79,6 +79,8 @@ export default function GroupManage() {
   async function saveProfile() {
     if (!fields || !group) return;
     if (fields.name.trim().length < 2) return say(false, 'Give your group a name.');
+    const rate = parseFloat(fields.base_rate);
+    if (fields.pricing_type !== 'contact_quote' && !(rate >= 0)) return say(false, 'Enter your rate, or choose Contact for a quote.');
     setSaving(true);
     const { error } = await supabase.from('resources').update({
       display_name: fields.name.trim().slice(0, 120), bio: fields.bio.trim().slice(0, 3000), categories: fields.categories,
@@ -86,6 +88,8 @@ export default function GroupManage() {
       location: [fields.city.trim(), fields.state.trim()].filter(Boolean).join(', ') || null,
       profile_image: fields.profile_image, cover_image: fields.cover_image,
       instagram_url: fields.instagram.trim() || null, website_url: fields.website.trim() || null,
+      pricing_type: fields.pricing_type, base_rate: fields.pricing_type === 'contact_quote' ? 0 : Math.min(rate, 1000000),
+      pricing_details: fields.pricing_details.trim().slice(0, 2000) || null,
     }).eq('id', group.id);
     setSaving(false);
     say(!error, error ? "Couldn't save. Please try again." : 'Group profile saved.');
