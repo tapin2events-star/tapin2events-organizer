@@ -9,6 +9,8 @@ export interface LineupEntry {
   image_url: string | null;
   link_url: string | null;    // manual entries only
   categories: string[] | null;
+  is_group?: boolean;
+  members?: string[] | null; // names, for booked groups
 }
 
 export interface ScheduleItem {

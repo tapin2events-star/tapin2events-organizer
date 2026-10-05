@@ -234,19 +234,10 @@ export default function ResourceProfile() {
           </div>
 
           <div className="md:sticky md:top-6 md:self-start">
-            {isGroup ? (
             <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-xs uppercase tracking-widest text-gray-400">Book this group</p>
+              <p className="text-xs uppercase tracking-widest text-gray-400">{isGroup ? 'Book this group' : 'Book this resource'}</p>
               <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
-              <p className="mt-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
-                Booking groups directly is coming soon. For now, you can book members individually from their profiles above.
-              </p>
-            </div>
-            ) : (
-            <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-xs uppercase tracking-widest text-gray-400">Book this resource</p>
-              <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
-              <p className="text-sm text-gray-500">{pricingLabel(resource)}</p>
+              <p className="text-sm text-gray-500">{isGroup ? 'Send an offer. Payment is shared among the members.' : pricingLabel(resource)}</p>
 
               {requestSent ? (
                 <div className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">
@@ -300,7 +291,6 @@ export default function ResourceProfile() {
                 </form>
               )}
             </div>
-            )}
           </div>
         </div>
       </div>

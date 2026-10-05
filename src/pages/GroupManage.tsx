@@ -7,6 +7,8 @@ import { ConfirmDialog, FormDialog } from '../components/admin/shared';
 import GroupProfileFields, { type GroupFields } from '../components/groups/GroupProfileFields';
 import { ROLE_LABELS, rpcError, type GroupRole, type ManagedMember } from '../lib/groups';
 import ResourceMediaManager from '../components/resources/ResourceMediaManager';
+import GroupBookings from '../components/groups/GroupBookings';
+import GroupPayments from '../components/groups/GroupPayments';
 import type { Resource } from '../lib/types';
 
 const btn = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold disabled:opacity-50';
@@ -129,6 +131,9 @@ export default function GroupManage() {
 
       {notice && <p role={notice.ok ? 'status' : 'alert'} className={`mt-4 rounded-lg px-3 py-2 text-sm ${notice.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{notice.text}</p>}
 
+      <GroupBookings groupId={group.id} groupName={group.display_name} canRespond={isAdmin} />
+      <GroupPayments groupId={group.id} isOwner={role === 'owner'} />
+
       {/* ---------- Members ---------- */}
       <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
         <h2 className="font-display text-lg font-semibold text-bone">Members</h2>
@@ -217,7 +222,7 @@ export default function GroupManage() {
           <h2 className="mb-3 font-display text-lg font-semibold text-bone">Group profile</h2>
           <GroupProfileFields value={fields} onChange={setFields} />
           <button onClick={saveProfile} disabled={saving} className="mt-4 rounded-lg bg-marigold px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save profile'}</button>
-          <p className="mt-3 text-xs text-muted">Booking a group, with payments split among members, is coming next.</p>
+
         </section>
       )}
 

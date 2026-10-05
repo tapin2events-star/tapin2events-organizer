@@ -19,6 +19,11 @@ function PersonCard({ p }: { p: LineupEntry }) {
         {!p.role && p.categories && p.categories.length > 0 && (
           <span className="block truncate text-xs text-gray-500">{[...new Set(p.categories.map((c) => c.trim()))].slice(0, 3).join(' · ')}</span>
         )}
+        {p.is_group && p.members && p.members.length > 0 && (
+          <span className="mt-0.5 block truncate text-xs text-gray-500">
+            with {p.members.length <= 3 ? p.members.filter(Boolean).join(', ') : `${p.members.slice(0, 3).filter(Boolean).join(', ')} +${p.members.length - 3}`}
+          </span>
+        )}
         {p.bio && <span className="mt-0.5 line-clamp-2 block text-xs text-gray-500">{p.bio}</span>}
       </span>
     </>
