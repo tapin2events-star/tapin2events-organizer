@@ -36,15 +36,82 @@ const REVIEW_LABELS: Record<string, string> = {
   location: 'location', price: 'price', category: 'category',
 };
 
+// Times from the importer are Eastern wall-clock ("YYYY-MM-DDTHH:mm"); show them exactly as written.
+function wallDate(local: string, opts: Intl.DateTimeFormatOptions) {
+  const [y, m, d] = local.slice(0, 10).split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('en-US', { ...opts, timeZone: 'UTC' });
+}
+function wallTime(local: string) {
+  const h = Number(local.slice(11, 13));
+  const min = local.slice(14, 16);
+  return `${h % 12 || 12}${min === '00' ? '' : ':' + min} ${h < 12 ? 'AM' : 'PM'}`;
+}
+const timeMissing = (e: FoundEvent) => e.needs_review.includes('start_time');
+
 function whenLabel(e: FoundEvent) {
   if (!e.start_local) return 'Date not found';
-  const start = new Date(e.start_local);
-  const dateOnly = e.needs_review.includes('start_time') || e.start_local.endsWith('T00:00');
-  const date = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  const time = dateOnly ? '' : ' · ' + start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '');
-  const end = e.end_local ? new Date(e.end_local) : null;
-  const multiDay = end && end.toDateString() !== start.toDateString();
-  return date + time + (multiDay ? ` – ${end!.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '');
+  const date = wallDate(e.start_local, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  if (timeMissing(e)) return `${date} · time not found`;
+  let label = `${date} · ${wallTime(e.start_local)}`;
+  if (e.end_local) {
+    const sameDay = e.end_local.slice(0, 10) === e.start_local.slice(0, 10);
+    const nextDay = !sameDay && new Date(e.end_local.slice(0, 10)).getTime() - new Date(e.start_local.slice(0, 10)).getTime() === 86400000;
+    label += sameDay || (nextDay && Number(e.end_local.slice(11, 13)) < 12)
+      ? ` – ${wallTime(e.end_local)}`
+      : ` – ${wallDate(e.end_local, { month: 'short', day: 'numeric' })}, ${wallTime(e.end_local)}`;
+  }
+  return label;
+}
+
+const DATE_FLAGS = ['start_date', 'start_time', 'end_date'];
+
+// Edit an imported event's date and times before saving it.
+function WhenEditor({ e, onChange }: { e: FoundEvent; onChange: (start: string | null, end: string | null) => void }) {
+  const [date, setDate] = useState(e.start_local?.slice(0, 10) ?? '');
+  const [start, setStart] = useState(e.start_local && !timeMissing(e) ? e.start_local.slice(11, 16) : '');
+  const [end, setEnd] = useState(e.end_local ? e.end_local.slice(11, 16) : '');
+  const [endDate, setEndDate] = useState(e.end_local && e.start_local && e.end_local.slice(0, 10) !== e.start_local.slice(0, 10) ? e.end_local.slice(0, 10) : '');
+  const [multiDay, setMultiDay] = useState(!!endDate && !(end && Number(end.slice(0, 2)) < 12 && endDate && date && new Date(endDate).getTime() - new Date(date).getTime() === 86400000));
+
+  function apply(d = date, s = start, en = end, ed = endDate, md = multiDay) {
+    if (!d || !s) { onChange(d && s ? `${d}T${s}` : null, null); return; }
+    const startLocal = `${d}T${s}`;
+    let endLocal: string | null = null;
+    if (en) {
+      let day = md && ed ? ed : d;
+      // A same-day end earlier than the start runs past midnight.
+      if (!md && en <= s) { const t = new Date(`${d}T12:00:00Z`); t.setUTCDate(t.getUTCDate() + 1); day = t.toISOString().slice(0, 10); }
+      endLocal = `${day}T${en}`;
+      if (endLocal <= startLocal) endLocal = null;
+    }
+    onChange(startLocal, endLocal);
+  }
+  const field = 'mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900';
+  return (
+    <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <label className="col-span-2 min-w-0 text-xs font-medium text-gray-700 sm:col-span-1">Date
+          <input type="date" className={field} value={date} onChange={(ev) => { setDate(ev.target.value); apply(ev.target.value); }} />
+        </label>
+        <label className="min-w-0 text-xs font-medium text-gray-700">Starts
+          <input type="time" className={field} value={start} onChange={(ev) => { setStart(ev.target.value); apply(date, ev.target.value); }} />
+        </label>
+        <label className="min-w-0 text-xs font-medium text-gray-700">Ends <span className="font-normal text-gray-400">(optional)</span>
+          <input type="time" className={field} value={end} onChange={(ev) => { setEnd(ev.target.value); apply(date, start, ev.target.value); }} />
+        </label>
+      </div>
+      <label className="mt-2 flex items-center gap-2 text-xs text-gray-700">
+        <input type="checkbox" checked={multiDay} onChange={(ev) => { setMultiDay(ev.target.checked); apply(date, start, end, endDate, ev.target.checked); }} className="h-4 w-4 accent-marigold" />
+        Ends on a later day
+      </label>
+      {multiDay && (
+        <label className="mt-2 block text-xs font-medium text-gray-700">End date
+          <input type="date" className={field} value={endDate} min={date} onChange={(ev) => { setEndDate(ev.target.value); apply(date, start, end, ev.target.value, true); }} />
+        </label>
+      )}
+      <p className="mt-2 text-xs text-gray-500">Eastern time. An end time earlier than the start (like 9 PM – 2 AM) is treated as the next morning.</p>
+    </div>
+  );
 }
 
 function priceLabel(e: FoundEvent) {
@@ -62,6 +129,16 @@ export default function ImportEvents() {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editingWhen, setEditingWhen] = useState<Set<string>>(new Set());
+
+  function updateWhen(key: string, start: string | null, end: string | null) {
+    setPreview((p) => p && {
+      ...p,
+      events: p.events.map((x) => (x.key === key
+        ? { ...x, start_local: start, end_local: end, needs_review: start ? x.needs_review.filter((r) => !DATE_FLAGS.includes(r)) : x.needs_review }
+        : x)),
+    });
+  }
   const [confirmed, setConfirmed] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ created: { id: string; title: string }[]; skipped: { title: string; reason: string; existing_event_id?: string }[] } | null>(null);
@@ -85,6 +162,7 @@ export default function ImportEvents() {
     }
     const p = data as Preview;
     setPreview(p);
+    setEditingWhen(new Set((p?.events ?? []).filter((x: FoundEvent) => !x.existing_event_id && x.needs_review.some((r) => DATE_FLAGS.includes(r))).map((x: FoundEvent) => x.key)));
     setSelected(new Set(p.events.filter((e) => !e.existing_event_id).map((e) => e.key)));
   }
 
@@ -121,6 +199,7 @@ export default function ImportEvents() {
 
   const importable = preview?.events.filter((e) => !e.existing_event_id) ?? [];
   const chosenCount = importable.filter((e) => selected.has(e.key)).length;
+  const missingTime = importable.filter((e) => selected.has(e.key) && (!e.start_local || timeMissing(e)));
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -189,10 +268,12 @@ export default function ImportEvents() {
                 {preview.events.map((e) => {
                   const done = !!e.existing_event_id;
                   const checked = selected.has(e.key) && !done;
-                  const review = e.needs_review.filter((r) => r !== 'category' || preview.method === 'ai').map((r) => REVIEW_LABELS[r] ?? r);
+                  const review = e.needs_review.filter((r) => (r !== 'category' || preview.method === 'ai') && !(editingWhen.has(e.key) && DATE_FLAGS.includes(r))).map((r) => REVIEW_LABELS[r] ?? r);
                   const address = tidyAddress(e);
+                  const editing = editingWhen.has(e.key);
                   return (
-                    <label key={e.key} className={`flex gap-3 rounded-xl border bg-white p-3 ${done ? 'border-gray-200 opacity-70' : checked ? 'border-marigold ring-1 ring-marigold/30' : 'border-gray-200'} ${done ? '' : 'cursor-pointer'}`}>
+                    <div key={e.key}>
+                    <label className={`flex gap-3 rounded-xl border bg-white p-3 ${done ? 'border-gray-200 opacity-70' : checked ? 'border-marigold ring-1 ring-marigold/30' : 'border-gray-200'} ${done ? '' : 'cursor-pointer'}`}>
                       <input type="checkbox" checked={checked} disabled={done} onChange={() => toggle(e.key)} className="mt-1 h-5 w-5 shrink-0 accent-marigold" />
                       {e.image_url ? (
                         <img src={e.image_url} alt="" className="h-20 w-20 shrink-0 rounded-lg object-cover" onError={(ev) => ((ev.target as HTMLImageElement).style.display = 'none')} />
@@ -201,7 +282,15 @@ export default function ImportEvents() {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-gray-900">{e.title}</p>
-                        <p className="text-sm text-gray-600">{whenLabel(e)}</p>
+                        <p className={`text-sm ${!e.start_local || timeMissing(e) ? 'font-medium text-amber-800' : 'text-gray-600'}`}>
+                          {whenLabel(e)}
+                          {!done && (
+                            <button type="button" onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); setEditingWhen((prev) => { const n = new Set(prev); if (n.has(e.key)) n.delete(e.key); else n.add(e.key); return n; }); }}
+                              className="ml-2 text-xs font-semibold text-marigold underline">
+                              {editing ? 'Done' : 'Edit'}
+                            </button>
+                          )}
+                        </p>
                         <p className="truncate text-sm text-gray-500">{e.is_online ? 'Online' : [e.location_name, address].filter(Boolean).join(' · ') || 'Location not found'}</p>
                         <p className="mt-0.5 text-sm text-gray-500">
                           {priceLabel(e)}
@@ -216,6 +305,8 @@ export default function ImportEvents() {
                         ) : null}
                       </div>
                     </label>
+                    {editing && !done && <WhenEditor e={e} onChange={(st, en) => updateWhen(e.key, st, en)} />}
+                    </div>
                   );
                 })}
               </div>
@@ -226,6 +317,11 @@ export default function ImportEvents() {
                     <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
                     <span>I'm the organizer of these events, or I have permission to post them on TapIN.</span>
                   </label>
+                  {missingTime.length > 0 && (
+                    <p role="status" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                      {missingTime.length === 1 ? `"${missingTime[0].title}" has` : `${missingTime.length} events have`} no start time on the page. Add one with <strong>Edit</strong> above, or set it later before publishing.
+                    </p>
+                  )}
                   <button type="button" onClick={importSelected} disabled={!confirmed || chosenCount === 0 || importing} className="mt-3 w-full rounded-lg bg-marigold px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 sm:w-auto">
                     {importing ? 'Importing…' : `Import ${chosenCount} as draft${chosenCount === 1 ? '' : 's'}`}
                   </button>
