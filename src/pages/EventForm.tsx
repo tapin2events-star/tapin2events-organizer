@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import BackButton, { hasInAppHistory } from '../components/BackButton';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -518,6 +519,7 @@ export default function EventForm() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <div className="mb-3"><BackButton fallback={isEdit && id ? `/organizer/events/${id}` : '/organizer'} fallbackLabel={isEdit ? 'Back to event' : 'Organizer Dashboard'} /></div>
       <h1 className="mb-6 font-display text-3xl font-extrabold text-bone">
         {isEdit ? 'Edit event' : 'Create event'}
       </h1>
@@ -1236,7 +1238,7 @@ export default function EventForm() {
             </svg>
             {!isEdit ? 'Save draft & preview' : status === 'draft' ? 'Save & preview' : 'Save & view page'}
           </button>
-          <button type="button" onClick={() => navigate(-1)} className="rounded-lg px-5 py-2.5 font-semibold text-muted hover:text-bone">
+          <button type="button" onClick={() => (hasInAppHistory() ? navigate(-1) : navigate(isEdit && id ? `/organizer/events/${id}` : '/organizer'))} className="rounded-lg px-5 py-2.5 font-semibold text-muted hover:text-bone">
             Cancel
           </button>
         </div>

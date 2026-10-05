@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { Product } from '../lib/types';
@@ -18,7 +19,6 @@ interface Variant {
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -98,7 +98,7 @@ export default function ProductDetail() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <button onClick={() => navigate(-1)} className="-my-2 py-2 text-sm text-marigold">&larr; Back</button>
+      <BackButton fallback="/products" fallbackLabel="Shop" />
 
       <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>

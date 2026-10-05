@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -135,7 +136,7 @@ export default function ResourceProfile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-5xl px-4 py-10">
-        <Link to="/resources" className="text-sm text-marigold hover:underline">&larr; Back to Artists &amp; Resources</Link>
+        <BackButton fallback="/resources" fallbackLabel="Artists & Resources" />
 
         {resource.profile_image ? (
           <img src={resource.profile_image} alt="" className="mt-4 aspect-[21/9] w-full rounded-2xl object-cover" />

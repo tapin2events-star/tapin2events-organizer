@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { PRODUCT_CATEGORIES, type Product } from '../lib/types';
@@ -64,6 +65,7 @@ export default function ProductsPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      <div className="mb-3"><BackButton fallback="/" fallbackLabel="Discover" /></div>
       <h1 className="font-display text-4xl font-extrabold text-gray-900">Shop</h1>
       <p className="mt-1 text-lg text-gray-500">Merch and products from events and artists on TapIN</p>
 

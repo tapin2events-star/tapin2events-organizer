@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { earningsRows, loadEarnings, money, monthly, RANGE_LABELS, summarize, type EarningsData, type Range } from '../lib/earnings';
@@ -46,7 +47,7 @@ export default function Earnings() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link to="/organizer" className="-my-2 inline-block py-2 text-sm font-medium text-marigold">&larr; Organizer Dashboard</Link>
+      <BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" />
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-bone">Earnings</h1>

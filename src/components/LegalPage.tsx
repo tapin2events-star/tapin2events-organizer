@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BackButton from './BackButton';
 
 export function LegalSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export function LegalSection({ title, children }: { title: string; children: Rea
 export function LegalPage({ title, updated, intro, children }: { title: string; updated: string; intro: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-2xl pb-10">
+      <div className="mb-3"><BackButton fallback="/" fallbackLabel="Back to TapIN" /></div>
       <h1 className="font-display text-3xl font-extrabold text-bone">{title}</h1>
       <p className="mt-1 text-sm text-muted">Effective {updated}</p>
       <div className="mt-4 text-sm leading-relaxed text-gray-700">{intro}</div>

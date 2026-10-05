@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import BackButton from '../components/BackButton';
+import { useParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { supabase } from '../lib/supabaseClient';
 
@@ -131,7 +132,7 @@ export default function CheckIn() {
 
   return (
     <div>
-      <Link to={`/organizer/events/${eventId}`} className="text-sm text-marigold hover:underline">&larr; Back to event</Link>
+      <BackButton fallback={`/organizer/events/${eventId}`} fallbackLabel="Back to event" />
       <h1 className="mt-2 font-display text-2xl font-extrabold text-bone">Check-in scanner</h1>
       <p className="text-sm text-muted">{eventTitle}</p>
 

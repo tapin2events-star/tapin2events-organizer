@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEscapeKey } from '../lib/useEscapeKey';
@@ -90,6 +91,7 @@ export default function EventDetail() {
         </div>
       )}
 
+      <div className="mb-3"><BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" /></div>
       <div className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>

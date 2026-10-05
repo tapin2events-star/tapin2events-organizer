@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 
 // Plain-language refund policy reflecting how TapIN handles refunds.
 // NOTE: draft for TapIN LLC to have reviewed by an attorney.
@@ -16,6 +17,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function RefundPolicy() {
   return (
     <div className="mx-auto max-w-2xl">
+      <div className="mb-3"><BackButton fallback="/" fallbackLabel="Back to TapIN" /></div>
       <h1 className="font-display text-3xl font-extrabold text-bone">Refund Policy</h1>
       <p className="mt-1 text-sm text-muted">Last updated {UPDATED}</p>
 

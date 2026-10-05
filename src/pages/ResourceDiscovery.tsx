@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { RESOURCE_CATEGORIES, type Resource } from '../lib/types';
@@ -99,6 +100,7 @@ export default function ResourceDiscovery() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="mb-3"><BackButton fallback="/" fallbackLabel="Discover" /></div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="font-display text-4xl font-extrabold text-gray-900">Artists &amp; Resources</h1>

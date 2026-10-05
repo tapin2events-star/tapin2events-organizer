@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { blockUser, hasBlocked, unblockUser } from '../lib/blocks';
 import BlockConfirm from '../components/BlockConfirm';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import FollowListModal from '../components/profile/FollowListModal';
@@ -39,7 +40,6 @@ interface TaggedTile {
 export default function CreatorProfile() {
   const { email } = useParams<{ email: string }>();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,7 +160,7 @@ export default function CreatorProfile() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <button onClick={() => navigate(-1)} className="-my-2 py-2 text-sm text-marigold">&larr; Back</button>
+      <BackButton fallback="/feed" fallbackLabel="Feed" />
 
       <div className="mt-4 flex items-center gap-4">
         {profile.profile_photo ? (

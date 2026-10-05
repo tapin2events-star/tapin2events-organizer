@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -85,6 +86,7 @@ export default function MyVendorApplicationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-3xl px-4 py-10">
+        <div className="mb-3"><BackButton fallback="/activity" fallbackLabel="My Activity" /></div>
         <h1 className="font-display text-3xl font-extrabold text-gray-900">My Vendor Applications</h1>
         <p className="mt-1 text-gray-500">Every event you've applied to be a vendor at.</p>
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { seatGroups, seatText } from '../lib/seats';
@@ -96,7 +97,7 @@ export default function TicketPass() {
       <div className="print:hidden">
       </div>
       <div className="mx-auto max-w-md px-4 py-10 print:py-0">
-        <Link to={`/events/${ticket.event_id}`} className="text-sm text-marigold hover:underline print:hidden">&larr; Back to event</Link>
+        <BackButton fallback="/activity" fallbackLabel="My tickets" />
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm print:mt-0 print:shadow-none">
           {event.poster_url && (

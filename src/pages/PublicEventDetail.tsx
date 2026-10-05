@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -314,12 +315,7 @@ export default function PublicEventDetail() {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-        <Link
-          to="/"
-          className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60 sm:left-6 sm:top-6"
-        >
-          &larr;
-        </Link>
+        <BackButton variant="overlay" fallback="/" fallbackLabel="Back to Discover" className="absolute left-4 top-4 sm:left-6 sm:top-6" />
 
         <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
           <div className="mx-auto max-w-4xl">

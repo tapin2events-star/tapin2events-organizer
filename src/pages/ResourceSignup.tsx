@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -139,6 +140,7 @@ export default function ResourceSignup() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-2xl px-4 py-10">
+        <div className="mb-3"><BackButton fallback="/profile" fallbackLabel="Profile" /></div>
         <h1 className="font-display text-3xl font-extrabold text-gray-900">
           {existing ? 'Edit your resource profile' : 'Become a Resource'}
         </h1>

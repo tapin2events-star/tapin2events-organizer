@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -120,7 +121,7 @@ export default function SavedEvents() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link to="/profile" className="text-sm font-medium text-marigold">&larr; Profile</Link>
+      <BackButton fallback="/profile" fallbackLabel="Profile" />
       <h1 className="mt-2 font-display text-3xl font-extrabold text-bone">Saved Events</h1>
       <p className="mt-1 text-muted">Events you've bookmarked. Tap the bookmark on any card to remove it.</p>
 

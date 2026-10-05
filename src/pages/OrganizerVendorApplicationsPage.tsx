@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -77,7 +78,7 @@ export default function OrganizerVendorApplicationsPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link to="/organizer" className="text-sm font-medium text-marigold">&larr; Organizer Dashboard</Link>
+      <BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" />
       <h1 className="mt-2 font-display text-3xl font-extrabold text-bone">Vendor Applications</h1>
       <p className="mt-1 text-muted">Review vendor applications across all of your events in one place.</p>
 

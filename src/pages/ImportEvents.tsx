@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BackButton from '../components/BackButton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { ticketSiteName } from '../lib/externalTickets';
@@ -203,7 +204,7 @@ export default function ImportEvents() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/organizer" className="-my-2 inline-block py-2 text-sm font-medium text-marigold">&larr; Organizer Dashboard</Link>
+      <BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" />
       <h1 className="mt-2 font-display text-3xl font-extrabold text-bone">Import events</h1>
       <p className="mt-1 text-muted">Bring in events from your website or Eventbrite. They arrive as drafts, so you can review everything before publishing.</p>
 
