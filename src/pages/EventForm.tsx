@@ -82,7 +82,7 @@ export default function EventForm() {
   const [quickUploading, setQuickUploading] = useState(false);
   const [quickFilling, setQuickFilling] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
-  const [quickResult, setQuickResult] = useState<{ fromFlyer: boolean; needs_review: string[]; review_note: string | null; price_found: string | null } | null>(null);
+  const [quickResult, setQuickResult] = useState<{ fromFlyer: boolean; needs_review: string[]; review_note: string | null; price_found: string | null; date_found: string | null } | null>(null);
   const [eventType, setEventType] = useState<EventType>('free');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -197,6 +197,8 @@ export default function EventForm() {
     if (f.title) setTitle(f.title);
     if (f.description) setDescription(f.description);
     if (f.category) setCategory(f.category);
+    // Only fill the times when both date and time were found; a date with no
+    // time is shown in the note below instead of being filled in as midnight.
     if (f.start_datetime) setStartDate(f.start_datetime);
     if (f.end_datetime) setEndDate(f.end_datetime);
     setIsOnline(!!f.is_online);
@@ -206,7 +208,7 @@ export default function EventForm() {
       setPosterUrl(quickFlyerUrl);
       setPosterFile(null);
     }
-    setQuickResult({ fromFlyer: !!quickFlyerUrl, needs_review: f.needs_review ?? [], review_note: f.review_note, price_found: f.price_found });
+    setQuickResult({ fromFlyer: !!quickFlyerUrl, needs_review: f.needs_review ?? [], review_note: f.review_note, price_found: f.price_found, date_found: f.date_found ?? null });
     setQuickOpen(false);
   }
   const [saving, setSaving] = useState(false);
@@ -616,6 +618,13 @@ export default function EventForm() {
                     {quickResult.needs_review
                       .map((k) => ({ title: 'Title', category: 'Category', date: 'Date', start_time: 'Start time', end_time: 'End time', location: 'Location', description: 'Description' } as Record<string, string>)[k] ?? k)
                       .join(', ')}
+                  </p>
+                )}
+                {quickResult.date_found && (
+                  <p className="mt-2 rounded-lg bg-amber-100 px-3 py-2 text-amber-900">
+                    Your {quickResult.fromFlyer ? 'flyer' : 'description'} says{' '}
+                    <span className="font-semibold">{new Date(`${quickResult.date_found}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>{' '}
+                    but doesn't list a start time. Enter the date and start time under <span className="font-semibold">Start</span> below.
                   </p>
                 )}
                 {quickResult.review_note && <p className="mt-1 text-amber-800">{quickResult.review_note}</p>}
