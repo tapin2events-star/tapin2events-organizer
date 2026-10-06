@@ -5,6 +5,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   group_invite          { group_id, email }    -> invites someone to join a group
 //   group_booking_status  { booking_id, status } -> tells the organizer a group accepted/declined/countered
 //   announce_new_site     { email, first_name, has_password } -> one-time new-site announcement
+//   receipt_booking_organizer { booking_id }            -> booking payment receipt for the organizer
+//   receipt_booking_payee     { booking_id, email, cents } -> "you've been paid" for a resource or group member
 // Same design as TapIN's other emails. Skips when the invite no longer applies.
 
 const SITE_URL = "https://app.tapin2events.com/";
@@ -145,6 +147,53 @@ Deno.serve(async (req) => {
       b += section(button(SITE_URL, "Open TapIN") +
         `<p style="margin:18px 0 0;font-size:15px;line-height:1.6;color:${C.body};">Thanks for being part of the TapIN community!<br><strong>William</strong>, TapIN2Events</p>`, "22px 28px 24px");
       html = layout({ preheader: "Same account, brand-new TapIN. Here's how to sign in and what's new.", eyebrow: "A new home for TapIN", body: b, why: "You're receiving this one-time announcement because you have a TapIN account. You can turn off emails in Email settings." });
+    } else if (kind === "receipt_booking_organizer" || kind === "receipt_booking_payee") {
+      // Booking payment emails, sent once the payment is recorded.
+      //  organizer: a receipt.   payee: "you've been paid" (individual resource, or one group member's share).
+      const { data: bk } = await admin.from("resource_bookings").select("id, event_id, resource_id, organizer_email, resource_email, amount_paid, final_rate, platform_fee, paid_at, payment_intent_id, payment_status").eq("id", String(body.booking_id ?? "")).maybeSingle();
+      if (!bk || !["paid", "refunded"].includes(bk.payment_status)) return skip("not paid");
+      const [{ data: r }, { data: ev }] = await Promise.all([
+        admin.from("resources").select("display_name, kind").eq("id", bk.resource_id).maybeSingle(),
+        admin.from("events").select("title, start_date").eq("id", bk.event_id).maybeSingle(),
+      ]);
+      const name = tidy(r?.display_name) || "your booking";
+      const isGroup = r?.kind === "group";
+      const eventTitle = tidy(ev?.title) || "your event";
+      const money = (n: number) => "$" + n.toFixed(2);
+      const price = Number(bk.amount_paid ?? bk.final_rate ?? 0);
+      const fees = Number(bk.platform_fee ?? 0);
+      const paidOn = new Date(bk.paid_at ?? Date.now()).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" });
+      const row = (label: string, value: string, strong = false) => `<tr><td style="padding:7px 0;font-size:14px;color:${strong ? C.ink : C.muted};${strong ? "font-weight:700;" : ""}">${esc(label)}</td><td align="right" style="padding:7px 0;font-size:14px;color:${C.ink};${strong ? "font-weight:800;" : ""}">${esc(value)}</td></tr>`;
+      if (kind === "receipt_booking_organizer") {
+        to = bk.organizer_email;
+        subject = `Receipt: ${plain(name, 60)} for ${plain(eventTitle, 60)}`;
+        let b = section(`<span style="display:inline-block;padding:5px 12px;border-radius:999px;background:#DCFCE7;color:#166534;font-size:12px;font-weight:700;">\u2713 Payment received</span>` +
+          `<div style="margin-top:10px;font-size:22px;line-height:1.25;font-weight:800;color:${C.ink};">${esc(name)}</div>` +
+          `<div style="margin-top:2px;font-size:14px;color:${C.muted};">for ${esc(eventTitle)}</div>`);
+        b += section(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.line};border-bottom:1px solid ${C.line};">` +
+          row(isGroup ? "Booking (shared among the group's members)" : "Booking", money(price)) +
+          row("Service & processing fees", money(fees)) +
+          row("Total paid", money(price + fees), true) +
+          `</table>` +
+          `<p style="margin:10px 0 0;font-size:13px;line-height:1.55;color:${C.muted};">Paid ${esc(paidOn)}${bk.payment_intent_id ? ` &middot; Reference ${esc(String(bk.payment_intent_id).slice(-10).toUpperCase())}` : ""}</p>` +
+          `<p style="margin:8px 0 0;font-size:13px;line-height:1.55;color:${C.muted};">If the booking is cancelled, the booking price is refunded; service and processing fees aren't. <a href="${SITE_URL}refund-policy" style="color:${C.indigo};">Refund policy</a></p>`, "18px 28px 0");
+        b += section(button(SITE_URL + "organizer/bookings?booking=" + bk.id, "View booking"), "20px 28px 24px");
+        html = layout({ preheader: `You paid ${money(price + fees)} for ${plain(name, 50)}.`, eyebrow: "Booking receipt", body: b, why: "You're receiving this receipt because you paid for a booking on TapIN." });
+      } else {
+        const email = String(body.email ?? "");
+        const cents = Number(body.cents ?? Math.round(price * 100));
+        if (!email) return skip("no payee");
+        to = email;
+        const share = isGroup ? "your share" : "";
+        subject = isGroup ? `You've been paid your share for ${plain(eventTitle, 70)}` : `You've been paid for ${plain(eventTitle, 80)}`;
+        let b = section(`<span style="display:inline-block;padding:5px 12px;border-radius:999px;background:#DCFCE7;color:#166534;font-size:12px;font-weight:700;">\u2713 You've been paid</span>` +
+          `<div style="margin-top:10px;font-size:30px;line-height:1.2;font-weight:800;color:${C.ink};">${esc(money(cents / 100))}</div>` +
+          `<div style="margin-top:2px;font-size:14px;color:${C.muted};">${isGroup ? `Your share for ${esc(name)} at ` : "For your booking at "}${esc(eventTitle)}</div>`);
+        b += section(para(`The organizer paid ${isGroup ? `the group's booking (${esc(money(price))} total), and ${share} is` : "your booking, and the money is"} on its way to your bank through Stripe. It arrives on your usual Stripe payout schedule, often within a few business days.`) +
+          note("TapIN's fees are paid by the organizer, so you receive the full amount shown."), "16px 28px 0");
+        b += section(button(isGroup ? `${SITE_URL}groups/${bk.resource_id}/manage` : `${SITE_URL}resources/dashboard`, "View booking"), "20px 28px 24px");
+        html = layout({ preheader: `${money(cents / 100)} is on its way to your bank.`, eyebrow: "Payment sent", body: b, why: "You're receiving this because you were paid for a booking on TapIN." });
+      }
     } else {
       return respond({ error: "Unknown email type." }, 400);
     }
