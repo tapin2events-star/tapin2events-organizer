@@ -2,7 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Group emails (server only; queued in email_outbox by the database):
-//   group_invite  { group_id, email }  -> invites someone to join a group
+//   group_invite          { group_id, email }    -> invites someone to join a group
+//   group_booking_status  { booking_id, status } -> tells the organizer a group accepted/declined/countered
 // Same design as TapIN's other emails. Skips when the invite no longer applies.
 
 const SITE_URL = "https://app.tapin2events.com/";
@@ -75,6 +76,30 @@ Deno.serve(async (req) => {
       b += section(button(SITE_URL + "groups", "Review invite") +
         `<div style="margin-top:14px;">${note(`Sign in with this email address (${esc(email)}) to join or decline. Not interested? You can ignore this email.`)}</div>`, "20px 28px 24px");
       html = layout({ preheader: `${plain(who, 60)} invited you to join ${plain(groupName, 60)}.`, eyebrow: "You're invited to a group", body: b, why: "You're receiving this because a group admin on TapIN invited you." });
+    } else if (kind === "group_booking_status") {
+      // A group's owner/admin accepted, declined, or countered a booking: tell the organizer.
+      const { data: bk } = await admin.from("resource_bookings").select("id, event_id, resource_id, organizer_email, status, offered_rate, counter_offer_rate, final_rate, response_from_resource").eq("id", String(body.booking_id ?? "")).maybeSingle();
+      if (!bk) return skip("booking not found");
+      if (String(body.status ?? "") !== bk.status) return skip("status changed again");
+      const { data: g } = await admin.from("resources").select("display_name, profile_image").eq("id", bk.resource_id).maybeSingle();
+      const { data: ev } = await admin.from("events").select("title").eq("id", bk.event_id).maybeSingle();
+      const groupName = tidy(g?.display_name) || "The group";
+      const eventTitle = tidy(ev?.title) || "your event";
+      const money = (n: unknown) => "$" + (Number(n) || 0).toFixed(2);
+      const copy: Record<string, { badge: string; subject: string; line: string; button: string }> = {
+        accepted: { badge: "\u2713 Booking accepted", subject: `Booking accepted: ${plain(groupName, 60)} for ${plain(eventTitle, 60)}`, line: `<strong>${esc(groupName)}</strong> accepted your booking for <strong>${esc(eventTitle)}</strong>${bk.final_rate != null ? ` at <strong>${esc(money(bk.final_rate))}</strong>` : ""}. You can now pay securely through TapIN; the payment is shared among the group's members.`, button: "Pay & view booking" },
+        rejected: { badge: "Booking declined", subject: `Booking declined: ${plain(groupName, 60)} for ${plain(eventTitle, 60)}`, line: `<strong>${esc(groupName)}</strong> isn't able to take your booking for <strong>${esc(eventTitle)}</strong>.`, button: "Find other artists & resources" },
+        counter_offered: { badge: "Counter offer", subject: `Counter offer from ${plain(groupName, 60)} for ${plain(eventTitle, 60)}`, line: `<strong>${esc(groupName)}</strong> sent a counter offer of <strong>${esc(money(bk.counter_offer_rate))}</strong> for <strong>${esc(eventTitle)}</strong> (you offered ${esc(money(bk.offered_rate))}).`, button: "Review counter offer" },
+      };
+      const c = copy[bk.status];
+      if (!c) return skip("no email for this status");
+      to = bk.organizer_email;
+      subject = c.subject;
+      let b = section(`<span style="display:inline-block;padding:5px 12px;border-radius:999px;background:#EEF2FF;color:${C.indigo};font-size:12px;font-weight:700;">${esc(c.badge)}</span>` +
+        `<div style="margin-top:10px;font-size:22px;line-height:1.25;font-weight:800;color:${C.ink};">${esc(eventTitle)}</div>`);
+      b += section(para(c.line) + (bk.response_from_resource ? `<div style="margin:4px 0 0;padding:12px 14px;border-radius:12px;background:${C.soft};border:1px solid ${C.line};font-size:14px;line-height:1.5;color:${C.body};">\u201c${esc(plain(bk.response_from_resource, 600))}\u201d</div>` : ""));
+      b += section(button(bk.status === "rejected" ? SITE_URL + "resources" : SITE_URL + "organizer/bookings?booking=" + bk.id, c.button), "20px 28px 24px");
+      html = layout({ preheader: c.subject, eyebrow: c.badge.replace("\u2713 ", ""), body: b, why: "You're receiving this because you sent a booking request on TapIN." });
     } else {
       return respond({ error: "Unknown email type." }, 400);
     }

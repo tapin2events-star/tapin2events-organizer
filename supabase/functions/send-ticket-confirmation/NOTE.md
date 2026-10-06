@@ -1,0 +1,1 @@
+send-ticket-confirmation (deployed v21): emails addressed to a group's internal address (group-<id>@groups.tapin2events.com) are sent to the group's owner and admins individually, with "[Group name]" added to the subject and resource-dashboard links pointed at /groups/<id>/manage.
