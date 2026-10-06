@@ -8,6 +8,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // Same design as TapIN's other emails. Skips when the invite no longer applies.
 
 const SITE_URL = "https://app.tapin2events.com/";
+const APP_STORE_URL = "https://apps.apple.com/us/app/tapin2events/id6474884074";
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=net.tapin2events.app";
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 const C = { indigo: "#4F46E5", teal: "#14B8A6", ink: "#111827", body: "#374151", muted: "#6B7280", faint: "#9CA3AF", line: "#E5E7EB", soft: "#F9FAFB", bg: "#F4F4F7", purple: "#6B21A8", purpleBg: "#F3E8FF" };
 const tidy = (t: unknown) => String(t ?? "").replace(/\s+/g, " ").trim();
@@ -132,6 +134,14 @@ Deno.serve(async (req) => {
         item("A social feed", "to share and watch videos from the community") +
         `</table>` +
         `<p style="margin:12px 0 0;font-size:14px;line-height:1.55;color:${C.muted};"><strong style="color:${C.ink};">Tip:</strong> add TapIN to your phone's Home Screen for a full-screen, app-like experience.</p>`, "20px 28px 0");
+      const storeBtn = (href: string, top: string, label: string) =>
+        `<a href="${esc(href)}" style="display:inline-block;margin:4px 6px 4px 0;padding:9px 16px;border-radius:12px;background:${C.ink};color:#ffffff;text-decoration:none;line-height:1.15;">` +
+        `<span style="display:block;font-size:10px;opacity:0.85;">${esc(top)}</span><span style="display:block;font-size:16px;font-weight:700;">${esc(label)}</span></a>`;
+      b += section(`<div style="padding:14px 16px;border-radius:14px;border:1px solid ${C.line};">` +
+        `<div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:${C.faint};">Using the TapIN app?</div>` +
+        `<p style="margin:6px 0 10px;font-size:15px;line-height:1.55;color:${C.body};">Update to the latest version, or download it if you haven't yet:</p>` +
+        storeBtn(APP_STORE_URL, "Download on the", "App Store") + storeBtn(PLAY_STORE_URL, "Get it on", "Google Play") +
+        `</div>`, "20px 28px 0");
       b += section(button(SITE_URL, "Open TapIN") +
         `<p style="margin:18px 0 0;font-size:15px;line-height:1.6;color:${C.body};">Thanks for being part of the TapIN community!<br><strong>William</strong>, TapIN2Events</p>`, "22px 28px 24px");
       html = layout({ preheader: "Same account, brand-new TapIN. Here's how to sign in and what's new.", eyebrow: "A new home for TapIN", body: b, why: "You're receiving this one-time announcement because you have a TapIN account. You can turn off emails in Email settings." });
