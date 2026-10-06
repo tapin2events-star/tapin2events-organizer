@@ -4,6 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // Group emails (server only; queued in email_outbox by the database):
 //   group_invite          { group_id, email }    -> invites someone to join a group
 //   group_booking_status  { booking_id, status } -> tells the organizer a group accepted/declined/countered
+//   announce_new_site     { email, first_name, has_password } -> one-time new-site announcement
 // Same design as TapIN's other emails. Skips when the invite no longer applies.
 
 const SITE_URL = "https://app.tapin2events.com/";
@@ -100,6 +101,40 @@ Deno.serve(async (req) => {
       b += section(para(c.line) + (bk.response_from_resource ? `<div style="margin:4px 0 0;padding:12px 14px;border-radius:12px;background:${C.soft};border:1px solid ${C.line};font-size:14px;line-height:1.5;color:${C.body};">\u201c${esc(plain(bk.response_from_resource, 600))}\u201d</div>` : ""));
       b += section(button(bk.status === "rejected" ? SITE_URL + "resources" : SITE_URL + "organizer/bookings?booking=" + bk.id, c.button), "20px 28px 24px");
       html = layout({ preheader: c.subject, eyebrow: c.badge.replace("\u2713 ", ""), body: b, why: "You're receiving this because you sent a booking request on TapIN." });
+    } else if (kind === "announce_new_site") {
+      // One-time announcement of the new site. { email, first_name, has_password }
+      const email = String(body.email ?? "");
+      const { data: p } = await admin.from("profiles").select("full_name, is_banned").eq("email", email).maybeSingle();
+      if (!p || p.is_banned) return skip("no longer applies");
+      const { data: wants } = await admin.rpc("notif_wants", { p_email: email, p_key: "email_notifications" });
+      if (wants === false) return skip("preference");
+      const first = tidy(body.first_name) || tidy(p.full_name).split(" ")[0] || "there";
+      const hasPassword = body.has_password === true;
+      const item = (title: string, text: string) => `<tr><td valign="top" style="padding:6px 10px 6px 0;font-size:15px;color:${C.indigo};">&#9679;</td><td style="padding:6px 0;font-size:15px;line-height:1.5;color:${C.body};"><strong style="color:${C.ink};">${esc(title)}</strong> ${esc(text)}</td></tr>`;
+      to = email;
+      subject = "TapIN has a new home: app.tapin2events.com";
+      let b = section(`<div style="font-size:24px;line-height:1.25;font-weight:800;color:${C.ink};">Hi ${esc(first)},</div>` +
+        `<p style="margin:12px 0 0;font-size:15px;line-height:1.6;color:${C.body};">TapIN2Events has a brand-new home: <a href="${SITE_URL}" style="color:${C.indigo};font-weight:700;">app.tapin2events.com</a>. We rebuilt TapIN from the ground up to be faster and easier to use. Your account and everything in it came with you.</p>`);
+      b += section(`<div style="padding:14px 16px;border-radius:14px;background:#EEF2FF;">` +
+        `<div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:${C.indigo};">Signing in</div>` +
+        (hasPassword
+          ? `<p style="margin:6px 0 0;font-size:15px;line-height:1.55;color:${C.body};">Sign in as usual with your email and password, or ask for a 6-digit code by email.</p>`
+          : `<p style="margin:6px 0 0;font-size:15px;line-height:1.55;color:${C.body};">Sign in with your email and we'll send you a 6-digit code. Then set a password anytime from your <a href="${SITE_URL}profile#password" style="color:${C.indigo};">Profile</a>.</p>` +
+            `<p style="margin:6px 0 0;font-size:13px;line-height:1.5;color:${C.muted};">If you used TapIN before, your old password didn't carry over.</p>`) +
+        `</div>`, "18px 28px 0");
+      b += section(`<div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:${C.faint};margin-bottom:6px;">What's new</div>` +
+        `<table role="presentation" cellpadding="0" cellspacing="0" width="100%">` +
+        item("Discover events near you:", "a map, today's events, and picks based on your interests") +
+        item("Tickets in seconds,", "with QR codes in your Activity tab") +
+        item("Lineups and schedules:", "see who's performing and when") +
+        item("Book artists, vendors, and services,", "and pay securely in the app") +
+        item("Groups:", "bands, crews, and collectives get their own page, shared booking payments, and a private group chat") +
+        item("A social feed", "to share and watch videos from the community") +
+        `</table>` +
+        `<p style="margin:12px 0 0;font-size:14px;line-height:1.55;color:${C.muted};"><strong style="color:${C.ink};">Tip:</strong> add TapIN to your phone's Home Screen for a full-screen, app-like experience.</p>`, "20px 28px 0");
+      b += section(button(SITE_URL, "Open TapIN") +
+        `<p style="margin:18px 0 0;font-size:15px;line-height:1.6;color:${C.body};">Thanks for being part of the TapIN community!<br><strong>William</strong>, TapIN2Events</p>`, "22px 28px 24px");
+      html = layout({ preheader: "Same account, brand-new TapIN. Here's how to sign in and what's new.", eyebrow: "A new home for TapIN", body: b, why: "You're receiving this one-time announcement because you have a TapIN account. You can turn off emails in Email settings." });
     } else {
       return respond({ error: "Unknown email type." }, 400);
     }
