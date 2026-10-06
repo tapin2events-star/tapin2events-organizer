@@ -31,6 +31,7 @@ import ResourceDashboard from './pages/ResourceDashboard';
 import MyGroups from './pages/MyGroups';
 import GroupCreate from './pages/GroupCreate';
 import GroupManage from './pages/GroupManage';
+import GroupChat from './pages/GroupChat';
 import ProductsPage from './pages/ProductsPage';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="/groups" element={<ProtectedRoute><MyGroups /></ProtectedRoute>} />
             <Route path="/groups/new" element={<ProtectedRoute><GroupCreate /></ProtectedRoute>} />
             <Route path="/groups/:id/manage" element={<ProtectedRoute><GroupManage /></ProtectedRoute>} />
+            <Route path="/groups/:id/chat" element={<ProtectedRoute><GroupChat /></ProtectedRoute>} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 

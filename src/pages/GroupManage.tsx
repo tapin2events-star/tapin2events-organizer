@@ -9,6 +9,7 @@ import { ROLE_LABELS, rpcError, type GroupRole, type ManagedMember } from '../li
 import ResourceMediaManager from '../components/resources/ResourceMediaManager';
 import GroupBookings from '../components/groups/GroupBookings';
 import GroupPayments from '../components/groups/GroupPayments';
+import GroupContent from '../components/groups/GroupContent';
 import type { Resource } from '../lib/types';
 
 const btn = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold disabled:opacity-50';
@@ -130,13 +131,17 @@ export default function GroupManage() {
           <p className="text-xs uppercase tracking-widest text-muted">{ROLE_LABELS[role]}</p>
           <h1 className="truncate font-display text-3xl font-extrabold text-bone">{group.display_name}</h1>
         </div>
-        <Link to={`/resources/${group.id}`} className={btn}>View group page</Link>
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/groups/${group.id}/chat`} className="rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white hover:bg-marigold/90">Group chat</Link>
+          <Link to={`/resources/${group.id}`} className={btn}>View group page</Link>
+        </div>
       </div>
 
       {notice && <p role={notice.ok ? 'status' : 'alert'} className={`mt-4 rounded-lg px-3 py-2 text-sm ${notice.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{notice.text}</p>}
 
       <GroupBookings groupId={group.id} groupName={group.display_name} canRespond={isAdmin} />
       <GroupPayments groupId={group.id} isOwner={role === 'owner'} />
+      <GroupContent groupId={group.id} groupName={group.display_name} isAdmin={isAdmin} />
 
       {/* ---------- Members ---------- */}
       <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">

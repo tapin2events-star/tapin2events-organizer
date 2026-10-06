@@ -8,6 +8,8 @@ interface ProductManagerProps {
   ownerType: 'event' | 'resource';
   ownerId: string;
   sellerEmail: string;
+  /** Groups: each member manages only the products they listed. */
+  onlyMine?: boolean;
 }
 
 interface VariantRow {
@@ -34,7 +36,7 @@ const emptyForm = {
   shippingCost: '0',
 };
 
-export default function ProductManager({ ownerType, ownerId, sellerEmail }: ProductManagerProps) {
+export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMine = false }: ProductManagerProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -49,7 +51,9 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail }: Prod
   const ownerColumn = ownerType === 'event' ? 'event_id' : 'resource_id';
 
   async function load() {
-    const { data, error: loadError } = await supabase.from('products').select('*').eq(ownerColumn, ownerId).order('created_at', { ascending: false });
+    let query = supabase.from('products').select('*').eq(ownerColumn, ownerId);
+    if (onlyMine) query = query.eq('seller_email', sellerEmail);
+    const { data, error: loadError } = await query.order('created_at', { ascending: false });
     if (loadError) {
       console.error('Failed to load products:', loadError);
     } else {

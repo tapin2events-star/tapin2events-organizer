@@ -28,6 +28,9 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(null);
   const [myEvents, setMyEvents] = useState<EventOption[]>([]);
+  // Groups this person belongs to, so the video can also show on a group's page.
+  const [myGroups, setMyGroups] = useState<{ group_id: string; name: string }[]>([]);
+  const [groupId, setGroupId] = useState('');
   const [stage, setStage] = useState<'pick' | 'uploading' | 'processing' | 'error'>('pick');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -39,6 +42,12 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
     onClose();
   }
   useEscapeKey(requestClose);
+
+  useEffect(() => {
+    supabase.rpc('my_groups').then(({ data }) => {
+      setMyGroups(((data ?? []) as { group_id: string; name: string; status: string }[]).filter((g) => g.status === 'active'));
+    });
+  }, []);
 
   useEffect(() => {
     if (eventSearch.trim().length < 2 || selectedEvent) {
@@ -171,6 +180,7 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
       category: category || null,
       tags: tags.length > 0 ? tags : null,
       event_id: selectedEvent?.id ?? null,
+      group_id: groupId || null,
     }).select('id').single();
     if (insertError || !created) {
       setError('Your video processed successfully, but saving the post failed. Please try again.');
@@ -279,6 +289,17 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
               selfEmail={user?.email}
               inputClassName="rounded-lg border border-gray-300 bg-surface2 px-3 py-2 text-sm text-bone outline-none focus-visible:border-marigold"
             />
+
+            {myGroups.length > 0 && (
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-bone">Also show on a group's page <span className="text-muted font-normal">(Optional)</span></span>
+                <select value={groupId} onChange={(e) => setGroupId(e.target.value)}
+                  className="rounded-lg border border-gray-300 bg-surface2 px-3 py-2 text-sm text-bone outline-none focus-visible:border-marigold">
+                  <option value="">No, just my profile</option>
+                  {myGroups.map((g) => <option key={g.group_id} value={g.group_id}>{g.name}</option>)}
+                </select>
+              </label>
+            )}
 
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-bone">Tag an Event <span className="text-muted font-normal">(Optional)</span></span>

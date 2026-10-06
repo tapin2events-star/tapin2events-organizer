@@ -15,7 +15,7 @@ const FEED_PREVIEW = 6;
 
 // Public "Media" section on a resource profile: music and video players from
 // links, the creator's TapIN feed videos, and photo albums.
-export default function ResourceMediaSection({ resourceId, resourceEmail }: { resourceId: string; resourceEmail: string }) {
+export default function ResourceMediaSection({ resourceId, resourceEmail, groupId }: { resourceId: string; resourceEmail: string; groupId?: string }) {
   const [items, setItems] = useState<ResourceMedia[]>([]);
   const [albums, setAlbums] = useState<ResourceAlbum[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -29,13 +29,16 @@ export default function ResourceMediaSection({ resourceId, resourceEmail }: { re
       supabase.from('resource_albums').select('*').eq('resource_id', resourceId).order('display_order', { ascending: true }),
       // Only videos the creator posted as a resource ("Posting as: Resource"),
       // not ones posted as an organizer or with no role chosen.
-      supabase.from('posts').select('id, thumbnail_url, caption').eq('author_email', resourceEmail).eq('poster_type', 'resource').eq('status', 'active').order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1),
+      // Groups: videos members chose to show on the group's page.
+      groupId
+        ? supabase.from('posts').select('id, thumbnail_url, caption').eq('group_id', groupId).eq('status', 'active').order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1)
+        : supabase.from('posts').select('id, thumbnail_url, caption').eq('author_email', resourceEmail).eq('poster_type', 'resource').eq('status', 'active').order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1),
     ]).then(([{ data: m }, { data: a }, { data: p }]) => {
       setItems((m ?? []) as ResourceMedia[]);
       setAlbums((a ?? []) as ResourceAlbum[]);
       setPosts((p ?? []) as FeedPost[]);
     });
-  }, [resourceId, resourceEmail]);
+  }, [resourceId, resourceEmail, groupId]);
 
   const embeds = items
     .filter((i) => i.media_type === 'embed')
@@ -92,7 +95,7 @@ export default function ResourceMediaSection({ resourceId, resourceEmail }: { re
         <div>
           <div className="flex items-baseline justify-between">
             {heading('Videos on TapIN')}
-            {posts.length > FEED_PREVIEW && (
+            {posts.length > FEED_PREVIEW && !groupId && (
               <Link to={`/creator/${encodeURIComponent(resourceEmail)}`} className="text-sm font-medium text-marigold">See all &rarr;</Link>
             )}
           </div>

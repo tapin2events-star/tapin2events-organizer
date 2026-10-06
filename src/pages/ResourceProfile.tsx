@@ -171,9 +171,12 @@ export default function ResourceProfile() {
                 {pricingLabel(resource)}
               </span>
               {isGroup && groupRole && (
-                <Link to={`/groups/${resource.id}/manage`} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold">
-                  {groupRole === 'member' ? 'Group settings' : 'Manage group'}
-                </Link>
+                <>
+                  <Link to={`/groups/${resource.id}/chat`} className="rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white hover:bg-marigold/90">Group chat</Link>
+                  <Link to={`/groups/${resource.id}/manage`} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold">
+                    {groupRole === 'member' ? 'Group settings' : 'Manage group'}
+                  </Link>
+                </>
               )}
             </div>
 
@@ -196,7 +199,7 @@ export default function ResourceProfile() {
 
             {isGroup && <GroupMembersSection groupId={resource.id} />}
 
-            <ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} />
+            <ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} groupId={isGroup ? resource.id : undefined} />
 
             {resource.pricing_details && (
               <div className="mt-6 border-t border-gray-200 pt-6">
