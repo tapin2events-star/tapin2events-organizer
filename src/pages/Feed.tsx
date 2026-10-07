@@ -650,17 +650,21 @@ export default function Feed() {
                 <span className="text-xs font-medium">{shareCopiedId === post.id ? 'Copied!' : 'Share'}</span>
               </button>
               {user?.email === post.author_email && (
-                <button onClick={() => setEditingPostId(post.id)} aria-label="Edit post" className="-m-2 p-2 text-white/70">
+                <button onClick={() => setEditingPostId(post.id)} aria-label="Edit post" className="flex h-12 w-12 items-center justify-center rounded-full text-white/80 active:scale-95">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </button>
               )}
               {user?.email === post.author_email ? (
-                <button onClick={() => deletePost(post.id)} aria-label="Delete post" className="-m-2 p-2 text-white/70">
+                <button onClick={() => deletePost(post.id)} aria-label="Delete post" className="flex h-12 w-12 items-center justify-center rounded-full text-white/80 active:scale-95">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </button>
               ) : (
-                <button onClick={() => setReportingId(post.id)} aria-label="Report or block" className="-m-2 p-2 text-white/70">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 8v5M12 16h.01" strokeLinecap="round" /></svg>
+                <button onClick={() => setReportingId(post.id)} aria-label="Report or block"
+                  className="flex min-h-[48px] min-w-[48px] flex-col items-center justify-center gap-1 rounded-full text-white active:scale-95">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10" /><path d="M12 8v5M12 16h.01" strokeLinecap="round" /></svg>
+                  </span>
+                  <span className="text-xs font-medium">Report</span>
                 </button>
               )}
             </div>
