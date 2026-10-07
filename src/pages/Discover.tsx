@@ -139,8 +139,19 @@ export default function Discover() {
   return (
     <div className="min-h-screen bg-ink">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <h1 className="font-display text-4xl font-extrabold text-gray-900">Discover Events</h1>
-        <p className="mt-1 text-lg text-gray-500">Find amazing events happening near you</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-4xl font-extrabold text-gray-900">Discover Events</h1>
+            <p className="mt-1 text-lg text-gray-500">Find amazing events happening near you</p>
+          </div>
+          {/* Desktop only: phones already have the + button in the tab bar.
+              Signed-out visitors are sent to sign in first, then to the form. */}
+          <Link to="/organizer/new"
+            className="mt-1 hidden shrink-0 items-center gap-2 rounded-xl bg-marigold px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-marigold/90 md:inline-flex">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            Create event
+          </Link>
+        </div>
 
         <Link
           to="/resources"
