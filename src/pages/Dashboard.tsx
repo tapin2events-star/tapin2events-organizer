@@ -165,6 +165,20 @@ export default function Dashboard() {
         const date = e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
         const hay = [e.title, e.location_name, e.location_address, e.category, date, e.is_online ? 'online virtual' : '', e.status].filter(Boolean).join(' ').toLowerCase();
         return words.every((w) => hay.includes(w));
+      })
+      // Upcoming (and happening now) first, soonest at the top; then events
+      // with no date yet; then past events, most recent first.
+      .sort((a, b) => {
+        const group = (e: TapEvent) => {
+          if (!e.start_date) return 1;
+          const ends = new Date(e.end_date ?? e.start_date).getTime();
+          return ends >= now.getTime() ? 0 : 2;
+        };
+        const ga = group(a), gb = group(b);
+        if (ga !== gb) return ga - gb;
+        const ta = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const tb = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return ga === 2 ? tb - ta : ta - tb;
       });
   }, [search, events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, bookingFilter, eventsWithPendingBookings, eventsWithBookedResources, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
 
