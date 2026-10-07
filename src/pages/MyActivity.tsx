@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -384,6 +385,10 @@ export default function MyActivity() {
                         >
                           {emailedId === t.id ? 'Sent!' : 'Email ticket'}
                         </button>
+                        {canCancelRegistration(t, t.event_start_date) && (
+                          <CancelRegistration ticketId={t.id} eventTitle={t.event_title} variant="button"
+                            onCancelled={() => setTickets((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'cancelled' } : x)))} />
+                        )}
                       </div>
                     )}
                   </div>

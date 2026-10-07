@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -83,6 +84,9 @@ export default function PublicEventDetail() {
           .select('*')
           .eq('event_id', id)
           .eq('attendee_email', user.email)
+          .neq('status', 'cancelled')
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
         setMyTicket((existing as Ticket) ?? null);
       }
@@ -445,6 +449,10 @@ export default function PublicEventDetail() {
                 <Link to={`/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
                   View your ticket &amp; QR code
                 </Link>
+                {canCancelRegistration(myTicket, event.start_date) && (
+                  <CancelRegistration ticketId={myTicket.id} eventTitle={event.title} variant="light" className="mt-1"
+                    onCancelled={() => { setMyTicket(null); setConfirmedCount((n) => Math.max(n - (myTicket.quantity || 1), 0)); }} />
+                )}
               </div>
             ) : !user ? (
               <button
@@ -533,6 +541,10 @@ export default function PublicEventDetail() {
                 <Link to={`/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
                   View your ticket &amp; QR code
                 </Link>
+                {canCancelRegistration(myTicket, event.start_date) && (
+                  <CancelRegistration ticketId={myTicket.id} eventTitle={event.title} variant="light" className="mt-1"
+                    onCancelled={() => { setMyTicket(null); setConfirmedCount((n) => Math.max(n - (myTicket.quantity || 1), 0)); }} />
+                )}
               </div>
             ) : !user ? (
               <button

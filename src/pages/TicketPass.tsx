@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import BackButton from '../components/BackButton';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -37,6 +39,8 @@ export default function TicketPass() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const [data, setData] = useState<PassData | null>(null);
+  const { user } = useAuth();
+  const [cancelledNow, setCancelledNow] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'signin_required' | 'error'>('idle');
@@ -100,6 +104,9 @@ export default function TicketPass() {
         <BackButton fallback="/activity" fallbackLabel="My tickets" />
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm print:mt-0 print:shadow-none">
+          {cancelledNow && (
+            <p role="status" className="bg-green-50 px-4 py-3 text-center text-sm text-green-800">Your registration is cancelled. Thanks for letting the organizer know.</p>
+          )}
           {event.poster_url && (
             <img src={event.poster_url} alt="" className="h-40 w-full object-cover" />
           )}
@@ -202,6 +209,12 @@ export default function TicketPass() {
             >
               {emailState === 'sending' ? 'Sending…' : emailState === 'sent' ? 'Sent \u2713' : 'Email me this ticket'}
             </button>
+          </div>
+        )}
+        {!isCancelled && user?.email === ticket.attendee_email && canCancelRegistration(ticket, event.start_date) && (
+          <div className="mt-5 text-center print:hidden">
+            <CancelRegistration ticketId={ticket.id} eventTitle={event.title}
+              onCancelled={() => { setCancelledNow(true); setData((d) => d && { ...d, ticket: { ...d.ticket, status: 'cancelled' } }); }} />
           </div>
         )}
         {emailState === 'signin_required' && (
