@@ -26,7 +26,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const SUSPENDED_MESSAGE =
-  'This account has been suspended. If you think this is a mistake, email tapin2events@gmail.com.';
+  'This account has been suspended. If you think this is a mistake, email support@tapin2events.com.';
 
 // Supabase reports a banned login as "User is banned"; show something people can act on.
 function friendlyAuthError(message: string | undefined | null): string | null {

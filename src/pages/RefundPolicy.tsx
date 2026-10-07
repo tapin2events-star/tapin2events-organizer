@@ -54,7 +54,7 @@ export default function RefundPolicy() {
       </Section>
 
       <Section title="Questions">
-        <p>Contact us at <a href="mailto:tapin2events@gmail.com" className="font-medium text-marigold hover:underline">tapin2events@gmail.com</a>.</p>
+        <p>Contact us at <a href="mailto:support@tapin2events.com" className="font-medium text-marigold hover:underline">support@tapin2events.com</a>.</p>
       </Section>
 
       <p className="mt-10 flex flex-wrap gap-x-4 gap-y-1 border-t border-gray-200 pt-4 text-sm">

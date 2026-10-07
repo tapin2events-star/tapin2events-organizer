@@ -28,4 +28,4 @@ export function LegalPage({ title, updated, intro, children }: { title: string; 
 }
 
 export const LEGAL_EFFECTIVE = 'September 27, 2026';
-export const CONTACT_EMAIL = 'tapin2events@gmail.com';
+export const CONTACT_EMAIL = 'support@tapin2events.com';

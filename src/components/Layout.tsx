@@ -152,6 +152,10 @@ export default function Layout() {
 
         <div className="mt-auto pt-6">
           <div className="border-t border-gray-200 pt-3">
+            <a href="mailto:support@tapin2events.com" onClick={close}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 active:bg-gray-100 md:hover:bg-gray-100">
+              <NavIcon name="help" /> Contact support
+            </a>
             {user && (
               <button onClick={() => { close(); signOut(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 active:bg-gray-100 md:hover:bg-gray-100">
                 <NavIcon name="signout" /> Sign out
