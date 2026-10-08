@@ -335,6 +335,7 @@ export default function BookingsManager({ eventId, title }: { eventId?: string; 
                         <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                           {b.payment_status === 'paid' && <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Paid</span>}
                           {b.payment_status === 'refunded' && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Refunded</span>}
+                          {b.kind === 'lineup_invite' && <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">Lineup invite</span>}
                           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${BOOKING_STATUS_STYLES[b.status] ?? BOOKING_STATUS_STYLES.pending}`}>{BOOKING_STATUS_LABELS[b.status] ?? b.status}</span>
                         </span>
                       </div>

@@ -11,6 +11,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   follow_new_events     { organizer_id, event_ids, email, first_name } -> one follower's new-events email
 //   follow_gigs_batch     { resource_id }        -> resource added to lineups: notify followers, queue their emails
 //   follow_gigs           { resource_id, event_ids, email, first_name } -> one follower's "where to catch them" email
+//   lineup_invite         { booking_id }         -> free lineup invite for a resource (groups go to their admins)
 // Same design as TapIN's other emails. Skips when the invite no longer applies.
 
 const SITE_URL = "https://app.tapin2events.com/";
@@ -344,6 +345,30 @@ Deno.serve(async (req) => {
       b += section(button(`${SITE_URL}resources/${resourceId}`, `See all of ${name}'s appearances`), "0 28px 16px");
       b += section(note(`You're getting this because you follow ${esc(name)} on TapIN. <a href="${SITE_URL}resources/${resourceId}" style="color:${C.indigo};">Unfollow</a> &middot; <a href="${SITE_URL}profile#notifications" style="color:${C.indigo};">Turn off these emails</a>`), "6px 28px 24px");
       html = layout({ preheader: live.length === 1 ? `${when(live[0].start_date)}${live[0].location_name ? " \u00b7 " + tidy(live[0].location_name) : ""}` : `See where to catch ${name} next.`, eyebrow: "Where to catch them next", body: b });
+    } else if (kind === "lineup_invite") {
+      // An organizer wants to list this resource (or group) on an event lineup, no payment involved.
+      const { data: bk } = await admin.from("resource_bookings").select("id, event_id, resource_email, organizer_email, status, kind, message_from_organizer, booking_details").eq("id", String(body.booking_id ?? "")).maybeSingle();
+      if (!bk || bk.kind !== "lineup_invite" || bk.status !== "pending") return skip("invite no longer pending");
+      const [{ data: ev }, { data: org }] = await Promise.all([
+        admin.from("events").select("title, start_date, location_name, is_online, poster_url").eq("id", bk.event_id).maybeSingle(),
+        admin.from("profiles").select("full_name").eq("email", bk.organizer_email).maybeSingle(),
+      ]);
+      const who = tidy(org?.full_name) || "An organizer";
+      const eventTitle = tidy(ev?.title) || "an event";
+      const role = tidy((bk.booking_details as Record<string, unknown> | null)?.lineup_role);
+      const when = ev?.start_date ? new Date(ev.start_date).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }).replace(":00 ", " ") : "";
+      const img = httpsOnly(ev?.poster_url);
+      to = bk.resource_email;
+      subject = `${plain(who, 50)} wants you on the lineup for ${plain(eventTitle, 70)}`;
+      let b = section(badge("Lineup invite") +
+        `<div style="margin-top:10px;font-size:22px;line-height:1.25;font-weight:800;color:${C.ink};">${esc(eventTitle)}</div>` +
+        `<div style="margin-top:4px;font-size:14px;color:${C.muted};">${esc([when, ev?.is_online ? "Online" : tidy(ev?.location_name)].filter(Boolean).join(" \u00b7 "))}</div>` +
+        (img ? `<img src="${esc(img)}" alt="" width="464" style="display:block;width:100%;max-height:220px;object-fit:cover;border-radius:14px;margin-top:14px;">` : ""));
+      b += section(para(`<strong>${esc(who)}</strong> would like to list you on this event's lineup${role ? ` as <strong>${esc(role)}</strong>` : ""}. This is a free listing, not a paid booking.`) +
+        (bk.message_from_organizer ? `<div style="margin:0 0 12px;padding:12px 14px;border-radius:12px;background:${C.soft};border:1px solid ${C.line};font-size:14px;line-height:1.5;color:${C.body};">\u201c${esc(plain(bk.message_from_organizer, 600))}\u201d</div>` : "") +
+        note("If you accept, you'll appear on the event page and in your Upcoming appearances, and your followers may be told. Nothing is public until you accept."), "16px 28px 0");
+      b += section(button(SITE_URL + "resources/dashboard", "Accept or decline"), "20px 28px 24px");
+      html = layout({ preheader: `${who} wants to list you on the lineup for ${eventTitle}.`, eyebrow: "You're invited to a lineup", body: b, why: "You're receiving this because an organizer on TapIN invited you to their event's lineup." });
     } else {
       return respond({ error: "Unknown email type." }, 400);
     }

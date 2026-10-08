@@ -349,6 +349,11 @@ export default function ResourceDashboard() {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-600">From <span className="font-medium text-gray-800">{b.organizer_name ?? b.organizer_email}</span></p>
+                {b.kind === 'lineup_invite' && (
+                  <p className="mt-1 rounded-lg bg-purple-50 px-3 py-2 text-sm text-purple-900">
+                    <strong>Lineup invite (no payment).</strong> They'd like to list you on this event's lineup{(b.booking_details as { lineup_role?: string } | null)?.lineup_role ? ` as ${(b.booking_details as { lineup_role?: string }).lineup_role}` : ''}. If you accept, you'll appear on the event page and in your Upcoming appearances.
+                  </p>
+                )}
                 <BookingListing listing={listings.get(b.id)} audience="resource" />
                 {b.payment_status === 'paid' && (
                   <p className="mt-1 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -390,9 +395,11 @@ export default function ResourceDashboard() {
                       <button onClick={() => respond(b, 'accepted')} disabled={busyId === b.id} className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
                         Accept
                       </button>
-                      <button onClick={() => setCounteringId(counteringId === b.id ? null : b.id)} disabled={busyId === b.id} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50">
-                        Counter offer
-                      </button>
+                      {b.kind !== 'lineup_invite' && (
+                        <button onClick={() => setCounteringId(counteringId === b.id ? null : b.id)} disabled={busyId === b.id} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold disabled:opacity-50">
+                          Counter offer
+                        </button>
+                      )}
                       <button onClick={() => respond(b, 'rejected')} disabled={busyId === b.id} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-magenta hover:text-magenta disabled:opacity-50">
                         Decline
                       </button>

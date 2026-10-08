@@ -70,6 +70,7 @@ export default function GroupBookings({ groupId, groupName, canRespond }: { grou
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${BOOKING_STATUS_STYLES[b.status] ?? BOOKING_STATUS_STYLES.pending}`}>{BOOKING_STATUS_LABELS[b.status] ?? b.status}</span>
                   </span>
                 </div>
+                {b.kind === 'lineup_invite' && <p className="mt-2 rounded-lg bg-purple-50 px-3 py-2 text-sm text-purple-900"><strong>Lineup invite (no payment).</strong> Accept to appear on this event's lineup.</p>}
                 {b.message_from_organizer && <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">“{b.message_from_organizer}”</p>}
                 {myShare && (
                   <p className="mt-2 text-sm text-emerald-800">
@@ -86,7 +87,7 @@ export default function GroupBookings({ groupId, groupName, canRespond }: { grou
                   ) : (
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button disabled={busy === b.id} onClick={() => update(b, { status: 'accepted' }, 'accepted your booking request')} className="rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Accept</button>
-                      <button disabled={busy === b.id} onClick={() => setCountering(b.id)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700">Counter offer</button>
+                      {b.kind !== 'lineup_invite' && <button disabled={busy === b.id} onClick={() => setCountering(b.id)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700">Counter offer</button>}
                       <button disabled={busy === b.id} onClick={() => update(b, { status: 'rejected' }, 'declined your booking request')} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-600">Decline</button>
                     </div>
                   )

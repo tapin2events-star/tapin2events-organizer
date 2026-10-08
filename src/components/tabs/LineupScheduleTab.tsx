@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../ImageUpload';
 import { ConfirmDialog } from '../admin/shared';
+import LineupInvite, { type PendingInvite } from './LineupInvite';
 import {
   KIND_LABELS, KIND_STYLES, fromInputs, groupByDay, initials, timeRange, toDateInput, toTimeInput,
   type LineupEntry, type ScheduleItem, type ScheduleKind,
@@ -165,6 +167,10 @@ export default function LineupScheduleTab({ event, isOwner }: { event: TapEvent;
   const [display, setDisplay] = useState<Map<string, LineupEntry>>(new Map());
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [bookings, setBookings] = useState<BookingOption[]>([]);
+  const { user } = useAuth();
+  const [invites, setInvites] = useState<PendingInvite[]>([]);
+  const [takenResources, setTakenResources] = useState<Set<string>>(new Set());
+  const [inviting, setInviting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingPerson, setEditingPerson] = useState<string | 'new' | null>(null);
@@ -183,9 +189,17 @@ export default function LineupScheduleTab({ event, isOwner }: { event: TapEvent;
     setDisplay(new Map(((p.data?.lineup ?? []) as LineupEntry[]).map((x) => [x.id, x])));
     setItems((s.data ?? []) as ScheduleItem[]);
     if (isOwner) {
-      const { data: b } = await supabase.from('resource_bookings').select('id, resource_id, show_on_event_page')
-        .eq('event_id', event.id).in('status', ['accepted', 'confirmed', 'completed']);
-      const unlisted = (b ?? []).filter((x) => !x.show_on_event_page);
+      const { data: all } = await supabase.from('resource_bookings').select('id, resource_id, show_on_event_page, status, kind, booking_details')
+        .eq('event_id', event.id).in('status', ['pending', 'counter_offered', 'accepted', 'confirmed', 'completed']);
+      setTakenResources(new Set((all ?? []).map((x) => x.resource_id)));
+      const b = (all ?? []).filter((x) => ['accepted', 'confirmed', 'completed'].includes(x.status));
+      const pend = (all ?? []).filter((x) => x.kind === 'lineup_invite' && x.status === 'pending');
+      if (pend.length) {
+        const { data: pr } = await supabase.from('resources').select('id, display_name, profile_image').in('id', pend.map((x) => x.resource_id));
+        const pm = new Map((pr ?? []).map((r) => [r.id, r]));
+        setInvites(pend.map((x) => ({ id: x.id, resource_id: x.resource_id, resource_name: pm.get(x.resource_id)?.display_name ?? 'Invited', resource_image: pm.get(x.resource_id)?.profile_image ?? null, role: (x.booking_details as { lineup_role?: string } | null)?.lineup_role ?? null })));
+      } else setInvites([]);
+      const unlisted = b.filter((x) => !x.show_on_event_page);
       if (unlisted.length) {
         const { data: res } = await supabase.from('resources').select('id, display_name, profile_image').in('id', unlisted.map((x) => x.resource_id));
         const byId = new Map((res ?? []).map((r) => [r.id, r]));
@@ -256,8 +270,38 @@ export default function LineupScheduleTab({ event, isOwner }: { event: TapEvent;
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-semibold text-bone">Lineup</h2>
-          {editingPerson === null && <button onClick={() => setEditingPerson('new')} className={btn}>+ Add someone</button>}
+          {editingPerson === null && !inviting && (
+            <div className="flex flex-wrap gap-2">
+              {isOwner && <button onClick={() => setInviting(true)} className="rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white hover:bg-marigold/90">+ Add from TapIN</button>}
+              <button onClick={() => setEditingPerson('new')} className={btn}>+ Add someone</button>
+            </div>
+          )}
         </div>
+        {inviting && user?.email && (
+          <LineupInvite eventId={event.id} organizerEmail={user.email} existingResourceIds={takenResources}
+            onClose={() => setInviting(false)} onSent={() => { setInviting(false); load(); }} />
+        )}
+        {invites.length > 0 && (
+          <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <p className="text-sm font-medium text-gray-700">Waiting for a reply</p>
+            <p className="text-xs text-gray-500">Not shown on your event page until they accept.</p>
+            <ul className="mt-2 flex flex-col gap-2">
+              {invites.map((iv) => (
+                <li key={iv.id} className="flex items-center gap-3 rounded-lg bg-white p-2">
+                  {iv.resource_image ? <img src={iv.resource_image} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600">{iv.resource_name.charAt(0)}</span>}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-gray-900">{iv.resource_name}</span>
+                    <span className="block truncate text-xs text-gray-500">{iv.role ? `${iv.role} · ` : ''}Invite pending</span>
+                  </span>
+                  <button className="text-xs font-medium text-gray-500 hover:text-red-600" onClick={async () => {
+                    await supabase.from('resource_bookings').update({ status: 'cancelled', cancellation_reason: 'Lineup invite withdrawn' }).eq('id', iv.id);
+                    load();
+                  }}>Withdraw</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {editingPerson === 'new' && <div className="mt-3"><PersonForm initial={{}} booked={false} onSave={(v) => savePerson('new', v)} onCancel={() => setEditingPerson(null)} /></div>}
 

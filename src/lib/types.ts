@@ -165,6 +165,7 @@ export interface ResourceBooking {
   // Set when the organizer pays through TapIN ('paid'), or after a refund ('refunded').
   payment_status?: string | null;
   legacy_id?: string | null; // set on bookings brought over from the old app
+  kind?: 'booking' | 'lineup_invite' | null; // lineup_invite = free lineup listing, no payment
   amount_paid?: number | null;
   platform_fee?: number | null;
   refund_amount?: number | null;

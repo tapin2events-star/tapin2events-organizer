@@ -59,6 +59,7 @@ export default function BookingsReceived() {
                 <p className="text-xs text-gray-500">From {b.organizer_name ?? b.organizer_email}{when ? ` · ${when}` : ''}{price ? ` · ${money(price)}` : ''}</p>
               </div>
               <span className="flex flex-wrap justify-end gap-1.5">
+                {b.kind === 'lineup_invite' && <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800">Lineup invite</span>}
                 {needsReply && <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800">Needs your reply</span>}
                 {b.payment_status === 'paid' && <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Paid</span>}
                 {b.payment_status === 'refunded' && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Refunded</span>}
