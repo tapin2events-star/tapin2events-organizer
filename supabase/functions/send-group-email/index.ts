@@ -9,6 +9,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   receipt_booking_payee     { booking_id, email, cents } -> "you've been paid" for a resource or group member
 //   follow_batch          { organizer_id }       -> new events from an organizer: notify followers, queue their emails
 //   follow_new_events     { organizer_id, event_ids, email, first_name } -> one follower's new-events email
+//   follow_gigs_batch     { resource_id }        -> resource added to lineups: notify followers, queue their emails
+//   follow_gigs           { resource_id, event_ids, email, first_name } -> one follower's "where to catch them" email
 // Same design as TapIN's other emails. Skips when the invite no longer applies.
 
 const SITE_URL = "https://app.tapin2events.com/";
@@ -268,6 +270,80 @@ Deno.serve(async (req) => {
       b += section(live.map(card).join(""), "18px 28px 10px");
       b += section(note(`You're getting this because you follow ${esc(orgName)} on TapIN. <a href="${SITE_URL}creator/${encodeURIComponent(org?.email ?? "")}" style="color:${C.indigo};">Unfollow</a> &middot; <a href="${SITE_URL}profile#notifications" style="color:${C.indigo};">Turn off these emails</a>`), "6px 28px 24px");
       html = layout({ preheader: live.length === 1 ? `${when(live[0])}${live[0].location_name ? " \u00b7 " + tidy(live[0].location_name) : ""}` : `See ${orgName}'s new events.`, eyebrow: "New from organizers you follow", body: b });
+    } else if (kind === "follow_gigs_batch") {
+      // A resource was added to published event lineups an hour ago: notify their followers.
+      const resourceId = String(body.resource_id ?? "");
+      const { data: alerts } = await admin.from("resource_appearance_alerts").update({ processed_at: new Date().toISOString() })
+        .eq("resource_id", resourceId).is("processed_at", null).select("event_id");
+      const ids = (alerts ?? []).map((a) => a.event_id);
+      if (!ids.length) return skip("nothing new");
+      const { data: res } = await admin.from("resources").select("id, display_name, email, status, announce_lineups").eq("id", resourceId).maybeSingle();
+      if (!res || res.status !== "active" || res.announce_lineups === false) return skip("resource not announcing");
+      // Still on the lineup, published and upcoming?
+      const { data: apps } = await admin.rpc("resource_appearances", { p_resource_id: resourceId });
+      const live = ((apps ?? []) as { event_id: string; title: string; start_date: string | null }[]).filter((a) => ids.includes(a.event_id))
+        .sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)));
+      if (!live.length) return skip("no longer on a published upcoming lineup");
+      const { data: people } = await admin.rpc("resource_alert_recipients", { p_resource_id: resourceId });
+      const list = (people ?? []) as { email: string; first_name: string; wants_email: boolean }[];
+      if (!list.length) return skip("no followers");
+      const name = tidy(res.display_name) || "An artist you follow";
+      const msg = live.length === 1 ? `${name} is on the lineup for ${live[0].title}` : `${name} is on the lineup for ${live.length} upcoming events`;
+      for (let i = 0; i < list.length; i += 500) {
+        await admin.from("notifications").insert(list.slice(i, i + 500).map((p) => ({
+          user_email: p.email, type: "followed_gig", message: msg.slice(0, 240),
+          link: live.length === 1 ? `/events/${live[0].event_id}` : `/resources/${resourceId}`,
+          related_entity_type: "event", related_entity_id: live[0].event_id,
+        })));
+      }
+      const rows = list.filter((p) => p.wants_email && EMAIL_RE.test(p.email)).map((p) => ({
+        kind: "follow_gigs",
+        payload: { resource_id: resourceId, event_ids: live.map((e) => e.event_id), email: p.email, first_name: p.first_name },
+        dedupe_key: `follow_gigs:${p.email}:${resourceId}:${live[0].event_id}`,
+        send_after: new Date().toISOString(),
+      }));
+      for (let i = 0; i < rows.length; i += 500) await admin.from("email_outbox").insert(rows.slice(i, i + 500));
+      return skip(`notified ${list.length}, queued ${rows.length} emails`);
+    } else if (kind === "follow_gigs") {
+      // One follower's email: where to catch an artist/resource next.
+      const email = String(body.email ?? "");
+      const resourceId = String(body.resource_id ?? "");
+      const ids = Array.isArray(body.event_ids) ? body.event_ids.map(String) : [];
+      const { data: wants } = await admin.rpc("notif_wants", { p_email: email, p_key: "followed_gigs" });
+      if (wants === false) return skip("preference");
+      const { data: res } = await admin.from("resources").select("display_name, profile_image, kind").eq("id", resourceId).maybeSingle();
+      const { data: apps } = await admin.rpc("resource_appearances", { p_resource_id: resourceId });
+      const live = ((apps ?? []) as { event_id: string; title: string; start_date: string | null; location_name: string | null; is_online: boolean | null; poster_url: string | null; role: string | null }[])
+        .filter((a) => ids.includes(a.event_id)).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date))).slice(0, 12);
+      if (!live.length) return skip("no longer on the lineup");
+      const name = tidy(res?.display_name) || "An artist you follow";
+      const when = (d: string | null) => d
+        ? new Date(d).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }).replace(":00 ", " ")
+        : "Date to be announced";
+      const { data: evs } = await admin.from("events").select("id, event_type").in("id", live.map((a) => a.event_id));
+      const freeIds = new Set((evs ?? []).filter((e) => e.event_type === "free").map((e) => e.id));
+      const card = (a: (typeof live)[number]) => {
+        const img = httpsOnly(a.poster_url);
+        const meta = [when(a.start_date), a.is_online ? "Online" : tidy(a.location_name)].filter(Boolean).map((x) => esc(x)).join(" &middot; ");
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;border:1px solid ${C.line};border-radius:16px;overflow:hidden;">` +
+          (img ? `<tr><td><a href="${SITE_URL}events/${a.event_id}"><img src="${esc(img)}" alt="" width="464" style="display:block;width:100%;max-height:240px;object-fit:cover;"></a></td></tr>` : "") +
+          `<tr><td style="padding:14px 16px;">` +
+          (a.role ? `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${C.indigo};">${esc(tidy(a.role))}</div>` : "") +
+          `<div style="margin-top:2px;font-size:17px;line-height:1.3;font-weight:800;color:${C.ink};">${esc(tidy(a.title))}</div>` +
+          `<div style="margin-top:4px;font-size:13px;line-height:1.5;color:${C.muted};">${meta}</div>` +
+          `<div style="margin-top:12px;">${button(`${SITE_URL}events/${a.event_id}`, freeIds.has(a.event_id) ? "Register" : "Get tickets")}</div></td></tr></table>`;
+      };
+      const firstName = tidy(body.first_name);
+      to = email;
+      subject = live.length === 1 ? `${plain(name, 50)} is performing at ${plain(live[0].title, 70)}` : `Catch ${plain(name, 50)} at ${live.length} upcoming events`;
+      const img = httpsOnly(res?.profile_image);
+      let b = section(`<table role="presentation" cellpadding="0" cellspacing="0"><tr>` +
+        (img ? `<td width="52" valign="middle"><img src="${esc(img)}" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border-radius:999px;object-fit:cover;"></td>` : "") +
+        `<td valign="middle" style="font-size:15px;line-height:1.5;color:${C.body};">${firstName ? `Hi ${esc(firstName)}, ` : ""}<strong style="color:${C.ink};">${esc(name)}</strong> was just added to ${live.length === 1 ? "an event lineup" : `${live.length} event lineups`}.</td></tr></table>`);
+      b += section(live.map(card).join(""), "18px 28px 10px");
+      b += section(button(`${SITE_URL}resources/${resourceId}`, `See all of ${name}'s appearances`), "0 28px 16px");
+      b += section(note(`You're getting this because you follow ${esc(name)} on TapIN. <a href="${SITE_URL}resources/${resourceId}" style="color:${C.indigo};">Unfollow</a> &middot; <a href="${SITE_URL}profile#notifications" style="color:${C.indigo};">Turn off these emails</a>`), "6px 28px 24px");
+      html = layout({ preheader: live.length === 1 ? `${when(live[0].start_date)}${live[0].location_name ? " \u00b7 " + tidy(live[0].location_name) : ""}` : `See where to catch ${name} next.`, eyebrow: "Where to catch them next", body: b });
     } else {
       return respond({ error: "Unknown email type." }, 400);
     }

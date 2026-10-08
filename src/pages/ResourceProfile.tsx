@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import UpcomingAppearances from '../components/resources/UpcomingAppearances';
+import FollowButton from '../components/FollowButton';
 import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -186,6 +188,7 @@ export default function ResourceProfile() {
               ))}
             </div>
 
+            <FollowButton email={resource.email} className="mt-3" />
             {!isGroup && <GroupBadges email={resource.email} className="mt-3" />}
 
             <p className="mt-2 text-sm text-gray-500">
@@ -196,6 +199,8 @@ export default function ResourceProfile() {
               <h2 className="font-display text-lg font-semibold text-gray-900">About</h2>
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
+
+            <UpcomingAppearances resourceId={resource.id} name={resource.display_name} />
 
             {isGroup && <GroupMembersSection groupId={resource.id} />}
 

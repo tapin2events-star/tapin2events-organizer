@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import AnnounceLineupsToggle from '../components/resources/AnnounceLineupsToggle';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -141,6 +142,7 @@ export default function GroupManage() {
 
       <GroupBookings groupId={group.id} groupName={group.display_name} canRespond={isAdmin} />
       <GroupPayments groupId={group.id} isOwner={role === 'owner'} />
+      {isAdmin && <div className="mt-6"><AnnounceLineupsToggle resourceId={group.id} isGroup /></div>}
       <GroupContent groupId={group.id} groupName={group.display_name} isAdmin={isAdmin} />
 
       {/* ---------- Members ---------- */}

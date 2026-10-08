@@ -37,6 +37,7 @@ interface ProfileRow {
     email_notifications?: boolean;
     collaboration_invites?: boolean;
     followed_new_events?: boolean;
+    followed_gigs?: boolean;
   } | null;
 }
 
@@ -374,6 +375,7 @@ export default function Profile() {
             {([
               { key: 'event_updates', label: 'Event reminders & updates', desc: "Reminders the day before, and changes to events you're attending" },
               { key: 'followed_new_events', label: 'New events from people you follow', desc: 'When an organizer you follow posts a new event' },
+              { key: 'followed_gigs', label: 'Gigs from artists & resources you follow', desc: "When someone you follow is added to an event's lineup" },
               { key: 'new_followers', label: 'New followers', desc: 'When someone follows your profile' },
               { key: 'email_notifications', label: 'Email notifications', desc: 'Receive these updates by email' },
               { key: 'collaboration_invites', label: 'Collaboration invites', desc: "When you're invited to help manage an event" },
