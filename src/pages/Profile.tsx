@@ -36,6 +36,7 @@ interface ProfileRow {
     new_followers?: boolean;
     email_notifications?: boolean;
     collaboration_invites?: boolean;
+    followed_new_events?: boolean;
   } | null;
 }
 
@@ -54,7 +55,7 @@ export default function Profile() {
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [tab, setTab] = useState<SettingsTab>('basic');
+  const [tab, setTab] = useState<SettingsTab>(() => (typeof window !== 'undefined' && window.location.hash === '#notifications' ? 'notifs' : 'basic'));
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
@@ -107,7 +108,7 @@ export default function Profile() {
       }
       setLoading(false);
       const hash = window.location.hash.slice(1);
-      if (hash === 'payouts' || hash === 'password') {
+      if (hash === 'payouts' || hash === 'password' || hash === 'notifications') {
         setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
       }
     })();
@@ -288,7 +289,7 @@ export default function Profile() {
         <PayoutsCard hasAccount={!!profile.stripe_account_id} chargesEnabled={!!profile.stripe_charges_enabled} variant="creator" />
       </div>
 
-      <div className="mt-10">
+      <div id="notifications" className="mt-10 scroll-mt-20">
         <div className="flex gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1">
           {([
             { id: 'basic', label: 'Basic' },
@@ -372,6 +373,7 @@ export default function Profile() {
           <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
             {([
               { key: 'event_updates', label: 'Event reminders & updates', desc: "Reminders the day before, and changes to events you're attending" },
+              { key: 'followed_new_events', label: 'New events from people you follow', desc: 'When an organizer you follow posts a new event' },
               { key: 'new_followers', label: 'New followers', desc: 'When someone follows your profile' },
               { key: 'email_notifications', label: 'Email notifications', desc: 'Receive these updates by email' },
               { key: 'collaboration_invites', label: 'Collaboration invites', desc: "When you're invited to help manage an event" },

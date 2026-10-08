@@ -926,6 +926,7 @@ export default function EventForm() {
                 <option value="draft">Draft (only you can see it)</option>
                 <option value="published">Published (visible to attendees)</option>
               </select>
+              {status === 'published' && <FollowerPublishNote email={user?.email} />}
             </Field>
           </>
         )}
@@ -1257,4 +1258,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+// Tells the organizer their followers will hear about this event.
+function FollowerPublishNote({ email }: { email?: string | null }) {
+  const [n, setN] = useState<number | null>(null);
+  useEffect(() => {
+    if (!email) return;
+    supabase.rpc('follower_count', { p_email: email }).then(({ data }) => setN(typeof data === 'number' ? data : 0));
+  }, [email]);
+  if (!n) return null;
+  return <p className="mt-1.5 text-xs text-muted">Your {n.toLocaleString()} follower{n === 1 ? '' : 's'} will be notified about an hour after you publish (upcoming events only). Unpublish within the hour and no one is emailed.</p>;
 }

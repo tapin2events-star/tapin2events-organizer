@@ -1,1 +1,1 @@
-process-email-outbox (deployed v4) routes queued emails whose kind starts with "group_", "announce_" or "receipt_" to send-group-email; all other kinds go to send-app-email.
+process-email-outbox (v6) routes: system_ -> send-system-email; group_/announce_/receipt_/follow_ -> send-group-email; others -> send-app-email.

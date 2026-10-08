@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import HostedBy from '../components/HostedBy';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -373,11 +374,8 @@ export default function PublicEventDetail() {
           </span>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-          <div>
-            <span className="text-gray-400">Organized by </span>
-            <span className="font-medium text-gray-700">{organizerName || event.organizer_email}</span>
-          </div>
+        {event.organizer_email && <HostedBy organizerEmail={event.organizer_email} fallbackName={organizerName} />}
+        <div className="mt-2 text-right text-sm">
           <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
             Contact organizer
           </a>

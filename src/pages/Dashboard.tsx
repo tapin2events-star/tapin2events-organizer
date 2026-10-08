@@ -205,6 +205,7 @@ export default function Dashboard() {
         <div>
           <h1 className="font-display text-3xl font-extrabold text-bone">Organizer Dashboard</h1>
           <p className="text-sm text-muted">Everything you're organizing, in one place.</p>
+          <FollowerNote email={user?.email} />
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <Link to="/organizer/import" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold">
@@ -422,5 +423,21 @@ export default function Dashboard() {
       )}
 
     </div>
+  );
+}
+
+// "42 followers" with a reminder that they hear about new events.
+function FollowerNote({ email }: { email?: string | null }) {
+  const [n, setN] = useState<number | null>(null);
+  useEffect(() => {
+    if (!email) return;
+    supabase.rpc('follower_count', { p_email: email }).then(({ data }) => setN(typeof data === 'number' ? data : 0));
+  }, [email]);
+  if (n === null) return null;
+  return (
+    <p className="mt-1 text-xs text-muted">
+      <span className="font-semibold text-bone">{n.toLocaleString()} follower{n === 1 ? '' : 's'}</span>
+      {n > 0 ? ' get an email when you publish a new event.' : ' yet. People who follow you hear about your new events.'}
+    </p>
   );
 }

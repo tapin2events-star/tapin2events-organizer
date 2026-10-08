@@ -7,6 +7,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   announce_new_site     { email, first_name, has_password } -> one-time new-site announcement
 //   receipt_booking_organizer { booking_id }            -> booking payment receipt for the organizer
 //   receipt_booking_payee     { booking_id, email, cents } -> "you've been paid" for a resource or group member
+//   follow_batch          { organizer_id }       -> new events from an organizer: notify followers, queue their emails
+//   follow_new_events     { organizer_id, event_ids, email, first_name } -> one follower's new-events email
 // Same design as TapIN's other emails. Skips when the invite no longer applies.
 
 const SITE_URL = "https://app.tapin2events.com/";
@@ -194,6 +196,78 @@ Deno.serve(async (req) => {
         b += section(button(isGroup ? `${SITE_URL}groups/${bk.resource_id}/manage` : `${SITE_URL}resources/dashboard`, "View booking"), "20px 28px 24px");
         html = layout({ preheader: `${money(cents / 100)} is on its way to your bank.`, eyebrow: "Payment sent", body: b, why: "You're receiving this because you were paid for a booking on TapIN." });
       }
+    } else if (kind === "follow_batch") {
+      // An organizer published new events an hour ago: notify their followers (in-app now, email queued per follower).
+      const organizerId = String(body.organizer_id ?? "");
+      const { data: alerts } = await admin.from("follower_event_alerts").update({ processed_at: new Date().toISOString() })
+        .eq("organizer_id", organizerId).is("processed_at", null).select("event_id");
+      const ids = (alerts ?? []).map((a) => a.event_id);
+      if (!ids.length) return skip("nothing new");
+      const nowIso = new Date().toISOString();
+      const { data: evs } = await admin.from("events").select("id, title, start_date, end_date, status").in("id", ids).eq("status", "published");
+      const live = (evs ?? []).filter((e) => (e.end_date ?? e.start_date) && String(e.end_date ?? e.start_date) > nowIso)
+        .sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)));
+      if (!live.length) return skip("events no longer upcoming or published");
+      const { data: org } = await admin.from("profiles").select("full_name, email").eq("id", organizerId).maybeSingle();
+      const orgName = tidy(org?.full_name) || "An organizer you follow";
+      const { data: people } = await admin.rpc("organizer_alert_recipients", { p_organizer_id: organizerId });
+      const list = (people ?? []) as { email: string; first_name: string; wants_email: boolean }[];
+      if (!list.length) return skip("no followers");
+      const first = live[0];
+      const msg = live.length === 1
+        ? `${orgName} posted a new event: ${first.title}`
+        : `${orgName} posted ${live.length} new events, including ${first.title}`;
+      for (let i = 0; i < list.length; i += 500) {
+        await admin.from("notifications").insert(list.slice(i, i + 500).map((p) => ({
+          user_email: p.email, type: "followed_new_event", message: msg.slice(0, 240),
+          link: live.length === 1 ? `/events/${first.id}` : `/creator/${encodeURIComponent(org?.email ?? "")}`,
+          related_entity_type: "event", related_entity_id: first.id,
+        })));
+      }
+      const rows = list.filter((p) => p.wants_email && EMAIL_RE.test(p.email)).map((p) => ({
+        kind: "follow_new_events",
+        payload: { organizer_id: organizerId, event_ids: live.map((e) => e.id), email: p.email, first_name: p.first_name },
+        dedupe_key: `follow_new_events:${p.email}:${first.id}`,
+        send_after: new Date().toISOString(),
+      }));
+      for (let i = 0; i < rows.length; i += 500) await admin.from("email_outbox").insert(rows.slice(i, i + 500));
+      return skip(`notified ${list.length}, queued ${rows.length} emails`);
+    } else if (kind === "follow_new_events") {
+      // One follower's email about an organizer's new event(s).
+      const email = String(body.email ?? "");
+      const ids = Array.isArray(body.event_ids) ? body.event_ids.map(String).slice(0, 12) : [];
+      const nowIso = new Date().toISOString();
+      const { data: evs } = await admin.from("events").select("id, title, start_date, end_date, status, location_name, is_online, poster_url, event_type, ticket_price, external_ticket_url").in("id", ids).eq("status", "published");
+      const live = (evs ?? []).filter((e) => String(e.end_date ?? e.start_date ?? "") > nowIso).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)));
+      if (!live.length) return skip("events no longer available");
+      const { data: wants } = await admin.rpc("notif_wants", { p_email: email, p_key: "followed_new_events" });
+      if (wants === false) return skip("preference");
+      const { data: org } = await admin.from("profiles").select("full_name, email, profile_photo").eq("id", String(body.organizer_id ?? "")).maybeSingle();
+      const orgName = tidy(org?.full_name) || "An organizer you follow";
+      const when = (e: { start_date: string | null }) => e.start_date
+        ? new Date(e.start_date).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }).replace(":00 ", " ")
+        : "Date to be announced";
+      const price = (e: { event_type: string | null; ticket_price: number | null }) => e.event_type === "free" ? "Free" : Number(e.ticket_price) > 0 ? `From $${Number(e.ticket_price).toFixed(2)}` : "";
+      const card = (e: (typeof live)[number]) => {
+        const img = httpsOnly(e.poster_url);
+        const meta = [when(e), e.is_online ? "Online" : tidy(e.location_name), price(e)].filter(Boolean).map((x) => esc(x)).join(" &middot; ");
+        const cta = e.event_type === "free" ? "Register" : "Get tickets";
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;border:1px solid ${C.line};border-radius:16px;overflow:hidden;">` +
+          (img ? `<tr><td><a href="${SITE_URL}events/${e.id}"><img src="${esc(img)}" alt="" width="464" style="display:block;width:100%;max-height:240px;object-fit:cover;"></a></td></tr>` : "") +
+          `<tr><td style="padding:14px 16px;"><div style="font-size:17px;line-height:1.3;font-weight:800;color:${C.ink};">${esc(tidy(e.title))}</div>` +
+          `<div style="margin-top:4px;font-size:13px;line-height:1.5;color:${C.muted};">${meta}</div>` +
+          `<div style="margin-top:12px;">${button(`${SITE_URL}events/${e.id}`, cta)}</div></td></tr></table>`;
+      };
+      const firstName = tidy(body.first_name);
+      to = email;
+      subject = live.length === 1 ? `${plain(orgName, 50)} just posted: ${plain(live[0].title, 70)}` : `${plain(orgName, 50)} posted ${live.length} new events`;
+      const img = httpsOnly(org?.profile_photo);
+      let b = section(`<table role="presentation" cellpadding="0" cellspacing="0"><tr>` +
+        (img ? `<td width="52" valign="middle"><img src="${esc(img)}" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border-radius:999px;object-fit:cover;"></td>` : "") +
+        `<td valign="middle" style="font-size:15px;line-height:1.5;color:${C.body};">${firstName ? `Hi ${esc(firstName)}, ` : ""}<strong style="color:${C.ink};">${esc(orgName)}</strong> just posted ${live.length === 1 ? "a new event" : `${live.length} new events`}.</td></tr></table>`);
+      b += section(live.map(card).join(""), "18px 28px 10px");
+      b += section(note(`You're getting this because you follow ${esc(orgName)} on TapIN. <a href="${SITE_URL}creator/${encodeURIComponent(org?.email ?? "")}" style="color:${C.indigo};">Unfollow</a> &middot; <a href="${SITE_URL}profile#notifications" style="color:${C.indigo};">Turn off these emails</a>`), "6px 28px 24px");
+      html = layout({ preheader: live.length === 1 ? `${when(live[0])}${live[0].location_name ? " \u00b7 " + tidy(live[0].location_name) : ""}` : `See ${orgName}'s new events.`, eyebrow: "New from organizers you follow", body: b });
     } else {
       return respond({ error: "Unknown email type." }, 400);
     }
