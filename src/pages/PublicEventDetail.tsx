@@ -37,6 +37,22 @@ export default function PublicEventDetail() {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [shareCopied, setShareCopied] = useState(false);
   const checkoutStatus = searchParams.get('checkout'); // 'success' | 'cancelled' | null
+  // Backed out of a seated checkout: free those seats right away.
+  const seatHold = searchParams.get('seat_hold');
+  const [seatsReleased, setSeatsReleased] = useState<null | 'releasing' | 'released' | 'pending'>(null);
+  useEffect(() => {
+    if (checkoutStatus !== 'cancelled' || !seatHold || !id) return;
+    setSeatsReleased('releasing');
+    supabase.functions.invoke('release-seat-hold', { body: { hold_id: seatHold } }).then(async ({ data, error }) => {
+      setSeatsReleased(!error && data?.released ? 'released' : 'pending');
+      const { data: fresh } = await supabase.from('events').select('booked_seats').eq('id', id).maybeSingle();
+      if (fresh) setEvent((ev) => (ev ? { ...ev, booked_seats: fresh.booked_seats } : ev));
+      // Tidy the address so a refresh doesn't try again.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('seat_hold');
+      window.history.replaceState(window.history.state, '', url.toString());
+    });
+  }, [checkoutStatus, seatHold, id]);
 
   useEffect(() => {
     if (!id) return;
@@ -345,6 +361,9 @@ export default function PublicEventDetail() {
         {checkoutStatus === 'cancelled' && (
           <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
             Checkout was cancelled — no charge was made.
+            {seatsReleased === 'releasing' && ' Releasing your seats…'}
+            {seatsReleased === 'released' && ' Your seats have been released so others can choose them. You can pick seats again anytime.'}
+            {seatsReleased === 'pending' && " Your seats will be released automatically within 30 minutes."}
           </div>
         )}
 
