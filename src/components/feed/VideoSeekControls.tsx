@@ -16,6 +16,35 @@ export default function VideoSeekControls({ video, paused, onResume }: { video: 
   const [dragging, setDragging] = useState(false);
   const [flash, setFlash] = useState<null | 'back' | 'fwd'>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const zoneRef = useRef<HTMLDivElement>(null);
+
+  // Keep the page and the feed perfectly still while the bar is being dragged:
+  // a finger drifting up or down would otherwise scroll the feed. Touch events
+  // are blocked natively (React's listeners can't cancel them), and the feed's
+  // scrolling is switched off until the finger lifts.
+  useEffect(() => {
+    const zone = zoneRef.current;
+    if (!zone) return;
+    const stop = (e: TouchEvent) => { e.preventDefault(); e.stopPropagation(); };
+    zone.addEventListener('touchstart', stop, { passive: false });
+    zone.addEventListener('touchmove', stop, { passive: false });
+    return () => {
+      zone.removeEventListener('touchstart', stop);
+      zone.removeEventListener('touchmove', stop);
+    };
+  }, []);
+  useEffect(() => {
+    if (!dragging) return;
+    const scroller = zoneRef.current?.closest('.overflow-y-scroll') as HTMLElement | null;
+    const prevScroll = scroller?.style.overflowY ?? '';
+    const prevBody = document.body.style.overflow;
+    if (scroller) scroller.style.overflowY = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      if (scroller) scroller.style.overflowY = prevScroll;
+      document.body.style.overflow = prevBody;
+    };
+  }, [dragging]);
 
   useEffect(() => {
     if (!video) return;
@@ -88,8 +117,9 @@ export default function VideoSeekControls({ video, paused, onResume }: { video: 
 
       {/* Progress bar. Sits above the tab bar when it's showing (paused). */}
       <div
+        ref={zoneRef}
         data-no-swipe
-        className="absolute inset-x-0 z-20 px-3"
+        className="absolute inset-x-0 z-20 touch-none select-none px-3"
         style={{ bottom: paused ? 'calc(4.75rem + env(safe-area-inset-bottom, 0px))' : 'env(safe-area-inset-bottom, 0px)' }}
       >
         {expanded && (
@@ -107,9 +137,9 @@ export default function VideoSeekControls({ video, paused, onResume }: { video: 
           aria-valuetext={`${fmt(time)} of ${fmt(duration)}`}
           tabIndex={0}
           onKeyDown={(e) => { if (e.key === 'ArrowLeft') skip(-5); if (e.key === 'ArrowRight') skip(5); }}
-          className="relative flex h-6 cursor-pointer touch-none items-center"
+          className="relative flex h-8 cursor-pointer touch-none items-center"
           onPointerDown={(e) => { e.stopPropagation(); (e.target as Element).setPointerCapture?.(e.pointerId); setDragging(true); seekTo(e.clientX); }}
-          onPointerMove={(e) => { if (dragging) { e.stopPropagation(); seekTo(e.clientX); } }}
+          onPointerMove={(e) => { if (dragging) { e.preventDefault(); e.stopPropagation(); seekTo(e.clientX); } }}
           onPointerUp={(e) => { e.stopPropagation(); setDragging(false); }}
           onPointerCancel={() => setDragging(false)}
           onClick={(e) => e.stopPropagation()}
