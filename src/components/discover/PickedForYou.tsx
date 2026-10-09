@@ -11,6 +11,8 @@ const DISMISS_KEY = 'tapin_interest_prompt_dismissed';
 
 interface Signals {
   interests: InterestGroup[];
+  city: string | null;
+  state: string | null;
   fromSaved: Map<InterestGroup, number>;
   fromTickets: Map<InterestGroup, number>;
   ticketEventIds: Set<string>;
@@ -54,23 +56,27 @@ export default function PickedForYou({
 
   async function loadSignals() {
     const [{ data: profile }, { data: tickets }] = await Promise.all([
-      supabase.from('profiles').select('interests, saved_event_ids').eq('email', userEmail).single(),
-      supabase.from('tickets').select('event_id').eq('attendee_email', userEmail).in('status', ['confirmed', 'checked_in']),
+      supabase.from('profiles').select('interests, saved_event_ids, city, state').eq('email', userEmail).single(),
+      // "used" = attended (checked in), the strongest sign of what someone enjoys.
+      supabase.from('tickets').select('event_id').eq('attendee_email', userEmail).in('status', ['confirmed', 'used']),
     ]);
     const saved = (profile?.saved_event_ids as string[]) ?? [];
     const ticketIds = [...new Set((tickets ?? []).map((t) => t.event_id as string))];
     const lookup = [...new Set([...saved, ...ticketIds])];
     const { data: signalEvents } = lookup.length
-      ? await supabase.from('events').select('id, category').in('id', lookup)
-      : { data: [] as { id: string; category: string }[] };
-    const catById = new Map((signalEvents ?? []).map((e) => [e.id, e.category]));
+      ? await supabase.from('events').select('id, category, title').in('id', lookup)
+      : { data: [] as { id: string; category: string; title: string }[] };
+    // A past event's category counts, plus what its title clearly says.
+    const groupsById = new Map((signalEvents ?? []).map((e) => [e.id, new Set([...groupsFor(e.category), ...groupsFor(e.title)])]));
     const tally = (ids: string[]) => {
       const m = new Map<InterestGroup, number>();
-      ids.forEach((id) => groupsFor(catById.get(id)).forEach((g) => m.set(g, (m.get(g) ?? 0) + 1)));
+      ids.forEach((id) => (groupsById.get(id) ?? new Set<InterestGroup>()).forEach((g) => m.set(g, (m.get(g) ?? 0) + 1)));
       return m;
     };
     setSignals({
       interests: normalizeInterests(profile?.interests as string[]),
+      city: (profile?.city as string | null)?.trim() || null,
+      state: (profile?.state as string | null)?.trim() || null,
       fromSaved: tally(saved),
       fromTickets: tally(ticketIds),
       ticketEventIds: new Set(ticketIds),
@@ -97,6 +103,7 @@ export default function PickedForYou({
       if (!isUpcoming(e, now) || savedIds.includes(e.id) || signals.ticketEventIds.has(e.id) || e.organizer_id === userId) continue;
       const catGroups = groupsFor(e.category);
       const titleGroups = [...groupsFor(e.title)].filter((g) => !catGroups.has(g));
+      const descGroups = [...groupsFor((e.description ?? '').slice(0, 1500))].filter((g) => !catGroups.has(g) && !titleGroups.includes(g));
       let score = 0;
       let reason = '';
       const weigh = (g: InterestGroup, weight: number) => {
@@ -113,7 +120,12 @@ export default function PickedForYou({
       };
       catGroups.forEach((g) => weigh(g, 1));
       titleGroups.forEach((g) => weigh(g, 0.5)); // a title hint counts, but less than the category
+      descGroups.forEach((g) => weigh(g, 0.3)); // the description, least of all
       if (score === 0) continue;
+      // Closer to home ranks higher (never excludes anything).
+      const where = `${e.location_address ?? ''} ${e.location_name ?? ''}`.toLowerCase();
+      if (!e.is_online && signals.city && where.includes(signals.city.toLowerCase())) score += 1;
+      else if (!e.is_online && signals.state && new RegExp(`\\b${signals.state.toLowerCase().replace(/[^a-z ]/g, '')}\\b`).test(where)) score += 0.5;
       const days = e.start_date ? (new Date(e.start_date).getTime() - now) / DAY : 999;
       if (days <= 14) score += 1;
       else if (days <= 30) score += 0.5;

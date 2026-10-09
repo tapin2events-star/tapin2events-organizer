@@ -17,15 +17,15 @@ export type InterestGroup = (typeof INTEREST_GROUPS)[number]['id'];
 
 const RULES: [RegExp, InterestGroup[]][] = [
   [/\bopen mic\b/, ['Music', 'Arts & Culture']],
-  [/\bfestival|fest\b/, ['Community', 'Music']],
-  [/\bcomic ?con\b|\bcosplay\b|\bgaming\b|\btcg\b/, ['Entertainment & Nightlife', 'Arts & Culture']],
-  [/\bmusic|concert|\bdj\b|hip ?hop|jazz|gospel|band\b|\blive music\b|karaoke/, ['Music']],
-  [/\bart\b|\barts\b|culture|theat(er|re)|poetry|spoken word|dance|film|museum|gallery|craft|makers?\b/, ['Arts & Culture']],
-  [/entertainment|nightlife|comedy|party|club\b|lounge|drag\b|trivia/, ['Entertainment & Nightlife']],
-  [/\bfood|drink|dining|culinary|brunch|wine|beer|cocktail|bake|cook|taste|tasting|market\b/, ['Food & Drink']],
-  [/community|worship|faith|church|ministry|volunteer|family|kids|juneteenth|block party|cleanup|education|school|library/, ['Community']],
-  [/sport|fitness|health|wellness|yoga|\brun\b|running|5k|workout|spa\b/, ['Health & Fitness']],
-  [/business|\btech|technology|networking|career|startup|entrepreneur|education|workshop|conference/, ['Business & Tech']],
+  [/\bfestival\b|\bfest\b/, ['Community', 'Music']],
+  [/\bcomic ?con\b|\bcosplay\b|\bgaming\b|\btcg\b|\banime\b/, ['Entertainment & Nightlife', 'Arts & Culture']],
+  [/\bmusic|concert|\bdj\b|hip ?hop|\br&b\b|jazz|gospel|\bband\b|live music|karaoke|singer|songwriter|choir|orchestra|rapper|\bbeats?\b/, ['Music']],
+  [/\bart\b|\barts\b|artist|culture|theat(er|re)|poetry|poet|spoken word|\bslam\b|dance|film|museum|gallery|craft|makers?\b|paint|exhibit|photograph|storytell|\bbook\b|author/, ['Arts & Culture']],
+  [/entertainment|nightlife|comedy|comedian|improv|stand-?up|party|\bclub\b|lounge|\bdrag\b|trivia|masquerade|\bgala\b|mixer|\bsocial\b|game night|happy hour|\bbar\b/, ['Entertainment & Nightlife']],
+  [/\bfood|drink|dining|culinary|brunch|wine|beer|cocktail|\bbake|\bcook|tasting|food truck|\bmarket\b|farmers|\bsip\b/, ['Food & Drink']],
+  [/community|worship|faith|church|ministry|volunteer|family|kids|juneteenth|block party|cleanup|library|vendor|pop-?up|fundrais|charity|neighborhood|celebration|heritage/, ['Community']],
+  [/sport|fitness|health|wellness|yoga|\brun\b|running|\b5k\b|workout|\bspa\b|meditat|hike|hiking|cycling|basketball|football|soccer/, ['Health & Fitness']],
+  [/business|\btech\b|technology|networking|career|startup|entrepreneur|conference|investor|marketing|leadership|professional/, ['Business & Tech']],
 ];
 
 /** Interest groups a piece of text (an event category or title) belongs to. */
