@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import VideoSeekControls from '../components/feed/VideoSeekControls';
 import { blockUser } from '../lib/blocks';
 import BlockConfirm from '../components/BlockConfirm';
 import { useSwipeRight } from '../lib/useSwipeRight';
@@ -595,6 +596,14 @@ export default function Feed() {
                 }
               }}
             />
+
+            {activePostId === post.id && (
+              <VideoSeekControls
+                video={videoRefs.current[post.id] ?? null}
+                paused={isPaused}
+                onResume={() => { videoRefs.current[post.id]?.play(); setIsPaused(false); }}
+              />
+            )}
 
             {burstingHeartId === post.id && (
               <svg
