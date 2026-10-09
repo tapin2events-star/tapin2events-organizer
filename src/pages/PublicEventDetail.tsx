@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import CopyAddress from '../components/CopyAddress';
+import { isIOS } from '../lib/displayMode';
 import HostedBy from '../components/HostedBy';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import BackButton from '../components/BackButton';
@@ -681,7 +683,13 @@ export default function PublicEventDetail() {
           <div className="mt-10">
             <h2 className="font-display text-xl font-bold text-gray-900">Location</h2>
             <p className="mt-2 font-medium text-gray-900">{event.location_name || 'Venue TBD'}</p>
-            {event.location_address && <p className="text-sm text-gray-500">{event.location_address}</p>}
+            {event.location_address && <p className="select-text text-sm text-gray-500">{event.location_address}</p>}
+            {(event.location_address || event.location_name) && (
+              <CopyAddress
+                address={[event.location_name, event.location_address].filter(Boolean).join(', ')}
+                mapLink={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.latitude && event.longitude ? `${event.latitude},${event.longitude}` : (event.location_address || event.location_name || ''))}`}
+              />
+            )}
 
             {(() => {
               const mapQuery = event.latitude && event.longitude
@@ -701,7 +709,7 @@ export default function PublicEventDetail() {
                   </div>
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${encoded}`}
+                      href={isIOS() ? `https://maps.apple.com/?daddr=${encoded}` : `https://www.google.com/maps/dir/?api=1&destination=${encoded}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold"
