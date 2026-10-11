@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ScoutingTab from '../components/tabs/ScoutingTab';
 import BackButton from '../components/BackButton';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +20,7 @@ import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
-const TABS = ['Overview', 'Lineup & schedule', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Tasks', 'Team', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Lineup & schedule', 'Scouting', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Tasks', 'Team', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -218,6 +219,7 @@ export default function EventDetail() {
 
       {tab === 'Overview' && <OverviewTab event={event} />}
       {tab === 'Lineup & schedule' && <LineupScheduleTab event={event} isOwner={isOwner} />}
+      {tab === 'Scouting' && <ScoutingTab event={event} />}
       {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (

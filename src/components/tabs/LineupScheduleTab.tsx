@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../ImageUpload';
 import { ConfirmDialog } from '../admin/shared';
 import LineupInvite, { type PendingInvite } from './LineupInvite';
+import ScoutingShortcut from './ScoutingShortcut';
 import {
   KIND_LABELS, KIND_STYLES, fromInputs, groupByDay, initials, timeRange, toDateInput, toTimeInput,
   type LineupEntry, type ScheduleItem, type ScheduleKind,
@@ -280,6 +281,9 @@ export default function LineupScheduleTab({ event, isOwner }: { event: TapEvent;
         {inviting && user?.email && (
           <LineupInvite eventId={event.id} organizerEmail={user.email} existingResourceIds={takenResources}
             onClose={() => setInviting(false)} onSent={() => { setInviting(false); load(); }} />
+        )}
+        {isOwner && user?.email && !inviting && (
+          <ScoutingShortcut eventId={event.id} organizerEmail={user.email} takenResourceIds={takenResources} onSent={() => load()} />
         )}
         {invites.length > 0 && (
           <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
