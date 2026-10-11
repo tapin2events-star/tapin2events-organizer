@@ -598,20 +598,32 @@ export default function PublicEventDetail() {
 
         {event.is_recurring && seriesEvents.length > 1 && (
           <div className="mt-6">
-            <p className="text-sm font-medium text-gray-700">Recurring event — choose a date</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {seriesEvents.map((e) => (
-                <Link
-                  key={e.id}
-                  to={`/events/${e.id}`}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                    e.id === event.id ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-200 text-gray-700 hover:border-marigold hover:text-marigold'
-                  }`}
-                >
-                  {new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </Link>
-              ))}
-            </div>
+            <label className="text-sm font-medium text-gray-700" htmlFor="series-date">Recurring event · choose a date</label>
+            {(() => {
+              // Attendees only need upcoming dates (plus the one they're looking at).
+              const now = Date.now();
+              const options = seriesEvents.filter((e) => e.id === event.id || !e.start_date || new Date(e.start_date).getTime() >= now - 6 * 3600 * 1000);
+              const idx = options.findIndex((e) => e.id === event.id);
+              const arrow = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-700 disabled:opacity-30';
+              return (
+                <div className="mt-2 flex items-center gap-2">
+                  <button type="button" onClick={() => idx > 0 && navigate(`/events/${options[idx - 1].id}`)} disabled={idx <= 0} aria-label="Previous date" className={arrow}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+                  <select id="series-date" value={event.id} onChange={(ev) => navigate(`/events/${ev.target.value}`)}
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 text-base font-medium text-gray-900">
+                    {options.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Date TBA'}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => idx < options.length - 1 && navigate(`/events/${options[idx + 1].id}`)} disabled={idx >= options.length - 1} aria-label="Next date" className={arrow}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+                  </button>
+                </div>
+              );
+            })()}
 
             {event.series_pass_enabled && !myTicket && (() => {
               const fullPrice = (event.ticket_price ?? 0) * seriesEvents.length;

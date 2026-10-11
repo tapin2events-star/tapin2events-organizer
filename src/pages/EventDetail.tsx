@@ -182,24 +182,42 @@ export default function EventDetail() {
       )}
       </div>
 
-      {event.is_recurring && seriesEvents.length > 1 && (
-        <div className="mb-6 rounded-xl border border-gray-200 bg-surface2 p-4">
-          <p className="text-xs uppercase tracking-widest text-muted">Part of a recurring series ({seriesEvents.length} occurrences)</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {seriesEvents.map((e, i) => (
-              <Link
-                key={e.id}
-                to={`/organizer/events/${e.id}`}
-                className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                  e.id === id ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 text-bone hover:border-marigold'
-                }`}
-              >
-                #{i + 1} · {new Date(e.start_date).toLocaleDateString()}
-              </Link>
-            ))}
+      {event.is_recurring && seriesEvents.length > 1 && (() => {
+        // Pick a date in the series: a dropdown with previous/next arrows.
+        const idx = Math.max(seriesEvents.findIndex((e) => e.id === id), 0);
+        const now = Date.now();
+        const nextUp = seriesEvents.findIndex((e) => e.start_date && new Date(e.start_date).getTime() >= now);
+        const label = (e: { start_date: string | null }, i: number) =>
+          `#${i + 1} · ${e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Date TBA'}`;
+        const go = (i: number) => { const e = seriesEvents[i]; if (e && e.id !== id) navigate(`/organizer/events/${e.id}`); };
+        const arrow = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-700 disabled:opacity-30';
+        return (
+          <div className="mb-6 rounded-xl border border-gray-200 bg-surface2 p-3">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted">Recurring series · {seriesEvents.length} dates</p>
+              {nextUp >= 0 && nextUp !== idx && (
+                <button type="button" onClick={() => go(nextUp)} className="text-xs font-medium text-marigold">Jump to next upcoming</button>
+              )}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <button type="button" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Previous date" className={arrow}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <select value={seriesEvents[idx]?.id ?? ''} onChange={(ev) => navigate(`/organizer/events/${ev.target.value}`)} aria-label="Choose a date in this series"
+                className="h-11 min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 text-base font-medium text-gray-900">
+                {seriesEvents.map((e, i) => (
+                  <option key={e.id} value={e.id}>
+                    {label(e, i)}{e.start_date && new Date(e.start_date).getTime() < now ? ' (past)' : i === nextUp ? ' (next up)' : ''}
+                  </option>
+                ))}
+              </select>
+              <button type="button" onClick={() => go(idx + 1)} disabled={idx >= seriesEvents.length - 1} aria-label="Next date" className={arrow}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-300">
         {visibleTabs.map((t) => (
