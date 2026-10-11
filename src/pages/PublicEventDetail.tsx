@@ -404,12 +404,28 @@ export default function PublicEventDetail() {
           </span>
         </div>
 
-        {event.organizer_email && <HostedBy organizerEmail={event.organizer_email} fallbackName={organizerName} />}
-        <div className="mt-2 text-right text-sm">
-          <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
-            Contact organizer
-          </a>
-        </div>
+        {event.source_name ? (
+          // Listed from another site: credit the source, send people there, and let the real organizer claim it.
+          <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4 text-sm">
+            <p className="text-gray-700">Listed by TapIN from <strong className="text-gray-900">{event.source_name}</strong>. Details, times and tickets are set by the event's organizer.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {(event.external_ticket_url || event.source_url) && (
+                <a href={event.external_ticket_url || event.source_url || '#'} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">View on {event.source_name} ↗</a>
+              )}
+              <a href={`mailto:support@tapin2events.com?subject=${encodeURIComponent('Claim my event: ' + event.title)}&body=${encodeURIComponent(`Hi TapIN, I'm the organizer of "${event.title}" (${window.location.href}). I'd like to manage this listing.`)}`}
+                className="text-sm font-medium text-marigold hover:underline">Is this your event? Claim it</a>
+            </div>
+          </div>
+        ) : (
+          <>
+            {event.organizer_email && <HostedBy organizerEmail={event.organizer_email} fallbackName={organizerName} />}
+            <div className="mt-2 text-right text-sm">
+              <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
+                Contact organizer
+              </a>
+            </div>
+          </>
+        )}
 
         {user?.email === event.organizer_email && (
           <div className="mt-3 flex flex-wrap gap-2 rounded-xl bg-gray-50 p-4">

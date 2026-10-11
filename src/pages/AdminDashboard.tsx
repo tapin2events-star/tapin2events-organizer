@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import ImportsTab from '../components/admin/ImportsTab';
 import PreviewTab from '../components/admin/PreviewTab';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -11,7 +12,7 @@ import PaymentsTab from '../components/admin/PaymentsTab';
 import ReportsTab from '../components/admin/ReportsTab';
 import ActivityTab from '../components/admin/ActivityTab';
 
-const TABS = ['Overview', 'Events', 'Resources', 'Products', 'Users', 'Payments', 'Reports', 'Activity', 'Preview'] as const;
+const TABS = ['Overview', 'Events', 'Resources', 'Products', 'Users', 'Payments', 'Reports', 'Activity', 'Imports', 'Preview'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminDashboard() {
@@ -82,6 +83,7 @@ export default function AdminDashboard() {
       {tab === 'Payments' && <PaymentsTab notify={notify} />}
       {tab === 'Reports' && <div className="mt-6"><ReportsTab /></div>}
       {tab === 'Activity' && <ActivityTab notify={notify} />}
+      {tab === 'Imports' && <ImportsTab notify={notify} />}
       {tab === 'Preview' && <PreviewTab />}
     </div>
   );

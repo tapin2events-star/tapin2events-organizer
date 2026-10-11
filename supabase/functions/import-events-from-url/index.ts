@@ -426,15 +426,22 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } });
-    const { data: userData } = await userClient.auth.getUser();
-    const user = userData?.user;
-    if (!user?.email) return respond({ error: "Please sign in to import events." }, 401);
-    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: profile } = await admin.from("profiles").select("is_banned").eq("id", user.id).maybeSingle();
-    if (profile?.is_banned) return respond({ error: "Your account can't create events." }, 403);
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const admin = createClient(supabaseUrl, serviceKey);
+    // TapIN's own weekly source check calls this with the service key (preview only).
+    const isSystem = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "") === serviceKey;
+    let user: { id: string; email?: string } | null = null;
+    if (!isSystem) {
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } });
+      const { data: userData } = await userClient.auth.getUser();
+      user = userData?.user ?? null;
+      if (!user?.email) return respond({ error: "Please sign in to import events." }, 401);
+      const { data: profile } = await admin.from("profiles").select("is_banned").eq("id", user.id).maybeSingle();
+      if (profile?.is_banned) return respond({ error: "Your account can't create events." }, 403);
+    }
 
     const body = await req.json().catch(() => ({}));
+    if (isSystem && body.action !== "preview") return respond({ error: "Not allowed." }, 403);
 
     // ----- Preview: read the page and report what was found -----
     if (body.action === "preview") {
@@ -497,11 +504,11 @@ Deno.serve(async (req) => {
       const sourceKey = (e: FoundEvent) => e.event_url ?? `${page.finalUrl}#${e.start_local ?? ""}-${e.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60)}`;
       const keys = events.map(sourceKey);
       const { data: existing } = keys.length
-        ? await admin.from("events").select("id, import_source_url").eq("organizer_id", user.id).in("import_source_url", keys)
+        ? await admin.from("events").select("id, import_source_url").eq("organizer_id", user?.id ?? "00000000-0000-0000-0000-000000000000").in("import_source_url", keys)
         : { data: [] as { id: string; import_source_url: string }[] };
       const existingByKey = new Map((existing ?? []).map((x) => [x.import_source_url, x.id]));
 
-      console.log(`[import-events] ${user.email} ${page.finalUrl} method=${method} model=${model ?? "-"} found=${total} upcoming=${events.length} times=${events.map((e) => `${e.start_local ?? "?"}/${e.end_local ?? "-"}`).join(",").slice(0, 300)}`);
+      console.log(`[import-events] ${user?.email ?? "weekly-check"} ${page.finalUrl} method=${method} model=${model ?? "-"} found=${total} upcoming=${events.length} times=${events.map((e) => `${e.start_local ?? "?"}/${e.end_local ?? "-"}`).join(",").slice(0, 300)}`);
       return respond({
         method, model, page_url: page.finalUrl, page_title: pageTitle, skipped_past: past.length,
         events: events.map((e, i) => ({ ...e, key: keys[i], existing_event_id: existingByKey.get(keys[i]) ?? null })),
@@ -509,7 +516,7 @@ Deno.serve(async (req) => {
     }
 
     // ----- Create: save the chosen events as drafts -----
-    if (body.action === "create") {
+    if (body.action === "create" && user) {
       const chosen = (Array.isArray(body.events) ? body.events : []).slice(0, MAX_CREATE) as Record<string, unknown>[];
       if (chosen.length === 0) return respond({ error: "Choose at least one event to import." }, 400);
       const created: { id: string; title: string }[] = [];
