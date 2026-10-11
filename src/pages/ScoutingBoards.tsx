@@ -34,7 +34,7 @@ export default function ScoutingBoards() {
       <p className="mt-1 text-sm text-muted">Keep track of artists you want for upcoming shows, privately, with your co-planners.</p>
 
       <form onSubmit={create} className="mt-5 flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-surface p-3">
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="New board name, e.g. Queens Speech 2027"
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="New board name, e.g. Spring Showcase 2027"
           className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900" />
         <button type="submit" disabled={creating || !name.trim()} className="rounded-lg bg-marigold px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{creating ? 'Creating…' : '+ Create board'}</button>
         {error && <p role="alert" className="w-full text-sm text-magenta">{error}</p>}

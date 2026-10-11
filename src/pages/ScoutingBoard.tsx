@@ -282,7 +282,7 @@ function ShowDialog({ boardId, show, onClose, onChanged }: { boardId: string; sh
     <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
       <div className="w-full max-w-md rounded-t-2xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:rounded-2xl" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Show">
         <p className="font-display text-lg font-bold text-gray-900">{show ? 'Edit show' : 'Add a show'}</p>
-        <label className="mt-3 block text-xs font-medium text-gray-600">Name<input className={input} value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="e.g. Queens Speech, February" autoFocus /></label>
+        <label className="mt-3 block text-xs font-medium text-gray-600">Name<input className={input} value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="e.g. Spring Showcase, March" autoFocus /></label>
         <label className="mt-3 block text-xs font-medium text-gray-600">Target date <span className="font-normal text-gray-400">(optional)</span><input type="date" className={input} value={date} onChange={(e) => setDate(e.target.value)} /></label>
         <label className="mt-3 block text-xs font-medium text-gray-600">Linked event <span className="font-normal text-gray-400">(optional, lets you send lineup invites from cards)</span>
           <select className={input} value={eventId} onChange={(e) => setEventId(e.target.value)}>
