@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ShareQR from '../components/ShareQR';
 import SaveToBoard from '../components/scouting/SaveToBoard';
 import UpcomingAppearances from '../components/resources/UpcomingAppearances';
 import FollowButton from '../components/FollowButton';
@@ -192,6 +193,7 @@ export default function ResourceProfile() {
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <FollowButton email={resource.email} />
               {user && user.email !== resource.email && <SaveToBoard resourceId={resource.id} name={resource.display_name} />}
+              <ShareQR path={`/resources/${resource.id}`} title={resource.display_name} subtitle={isGroup ? 'Group on TapIN' : 'Artist & resource on TapIN'} />
             </div>
             {!isGroup && <GroupBadges email={resource.email} className="mt-3" />}
 

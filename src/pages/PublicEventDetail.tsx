@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ShareQR from '../components/ShareQR';
 import CopyAddress from '../components/CopyAddress';
 import { isIOS } from '../lib/displayMode';
 import HostedBy from '../components/HostedBy';
@@ -393,6 +394,9 @@ export default function PublicEventDetail() {
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
               {shareCopied ? 'Copied!' : 'Share'}
             </button>}
+            {!isPreview && event && <ShareQR path={`/events/${event.id}`} title={event.title} label="QR"
+              subtitle={event.start_date ? new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : undefined}
+              className="-my-2 flex items-center gap-1.5 py-2 text-sm font-medium text-gray-500 hover:text-marigold" />}
             {!isPreview && (<button onClick={toggleSave} className={`-my-2 flex items-center gap-1.5 py-2 text-sm font-medium ${id && savedIds.includes(id) ? 'text-marigold' : 'text-gray-500 hover:text-marigold'}`}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill={id && savedIds.includes(id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" strokeLinejoin="round" /></svg>
               {id && savedIds.includes(id) ? 'Saved' : 'Save'}

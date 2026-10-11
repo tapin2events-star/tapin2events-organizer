@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ShareQR from '../components/ShareQR';
 import ScoutingTab from '../components/tabs/ScoutingTab';
 import BackButton from '../components/BackButton';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -159,6 +160,9 @@ export default function EventDetail() {
             </svg>
             {event.status === 'draft' ? 'Preview' : 'View live page'}
           </Link>
+          <ShareQR path={`/events/${id}`} title={event.title}
+            subtitle={event.start_date ? new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : undefined}
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold" />
           {isOwner && (event.status !== 'cancelled' || hasSales === false) && (
             <div className="relative">
               <button

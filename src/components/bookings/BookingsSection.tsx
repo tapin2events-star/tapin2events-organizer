@@ -4,22 +4,23 @@ import BookingsReceived from './BookingsReceived';
 
 // Activity > Bookings: the ones you made, and the ones where you were booked.
 // The switch only appears when someone has both.
-export default function BookingsSection({ mine, received, pending }: { mine: number; received: number; pending: number }) {
+// `standalone`: used as a full page (the page supplies its own title), so no section heading or top margin.
+export default function BookingsSection({ mine, received, pending, standalone = false }: { mine: number; received: number; pending: number; standalone?: boolean }) {
   const both = mine > 0 && received > 0;
   const [side, setSide] = useState<'mine' | 'received'>(() => (mine === 0 && received > 0) || pending > 0 ? 'received' : 'mine');
   useEffect(() => { if (mine === 0 && received > 0) setSide('received'); }, [mine, received]);
 
   if (!both) {
     return received > 0 && mine === 0
-      ? <div className="mt-8"><h2 className="mb-3 font-display text-xl font-bold text-gray-900">Bookings</h2><BookingsReceived /></div>
-      : <div className="mt-8"><BookingsManager title="Bookings" /></div>;
+      ? <div className={standalone ? '' : 'mt-8'}>{!standalone && <h2 className="mb-3 font-display text-xl font-bold text-gray-900">Bookings</h2>}<BookingsReceived /></div>
+      : <div className={standalone ? '' : 'mt-8'}><BookingsManager title={standalone ? undefined : 'Bookings'} /></div>;
   }
 
   return (
-    <div className="mt-8">
+    <div className={standalone ? '' : 'mt-8'}>
       {/* Phone: title, then a full-width switch underneath. Wider screens: side by side. */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-display text-xl font-bold text-gray-900">Bookings</h2>
+        {!standalone && <h2 className="font-display text-xl font-bold text-gray-900">Bookings</h2>}
         <div className="flex w-full rounded-full border border-gray-200 bg-white p-1 sm:inline-flex sm:w-auto" role="tablist" aria-label="Which bookings">
           {([['mine', 'I booked', 0], ['received', 'Booked me', pending]] as const).map(([key, label, dot]) => (
             <button key={key} role="tab" aria-selected={side === key} onClick={() => setSide(key)}
