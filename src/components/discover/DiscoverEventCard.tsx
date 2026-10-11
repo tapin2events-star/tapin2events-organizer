@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import EventCover from '../EventCover';
 import type { TapEvent } from '../../lib/types';
 import { safeTicketUrl } from '../../lib/externalTickets';
 
@@ -64,12 +65,7 @@ export default function DiscoverEventCard({
             className="h-48 w-full object-cover transition group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-48 w-full items-center justify-center bg-gradient-to-br from-indigo-100 to-teal-100">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="1.5">
-              <rect x="3" y="5" width="18" height="16" rx="2" />
-              <path d="M8 3v4M16 3v4M3 10h18" strokeLinecap="round" />
-            </svg>
-          </div>
+          <EventCover category={event.category} title={event.title} showTitle className="h-48 w-full" />
         )}
 
         <div className="absolute right-3 top-3 flex gap-2">

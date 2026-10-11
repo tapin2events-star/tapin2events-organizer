@@ -56,7 +56,7 @@ const easternDay = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone:
 const short = (s: unknown, n = 600) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, n) : null) || null;
 
 // ---------- Sources ----------
-async function fromPage(supabaseUrl: string, serviceKey: string, sourceId: string, url: string): Promise<Found[]> {
+async function fromPage(supabaseUrl: string, serviceKey: string, sourceId: string, url: string, keepImages = false): Promise<Found[]> {
   const res = await fetch(`${supabaseUrl}/functions/v1/import-events-from-url`, {
     method: "POST",
     headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
@@ -71,7 +71,7 @@ async function fromPage(supabaseUrl: string, serviceKey: string, sourceId: strin
     end: e.end_local ? easternToIso(String(e.end_local)) : null,
     location_name: short(e.location_name, 200), location_address: short(e.location_address, 300),
     description: short(e.description), ticket_url: (e.ticket_url as string) ?? null, event_url: (e.event_url as string) ?? url,
-    image_url: null, // Images from other sites are skipped unless the organizer adds their own.
+    image_url: keepImages ? ((e.image_url as string) ?? null) : null, // only when the source's photo switch is on
     category: (e.category as string) ?? null, price: typeof e.price === "number" ? e.price : null, is_free: e.is_free === true,
   }));
 }
@@ -162,7 +162,7 @@ async function fromTicketmaster(sourceId: string): Promise<Found[]> {
 }
 
 // WordPress sites using The Events Calendar publish events at /wp-json/tribe/events/v1/events.
-async function fromWordpress(sourceId: string, feedUrl: string): Promise<Found[]> {
+async function fromWordpress(sourceId: string, feedUrl: string, keepImages = false): Promise<Found[]> {
   const out: Found[] = [];
   let next: string | null = feedUrl;
   for (let page = 0; page < 4 && next && !outOfTime(); page++) {
@@ -179,7 +179,7 @@ async function fromWordpress(sourceId: string, feedUrl: string): Promise<Found[]
         location_name: venue?.venue ? stripHtml(venue.venue).slice(0, 200) : null,
         location_address: venue ? [venue.address, venue.city, venue.state ?? venue.province, venue.zip].filter(Boolean).join(", ").slice(0, 300) || null : null,
         description: short(stripHtml(String(e.excerpt || e.description || ""))), ticket_url: e.website || e.url || null, event_url: e.url ?? null,
-        image_url: null, category: null, price: null, is_free: /free/i.test(String(e.cost ?? "")),
+        image_url: keepImages && typeof e.image?.url === "string" ? e.image.url : null, category: null, price: null, is_free: /free/i.test(String(e.cost ?? "")),
       });
     }
     next = j.next_rest_url ?? null;
@@ -188,7 +188,7 @@ async function fromWordpress(sourceId: string, feedUrl: string): Promise<Found[]
 }
 
 // RSS/Atom: titles and links; each event's own page supplies the exact date, time and venue.
-async function fromRss(supabaseUrl: string, serviceKey: string, sourceId: string, feedUrl: string): Promise<Found[]> {
+async function fromRss(supabaseUrl: string, serviceKey: string, sourceId: string, feedUrl: string, keepImages = false): Promise<Found[]> {
   const r = await getText(feedUrl, "application/rss+xml,application/atom+xml,application/xml,text/xml");
   if (!r.ok) throw new Error(`Couldn't open the feed (${r.status})`);
   const items = [...r.text.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].map((m) => m[0]).slice(0, 60);
@@ -201,7 +201,7 @@ async function fromRss(supabaseUrl: string, serviceKey: string, sourceId: string
     if (!title || !/^https?:/i.test(link)) continue;
     opened++;
     try {
-      const detail = (await fromPage(supabaseUrl, serviceKey, sourceId, link)).find((d) => similar(d.title, title)) ?? null;
+      const detail = (await fromPage(supabaseUrl, serviceKey, sourceId, link, keepImages)).find((d) => similar(d.title, title)) ?? null;
       if (detail?.start) out.push({ ...detail, key: `${sourceId}:${link}`, event_url: link, title: detail.title || title });
     } catch { /* skip items whose page can't be read */ }
   }
@@ -263,6 +263,27 @@ function issuesFor(f: Found, sourceKind: string): string[] {
   return out;
 }
 
+// Copy a photo into TapIN's storage so it keeps working if the original site changes.
+async function storePhoto(admin: ReturnType<typeof createClient>, url: string): Promise<string | null> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "image/*" }, signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) return null;
+    const type = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    const ext = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" } as Record<string, string>)[type];
+    if (!ext) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length < 2000 || bytes.length > 8_000_000) return null;
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(url)))).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 24);
+    const path = `imports/${hash}.${ext}`;
+    const { error } = await admin.storage.from("event-posters").upload(path, bytes, { contentType: type, upsert: true });
+    if (error) return null;
+    return admin.storage.from("event-posters").getPublicUrl(path).data.publicUrl;
+  } catch { return null; }
+}
+
 // ---------- Handler ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
@@ -281,6 +302,32 @@ Deno.serve(async (req) => {
     const { data: p } = u?.user ? await admin.from("profiles").select("is_admin").eq("id", u.user.id).maybeSingle() : { data: null };
     if (!p?.is_admin) return respond({ error: "Only admins can check sources." }, 403);
     forced = true;
+  }
+
+  // Admin: add photos to already-published events from sources whose photo switch is on.
+  if (forced && body.backfill_photos) {
+    const { data: srcs } = await admin.from("event_sources").select("id, name, kind").eq("use_images", true);
+    const ids = (srcs ?? []).map((x) => x.id);
+    const { data: rows } = ids.length ? await admin.from("imported_events").select("id, source_id, event_id, event_url, title, image_url").eq("status", "approved").in("source_id", ids).not("event_id", "is", null).limit(60) : { data: [] };
+    let added = 0;
+    for (const r of rows ?? []) {
+      if (outOfTime() || added >= 25) break;
+      const { data: ev } = await admin.from("events").select("id, poster_url").eq("id", r.event_id).maybeSingle();
+      if (!ev || ev.poster_url) continue;
+      const src = (srcs ?? []).find((x) => x.id === r.source_id);
+      let imageUrl: string | null = r.image_url ?? null;
+      if (!imageUrl && r.event_url) {
+        try { imageUrl = (await fromPage(supabaseUrl, serviceKey, r.source_id, r.event_url, true)).find((d) => similar(d.title, r.title))?.image_url ?? null; } catch { /* no photo */ }
+      }
+      if (!imageUrl) continue;
+      const stored = String(imageUrl).includes("/event-posters/") ? imageUrl : await storePhoto(admin, imageUrl);
+      if (!stored) continue;
+      const credit = `Photo: ${src?.name ?? "source"}`;
+      await admin.from("events").update({ poster_url: stored, poster_credit: credit }).eq("id", ev.id);
+      await admin.from("imported_events").update({ image_url: stored, image_credit: credit }).eq("id", r.id);
+      added++;
+    }
+    return respond({ photos_added: added });
   }
 
   let q = admin.from("event_sources").select("*").eq("active", true);
@@ -304,9 +351,9 @@ Deno.serve(async (req) => {
       else if (s.feed_url && s.feed_kind) {
         // A data feed found earlier behind this page.
         via = ` via ${s.feed_kind === "wordpress" ? "events feed" : s.feed_kind === "ical" ? "calendar feed" : "RSS feed"}`;
-        found = s.feed_kind === "ical" ? await fromIcal(s.id, s.feed_url) : s.feed_kind === "wordpress" ? await fromWordpress(s.id, s.feed_url) : await fromRss(supabaseUrl, serviceKey, s.id, s.feed_url);
+        found = s.feed_kind === "ical" ? await fromIcal(s.id, s.feed_url) : s.feed_kind === "wordpress" ? await fromWordpress(s.id, s.feed_url, s.use_images) : await fromRss(supabaseUrl, serviceKey, s.id, s.feed_url, s.use_images);
       } else {
-        try { found = await fromPage(supabaseUrl, serviceKey, s.id, s.url); } catch (e) { error = String((e as Error).message ?? e).slice(0, 200); }
+        try { found = await fromPage(supabaseUrl, serviceKey, s.id, s.url, s.use_images); } catch (e) { error = String((e as Error).message ?? e).slice(0, 200); }
         if (found.length === 0) {
           // The page drew its events in the browser: look for the feed behind it.
           const feed = await discoverFeed(s.url);
@@ -314,7 +361,7 @@ Deno.serve(async (req) => {
             error = undefined;
             await admin.from("event_sources").update({ feed_url: feed.url, feed_kind: feed.kind }).eq("id", s.id);
             via = ` via ${feed.kind === "wordpress" ? "events feed" : feed.kind === "ical" ? "calendar feed" : "RSS feed"} (found automatically)`;
-            found = feed.kind === "ical" ? await fromIcal(s.id, feed.url) : feed.kind === "wordpress" ? await fromWordpress(s.id, feed.url) : await fromRss(supabaseUrl, serviceKey, s.id, feed.url);
+            found = feed.kind === "ical" ? await fromIcal(s.id, feed.url) : feed.kind === "wordpress" ? await fromWordpress(s.id, feed.url, s.use_images) : await fromRss(supabaseUrl, serviceKey, s.id, feed.url, s.use_images);
           } else if (!error) {
             error = "This calendar loads in the browser and no public feed was found. Try the venue's own event pages, or an iCal/RSS link if the site has one";
           }
@@ -335,7 +382,7 @@ Deno.serve(async (req) => {
         if (already) continue;
         enriched++;
         try {
-          const detail = (await fromPage(supabaseUrl, serviceKey, s.id, f.event_url)).find((d) => similar(d.title, f.title)) ?? null;
+          const detail = (await fromPage(supabaseUrl, serviceKey, s.id, f.event_url, s.use_images)).find((d) => similar(d.title, f.title)) ?? null;
           if (detail) {
             const sameDay = !detail.start || !f.start || easternDay(detail.start) === easternDay(f.start);
             if (detail.start && sameDay && easternClock(detail.start) !== "00:00") { f.start = detail.start; f.end = detail.end ?? f.end; }
@@ -346,6 +393,7 @@ Deno.serve(async (req) => {
             f.price = f.price ?? detail.price;
             f.is_free = f.is_free || detail.is_free;
             f.category = f.category && f.category !== "Other" ? f.category : detail.category;
+            f.image_url = f.image_url ?? detail.image_url;
           }
         } catch { /* keep what the calendar page had */ }
       }
@@ -368,6 +416,16 @@ Deno.serve(async (req) => {
         admin.from("events").select("id, title, start_date").neq("status", "cancelled").gte("start_date", from).lte("start_date", to).limit(2000),
         admin.from("imported_events").select("id, title, start_date").in("status", ["pending", "approved"]).gte("start_date", from).lte("start_date", to).limit(2000),
       ]);
+      // Photos: copied into TapIN's storage (Ticketmaster's are linked directly, as its terms allow).
+      if (s.use_images) {
+        for (const f of fresh) {
+          if (!f.image_url || s.kind === "ticketmaster" || outOfTime()) continue;
+          f.image_url = await storePhoto(admin, f.image_url);
+        }
+      } else {
+        for (const f of fresh) f.image_url = null;
+      }
+      const credit = s.use_images ? `Photo: ${s.kind === "ticketmaster" ? "Ticketmaster" : s.name}` : null;
       const rows = fresh.map((f) => {
         const day = easternDay(f.start!);
         const dupEvent = (existing ?? []).find((e) => e.start_date && easternDay(e.start_date) === day && similar(e.title, f.title));
@@ -379,6 +437,7 @@ Deno.serve(async (req) => {
           ticket_url: f.ticket_url, event_url: f.event_url, image_url: f.image_url, category: f.category, price: f.price, is_free: f.is_free,
           status: dupEvent || dupQueued ? "duplicate" : "pending", duplicate_of: dupEvent?.id ?? null,
           issues: issuesFor(f, s.kind),
+          image_credit: f.image_url ? credit : null,
         };
       });
       const { error: insErr } = await admin.from("imported_events").upsert(rows, { onConflict: "external_key", ignoreDuplicates: true });

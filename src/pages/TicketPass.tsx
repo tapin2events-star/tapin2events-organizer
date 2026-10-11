@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import EventCover from '../components/EventCover';
 import { useAuth } from '../context/AuthContext';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import BackButton from '../components/BackButton';
@@ -25,6 +26,7 @@ interface PassData {
     location_name: string | null;
     is_online: boolean;
     poster_url: string | null;
+    category?: string | null;
     organizer_email: string;
   };
   organizerName: string | null;
@@ -107,8 +109,10 @@ export default function TicketPass() {
           {cancelledNow && (
             <p role="status" className="bg-green-50 px-4 py-3 text-center text-sm text-green-800">Your registration is cancelled. Thanks for letting the organizer know.</p>
           )}
-          {event.poster_url && (
+          {event.poster_url ? (
             <img src={event.poster_url} alt="" className="h-40 w-full object-cover" />
+          ) : (
+            <EventCover category={event.category} className="h-40 w-full" />
           )}
           <div className="p-6">
             <p className="text-xs uppercase tracking-widest text-gray-400">

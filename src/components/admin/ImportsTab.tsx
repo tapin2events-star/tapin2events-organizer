@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 
-interface Source { id: string; name: string; url: string | null; kind: 'page' | 'ical' | 'ticketmaster'; active: boolean; last_run_at: string | null; last_result: string | null; feed_url: string | null; feed_kind: string | null }
+interface Source { id: string; name: string; url: string | null; kind: 'page' | 'ical' | 'ticketmaster'; active: boolean; last_run_at: string | null; last_result: string | null; feed_url: string | null; feed_kind: string | null; use_images: boolean }
 interface Found {
   id: string; source_id: string | null; title: string; start_date: string | null; end_date: string | null; location_name: string | null; location_address: string | null;
   description: string | null; ticket_url: string | null; event_url: string | null; image_url: string | null; category: string | null; price: number | null; is_free: boolean;
-  status: 'pending' | 'approved' | 'skipped' | 'duplicate'; duplicate_of: string | null; event_id: string | null; found_at: string; issues: string[];
+  status: 'pending' | 'approved' | 'skipped' | 'duplicate'; duplicate_of: string | null; event_id: string | null; found_at: string; issues: string[]; image_credit: string | null;
 }
 const ISSUE_LABEL: Record<string, string> = { time_missing: 'Time not listed: set it before or after publishing', venue_missing: 'Venue missing', outside_triangle: 'May be outside the Triangle', far_out: 'More than 2 months away' };
 const CATEGORIES = ['Music', 'Arts & Culture', 'Community', 'Nightlife', 'Food & Drink', 'Business', 'Sports & Fitness', 'Other'];
@@ -77,7 +77,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
       start_date: f.start_date, end_date: f.end_date,
       location_name: f.location_name, location_address: f.location_address,
       event_type: f.is_free ? 'free' : 'paid', ticket_price: f.is_free ? 0 : f.price ?? 0,
-      external_ticket_url: link, poster_url: f.image_url,
+      external_ticket_url: link, poster_url: f.image_url, poster_credit: f.image_url ? f.image_credit : null,
       status: (f.issues ?? []).includes('time_missing') ? 'draft' : 'published', organizer_id: user.id, organizer_email: user.email,
       source_name: src, source_url: f.event_url || f.ticket_url,
     }).select('id').single();
@@ -132,6 +132,10 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
                 </span>
               </span>
               <button onClick={() => checkNow(s.id)} disabled={!!checking || !s.active} className="text-xs font-medium text-marigold disabled:opacity-40">{checking === s.id ? 'Checking…' : 'Check now'}</button>
+              <label className="flex items-center gap-1.5 text-xs text-gray-600" title="Bring in this source's event photos (credited). Only turn on where you're comfortable using their images.">
+                <input type="checkbox" checked={s.use_images} onChange={async (e) => { await supabase.from('event_sources').update({ use_images: e.target.checked }).eq('id', s.id); load(); }} className="h-4 w-4 accent-marigold" />
+                Photos
+              </label>
               <label className="flex items-center gap-1.5 text-xs text-gray-600">
                 <input type="checkbox" checked={s.active} onChange={async (e) => { await supabase.from('event_sources').update({ active: e.target.checked }).eq('id', s.id); load(); }} className="h-4 w-4 accent-marigold" />
                 On
@@ -139,6 +143,18 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
             </li>
           ))}
         </ul>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button onClick={async () => {
+            setChecking('photos');
+            const { data, error } = await supabase.functions.invoke('sync-event-sources', { body: { backfill_photos: true } });
+            setChecking(null);
+            if (error) return notify("Couldn't get photos right now.", false);
+            notify(data?.photos_added ? `Added photos to ${data.photos_added} published event${data.photos_added === 1 ? '' : 's'}.` : 'No new photos found for published events.');
+          }} disabled={!!checking} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 disabled:opacity-50">
+            {checking === 'photos' ? 'Getting photos…' : 'Add photos to published events'}
+          </button>
+          <span className="text-xs text-muted">Uses sources with <strong>Photos</strong> on. Each photo is credited (e.g. "Photo: Visit Raleigh"); events without one get a TapIN cover.</span>
+        </div>
         <p className="mt-2 text-xs text-muted">Ticketmaster needs a free API key from developer.ticketmaster.com before it can be checked. Facebook and Instagram can't be used as sources.</p>
       </section>
 

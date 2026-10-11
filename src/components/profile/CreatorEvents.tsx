@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import EventCover from '../EventCover';
 import { Link } from 'react-router-dom';
 
 export interface CreatorEvent {
@@ -63,7 +64,7 @@ export default function CreatorEvents({ events }: { events: CreatorEvent[] }) {
       {c.event.poster_url ? (
         <img src={c.event.poster_url} alt="" className="h-20 w-16 shrink-0 rounded-lg object-cover" />
       ) : (
-        <div className="h-20 w-16 shrink-0 rounded-lg bg-gradient-to-br from-indigo-200 to-teal-200" />
+        <EventCover category={(c.event as { category?: string | null }).category} size="sm" className="h-20 w-16 shrink-0 rounded-lg" />
       )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap gap-1.5">

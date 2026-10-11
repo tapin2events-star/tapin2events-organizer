@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import EventCover from '../components/EventCover';
 import ShareQR from '../components/ShareQR';
 import CopyAddress from '../components/CopyAddress';
 import { isIOS } from '../lib/displayMode';
@@ -23,7 +24,7 @@ import { EventPageSkeleton } from '../components/ui/Skeleton';
 export default function PublicEventDetail() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [event, setEvent] = useState<TapEvent | null>(null);
@@ -335,9 +336,12 @@ export default function PublicEventDetail() {
         {event.poster_url ? (
           <img src={event.poster_url} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-indigo-600 via-indigo-500 to-teal-500" />
+          <EventCover category={event.category} size="lg" className="h-full w-full" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        {event.poster_url && event.poster_credit && (
+          <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2 py-0.5 text-[10px] text-white/90 sm:right-6 sm:top-6">{event.poster_credit}</span>
+        )}
 
         <BackButton variant="overlay" fallback="/" fallbackLabel="Back to Discover" className="absolute left-4 top-4 sm:left-6 sm:top-6" />
 
@@ -411,6 +415,12 @@ export default function PublicEventDetail() {
             <div className="mt-3 flex flex-wrap items-center gap-3">
               {(event.external_ticket_url || event.source_url) && (
                 <a href={event.external_ticket_url || event.source_url || '#'} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">View on {event.source_name} ↗</a>
+              )}
+              {isAdmin && event.poster_url && (
+                <button type="button" onClick={async () => {
+                  const { error } = await supabase.from('events').update({ poster_url: null, poster_credit: null }).eq('id', event.id);
+                  if (!error) setEvent({ ...event, poster_url: null, poster_credit: null });
+                }} className="text-sm font-medium text-gray-500 hover:text-red-600">Remove photo</button>
               )}
               <a href={`mailto:support@tapin2events.com?subject=${encodeURIComponent('Claim my event: ' + event.title)}&body=${encodeURIComponent(`Hi TapIN, I'm the organizer of "${event.title}" (${window.location.href}). I'd like to manage this listing.`)}`}
                 className="text-sm font-medium text-marigold hover:underline">Is this your event? Claim it</a>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import EventCover from '../components/EventCover';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -338,7 +339,7 @@ export default function MyActivity() {
                         <img src={t.event_poster_url} alt="" className="h-full w-full object-cover" />
                       </div>
                     ) : (
-                      <div className="h-32 w-full shrink-0 rounded-lg bg-gradient-to-br from-indigo-100 to-teal-100 sm:w-32 md:w-full lg:w-32" />
+                      <EventCover category={(t as { event_category?: string | null }).event_category} title={t.event_title} size="sm" className="h-32 w-full shrink-0 rounded-lg sm:w-32 md:w-full lg:w-32" />
                     )}
 
                     <div className="min-w-0 flex-1">

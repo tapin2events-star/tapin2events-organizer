@@ -34,6 +34,7 @@ export interface TapEvent {
   is_test?: boolean; // visible only to the organizer, their team, and admins
   source_name?: string | null; // listed from another site (Admin > Imports)
   source_url?: string | null;
+  poster_credit?: string | null; // e.g. "Photo: Visit Raleigh"
   is_recurring: boolean;
   series_pass_enabled: boolean | null;
   series_pass_discount: number | null;
