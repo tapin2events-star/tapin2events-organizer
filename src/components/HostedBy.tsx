@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { hasBlocked, unblockUser } from '../lib/blocks';
 
 // "Hosted by" card on event pages with a Follow button. Following here is the same
 // follow as on profiles and the Feed; followers hear about the organizer's new events.
@@ -11,6 +12,8 @@ export default function HostedBy({ organizerEmail, fallbackName }: { organizerEm
   const [followers, setFollowers] = useState<number | null>(null);
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isMe = user?.email === organizerEmail;
 
   useEffect(() => {
@@ -20,16 +23,17 @@ export default function HostedBy({ organizerEmail, fallbackName }: { organizerEm
   useEffect(() => {
     if (!user?.email || isMe) { setFollowing(false); return; }
     supabase.from('follows').select('follower_email').eq('follower_email', user.email).eq('following_email', organizerEmail).maybeSingle().then(({ data }) => setFollowing(!!data));
+    hasBlocked(user.email, organizerEmail).then(setBlocked).catch(() => setBlocked(false));
   }, [user?.email, organizerEmail, isMe]);
 
   async function toggle() {
     if (!user?.email) { window.location.assign(import.meta.env.BASE_URL + 'login'); return; }
-    setBusy(true);
+    setBusy(true); setError(null);
     const { error } = following
       ? await supabase.from('follows').delete().eq('follower_email', user.email).eq('following_email', organizerEmail)
       : await supabase.from('follows').insert({ follower_email: user.email, following_email: organizerEmail });
     setBusy(false);
-    if (error) return;
+    if (error) { setError("Couldn't update. Please try again."); return; }
     setFollowing(!following);
     setFollowers((n) => Math.max((n ?? 0) + (following ? -1 : 1), 0));
   }
@@ -47,12 +51,17 @@ export default function HostedBy({ organizerEmail, fallbackName }: { organizerEm
           {followers !== null && <span className="block text-xs text-gray-500">{followers.toLocaleString()} follower{followers === 1 ? '' : 's'}</span>}
         </span>
       </Link>
-      {!isMe && (
+      {!isMe && blocked && (
+        <button disabled={busy} onClick={async () => { if (!user?.email) return; setBusy(true); await unblockUser(user.email, organizerEmail); setBlocked(false); setBusy(false); }}
+          className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700" title="You blocked this account">Blocked · Unblock</button>
+      )}
+      {!isMe && !blocked && (
         <button onClick={toggle} disabled={busy} aria-pressed={following}
           className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${following ? 'border border-gray-300 bg-white text-gray-700' : 'bg-marigold text-white hover:bg-marigold/90'}`}>
           {following ? 'Following' : 'Follow'}
         </button>
       )}
+      {error && <span role="alert" className="text-xs text-red-600">{error}</span>}
     </div>
   );
 }
