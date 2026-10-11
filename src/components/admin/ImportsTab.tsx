@@ -155,7 +155,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         </div>
         {view === 'pending' && <p className="mt-1 text-xs text-muted">Published events show "Listed from [source]," send people to the original page for tickets, and include a "Claim this event" link for the real organizer. Images aren't copied from other sites (except Ticketmaster).</p>}
         {found === null ? <p className="mt-3 text-sm text-muted">Loading…</p> : found.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each morning's check (or tap Check all now).' : 'Nothing here.'}</p>
+          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each morning’s check (or tap Check all now).' : 'Nothing here.'}</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {found.map((f) => (
