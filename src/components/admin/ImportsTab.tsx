@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 
-interface Source { id: string; name: string; url: string | null; kind: 'page' | 'ical' | 'ticketmaster'; active: boolean; last_run_at: string | null; last_result: string | null }
+interface Source { id: string; name: string; url: string | null; kind: 'page' | 'ical' | 'ticketmaster'; active: boolean; last_run_at: string | null; last_result: string | null; feed_url: string | null; feed_kind: string | null }
 interface Found {
   id: string; source_id: string | null; title: string; start_date: string | null; end_date: string | null; location_name: string | null; location_address: string | null;
   description: string | null; ticket_url: string | null; event_url: string | null; image_url: string | null; category: string | null; price: number | null; is_free: boolean;
-  status: 'pending' | 'approved' | 'skipped' | 'duplicate'; duplicate_of: string | null; event_id: string | null; found_at: string;
+  status: 'pending' | 'approved' | 'skipped' | 'duplicate'; duplicate_of: string | null; event_id: string | null; found_at: string; issues: string[];
 }
+const ISSUE_LABEL: Record<string, string> = { time_missing: 'Time not listed: set it before or after publishing', venue_missing: 'Venue missing', outside_triangle: 'May be outside the Triangle', far_out: 'More than 2 months away' };
 const CATEGORIES = ['Music', 'Arts & Culture', 'Community', 'Nightlife', 'Food & Drink', 'Business', 'Sports & Fitness', 'Other'];
 const KIND_LABEL = { page: 'Web page', ical: 'Calendar feed (.ics)', ticketmaster: 'Ticketmaster' } as const;
 const when = (iso: string | null) => {
@@ -77,13 +78,14 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
       location_name: f.location_name, location_address: f.location_address,
       event_type: f.is_free ? 'free' : 'paid', ticket_price: f.is_free ? 0 : f.price ?? 0,
       external_ticket_url: link, poster_url: f.image_url,
-      status: 'published', organizer_id: user.id, organizer_email: user.email,
+      status: (f.issues ?? []).includes('time_missing') ? 'draft' : 'published', organizer_id: user.id, organizer_email: user.email,
       source_name: src, source_url: f.event_url || f.ticket_url,
     }).select('id').single();
     if (error || !ev) { setBusy(null); return notify("Couldn't publish it.", false); }
     await supabase.from('imported_events').update({ status: 'approved', event_id: ev.id, reviewed_at: new Date().toISOString() }).eq('id', f.id);
     setBusy(null);
     setFound((prev) => (prev ?? []).filter((x) => x.id !== f.id));
+    if ((f.issues ?? []).includes('time_missing')) { notify(`Saved "${f.title}" as a draft. Add the time, then publish.`); window.open(`${import.meta.env.BASE_URL}organizer/events/${ev.id}/edit`, '_self'); return; }
     notify(`Published "${f.title}".`);
   }
 
@@ -101,7 +103,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-lg font-semibold text-bone">Event sources · Raleigh &amp; the Triangle</h2>
-            <p className="mt-1 text-sm text-muted">Checked automatically every Monday morning. New finds wait below for your approval; nothing is published on its own.</p>
+            <p className="mt-1 text-sm text-muted">Checked automatically every morning. New finds wait below for your approval; nothing is published on its own. Calendars that load in the browser are read through the data feed behind them when one exists.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setAdding((a) => !a)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">+ Add source</button>
@@ -124,6 +126,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-gray-900">{s.name} <span className="font-normal text-gray-400">· {KIND_LABEL[s.kind]}</span></span>
                 {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer" className="block truncate text-xs text-marigold">{s.url}</a>}
+                {s.feed_url && <span className="block truncate text-xs text-green-700">Reading its {s.feed_kind === 'wordpress' ? 'events feed' : s.feed_kind === 'ical' ? 'calendar feed' : 'RSS feed'} (found automatically)</span>}
                 <span className={`block text-xs ${s.last_result?.startsWith('Problem') ? 'text-red-600' : 'text-gray-500'}`}>
                   {s.last_run_at ? `${new Date(s.last_run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${s.last_result ?? ''}` : 'Not checked yet'}
                 </span>
@@ -152,7 +155,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         </div>
         {view === 'pending' && <p className="mt-1 text-xs text-muted">Published events show "Listed from [source]," send people to the original page for tickets, and include a "Claim this event" link for the real organizer. Images aren't copied from other sites (except Ticketmaster).</p>}
         {found === null ? <p className="mt-3 text-sm text-muted">Loading…</p> : found.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each Monday check (or tap Check all now).' : 'Nothing here.'}</p>
+          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each morning's check (or tap Check all now).' : 'Nothing here.'}</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {found.map((f) => (
@@ -164,6 +167,11 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
                     <p className="text-xs text-gray-500">{when(f.start_date)}{f.location_name ? ` · ${f.location_name}` : ''}{f.is_free ? ' · Free' : f.price ? ` · from $${Number(f.price).toFixed(2)}` : ''}</p>
                     <p className="text-xs text-gray-400">From {sourceName(f.source_id)}{f.event_url && <> · <a href={f.event_url} target="_blank" rel="noopener noreferrer" className="text-marigold">original page ↗</a></>}</p>
                     {f.description && <p className="mt-1 line-clamp-2 text-xs text-gray-600">{f.description}</p>}
+                    {(f.issues ?? []).length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {f.issues.map((i) => <span key={i} className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">⚠ {ISSUE_LABEL[i] ?? i}</span>)}
+                      </div>
+                    )}
                     {f.status === 'duplicate' && f.duplicate_of && <Link to={`/events/${f.duplicate_of}`} className="mt-1 inline-block text-xs font-medium text-marigold">See the existing listing →</Link>}
                     {f.status === 'approved' && f.event_id && <Link to={`/events/${f.event_id}`} className="mt-1 inline-block text-xs font-medium text-marigold">View on TapIN →</Link>}
                   </div>
@@ -174,7 +182,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
                       aria-label="Category" className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700">
                       {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
                     </select>
-                    <button onClick={() => approve(f)} disabled={busy === f.id} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Approve &amp; publish</button>
+                    <button onClick={() => approve(f)} disabled={busy === f.id} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{(f.issues ?? []).includes('time_missing') ? 'Approve & add time' : 'Approve & publish'}</button>
                     <button onClick={() => setStatus(f, 'skipped')} disabled={busy === f.id} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700">Skip</button>
                   </div>
                 )}
