@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import BookingEarningsCard from '../components/resources/BookingEarningsCard';
 import AnnounceLineupsToggle from '../components/resources/AnnounceLineupsToggle';
 import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -281,6 +282,7 @@ export default function ResourceDashboard() {
             <PayoutsCard hasAccount={payouts.hasAccount} chargesEnabled={payouts.chargesEnabled} variant="resource" />
           </div>
         )}
+        <div className="mt-4"><BookingEarningsCard /></div>
         <div className="mt-4"><AnnounceLineupsToggle resourceId={resource.id} /></div>
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
           <div className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 text-center sm:gap-2 sm:p-4">

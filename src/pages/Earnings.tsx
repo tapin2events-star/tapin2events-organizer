@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { earningsRows, loadEarnings, money, monthly, RANGE_LABELS, summarize, type EarningsData, type Range } from '../lib/earnings';
 import { downloadCsv } from '../lib/csv';
+import { loadBookingMoney, summarizeBookings, type BookingCost, type BookingEarning } from '../lib/bookingEarnings';
 
 function Stat({ label, value, sub, big = false }: { label: string; value: string; sub?: string; big?: boolean }) {
   return (
@@ -19,6 +20,9 @@ export default function Earnings() {
   const { user } = useAuth();
   const [data, setData] = useState<EarningsData | null>(null);
   const [range, setRange] = useState<Range>('all');
+  const [bookingMoney, setBookingMoney] = useState<{ earnings: BookingEarning[]; costs: BookingCost[] } | null>(null);
+  useEffect(() => { if (user?.email) loadBookingMoney().then(setBookingMoney); }, [user?.email]);
+  const bk = useMemo(() => (bookingMoney ? summarizeBookings(bookingMoney.earnings, bookingMoney.costs, range) : null), [bookingMoney, range]);
 
   useEffect(() => {
     if (!user?.id || !user.email) return;
@@ -44,6 +48,8 @@ export default function Earnings() {
       return { e, s, total: s ? s.ticketRevenue + s.productRevenue + s.vendorRevenue : 0 };
     });
   const hasActivity = earned > 0 || totals.ticketsSold > 0;
+  const hasBookings = !!bk && (bk.paid.length > 0 || bk.upcoming.length > 0);
+  const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -51,7 +57,7 @@ export default function Earnings() {
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-bone">Earnings</h1>
-          <p className="mt-1 text-muted">What you've earned across all your events.</p>
+          <p className="mt-1 text-muted">What you've earned on TapIN, from your events and from being booked.</p>
         </div>
         <button type="button" onClick={exportCsv} disabled={!hasActivity} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-bone hover:border-marigold disabled:opacity-50">
           Download CSV
@@ -66,8 +72,17 @@ export default function Earnings() {
         ))}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat big label={`Total earned · ${RANGE_LABELS[range].toLowerCase()}`} value={money(earned)} sub="Before Stripe payouts. Buyer service fees aren't included." />
+      {bk && hasBookings && (
+        <div className="mt-4 rounded-2xl bg-gradient-to-br from-marigold to-teal p-5 text-white">
+          <p className="text-xs font-semibold uppercase tracking-wide opacity-90">Total earned on TapIN · {RANGE_LABELS[range].toLowerCase()}</p>
+          <p className="mt-1 font-display text-4xl font-extrabold">{money(earned + bk.earned)}</p>
+          <p className="mt-1 text-sm opacity-90">Events {money(earned)} · Bookings {money(bk.earned)}</p>
+        </div>
+      )}
+
+      <h2 className="mt-6 font-display text-xl font-bold text-bone">From your events</h2>
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat big label={`Earned from events · ${RANGE_LABELS[range].toLowerCase()}`} value={money(earned)} sub="Before Stripe payouts. Buyer service fees aren't included." />
         <Stat label="Ticket sales" value={money(totals.ticketRevenue)} sub={`${totals.paidTickets} paid ticket${totals.paidTickets === 1 ? '' : 's'}`} />
         <Stat label="Merch & shipping" value={money(totals.productRevenue)} />
         <Stat label="Vendor fees" value={money(totals.vendorRevenue)} />
@@ -88,6 +103,67 @@ export default function Earnings() {
           ))}
         </div>
       </div>
+
+      {bk && hasBookings && (
+        <section id="bookings" className="mt-8 scroll-mt-20">
+          <h2 className="font-display text-xl font-bold text-bone">From being booked</h2>
+          <p className="text-sm text-muted">Bookings paid through TapIN, including your share of group bookings.</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat big label={`Earned from bookings · ${RANGE_LABELS[range].toLowerCase()}`} value={money(bk.earned)} sub={`${bk.paidCount} paid booking${bk.paidCount === 1 ? '' : 's'} · sent to your bank through Stripe`} />
+            <Stat label="Coming up" value={money(bk.upcomingTotal)} sub={`${bk.upcoming.length} accepted, not paid yet`} />
+          </div>
+          <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr><th className="px-4 py-2.5 font-semibold">Event</th><th className="px-4 py-2.5 font-semibold">Booked by</th><th className="px-4 py-2.5 font-semibold">As</th><th className="px-4 py-2.5 text-right font-semibold">Amount</th><th className="px-4 py-2.5 font-semibold">Status</th></tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {[...bk.upcoming, ...bk.paid].map((r) => (
+                  <tr key={`${r.booking_id}-${r.source}`}>
+                    <td className="px-4 py-2.5"><span className="block font-medium text-gray-900">{r.event_title ?? 'Event'}</span><span className="text-xs text-gray-500">{fmtDate(r.event_date)}</span></td>
+                    <td className="px-4 py-2.5 text-gray-700">{r.organizer_name ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{r.source === 'group' ? <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">{r.group_name ?? 'Group'} share</span> : 'You'}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{money(r.amount - r.refunded)}{r.refunded > 0 && r.status !== 'refunded' ? <span className="block text-xs font-normal text-gray-500">{money(r.refunded)} refunded</span> : null}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.status === 'paid' ? 'bg-green-100 text-green-800' : r.status === 'refunded' ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-800'}`}>
+                        {r.status === 'paid' ? `Paid ${fmtDate(r.paid_at)}` : r.status === 'refunded' ? 'Refunded' : 'Awaiting payment'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {bk && bk.costRows.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-display text-xl font-bold text-bone">Booking costs</h2>
+          <p className="text-sm text-muted">What you've paid artists and resources for your events (booking price plus TapIN fees, minus refunds).</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat big label={`Paid for bookings · ${RANGE_LABELS[range].toLowerCase()}`} value={money(bk.costTotal)} sub={`${bk.costRows.length} booking${bk.costRows.length === 1 ? '' : 's'}`} />
+          </div>
+          <ul className="mt-3 flex flex-col gap-2">
+            {bk.costRows.map((c) => {
+              const eventEarned = c.event_id ? (byEvent.get(c.event_id) ? (byEvent.get(c.event_id)!.ticketRevenue + byEvent.get(c.event_id)!.productRevenue + byEvent.get(c.event_id)!.vendorRevenue) : 0) : 0;
+              const eventCosts = c.event_id ? bk.costByEvent.get(c.event_id) ?? 0 : 0;
+              return (
+                <li key={c.booking_id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                  <span className="min-w-0">
+                    <span className="block font-medium text-gray-900">{c.resource_name ?? 'Booking'} · {c.event_title ?? 'Event'}</span>
+                    <span className="text-xs text-gray-500">{money(c.price)} + {money(c.fees)} fees{c.refunded > 0 ? ` · ${money(c.refunded)} refunded` : ''} · {fmtDate(c.paid_at)}</span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block font-semibold text-gray-900">{money(c.price + c.fees - c.refunded)}</span>
+                    {c.event_id && <span className="text-xs text-gray-500">Event net: {money(eventEarned - eventCosts)}</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <div className="mt-6">
         <h2 className="font-display text-xl font-bold text-bone">By event</h2>
