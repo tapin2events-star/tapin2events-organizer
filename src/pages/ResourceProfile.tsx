@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SaveToBoard from '../components/scouting/SaveToBoard';
 import UpcomingAppearances from '../components/resources/UpcomingAppearances';
 import FollowButton from '../components/FollowButton';
 import BackButton from '../components/BackButton';
@@ -188,7 +189,10 @@ export default function ResourceProfile() {
               ))}
             </div>
 
-            <FollowButton email={resource.email} className="mt-3" />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <FollowButton email={resource.email} />
+              {user && user.email !== resource.email && <SaveToBoard resourceId={resource.id} name={resource.display_name} />}
+            </div>
             {!isGroup && <GroupBadges email={resource.email} className="mt-3" />}
 
             <p className="mt-2 text-sm text-gray-500">
