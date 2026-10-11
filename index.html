@@ -12,6 +12,16 @@
     <meta name="apple-mobile-web-app-title" content="TapIN" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#ffffff" />
+    <!-- iPhone Safari: "Open in the TapIN app" banner (Get, if not installed). app-argument = the page being viewed. -->
+    <meta name="apple-itunes-app" content="app-id=6474884074" />
+    <script>
+      (function () {
+        try {
+          var m = document.querySelector('meta[name="apple-itunes-app"]');
+          if (m) m.setAttribute('content', 'app-id=6474884074, app-argument=' + location.href);
+        } catch (e) {}
+      })();
+    </script>
     <title>TapIN2Events</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
