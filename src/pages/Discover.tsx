@@ -24,6 +24,8 @@ export default function Discover() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [priceFilter, setPriceFilter] = useState<'' | 'free' | 'paid'>('');
+  const [dateFilter, setDateFilter] = useState<'' | 'today' | 'tomorrow' | 'weekend' | 'week' | 'month' | 'pick'>('');
+  const [pickedDate, setPickedDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [tab, setTab] = useState<DiscoverTab>('all');
   const myTickets = useMyTickets(user?.email);
@@ -62,8 +64,40 @@ export default function Discover() {
     // Group occurrences of the same recurring series together (parent_event_id,
     // or the event's own id if it's the parent) so the list shows one card
     // per series instead of every occurrence.
+    // Date filter: keep events (or dates of a series) that overlap the chosen range.
+    const range = (() => {
+      const day = (offset: number) => { const d = new Date(now); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + offset); return d; };
+      const endOf = (d: Date) => { const e = new Date(d); e.setHours(23, 59, 59, 999); return e; };
+      switch (dateFilter) {
+        case 'today': return [now, endOf(day(0))];
+        case 'tomorrow': return [day(1), endOf(day(1))];
+        case 'weekend': {
+          const dow = now.getDay(); // 0 Sun … 6 Sat
+          const friOffset = dow === 0 ? -2 : 5 - dow;
+          const start = dow === 5 || dow === 6 || dow === 0 ? now : day(friOffset);
+          return [start, endOf(day(dow === 0 ? 0 : 7 - dow))];
+        }
+        case 'week': return [now, endOf(day(6))];
+        case 'month': return [now, endOf(day(29))];
+        case 'pick': {
+          if (!pickedDate) return null;
+          const [y, m, d] = pickedDate.split('-').map(Number);
+          const start = new Date(y, m - 1, d, 0, 0, 0, 0);
+          return [start, endOf(start)];
+        }
+        default: return null;
+      }
+    })();
+    const inRange = (e: TapEvent) => {
+      if (!range) return true;
+      if (!e.start_date) return false;
+      const st = new Date(e.start_date).getTime();
+      const en = new Date(e.end_date ?? e.start_date).getTime();
+      return st <= range[1].getTime() && en >= range[0].getTime();
+    };
+
     const seriesMap = new Map<string, TapEvent[]>();
-    for (const e of events) {
+    for (const e of events.filter(inRange)) {
       const seriesKey = e.parent_event_id || e.id;
       if (!seriesMap.has(seriesKey)) seriesMap.set(seriesKey, []);
       seriesMap.get(seriesKey)!.push(e);
@@ -103,7 +137,7 @@ export default function Discover() {
       })
       .filter((e) => !category || e.category === category)
       .filter((e) => !priceFilter || e.event_type === priceFilter);
-  }, [events, search, category, priceFilter]);
+  }, [events, search, category, priceFilter, dateFilter, pickedDate]);
 
   const tabFiltered = useMemo(() => {
     if (tab === 'saved') return filtered.filter((e) => savedIds.includes(e.id));
@@ -172,10 +206,11 @@ export default function Discover() {
             onClick={() => setShowFilters((v) => !v)}
             aria-label="Toggle filters"
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${
-              showFilters || category || priceFilter ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 bg-white text-gray-500'
-            }`}
+              showFilters || category || priceFilter || dateFilter ? 'border-marigold bg-marigold/10 text-marigold' : 'border-gray-300 bg-white text-gray-500'
+            } relative`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 5h16M7 12h10M10 19h4" strokeLinecap="round" /></svg>
+            {!showFilters && (category || priceFilter || dateFilter) && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-marigold ring-2 ring-white" aria-label="Filters are on" />}
           </button>
         </div>
 
@@ -200,6 +235,28 @@ export default function Discover() {
               <option value="free">Free only</option>
               <option value="paid">Paid only</option>
             </select>
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
+              aria-label="Date"
+              className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none focus-visible:border-marigold"
+            >
+              <option value="">Any date</option>
+              <option value="today">Today</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="weekend">This weekend</option>
+              <option value="week">Next 7 days</option>
+              <option value="month">Next 30 days</option>
+              <option value="pick">Pick a date…</option>
+            </select>
+            {dateFilter === 'pick' && (
+              <input type="date" value={pickedDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setPickedDate(e.target.value)} aria-label="Pick a date"
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base text-gray-900 outline-none focus-visible:border-marigold" />
+            )}
+            {(category || priceFilter || dateFilter) && (
+              <button type="button" onClick={() => { setCategory(''); setPriceFilter(''); setDateFilter(''); setPickedDate(''); }}
+                className="self-start text-sm font-medium text-marigold sm:self-center">Clear filters</button>
+            )}
           </div>
         )}
 
