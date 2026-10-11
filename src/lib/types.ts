@@ -31,6 +31,7 @@ export interface TapEvent {
   // Where an imported event came from (prevents importing it twice).
   import_source_url?: string | null;
   status: EventStatus;
+  is_test?: boolean; // visible only to the organizer, their team, and admins
   is_recurring: boolean;
   series_pass_enabled: boolean | null;
   series_pass_discount: number | null;

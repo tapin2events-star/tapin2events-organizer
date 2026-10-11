@@ -52,12 +52,15 @@ export default function TicketStubCard({ event }: { event: TapEvent }) {
             </Link>
             <p className="text-sm text-muted">{formatEventDate(event.start_date)}</p>
           </div>
-          <span
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-              STATUS_STYLES[status] ?? STATUS_STYLES.draft
-            }`}
-          >
-            {STATUS_LABEL[status] ?? status}
+          <span className="flex shrink-0 flex-col items-end gap-1">
+            {event.is_test && <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-800">Test</span>}
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                STATUS_STYLES[status] ?? STATUS_STYLES.draft
+              }`}
+            >
+              {STATUS_LABEL[status] ?? status}
+            </span>
           </span>
         </div>
 

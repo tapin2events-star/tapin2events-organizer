@@ -65,7 +65,7 @@ export default function EventForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const [step, setStep] = useState(1);
 
@@ -130,6 +130,8 @@ export default function EventForm() {
   // Social and website links, keyed by platform (see lib/socialLinks).
   const [links, setLinks] = useState<Record<LinkKey, string>>({ instagram: '', tiktok: '', facebook: '', youtube: '', x: '', website: '' });
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
+  // Admin-only: a private test event (see Admin > Preview). ?test=1 starts one checked.
+  const [isTest, setIsTest] = useState(() => !isEdit && searchParams.get('test') === '1');
 
   const [loading, setLoading] = useState(isEdit);
 
@@ -277,6 +279,7 @@ export default function EventForm() {
         website: data.social_links?.website ?? '',
       });
       setStatus(data.status === 'published' ? 'published' : 'draft');
+      setIsTest(!!data.is_test);
       setIsRecurring(!!data.is_recurring);
       setWasAlreadyRecurring(!!data.is_recurring);
       if (data.recurrence_rule?.frequency) setRecurFrequency(data.recurrence_rule.frequency);
@@ -415,6 +418,7 @@ export default function EventForm() {
       poster_url: uploadedPosterUrl,
       social_links: Object.fromEntries(PLATFORMS.map((p) => [p.key, normalizeLink(p.key, links[p.key])])),
       status,
+      ...(isAdmin ? { is_test: isTest } : {}),
     };
     // Ownership is only ever set on creation. An edit must never touch
     // these fields — otherwise an admin editing someone else's event on
@@ -926,8 +930,14 @@ export default function EventForm() {
                 <option value="draft">Draft (only you can see it)</option>
                 <option value="published">Published (visible to attendees)</option>
               </select>
-              {status === 'published' && <FollowerPublishNote email={user?.email} />}
+              {status === 'published' && !isTest && <FollowerPublishNote email={user?.email} />}
             </Field>
+            {isAdmin && (
+              <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} className="mt-0.5 h-4 w-4 accent-marigold" />
+                <span><strong>Test event</strong> (admin only)<span className="block text-xs">Only you and this event's team can see it, even when published. It never appears on Discover or in follower emails.</span></span>
+              </label>
+            )}
           </>
         )}
 
