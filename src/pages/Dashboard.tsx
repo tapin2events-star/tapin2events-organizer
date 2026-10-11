@@ -166,6 +166,18 @@ export default function Dashboard() {
         const hay = [e.title, e.location_name, e.location_address, e.category, date, e.is_online ? 'online virtual' : '', e.status].filter(Boolean).join(' ').toLowerCase();
         return words.every((w) => hay.includes(w));
       })
+      // A recurring series shows as one card: its next upcoming date (or, once
+      // every date has passed, its most recent one) stands in for the series.
+      .filter((e, _i, list) => {
+        if (!e.is_recurring) return true;
+        const key = e.parent_event_id || e.id;
+        const dates = list.filter((x) => x.is_recurring && (x.parent_event_id || x.id) === key);
+        if (dates.length < 2) return true;
+        const ends = (x: TapEvent) => new Date(x.end_date ?? x.start_date ?? 0).getTime();
+        const upcoming = dates.filter((x) => ends(x) >= now.getTime()).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)));
+        const pick = upcoming[0] ?? [...dates].sort((a, b) => String(b.start_date).localeCompare(String(a.start_date)))[0];
+        return pick.id === e.id;
+      })
       // Upcoming (and happening now) first, soonest at the top; then events
       // with no date yet; then past events, most recent first.
       .sort((a, b) => {
@@ -181,6 +193,22 @@ export default function Dashboard() {
         return ga === 2 ? tb - ta : ta - tb;
       });
   }, [search, events, statusFilter, typeFilter, timeFilter, vendorFilter, eventsWithPendingVendors, seriesPassFilter, eventsWithSeriesPasses, bookingFilter, eventsWithPendingBookings, eventsWithBookedResources, vendorManagerEventIds, eventsWithVendorManagerAssigned, user?.id]);
+
+  // Per series: how many dates, how many still ahead.
+  const seriesInfo = useMemo(() => {
+    const m = new Map<string, { total: number; upcoming: number; parent: TapEvent | null; children: TapEvent[] }>();
+    const now = Date.now();
+    for (const e of events) {
+      if (!e.is_recurring) continue;
+      const key = e.parent_event_id || e.id;
+      const info = m.get(key) ?? { total: 0, upcoming: 0, parent: null, children: [] };
+      info.total += 1;
+      if (new Date(e.end_date ?? e.start_date ?? 0).getTime() >= now) info.upcoming += 1;
+      if (!e.parent_event_id) info.parent = e; else info.children.push(e);
+      m.set(key, info);
+    }
+    return m;
+  }, [events]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -407,16 +435,22 @@ export default function Dashboard() {
                   Vendor Manager Assigned
                 </span>
               )}
-              {event.organizer_id === user?.id && (
+              {event.organizer_id === user?.id && (() => {
+                // For a series, the menu acts on the whole series (its first date + the rest).
+                const info = event.is_recurring ? seriesInfo.get(event.parent_event_id || event.id) : undefined;
+                const target = info?.parent ?? event;
+                const kids = info ? info.children : events.filter((c) => c.parent_event_id === event.id);
+                return (
                 <EventActions
-                  event={event}
-                  seriesChildren={events.filter((c) => c.parent_event_id === event.id)}
-                  hasSales={salesEventIds === null ? undefined : [event.id, ...events.filter((c) => c.parent_event_id === event.id).map((c) => c.id)].some((id) => salesEventIds.has(id))}
+                  event={target}
+                  seriesChildren={kids}
+                  hasSales={salesEventIds === null ? undefined : [target.id, ...kids.map((c) => c.id)].some((id) => salesEventIds.has(id))}
                   onDeleted={(ids) => setEvents((prev) => prev.filter((e) => !ids.includes(e.id)))}
                   onCancelled={(id) => setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, status: 'cancelled' } : e)))}
                 />
-              )}
-              <TicketStubCard event={event} />
+                );
+              })()}
+              <TicketStubCard event={event} series={event.is_recurring ? seriesInfo.get(event.parent_event_id || event.id) : undefined} />
             </div>
           ))}
         </div>

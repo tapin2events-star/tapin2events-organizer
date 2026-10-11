@@ -95,6 +95,10 @@ export default function EventForm() {
   // a new series; a genuinely already-recurring event shouldn't regenerate
   // one just because the box is still checked while editing.
   const [wasAlreadyRecurring, setWasAlreadyRecurring] = useState(false);
+  // Editing one date of a series: apply to just this date, or this and every upcoming date.
+  const [applyScope, setApplyScope] = useState<'one' | 'upcoming'>('upcoming');
+  const [loadedStart, setLoadedStart] = useState<string | null>(null);
+  const [loadedEnd, setLoadedEnd] = useState<string | null>(null);
   const [recurFrequency, setRecurFrequency] = useState<'weekly' | 'monthly'>('weekly');
   const [recurCount, setRecurCount] = useState('4');
   const [seriesPassEnabled, setSeriesPassEnabled] = useState(false);
@@ -282,6 +286,8 @@ export default function EventForm() {
       setIsTest(!!data.is_test);
       setIsRecurring(!!data.is_recurring);
       setWasAlreadyRecurring(!!data.is_recurring);
+      setLoadedStart(data.start_date ?? null);
+      setLoadedEnd(data.end_date ?? null);
       if (data.recurrence_rule?.frequency) setRecurFrequency(data.recurrence_rule.frequency);
       if (data.recurrence_rule?.count) setRecurCount(String(data.recurrence_rule.count));
       setSeriesPassEnabled(!!data.series_pass_enabled);
@@ -439,6 +445,38 @@ export default function EventForm() {
       setError(error.message);
       return;
     }
+
+    // "This and all upcoming dates": copy the shared details to every later date in
+    // the series. Dates stay as they are; if the start/end time changed, the same
+    // time of day (and length) is applied to each later date.
+    let seriesUpdated = 0;
+    if (isEdit && wasAlreadyRecurring && applyScope === 'upcoming') {
+      const seriesParentId = data.parent_event_id || data.id;
+      const fromIso = data.start_date ?? new Date().toISOString();
+      const { data: later } = await supabase.from('events').select('id, start_date, end_date')
+        .or(`id.eq.${seriesParentId},parent_event_id.eq.${seriesParentId}`)
+        .neq('id', data.id).gt('start_date', fromIso).neq('status', 'cancelled');
+      const shared: Record<string, unknown> = { ...payload };
+      for (const k of ['start_date', 'end_date', 'status', 'date_tbd', 'organizer_id', 'organizer_email', 'parent_event_id', 'is_recurring', 'recurrence_rule', 'booked_seats']) delete shared[k];
+      const oldS = loadedStart ? new Date(loadedStart) : null;
+      const newS = data.start_date ? new Date(data.start_date) : null;
+      const timeChanged = !!(oldS && newS && (oldS.getHours() !== newS.getHours() || oldS.getMinutes() !== newS.getMinutes()));
+      const newLen = newS && data.end_date ? new Date(data.end_date).getTime() - newS.getTime() : null;
+      const oldLen = oldS && loadedEnd ? new Date(loadedEnd).getTime() - oldS.getTime() : null;
+      const lengthChanged = newLen !== oldLen;
+      for (const occ of later ?? []) {
+        const row: Record<string, unknown> = { ...shared };
+        if ((timeChanged || lengthChanged) && newS && occ.start_date) {
+          const st = new Date(occ.start_date);
+          st.setHours(newS.getHours(), newS.getMinutes(), 0, 0);
+          row.start_date = st.toISOString();
+          row.end_date = newLen !== null ? new Date(st.getTime() + newLen).toISOString() : null;
+        }
+        const { error: occErr } = await supabase.from('events').update(row).eq('id', occ.id);
+        if (!occErr) seriesUpdated += 1;
+      }
+    }
+    void seriesUpdated;
 
     // A series pass setting belongs to the whole series, not just the one
     // occurrence being edited -- the checkout flow reads it off the parent,
@@ -1229,6 +1267,19 @@ export default function EventForm() {
             <button type="button" onClick={() => setStep(step + 1)} className="rounded-lg bg-marigold px-5 py-2.5 font-semibold text-ink hover:bg-marigold/90">
               Next
             </button>
+          )}
+          {isLastStep && isEdit && wasAlreadyRecurring && (
+            <fieldset className="w-full rounded-xl border border-indigo-200 bg-indigo-50/60 p-3">
+              <legend className="px-1 text-sm font-semibold text-bone">This is a repeating event. Apply these changes to:</legend>
+              <label className="mt-1 flex items-start gap-2.5 text-sm text-bone">
+                <input type="radio" name="applyScope" checked={applyScope === 'upcoming'} onChange={() => setApplyScope('upcoming')} className="mt-0.5 h-4 w-4 accent-marigold" />
+                <span><strong>This and all upcoming dates</strong><span className="block text-xs text-muted">Details like the title, description, photo, price, and location update everywhere ahead. Each date keeps its own day; a new time is applied to all of them.</span></span>
+              </label>
+              <label className="mt-2 flex items-start gap-2.5 text-sm text-bone">
+                <input type="radio" name="applyScope" checked={applyScope === 'one'} onChange={() => setApplyScope('one')} className="mt-0.5 h-4 w-4 accent-marigold" />
+                <span><strong>Only this date</strong></span>
+              </label>
+            </fieldset>
           )}
           {isLastStep && (
             <button type="submit" disabled={saving} className="rounded-lg bg-marigold px-5 py-2.5 font-semibold text-ink hover:bg-marigold/90 disabled:opacity-50">

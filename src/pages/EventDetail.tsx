@@ -26,7 +26,7 @@ type Tab = (typeof TABS)[number];
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const [event, setEvent] = useState<TapEvent | null>(null);
-  const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
+  const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string; status?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('Overview');
   const { user } = useAuth();
@@ -73,7 +73,7 @@ export default function EventDetail() {
         if (data?.is_recurring && seriesId) {
           supabase
             .from('events')
-            .select('id, start_date')
+            .select('id, start_date, status')
             .or(`id.eq.${seriesId},parent_event_id.eq.${seriesId}`)
             .order('start_date', { ascending: true })
             .then(({ data: siblings }) => setSeriesEvents(siblings ?? []));
@@ -102,20 +102,41 @@ export default function EventDetail() {
           </span>
         </div>
         <div className="flex flex-wrap gap-2 xl:shrink-0 xl:flex-nowrap">
-          <button
-            onClick={async () => {
-              const nextStatus = event.status === 'published' ? 'draft' : 'published';
-              const { error } = await supabase.from('events').update({ status: nextStatus }).eq('id', id);
-              if (!error) setEvent({ ...event, status: nextStatus });
-            }}
-            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold ${
-              event.status === 'published'
-                ? 'border border-gray-300 text-bone hover:border-magenta hover:text-magenta'
-                : 'bg-mint text-ink hover:bg-mint/90'
-            }`}
-          >
-            {event.status === 'published' ? 'Unpublish' : 'Publish event'}
-          </button>
+          {(() => {
+            // Repeating events: publish/unpublish this date and every upcoming date together
+            // (with a "just this date" option).
+            const isSeries = !!event.is_recurring && seriesEvents.length > 1;
+            const nextStatus = event.status === 'published' ? 'draft' : 'published';
+            const setStatus = async (allUpcoming: boolean) => {
+              const ids = allUpcoming
+                ? seriesEvents.filter((e) => e.id === id || (e.status !== 'cancelled' && e.start_date && event.start_date && e.start_date >= event.start_date)).map((e) => e.id)
+                : [id as string];
+              const { error } = await supabase.from('events').update({ status: nextStatus }).in('id', ids);
+              if (!error) {
+                setEvent({ ...event, status: nextStatus });
+                setSeriesEvents((prev) => prev.map((e) => (ids.includes(e.id) ? { ...e, status: nextStatus } : e)));
+              }
+            };
+            return (
+              <span className="flex flex-col items-start gap-1">
+                <button
+                  onClick={() => setStatus(isSeries)}
+                  className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold ${
+                    event.status === 'published'
+                      ? 'border border-gray-300 text-bone hover:border-magenta hover:text-magenta'
+                      : 'bg-mint text-ink hover:bg-mint/90'
+                  }`}
+                >
+                  {event.status === 'published' ? (isSeries ? 'Unpublish all upcoming' : 'Unpublish') : (isSeries ? 'Publish all upcoming dates' : 'Publish event')}
+                </button>
+                {isSeries && (
+                  <button onClick={() => setStatus(false)} className="px-1 text-xs font-medium text-muted hover:text-marigold">
+                    {event.status === 'published' ? 'Unpublish just this date' : 'Publish just this date'}
+                  </button>
+                )}
+              </span>
+            );
+          })()}
           <Link
             to={`/organizer/events/${id}/checkin`}
             className="whitespace-nowrap rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-ink hover:bg-marigold/90"

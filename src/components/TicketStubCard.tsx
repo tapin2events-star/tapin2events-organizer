@@ -27,7 +27,7 @@ function formatEventDate(iso: string | null) {
   });
 }
 
-export default function TicketStubCard({ event }: { event: TapEvent }) {
+export default function TicketStubCard({ event, series }: { event: TapEvent; series?: { total: number; upcoming: number } }) {
   const status = event.status ?? 'draft';
 
   return (
@@ -50,7 +50,13 @@ export default function TicketStubCard({ event }: { event: TapEvent }) {
                 {event.title}
               </p>
             </Link>
-            <p className="text-sm text-muted">{formatEventDate(event.start_date)}</p>
+            <p className="text-sm text-muted">{series && series.total > 1 ? (series.upcoming > 0 ? 'Next: ' : 'Last: ') : ''}{formatEventDate(event.start_date)}</p>
+            {series && series.total > 1 && (
+              <p className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="rounded-full bg-indigo-100 px-2 py-0.5 font-semibold text-indigo-800">↻ Repeats</span>
+                <span className="text-muted">{series.total} dates{series.upcoming > 0 && series.upcoming < series.total ? ` · ${series.upcoming} upcoming` : ''}</span>
+              </p>
+            )}
           </div>
           <span className="flex shrink-0 flex-col items-end gap-1">
             {event.is_test && <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-800">Test</span>}
