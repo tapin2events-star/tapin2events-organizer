@@ -34,6 +34,7 @@ import GroupManage from './pages/GroupManage';
 import GroupChat from './pages/GroupChat';
 import ScoutingBoards from './pages/ScoutingBoards';
 import ScoutingBoard from './pages/ScoutingBoard';
+import SharedScoutBoard from './pages/SharedScoutBoard';
 import ProductsPage from './pages/ProductsPage';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -86,6 +87,7 @@ export default function App() {
             <Route path="/groups/:id/chat" element={<ProtectedRoute><GroupChat /></ProtectedRoute>} />
             <Route path="/organizer/scouting" element={<ProtectedRoute><ScoutingBoards /></ProtectedRoute>} />
             <Route path="/organizer/scouting/:id" element={<ProtectedRoute><ScoutingBoard /></ProtectedRoute>} />
+            <Route path="/scout/:token" element={<SharedScoutBoard />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 

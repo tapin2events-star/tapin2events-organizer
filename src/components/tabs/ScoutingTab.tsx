@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import Sheet from '../scouting/Sheet';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import AddCardForm from '../scouting/AddCardForm';
@@ -55,9 +56,9 @@ export default function ScoutingTab({ event }: { event: TapEvent }) {
         <button onClick={() => setAdding((a) => !a)} className="rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white">+ Add artist</button>
       </div>
       {adding && (
-        <div className="mt-3 max-w-xl">
-          <AddCardForm boardId={shows[0].board_id} shows={shows} takenResourceIds={takenResourceIds} defaultShowId={shows[0].id} onAdded={load} onClose={() => setAdding(false)} />
-        </div>
+        <Sheet title="Add an artist" onClose={() => setAdding(false)}>
+          <AddCardForm boardId={shows[0].board_id} shows={shows} takenResourceIds={takenResourceIds} defaultShowId={shows[0].id} onAdded={() => load()} onClose={() => setAdding(false)} />
+        </Sheet>
       )}
       {cards.length === 0 && !adding && <p className="mt-4 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No prospects yet. Tap <strong>+ Add artist</strong>.</p>}
       <div className="mt-4 flex flex-col gap-5">
