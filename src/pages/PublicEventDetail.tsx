@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import RegistrationSheet from '../components/business/RegistrationSheet';
+import { loadMyRequest, loadQuestions, type MyRequest, type Question } from '../lib/registration';
 import TierPicker from '../components/business/TierPicker';
 import { loadTiers, type TierAvail } from '../lib/tiers';
 import BusinessEventSections, { OrgStrip, useBusinessData } from '../components/business/BusinessEventSections';
@@ -38,6 +40,26 @@ export default function PublicEventDetail() {
   // Ticket tiers (preview): when an event has tiers, the tier picker replaces the single price.
   const [tiers, setTiers] = useState<TierAvail[]>([]);
   useEffect(() => { if (id && businessOn) loadTiers(id).then(setTiers); else setTiers([]); }, [id, businessOn]);
+  // Registration questions and approval (preview).
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [myRequest, setMyRequest] = useState<MyRequest | null>(null);
+  const [askSheet, setAskSheet] = useState<{ mode: 'register' | 'request'; items: { tier_id: string; qty: number }[] | null; resolve: (ok: boolean) => void } | null>(null);
+  useEffect(() => { if (id && businessOn) loadQuestions(id).then(setQuestions); else setQuestions([]); }, [id, businessOn]);
+  useEffect(() => { if (id && businessOn && user?.email) loadMyRequest(id, user.email).then(setMyRequest); else setMyRequest(null); }, [id, businessOn, user?.email]);
+  const askFirst = (mode: 'register' | 'request', items: { tier_id: string; qty: number }[] | null) => new Promise<boolean>((resolve) => setAskSheet({ mode, items, resolve }));
+  const isHost = !!event && !!user && (event.organizer_id === user.id || ((event as { collaborators?: string[] }).collaborators ?? []).includes(user.email ?? ''));
+  const approvalNeeded = businessOn && !!event?.requires_approval && !isHost && myRequest?.status !== 'approved';
+  // Before registering or paying: questions, or (approval events) a join request instead.
+  const beforeContinue = async (items: { tier_id: string; qty: number }[] | null): Promise<'continue' | 'stop'> => {
+    if (approvalNeeded) {
+      if (myRequest?.status === 'pending') return 'stop';
+      const ok = await askFirst('request', items);
+      if (ok && id && user?.email) loadMyRequest(id, user.email).then(setMyRequest);
+      return 'stop';
+    }
+    if (questions.length) return (await askFirst('register', null)) ? 'continue' : 'stop';
+    return 'continue';
+  };
   const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
   const [selectedSectionName, setSelectedSectionName] = useState<string | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -478,6 +500,20 @@ export default function PublicEventDetail() {
           </div>
         )}
 
+        {/* Approval-required events: where my request stands. */}
+        {businessOn && event.requires_approval && !isHost && !myTicket && (
+          <div className={`mt-6 rounded-2xl px-4 py-3 text-sm ${myRequest?.status === 'approved' ? 'bg-green-50 text-green-900' : myRequest?.status === 'declined' ? 'bg-gray-100 text-gray-700' : myRequest?.status === 'pending' ? 'bg-amber-50 text-amber-900' : 'bg-indigo-50 text-indigo-900'}`}>
+            {myRequest?.status === 'approved' ? <p><strong>✓ You're approved.</strong> Choose your ticket below to finish registering.</p>
+              : myRequest?.status === 'declined' ? <p><strong>Your request wasn't approved this time.</strong>{myRequest.decision_note ? ` "${myRequest.decision_note}"` : ''}</p>
+              : myRequest?.status === 'pending' ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p><strong>Request sent.</strong> The organizer will review it, and you'll get an email when they decide.</p>
+                  <button onClick={async () => { await supabase.rpc('cancel_registration_request', { p_event_id: event.id }); setMyRequest(null); }} className="text-xs font-medium underline">Cancel request</button>
+                </div>
+              ) : <p><strong>This event requires approval.</strong> Request to join, and the organizer will let you know.</p>}
+          </div>
+        )}
+
         {/* The CTA is the lead of the page — everything above just orients
             the visitor, everything below is supporting detail. */}
         {safeTicketUrl(event.external_ticket_url) ? (
@@ -504,6 +540,10 @@ export default function PublicEventDetail() {
                 {isFree ? 'RSVP' : 'Get tickets'} on {ticketSiteName(event.external_ticket_url!)} ↗
               </a>
             )}
+          </div>
+        ) : approvalNeeded && event.is_seating_enabled ? (
+          <div className="mt-6 rounded-2xl bg-gray-900 p-5 text-center sm:p-6">
+            <button onClick={() => beforeContinue(null)} disabled={myRequest?.status === 'pending' || isPreview || hasEnded} className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white disabled:opacity-50">{myRequest?.status === 'pending' ? 'Request sent' : 'Request to join'}</button>
           </div>
         ) : event.is_seating_enabled && event.seating_sections && event.seating_sections.length > 0 ? (
           <div className="mt-6 rounded-2xl bg-gray-900 p-5 sm:p-6">
@@ -603,6 +643,7 @@ export default function PublicEventDetail() {
               </div>
             )}
             <TierPicker eventId={event.id} tiers={tiers} accent={biz.org?.brand.accent}
+              beforeContinue={beforeContinue} actionLabel={approvalNeeded ? (myRequest?.status === 'pending' ? 'Request sent' : 'Request to join') : undefined}
               disabledReason={isPreview ? 'Available once published' : hasEnded ? 'This event has ended' : isFull ? 'This event is full' : null}
               onRegistered={async (ticketId) => {
                 const { data: t } = await supabase.from('tickets').select('*').eq('id', ticketId).maybeSingle();
@@ -641,11 +682,11 @@ export default function PublicEventDetail() {
             ) : (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 <button
-                  onClick={isFree ? handleRegister : handleBuyTicket}
+                  onClick={async () => { if ((await beforeContinue(null)) === 'stop') return; if (isFree) handleRegister(); else handleBuyTicket(); }}
                   disabled={registering || isPreview || hasEnded}
                   className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
+                  {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : approvalNeeded ? (myRequest?.status === 'pending' ? 'Request sent' : 'Request to join') : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
                 </button>
                 {registerError && <p className="text-sm text-magenta">{registerError}</p>}
               </div>
@@ -749,6 +790,11 @@ export default function PublicEventDetail() {
         )}
 
         {businessOn && biz.isBiz && <BusinessEventSections event={event} data={biz} />}
+        {askSheet && (
+          <RegistrationSheet eventId={event.id} eventTitle={event.title} questions={questions} mode={askSheet.mode} items={askSheet.items}
+            onClose={() => { askSheet.resolve(false); setAskSheet(null); }}
+            onDone={() => { askSheet.resolve(true); setAskSheet(null); }} />
+        )}
         <EventProgram eventId={event.id} />
 
         <CommunityPosts eventId={event.id} />

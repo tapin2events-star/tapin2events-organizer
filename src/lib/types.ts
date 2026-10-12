@@ -33,6 +33,7 @@ export interface TapEvent {
   status: EventStatus;
   allow_transfers?: boolean;
   event_kind?: 'community' | 'business' | 'nonprofit';
+  requires_approval?: boolean;
   organization_id?: string | null;
   business_page?: { faq?: { q: string; a: string }[]; venue_notes?: string; template?: string } | null; // ticket holders can send tickets to someone else
   is_test?: boolean; // visible only to the organizer, their team, and admins

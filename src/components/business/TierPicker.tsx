@@ -8,8 +8,11 @@ const money = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
 
 // The ticket chooser for events with tiers: pick how many of each, see the total, then
 // check out (paid) or register (all free).
-export default function TierPicker({ eventId, tiers, disabledReason, onRegistered, accent }: {
+export default function TierPicker({ eventId, tiers, disabledReason, onRegistered, accent, beforeContinue, actionLabel }: {
   eventId: string; tiers: TierAvail[]; disabledReason?: string | null; onRegistered: (ticketId: string) => void; accent?: string;
+  // Runs first (registration questions, or a join request for approval events). 'stop' ends here.
+  beforeContinue?: (items: { tier_id: string; qty: number }[]) => Promise<'continue' | 'stop'>;
+  actionLabel?: string;
 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -58,6 +61,10 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   async function go() {
     if (!user) { navigate('/login', { state: { from: location.pathname } }); return; }
     const items = chosen.map((t) => ({ tier_id: t.id, qty: qty[t.id] }));
+    if (beforeContinue) {
+      const next = await beforeContinue(items);
+      if (next === 'stop') return;
+    }
     setBusy(true); setError(null);
     if (allFree) {
       const { data, error: err } = await supabase.rpc('register_tiers', { p_event_id: eventId, p_items: items, p_code: promo?.code ?? null });
@@ -151,7 +158,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
       {error && <p role="alert" className="mt-2 text-sm text-magenta">{error}</p>}
       <button type="button" onClick={go} disabled={busy || count === 0 || !!disabledReason || !anyOnSale}
         className={`mt-3 w-full rounded-xl px-5 py-3 text-sm font-bold disabled:opacity-50 ${btnColor ? '' : 'bg-gradient-to-r from-marigold to-teal text-white'}`} style={btnColor}>
-        {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : `Checkout · ${money(subtotal + fees)}`}
+        {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : `Checkout · ${money(subtotal + fees)}`}
       </button>
       {!user && <p className="mt-2 text-center text-xs text-gray-500">Already have an account? <Link to="/login" className="text-marigold">Sign in</Link></p>}
     </div>
