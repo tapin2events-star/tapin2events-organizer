@@ -1,4 +1,7 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import CreateSheet from './CreateSheet';
+import { useAuth } from '../context/AuthContext';
 
 const TABS = [
   {
@@ -45,6 +48,10 @@ const TABS = [
 
 export default function BottomTabBar() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [creating, setCreating] = useState(false);
+  const location = useLocation();
+  useEffect(() => { setCreating(false); }, [location.pathname]);
 
   return (
     <nav
@@ -72,12 +79,13 @@ export default function BottomTabBar() {
       ))}
 
       <button
-        onClick={() => navigate('/organizer/new')}
-        aria-label="Create event"
-        className="mx-1 -mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-lg"
+        onClick={() => (user ? setCreating((c) => !c) : navigate('/login'))}
+        aria-label={creating ? 'Close create menu' : 'Create'}
+        aria-expanded={creating}
+        className="relative z-[1002] mx-1 -mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-lg"
         style={{ background: 'linear-gradient(135deg, #4F46E5, #14B8A6)' }}
       >
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`transition-transform duration-200 ${creating ? 'rotate-45' : ''}`}>
           <path d="M12 5v14M5 12h14" strokeLinecap="round" />
         </svg>
       </button>
@@ -101,6 +109,7 @@ export default function BottomTabBar() {
           )}
         </NavLink>
       ))}
+      {creating && <CreateSheet onClose={() => setCreating(false)} />}
     </nav>
   );
 }

@@ -77,7 +77,8 @@ export default function EventForm() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiNotes, setShowAiNotes] = useState(false);
   // Quick create: fill the form from a flyer image and/or a short description.
-  const [quickOpen, setQuickOpen] = useState(true);
+  // ?start=scratch (from the + menu) opens the regular form with Quick create collapsed.
+  const [quickOpen, setQuickOpen] = useState(() => new URLSearchParams(window.location.search).get('start') !== 'scratch');
   const [quickText, setQuickText] = useState('');
   const [quickFlyerUrl, setQuickFlyerUrl] = useState<string | null>(null);
   const [quickUploading, setQuickUploading] = useState(false);

@@ -110,6 +110,14 @@ export default function Feed() {
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  // Opened from the "+" menu: start a new video post right away.
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return;
+    setShowCreateModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [activatedPostIds, setActivatedPostIds] = useState<Set<string>>(new Set());
