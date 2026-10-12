@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import DeleteOrgSheet from '../../components/business/DeleteOrgSheet';
 import EarlyAccessBadge from '../../components/business/EarlyAccessBadge';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -79,10 +80,18 @@ function OrgManageInner() {
           <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium sm:px-4 ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
         ))}
       </div>
+      {org.status === 'deleted' && (
+        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+          <p className="font-semibold text-red-900">This organization was deleted.</p>
+          <p className="mt-1 text-sm text-red-800">It's hidden from everyone{(org as Organization & { deleted_at?: string | null }).deleted_at ? ` and will be removed for good on ${new Date(new Date((org as Organization & { deleted_at?: string | null }).deleted_at as string).getTime() + 30 * 86400000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}` : ''}.</p>
+          {role === 'owner' && <button onClick={async () => { const { error } = await supabase.rpc('restore_organization', { p_org_id: org.id }); if (error) setMsg({ ok: false, text: error.message }); else { setMsg({ ok: true, text: 'Restored.' }); load(); } }} className="mt-3 rounded-xl bg-[#0F1B3D] px-4 py-2 text-sm font-bold text-white">Restore organization</button>}
+        </div>
+      )}
       {msg && <p role="status" className={`mt-3 text-sm ${msg.ok ? 'text-green-700' : 'text-red-600'}`}>{msg.text}</p>}
 
       <div className="mt-5">
         {tab === 'Profile' && <ProfileTab org={org} canEdit={canEdit} onSave={save} />}
+        {tab === 'Profile' && role === 'owner' && org.status !== 'deleted' && <DangerZone orgId={org.id} orgName={org.name} />}
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} />}
@@ -237,5 +246,17 @@ function EventsTab({ org, canEdit }: { org: Organization; canEdit: boolean }) {
         </ul>
       )}
     </div>
+  );
+}
+
+function DangerZone({ orgId, orgName }: { orgId: string; orgName: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="mt-10 rounded-2xl border border-red-200 p-4">
+      <p className="font-semibold text-red-700">Delete organization</p>
+      <p className="mt-1 text-sm text-muted">Hides the organization right away. You can restore it for 30 days; after that it's removed for good. Past events and donation records are kept.</p>
+      <button onClick={() => setOpen(true)} className="mt-3 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700">Delete organization…</button>
+      {open && <DeleteOrgSheet orgId={orgId} orgName={orgName} onClose={() => setOpen(false)} />}
+    </section>
   );
 }

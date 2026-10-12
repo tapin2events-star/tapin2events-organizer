@@ -70,7 +70,7 @@ function BusinessHomeInner() {
                     {o.logo_url ? <img src={o.logo_url} alt="" className="h-12 w-12 rounded-xl object-cover" /> : <span className="flex h-12 w-12 items-center justify-center rounded-xl font-bold text-white" style={{ background: o.brand.primary }}>{o.name.charAt(0)}</span>}
                     <span className="min-w-0">
                       <span className="block truncate font-semibold text-bone">{o.name}{o.verified && <span className="ml-1 text-[#C9A227]" title="Verified">✓</span>}</span>
-                      <span className="block text-xs text-muted">{o.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · {o.role}{o.founding_number ? ` · Founding member #${o.founding_number}` : ''}</span>
+                      <span className="block text-xs text-muted">{o.status === 'deleted' ? <span className="font-semibold text-red-600">Deleted · restore by {o.deleted_at ? new Date(new Date(o.deleted_at).getTime() + 30 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'soon'}</span> : <>{o.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · {o.role}{o.founding_number ? ` · Founding member #${o.founding_number}` : ''}</>}</span>
                     </span>
                   </Link>
                 </li>
