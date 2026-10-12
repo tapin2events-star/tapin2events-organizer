@@ -842,7 +842,7 @@ export default function EventForm() {
                   <span><strong>Offer multiple ticket types</strong> <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span>
                     <span className="block text-xs text-muted">General, VIP, Early Bird and more, each with its own price, quantity and sales dates. Free and paid types can be mixed.</span></span>
                 </label>
-                {useTiers && <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1`} />}
+                {useTiers && <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
               </div>
             )}
 

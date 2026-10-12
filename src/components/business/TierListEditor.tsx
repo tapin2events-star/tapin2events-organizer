@@ -10,15 +10,15 @@ export default function TierListEditor({ drafts, onChange, sold, inputClass }: {
   const move = (i: number, dir: -1 | 1) => { const n = [...drafts]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; onChange(n); };
   const used = new Set(drafts.map((d) => d.name.trim().toLowerCase()));
   return (
-    <div className="mt-3 flex flex-col gap-3">
+    <div className="mt-3 flex min-w-0 flex-col gap-3">
       {drafts.map((d, i) => {
         const s = d.id ? sold[d.id] ?? 0 : 0;
         return (
           <div key={d.key} className={`rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4 ${d.active ? '' : 'opacity-60'}`}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_6.5rem_6.5rem]">
-              <label className="col-span-2 text-xs font-medium text-gray-500 sm:col-span-1">Name<input value={d.name} maxLength={80} onChange={(e) => set(d.key, { name: e.target.value })} placeholder="General Admission" className={inputClass} /></label>
-              <label className="text-xs font-medium text-gray-500">Price ($)<input value={d.price} inputMode="decimal" onChange={(e) => set(d.key, { price: e.target.value.replace(/[^0-9.]/g, '') })} placeholder="Free" className={inputClass} /></label>
-              <label className="text-xs font-medium text-gray-500">Quantity<input value={d.quantity} inputMode="numeric" onChange={(e) => set(d.key, { quantity: e.target.value.replace(/\D/g, '') })} placeholder="No limit" className={inputClass} /></label>
+              <label className="col-span-2 min-w-0 text-xs font-medium text-gray-500 sm:col-span-1">Name<input value={d.name} maxLength={80} onChange={(e) => set(d.key, { name: e.target.value })} placeholder="General Admission" className={inputClass} /></label>
+              <label className="min-w-0 text-xs font-medium text-gray-500">Price ($)<input value={d.price} inputMode="decimal" onChange={(e) => set(d.key, { price: e.target.value.replace(/[^0-9.]/g, '') })} placeholder="Free" className={inputClass} /></label>
+              <label className="min-w-0 text-xs font-medium text-gray-500">Quantity<input value={d.quantity} inputMode="numeric" onChange={(e) => set(d.key, { quantity: e.target.value.replace(/\D/g, '') })} placeholder="No limit" className={inputClass} /></label>
             </div>
             {(s > 0 || ((d.sales_start || d.sales_end) && open !== d.key)) && (
               <p className="mt-1.5 text-xs text-gray-500">
@@ -47,7 +47,7 @@ export default function TierListEditor({ drafts, onChange, sold, inputClass }: {
               </span>
             </div>
             {open === d.key && (
-              <div className="mt-1 grid gap-3 pb-1 sm:grid-cols-2">
+              <div className="mt-1 grid min-w-0 gap-3 pb-1 sm:grid-cols-2">
                 <label className="text-xs font-medium text-gray-500">Sales start <span className="font-normal text-gray-400">(optional)</span><input type="datetime-local" value={d.sales_start} onChange={(e) => set(d.key, { sales_start: e.target.value })} className={inputClass} /></label>
                 <label className="text-xs font-medium text-gray-500">Sales end <span className="font-normal text-gray-400">(optional)</span><input type="datetime-local" value={d.sales_end} onChange={(e) => set(d.key, { sales_end: e.target.value })} className={inputClass} /></label>
                 <label className="text-xs font-medium text-gray-500">Max per order<input value={d.max_per_order} inputMode="numeric" onChange={(e) => set(d.key, { max_per_order: e.target.value.replace(/\D/g, '') })} className={inputClass} /></label>
