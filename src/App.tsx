@@ -38,6 +38,7 @@ import SharedScoutBoard from './pages/SharedScoutBoard';
 import BusinessHome from './pages/business/BusinessHome';
 import OrgManage from './pages/business/OrgManage';
 import OrgPublic from './pages/business/OrgPublic';
+import OrgDirectory from './pages/business/OrgDirectory';
 import ProductsPage from './pages/ProductsPage';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="/business" element={<BusinessHome />} />
             <Route path="/business/:slug/manage" element={<ProtectedRoute><OrgManage /></ProtectedRoute>} />
             <Route path="/o/:slug" element={<OrgPublic />} />
+            <Route path="/organizations" element={<OrgDirectory />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 

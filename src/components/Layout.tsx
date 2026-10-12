@@ -18,6 +18,7 @@ const EXPLORE: Item[] = [
   { to: '/', label: 'Discover', icon: 'discover', end: true, desktopOnly: true },
   { to: '/feed', label: 'Feed', icon: 'feed', desktopOnly: true },
   { to: '/resources', label: 'Artists & Resources', icon: 'resources', end: true },
+  { to: '/organizations', label: 'Organizations', icon: 'bookings', end: true },
   { to: '/products', label: 'Shop', icon: 'shop' },
 ];
 const MY_STUFF: Item[] = [

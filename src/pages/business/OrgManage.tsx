@@ -125,6 +125,10 @@ function ProfileTab({ org, canEdit, onSave }: { org: Organization; canEdit: bool
           </label>
         )}
       </div>
+      <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-surface p-3 text-sm text-bone">
+        <input type="checkbox" disabled={!canEdit} checked={(org as Organization & { listed?: boolean }).listed !== false} onChange={(e) => onSave({ listed: e.target.checked } as Partial<Organization>)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
+        <span><strong>List in the Organizations directory</strong><span className="block text-xs text-muted">Shows your organization on TapIN's Organizations page and Discover. Turn off if you'd rather people reach your page only by link.</span></span>
+      </label>
       {canEdit && <button onClick={() => { if (f.ein && !/^\d{2}-?\d{7}$/.test(f.ein)) { setEinErr('An EIN is 9 digits, like 12-3456789.'); return; } onSave({ ...f, name: f.name.trim() || org.name, website: f.website.trim() || null, contact_email: f.contact_email.trim() || null, ein: f.ein ? f.ein.replace(/^(\d{2})-?(\d{7})$/, '$1-$2') : null } as Partial<Organization>); }} className="self-start rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">Save profile</button>}
     </div>
   );

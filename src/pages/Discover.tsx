@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import FeaturedOrgs from '../components/business/FeaturedOrgs';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -282,6 +283,8 @@ export default function Discover() {
             </button>
           ))}
         </div>
+
+        {tab !== 'map' && (search.trim().length >= 2 || (!category && !priceFilter && !dateFilter)) && <FeaturedOrgs query={search} />}
 
         {showPicks && picksState !== 'skipped' && user?.id && user.email && (
           <PickedForYou events={events} savedIds={savedIds} userId={user.id} userEmail={user.email} onToggleSave={toggleSave} onReady={() => setPicksState((st) => (st === 'waiting' ? 'ready' : st))} />
