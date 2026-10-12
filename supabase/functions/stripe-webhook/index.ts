@@ -254,6 +254,52 @@ Deno.serve(async (req) => {
 
       const { data: existingOrder } = await admin.from("orders").select("id").eq("payment_intent_id", paymentIntentId).maybeSingle();
 
+      if (!existingOrder && metadata.checkout_type === "tiers") {
+        // ---- Ticket tiers path ----
+        // One ticket row per seat, each linked to its tier, all on one order.
+        // Free tiers in the same cart (price 0) are created too.
+        const eventId = metadata.event_id;
+        const userEmail = metadata.user_email;
+        const tiers = JSON.parse(metadata.tiers || "[]"); // [[tier_id, qty, price_cents], ...]
+        const subtotalCents = parseInt(metadata.subtotal_cents || "0", 10);
+        const platformFeeCents = parseInt(metadata.platform_fee_cents || "0", 10);
+        const totalAmountCents = session.amount_total || 0;
+
+        const { data: ev } = await admin.from("events").select("title").eq("id", eventId).single();
+        const { data: tierRows } = await admin.from("event_ticket_tiers").select("id, name").in("id", tiers.map((t) => t[0]));
+        const tierName = (id) => ((tierRows || []).find((t) => t.id === id) || {}).name || "Ticket";
+        const { data: profile } = await admin.from("profiles").select("full_name").eq("email", userEmail).single();
+        const title = ev ? ev.title : "Event";
+
+        const { data: order } = await admin
+          .from("orders")
+          .insert({
+            order_number: "TAPIN-" + Date.now(),
+            event_id: eventId,
+            customer_email: userEmail,
+            customer_name: (profile && profile.full_name) || userEmail,
+            items: tiers.map((t) => ({ type: "ticket", item_id: eventId, item_name: title + " \u00b7 " + tierName(t[0]), quantity: t[1], unit_price: t[2] / 100, total_price: (t[2] * t[1]) / 100 })),
+            subtotal: subtotalCents / 100,
+            platform_fee: platformFeeCents / 100,
+            total_amount: totalAmountCents / 100,
+            payment_status: "paid",
+            payment_intent_id: paymentIntentId,
+          })
+          .select()
+          .single();
+
+        const ticketRows = [];
+        for (const t of tiers) {
+          for (let i = 0; i < Math.min(Number(t[1]) || 0, 50); i++) {
+            ticketRows.push({ event_id: eventId, attendee_email: userEmail, order_id: order ? order.id : null, ticket_type: "general", price_paid: t[2] / 100, quantity: 1, status: "confirmed", tier_id: t[0] });
+          }
+        }
+        const { data: tickets, error: ticketError } = await admin.from("tickets").insert(ticketRows).select();
+        if (ticketError) console.error("Tier ticket insert failed:", ticketError);
+        if (order && tickets && tickets.length > 0) await sendAppEmail("order_confirmation", { order_id: order.id });
+        return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+
       if (!existingOrder && metadata.checkout_type === "series_pass") {
         // ---- Series pass path ----
         // One ticket per occurrence, all linked to the same order, so

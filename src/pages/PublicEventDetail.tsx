@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import TierPicker from '../components/business/TierPicker';
+import { loadTiers, type TierAvail } from '../lib/tiers';
 import BusinessEventSections, { OrgStrip, useBusinessData } from '../components/business/BusinessEventSections';
 import { useFeature } from '../lib/preview';
 import EventCover from '../components/EventCover';
@@ -33,6 +35,9 @@ export default function PublicEventDetail() {
   const [event, setEvent] = useState<TapEvent | null>(null);
   // Business / nonprofit events: organization brand, agenda, speakers, sponsors (TapIN for Business).
   const biz = useBusinessData(event);
+  // Ticket tiers (preview): when an event has tiers, the tier picker replaces the single price.
+  const [tiers, setTiers] = useState<TierAvail[]>([]);
+  useEffect(() => { if (id && businessOn) loadTiers(id).then(setTiers); else setTiers([]); }, [id, businessOn]);
   const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
   const [selectedSectionName, setSelectedSectionName] = useState<string | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -589,6 +594,22 @@ export default function PublicEventDetail() {
               </>
             )}
           </div>
+        ) : businessOn && tiers.length > 0 ? (
+          <>
+            {myTicket && (
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-green-50 px-4 py-3 text-sm">
+                <span className="font-medium text-green-800">✓ You have tickets for this event</span>
+                <Link to={`/pass/${myTicket.id}`} className="font-medium text-green-800 underline underline-offset-2">View ticket &amp; QR code</Link>
+              </div>
+            )}
+            <TierPicker eventId={event.id} tiers={tiers} accent={biz.org?.brand.accent}
+              disabledReason={isPreview ? 'Available once published' : hasEnded ? 'This event has ended' : isFull ? 'This event is full' : null}
+              onRegistered={async (ticketId) => {
+                const { data: t } = await supabase.from('tickets').select('*').eq('id', ticketId).maybeSingle();
+                if (t) setMyTicket(t as Ticket);
+                loadTiers(event.id).then(setTiers);
+              }} />
+          </>
         ) : (
           <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
