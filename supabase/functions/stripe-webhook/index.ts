@@ -142,6 +142,10 @@ Deno.serve(async (req) => {
         const seats = JSON.parse(metadata.seats);
         await admin.rpc("release_seats", { p_event_id: metadata.event_id, p_seats: seats });
       }
+      // An abandoned donation checkout is marked failed.
+      if (metadata.donation_id) {
+        await admin.from("donations").update({ payment_status: "failed" }).eq("id", metadata.donation_id).eq("payment_status", "pending");
+      }
       // An abandoned tip checkout is marked failed so it never shows as pending.
       if (metadata.checkout_type === "tip" && metadata.tip_id) {
         await admin.from("tips").update({ payment_status: "failed" }).eq("id", metadata.tip_id).eq("payment_status", "pending");
@@ -153,6 +157,16 @@ Deno.serve(async (req) => {
       const session = stripeEvent.data.object;
       const paymentIntentId = session.payment_intent;
       const metadata = session.metadata || {};
+
+      // ---- Donations (standalone, or added to a ticket purchase) ----
+      // Only a pending gift flips to paid, so a retried webhook can't count it twice;
+      // a database trigger then sends the receipt and tells the organizer.
+      if (metadata.donation_id) {
+        await admin.from("donations").update({ payment_status: "paid", payment_intent_id: paymentIntentId, paid_at: new Date().toISOString() }).eq("id", metadata.donation_id).eq("payment_status", "pending");
+      }
+      if (metadata.checkout_type === "donation") {
+        return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "content-type": "application/json" } });
+      }
 
       if (metadata.checkout_type === "tip" && metadata.tip_id) {
         // ---- Tip path ----

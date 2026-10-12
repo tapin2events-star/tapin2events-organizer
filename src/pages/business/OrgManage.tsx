@@ -76,7 +76,8 @@ function OrgManageInner() {
 }
 
 function ProfileTab({ org, canEdit, onSave }: { org: Organization; canEdit: boolean; onSave: (p: Partial<Organization>) => void }) {
-  const [f, setF] = useState({ name: org.name, tagline: org.tagline ?? '', description: org.description ?? '', website: org.website ?? '', contact_email: org.contact_email ?? '', city: org.city ?? '', state: org.state ?? '' });
+  const [f, setF] = useState({ name: org.name, tagline: org.tagline ?? '', description: org.description ?? '', website: org.website ?? '', contact_email: org.contact_email ?? '', city: org.city ?? '', state: org.state ?? '', ein: (org as { ein?: string | null }).ein ?? '' });
+  const [einErr, setEinErr] = useState<string | null>(null);
   const field = 'mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 disabled:bg-gray-50';
   return (
     <div className="flex flex-col gap-4">
@@ -92,8 +93,14 @@ function ProfileTab({ org, canEdit, onSave }: { org: Organization; canEdit: bool
         <label className="text-xs font-medium text-gray-500">Contact email<input disabled={!canEdit} className={field} value={f.contact_email} onChange={(e) => setF({ ...f, contact_email: e.target.value })} inputMode="email" /></label>
         <label className="text-xs font-medium text-gray-500">City<input disabled={!canEdit} className={field} value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} /></label>
         <label className="text-xs font-medium text-gray-500">State<input disabled={!canEdit} className={field} value={f.state} maxLength={30} onChange={(e) => setF({ ...f, state: e.target.value })} /></label>
+        {org.kind === 'nonprofit' && (
+          <label className="text-xs font-medium text-gray-500 sm:col-span-2">EIN (optional, shown on donation receipts)
+            <input disabled={!canEdit} className={field} value={f.ein} maxLength={10} inputMode="numeric" onChange={(e) => { setF({ ...f, ein: e.target.value.replace(/[^0-9-]/g, '') }); setEinErr(null); }} placeholder="12-3456789" />
+            {einErr && <span className="mt-1 block text-red-600">{einErr}</span>}
+          </label>
+        )}
       </div>
-      {canEdit && <button onClick={() => onSave({ ...f, name: f.name.trim() || org.name, website: f.website.trim() || null, contact_email: f.contact_email.trim() || null })} className="self-start rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">Save profile</button>}
+      {canEdit && <button onClick={() => { if (f.ein && !/^\d{2}-?\d{7}$/.test(f.ein)) { setEinErr('An EIN is 9 digits, like 12-3456789.'); return; } onSave({ ...f, name: f.name.trim() || org.name, website: f.website.trim() || null, contact_email: f.contact_email.trim() || null, ein: f.ein ? f.ein.replace(/^(\d{2})-?(\d{7})$/, '$1-$2') : null } as Partial<Organization>); }} className="self-start rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">Save profile</button>}
     </div>
   );
 }

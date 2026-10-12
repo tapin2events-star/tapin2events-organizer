@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DonationsTab from '../components/business/DonationsTab';
 import RegistrationTab from '../components/business/RegistrationTab';
 import TiersTab from '../components/business/TiersTab';
 import BusinessPageTab from '../components/business/BusinessPageTab';
@@ -24,7 +25,7 @@ import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
-const TABS = ['Overview', 'Business page', 'Tickets', 'Registration', 'Lineup', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Team & tasks', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Business page', 'Tickets', 'Registration', 'Donations', 'Lineup', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Team & tasks', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -51,7 +52,7 @@ export default function EventDetail() {
   useEffect(() => { if (id) supabase.rpc('event_team_role', { p_event_id: id }).then(({ data }) => setTeamRole((data as string | null) ?? null)); }, [id]);
   const limitedTabs: Record<string, readonly string[]> = { helper: ['Overview', 'Team & tasks'], vendor_manager: ['Overview', 'Vendor applications', 'Team & tasks'] };
   const businessOn = useFeature('business');
-  const visibleTabs = TABS.filter((t) => (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (t !== 'Bookings' || isOwner) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
+  const visibleTabs = TABS.filter((t) => (t !== 'Donations' || (businessOn && event?.event_kind === 'nonprofit')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (t !== 'Bookings' || isOwner) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
     (async () => {
@@ -272,6 +273,7 @@ export default function EventDetail() {
       {tab === 'Business page' && <BusinessPageTab event={event} onEventChange={setEvent} />}
       {tab === 'Tickets' && <TiersTab event={event} />}
       {tab === 'Registration' && <RegistrationTab event={event} onEventChange={setEvent} />}
+      {tab === 'Donations' && <DonationsTab event={event} onEventChange={setEvent} />}
       {tab === 'Lineup' && <LineupWithScouting event={event} isOwner={isOwner} />}
       {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}

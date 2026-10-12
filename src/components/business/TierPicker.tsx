@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { donationFee } from '../../lib/donations';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -8,11 +9,13 @@ const money = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
 
 // The ticket chooser for events with tiers: pick how many of each, see the total, then
 // check out (paid) or register (all free).
-export default function TierPicker({ eventId, tiers, disabledReason, onRegistered, accent, beforeContinue, actionLabel }: {
+export default function TierPicker({ eventId, tiers, disabledReason, onRegistered, accent, beforeContinue, actionLabel, donation }: {
   eventId: string; tiers: TierAvail[]; disabledReason?: string | null; onRegistered: (ticketId: string) => void; accent?: string;
   // Runs first (registration questions, or a join request for approval events). 'stop' ends here.
   beforeContinue?: (items: { tier_id: string; qty: number }[]) => Promise<'continue' | 'stop'>;
   actionLabel?: string;
+  // Nonprofit events: let buyers add a donation to their order.
+  donation?: { presets: number[]; min: number; recipient: string } | null;
 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -49,7 +52,15 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   const paidCount = chosen.filter((t) => priceOf(t) > 0).reduce((n, t) => n + qty[t.id], 0);
   // Same fees as checkout: 3.7% + $1.79 per paid ticket, plus 2.9% processing.
   const fees = paidCount ? Math.round(subtotal * 100 * 0.037 + 179 * paidCount + subtotal * 100 * 0.029) / 100 : 0;
-  const allFree = chosen.length > 0 && chosen.every((t) => priceOf(t) === 0);
+  // Optional donation riding on this order.
+  const [gift, setGift] = useState(0);
+  const [giftCustom, setGiftCustom] = useState('');
+  const [giftCover, setGiftCover] = useState(true);
+  const giftValue = giftCustom ? Number(giftCustom) || 0 : gift;
+  const giftOk = !!donation && giftValue >= (donation?.min ?? 5);
+  const giftFee = giftOk ? donationFee(giftValue, paidCount > 0) : 0;
+  const giftCharge = giftOk ? giftValue + (giftCover ? giftFee : 0) : 0;
+  const allFree = chosen.length > 0 && chosen.every((t) => priceOf(t) === 0) && !giftOk;
   const anyOnSale = useMemo(() => tiers.some((t) => t.status === 'on_sale'), [tiers]);
 
   function step(t: TierAvail, d: number) {
@@ -66,6 +77,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
       if (next === 'stop') return;
     }
     setBusy(true); setError(null);
+    if (donation && giftValue > 0 && !giftOk) { setBusy(false); return setError(`The minimum donation is $${donation.min}.`); }
     if (allFree) {
       const { data, error: err } = await supabase.rpc('register_tiers', { p_event_id: eventId, p_items: items, p_code: promo?.code ?? null });
       setBusy(false);
@@ -77,7 +89,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
     }
     const base = window.location.origin + import.meta.env.BASE_URL;
     const { data, error: err } = await supabase.functions.invoke('create-tier-checkout', {
-      body: { event_id: eventId, items, promo_code: promo?.code ?? null, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
+      body: { event_id: eventId, items, promo_code: promo?.code ?? null, donation: giftOk ? { amount: Math.round(giftValue * 100) / 100, cover_fees: giftCover } : null, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
     });
     setBusy(false);
     if (err || !data?.url) {
@@ -134,7 +146,29 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
           <div className="flex justify-between"><span>{count} ticket{count === 1 ? '' : 's'}</span><span>{fullSubtotal > 0 ? money(fullSubtotal) : 'Free'}</span></div>
           {savings > 0 && <div className="flex justify-between text-green-700"><span>Code {promo?.code}</span><span>−{money(savings)}</span></div>}
           {fees > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Service & processing fees</span><span>{money(fees)}</span></div>}
-          {subtotal > 0 && <div className="mt-1 flex justify-between font-semibold text-gray-900"><span>Total</span><span>{money(subtotal + fees)}</span></div>}
+          {giftOk && <div className="flex justify-between"><span>Donation to {donation?.recipient}</span><span>{money(giftValue)}</span></div>}
+          {giftOk && giftCover && <div className="flex justify-between text-xs text-gray-500"><span>Donation fees (covered by you)</span><span>{money(giftFee)}</span></div>}
+          {(subtotal > 0 || giftOk) && <div className="mt-1 flex justify-between font-semibold text-gray-900"><span>Total</span><span>{money(subtotal + fees + giftCharge)}</span></div>}
+        </div>
+      )}
+      {donation && count > 0 && (
+        <div className="mt-3 rounded-xl bg-rose-50/60 p-3">
+          <p className="text-sm font-semibold text-gray-900">💛 Add a donation to {donation.recipient}?</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[0, ...donation.presets.slice(0, 3)].map((p) => (
+              <button key={p} type="button" onClick={() => { setGift(p); setGiftCustom(''); }} aria-pressed={!giftCustom && gift === p}
+                className={`min-h-[40px] rounded-full px-4 text-sm font-medium ${!giftCustom && gift === p ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 ring-1 ring-gray-200'}`}>{p === 0 ? 'No thanks' : money(p)}</button>
+            ))}
+            <input value={giftCustom} inputMode="decimal" onChange={(e) => setGiftCustom(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="Other $" aria-label="Other donation amount"
+              className="min-h-[40px] w-24 rounded-full bg-white px-3 text-sm text-gray-900 ring-1 ring-gray-200" />
+          </div>
+          {giftOk && (
+            <label className="mt-2 flex items-start gap-2 text-xs text-gray-600">
+              <input type="checkbox" checked={giftCover} onChange={(e) => setGiftCover(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-marigold" />
+              <span>Cover the donation fees ({money(giftFee)}) so 100% goes to {donation.recipient}</span>
+            </label>
+          )}
+          {giftValue > 0 && !giftOk && <p className="mt-1 text-xs text-magenta">Minimum donation is ${donation.min}.</p>}
         </div>
       )}
       <div className="mt-3">
@@ -158,7 +192,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
       {error && <p role="alert" className="mt-2 text-sm text-magenta">{error}</p>}
       <button type="button" onClick={go} disabled={busy || count === 0 || !!disabledReason || !anyOnSale}
         className={`mt-3 w-full rounded-xl px-5 py-3 text-sm font-bold disabled:opacity-50 ${btnColor ? '' : 'bg-gradient-to-r from-marigold to-teal text-white'}`} style={btnColor}>
-        {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : `Checkout · ${money(subtotal + fees)}`}
+        {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : `Checkout · ${money(subtotal + fees + giftCharge)}`}
       </button>
       {!user && <p className="mt-2 text-center text-xs text-gray-500">Already have an account? <Link to="/login" className="text-marigold">Sign in</Link></p>}
     </div>

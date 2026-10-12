@@ -34,6 +34,12 @@ export interface TapEvent {
   allow_transfers?: boolean;
   event_kind?: 'community' | 'business' | 'nonprofit';
   requires_approval?: boolean;
+  donations_enabled?: boolean;
+  donation_description?: string | null;
+  donation_goal?: number | null;
+  donation_presets?: number[];
+  min_donation_amount?: number | null;
+  show_donors?: boolean;
   organization_id?: string | null;
   business_page?: { faq?: { q: string; a: string }[]; venue_notes?: string; template?: string } | null; // ticket holders can send tickets to someone else
   is_test?: boolean; // visible only to the organizer, their team, and admins
