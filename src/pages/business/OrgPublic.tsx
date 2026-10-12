@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import OrgFollowButton from '../../components/business/OrgFollowButton';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import BusinessGate from '../../components/business/BusinessGate';
@@ -43,7 +44,10 @@ function OrgPublicInner() {
       <div className="mx-auto max-w-4xl px-6">
         <div className="relative z-10 -mt-12 flex items-end justify-between gap-3 sm:-mt-14">
           {org.logo_url ? <img src={org.logo_url} alt="" className="h-24 w-24 shrink-0 rounded-3xl border-4 bg-white object-cover shadow-md sm:h-28 sm:w-28" style={{ borderColor: dark ? '#0B1020' : '#fff' }} /> : <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border-4 text-3xl font-bold text-white shadow-md sm:h-28 sm:w-28" style={{ background: b.primary, borderColor: dark ? '#0B1020' : '#fff' }}>{org.name.charAt(0)}</span>}
-          {canManage && <Link to={`/business/${org.slug}/manage`} className="mb-1 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm" style={{ background: b.primary }}>Manage</Link>}
+          <div className="mb-1 flex flex-wrap items-center justify-end gap-2">
+            {canManage && <Link to={`/business/${org.slug}/manage`} className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm">Manage</Link>}
+            <OrgFollowButton orgId={org.id} color={b.primary} />
+          </div>
         </div>
         <div className="mt-3 min-w-0">
           <h1 className="break-words text-2xl font-extrabold leading-tight sm:text-3xl">{org.name}{org.verified && <span className="ml-2 text-xl" style={{ color: b.accent }} title="Verified">✓</span>}</h1>

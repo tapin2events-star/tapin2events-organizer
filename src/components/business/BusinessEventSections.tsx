@@ -39,7 +39,7 @@ export function OrgStrip({ org, kind }: { org: Organization | null; kind?: strin
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 text-white sm:px-6" style={{ background: org.brand.primary, fontFamily: `'${org.brand.font}', system-ui, sans-serif` }}>
       {org.logo_url ? <img src={org.logo_url} alt="" className="h-8 w-8 rounded-lg bg-white/10 object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm font-bold">{org.name.charAt(0)}</span>}
-      <Link to={`/o/${org.slug}`} className="min-w-0 flex-1 truncate text-sm font-semibold hover:underline">{org.name}{org.verified && <span className="ml-1" style={{ color: org.brand.accent }} title="Verified">✓</span>}</Link>
+      <Link to={`/o/${org.slug}`} className="min-w-0 flex-1 truncate text-sm font-semibold hover:underline" aria-label={`${org.name}: view organization page`}>{org.name}{org.verified && <span className="ml-1" style={{ color: org.brand.accent }} title="Verified">✓</span>}<span className="ml-1.5 opacity-80" aria-hidden="true">›</span></Link>
       <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide" style={{ background: org.brand.accent, color: '#111827' }}>{kind === 'nonprofit' ? 'Nonprofit event' : 'Business event'}</span>
     </div>
   );

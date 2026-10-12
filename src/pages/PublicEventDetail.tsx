@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MoreFromOrg, OrgHostedBy } from '../components/business/OrgHostedBy';
 import DonationCard from '../components/business/DonationCard';
 import RegistrationSheet from '../components/business/RegistrationSheet';
 import { loadMyRequest, loadQuestions, type MyRequest, type Question } from '../lib/registration';
@@ -463,7 +464,7 @@ export default function PublicEventDetail() {
           </div>
         ) : (
           <>
-            {event.organizer_email && <HostedBy organizerEmail={event.organizer_email} fallbackName={organizerName} />}
+            {businessOn && biz.org ? <OrgHostedBy org={biz.org} /> : event.organizer_email && <HostedBy organizerEmail={event.organizer_email} fallbackName={organizerName} />}
             <div className="mt-2 text-right text-sm">
               <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
                 Contact organizer
@@ -794,6 +795,7 @@ export default function PublicEventDetail() {
 
         {donationsOn && <DonationCard event={event} recipient={biz.org?.name ?? organizerName ?? event.title} accent={biz.org?.brand.accent} />}
         {businessOn && biz.isBiz && <BusinessEventSections event={event} data={biz} />}
+        {businessOn && biz.org && <MoreFromOrg org={biz.org} currentEventId={event.id} />}
         {askSheet && (
           <RegistrationSheet eventId={event.id} eventTitle={event.title} questions={questions} mode={askSheet.mode} items={askSheet.items}
             onClose={() => { askSheet.resolve(false); setAskSheet(null); }}
