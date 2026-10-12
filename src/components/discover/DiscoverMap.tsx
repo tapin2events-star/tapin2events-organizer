@@ -33,6 +33,16 @@ const resourceMarkerIcon = new L.Icon({
 
 const MILES_TO_METERS = 1609.34;
 
+// How tickets work for this event, so people know before they tap.
+function ticketLine(e: TapEvent) {
+  const host = (url?: string | null) => { try { return url ? new URL(url).hostname.replace(/^www\./, '') : ''; } catch { return ''; } };
+  const site = (h: string) => (/eventbrite/.test(h) ? 'Eventbrite' : /ticketmaster|livenation/.test(h) ? 'Ticketmaster' : /etix/.test(h) ? 'Etix' : /dice\.fm/.test(h) ? 'DICE' : /seetickets/.test(h) ? 'See Tickets' : h);
+  if (e.source_name) return `Listed from ${e.source_name}`;
+  if (e.event_type === 'free') return e.external_ticket_url ? `Free · RSVP on ${site(host(e.external_ticket_url))}` : 'Free · Register on TapIN';
+  if (e.external_ticket_url) return `Tickets on ${site(host(e.external_ticket_url))}`;
+  return 'Get tickets on TapIN';
+}
+
 function haversineMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 3958.8; // Earth radius in miles
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -268,9 +278,11 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
                     <p className="font-semibold text-gray-900">{event.title}</p>
                     {event.start_date && (
                       <p className="text-xs text-gray-500">
-                        {new Date(event.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {new Date(event.start_date).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(':00 ', ' ')}
+                        {event.location_name ? ` · ${event.location_name}` : ''}
                       </p>
                     )}
+                    <p className="mt-0.5 text-xs text-gray-600">{ticketLine(event)}</p>
                     <Link to={`/events/${event.id}`} className="mt-1 inline-block text-xs font-medium text-marigold hover:underline">
                       View event &rarr;
                     </Link>

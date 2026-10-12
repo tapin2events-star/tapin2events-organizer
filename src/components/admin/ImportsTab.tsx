@@ -158,6 +158,8 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         <p className="mt-2 text-xs text-muted">Ticketmaster needs a free API key from developer.ticketmaster.com before it can be checked. Facebook and Instagram can't be used as sources.</p>
       </section>
 
+      <NotOnMap />
+
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-semibold text-bone">Found events</h2>
@@ -209,5 +211,30 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         )}
       </section>
     </div>
+  );
+}
+
+// Upcoming events whose address couldn't be found on the map.
+function NotOnMap() {
+  const [list, setList] = useState<{ id: string; title: string; location_name: string | null; location_address: string | null }[] | null>(null);
+  useEffect(() => {
+    supabase.from('events').select('id, title, location_name, location_address').eq('geocode_status', 'failed').eq('is_online', false)
+      .gte('start_date', new Date().toISOString()).order('start_date').limit(30)
+      .then(({ data }) => setList((data ?? []) as { id: string; title: string; location_name: string | null; location_address: string | null }[]));
+  }, []);
+  if (!list || list.length === 0) return null;
+  return (
+    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+      <h2 className="font-display text-base font-semibold text-amber-900">Not on the map ({list.length})</h2>
+      <p className="text-xs text-amber-900/80">These addresses couldn't be found. Edit the address (a full street address works best) and it'll be placed automatically within a few minutes.</p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {list.map((e) => (
+          <li key={e.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm">
+            <span className="min-w-0"><span className="block truncate font-medium text-gray-900">{e.title}</span><span className="block truncate text-xs text-gray-500">{[e.location_name, e.location_address].filter(Boolean).join(' · ') || 'No address'}</span></span>
+            <Link to={`/organizer/events/${e.id}/edit`} className="shrink-0 text-xs font-medium text-marigold">Fix address</Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
