@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import BusinessEventSections, { OrgStrip, useBusinessData } from '../components/business/BusinessEventSections';
+import { useFeature } from '../lib/preview';
 import EventCover from '../components/EventCover';
 import ShareQR from '../components/ShareQR';
 import CopyAddress from '../components/CopyAddress';
@@ -25,9 +27,12 @@ export default function PublicEventDetail() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { user, isAdmin } = useAuth();
+  const businessOn = useFeature('business');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [event, setEvent] = useState<TapEvent | null>(null);
+  // Business / nonprofit events: organization brand, agenda, speakers, sponsors (TapIN for Business).
+  const biz = useBusinessData(event);
   const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
   const [selectedSectionName, setSelectedSectionName] = useState<string | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -332,6 +337,7 @@ export default function PublicEventDetail() {
       )}
       {/* Hero: title and key facts live directly on the image, editorial-style,
           instead of a separate text block below a plain picture frame. */}
+      {businessOn && biz.isBiz && <OrgStrip org={biz.org} kind={event.event_kind} />}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900 sm:aspect-[21/9]">
         {event.poster_url ? (
           <img src={event.poster_url} alt="" className="h-full w-full object-cover" />
@@ -721,6 +727,7 @@ export default function PublicEventDetail() {
           </div>
         )}
 
+        {businessOn && biz.isBiz && <BusinessEventSections event={event} data={biz} />}
         <EventProgram eventId={event.id} />
 
         <CommunityPosts eventId={event.id} />

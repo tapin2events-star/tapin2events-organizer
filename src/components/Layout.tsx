@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../lib/preview';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import NavIcon from './NavIcon';
@@ -35,6 +36,7 @@ const ORGANIZER: Item[] = [
 
 export default function Layout() {
   const { user, isAdmin, signOut } = useAuth();
+  const businessOn = useFeature('business');
   const [menuOpen, setMenuOpen] = useState(false);
   useEscapeKey(() => setMenuOpen(false), menuOpen);
   const location = useLocation();
@@ -147,7 +149,7 @@ export default function Layout() {
         {isAdmin && (
           <>
             {heading('Platform')}
-            <nav className="flex flex-col gap-0.5" aria-label="Platform">{renderItems([{ to: '/admin', label: 'Admin Dashboard', icon: 'admin' }])}</nav>
+            <nav className="flex flex-col gap-0.5" aria-label="Platform">{renderItems([{ to: '/admin', label: 'Admin Dashboard', icon: 'admin' }, ...(businessOn ? [{ to: '/business', label: 'TapIN for Business', icon: 'bookings' as const }] : [])])}</nav>
           </>
         )}
 

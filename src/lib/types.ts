@@ -31,7 +31,10 @@ export interface TapEvent {
   // Where an imported event came from (prevents importing it twice).
   import_source_url?: string | null;
   status: EventStatus;
-  allow_transfers?: boolean; // ticket holders can send tickets to someone else
+  allow_transfers?: boolean;
+  event_kind?: 'community' | 'business' | 'nonprofit';
+  organization_id?: string | null;
+  business_page?: { faq?: { q: string; a: string }[]; venue_notes?: string; template?: string } | null; // ticket holders can send tickets to someone else
   is_test?: boolean; // visible only to the organizer, their team, and admins
   source_name?: string | null; // listed from another site (Admin > Imports)
   source_url?: string | null;

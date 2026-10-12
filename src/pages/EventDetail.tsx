@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import BusinessPageTab from '../components/business/BusinessPageTab';
+import { useFeature } from '../lib/preview';
 import TeamTasksTab from '../components/tabs/TeamTasksTab';
 import ShareQR from '../components/ShareQR';
 import ScoutingTab from '../components/tabs/ScoutingTab';
@@ -20,7 +22,7 @@ import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
-const TABS = ['Overview', 'Lineup', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Team & tasks', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Business page', 'Lineup', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Team & tasks', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -46,7 +48,8 @@ export default function EventDetail() {
   const [teamRole, setTeamRole] = useState<string | null>(null);
   useEffect(() => { if (id) supabase.rpc('event_team_role', { p_event_id: id }).then(({ data }) => setTeamRole((data as string | null) ?? null)); }, [id]);
   const limitedTabs: Record<string, readonly string[]> = { helper: ['Overview', 'Team & tasks'], vendor_manager: ['Overview', 'Vendor applications', 'Team & tasks'] };
-  const visibleTabs = TABS.filter((t) => (t !== 'Bookings' || isOwner) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
+  const businessOn = useFeature('business');
+  const visibleTabs = TABS.filter((t) => (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (t !== 'Bookings' || isOwner) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
     (async () => {
@@ -264,6 +267,7 @@ export default function EventDetail() {
       </div>
 
       {tab === 'Overview' && <OverviewTab event={event} />}
+      {tab === 'Business page' && <BusinessPageTab event={event} onEventChange={setEvent} />}
       {tab === 'Lineup' && <LineupWithScouting event={event} isOwner={isOwner} />}
       {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}

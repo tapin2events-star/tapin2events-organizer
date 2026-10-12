@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import EventKindPicker from '../components/business/EventKindPicker';
+import { FEATURES, useFeature } from '../lib/preview';
+import type { EventKind } from '../lib/business';
 import BackButton, { hasInAppHistory } from '../components/BackButton';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -137,6 +140,10 @@ export default function EventForm() {
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   // Admin-only: a private test event (see Admin > Preview). ?test=1 starts one checked.
   const [allowTransfers, setAllowTransfers] = useState(true);
+  // TapIN for Business (preview): event type + organization. ?kind= and ?org= come from an organization's page.
+  const businessOn = useFeature('business');
+  const [eventKind, setEventKind] = useState<EventKind>(() => { const k = new URLSearchParams(window.location.search).get('kind'); return k === 'business' || k === 'nonprofit' ? k : 'community'; });
+  const [orgId, setOrgId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('org'));
   const [isTest, setIsTest] = useState(() => !isEdit && searchParams.get('test') === '1');
 
   const [loading, setLoading] = useState(isEdit);
@@ -287,6 +294,8 @@ export default function EventForm() {
       setStatus(data.status === 'published' ? 'published' : 'draft');
       setIsTest(!!data.is_test);
       setAllowTransfers(data.allow_transfers !== false);
+      setEventKind((data.event_kind as EventKind) ?? 'community');
+      setOrgId(data.organization_id ?? null);
       setIsRecurring(!!data.is_recurring);
       setWasAlreadyRecurring(!!data.is_recurring);
       setLoadedStart(data.start_date ?? null);
@@ -347,6 +356,11 @@ export default function EventForm() {
     const previewing = previewAfterSave.current;
     previewAfterSave.current = false;
     if (!user) return;
+    if (businessOn && eventKind !== 'community' && !orgId) {
+      setError('Choose the organization this event belongs to.');
+      setStep(1);
+      return;
+    }
     if (!title.trim()) {
       setError('Event title is required.');
       setStep(1);
@@ -429,6 +443,9 @@ export default function EventForm() {
       status,
       ...(isAdmin ? { is_test: isTest } : {}),
       allow_transfers: allowTransfers,
+      ...(businessOn ? { event_kind: eventKind, organization_id: eventKind === 'community' ? null : orgId } : {}),
+      // While business events are in preview they stay private as test events.
+      ...(businessOn && isAdmin && eventKind !== 'community' && FEATURES.business?.status === 'preview' ? { is_test: true } : {}),
     };
     // Ownership is only ever set on creation. An edit must never touch
     // these fields — otherwise an admin editing someone else's event on
@@ -597,6 +614,7 @@ export default function EventForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {step === 1 && (
           <>
+            {businessOn && <EventKindPicker kind={eventKind} onKind={setEventKind} orgId={orgId} onOrg={setOrgId} />}
             {!isEdit && quickOpen && (
               <div className="rounded-2xl border border-marigold/30 bg-marigold/5 p-4">
                 <p className="font-semibold text-bone">✨ Quick create with AI</p>

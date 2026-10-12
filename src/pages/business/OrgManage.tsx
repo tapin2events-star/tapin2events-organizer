@@ -1,0 +1,218 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import BackButton from '../../components/BackButton';
+import BusinessGate from '../../components/business/BusinessGate';
+import ImagePicker from '../../components/business/ImagePicker';
+import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
+
+type Tab = 'Profile' | 'Brand kit' | 'Team' | 'Events';
+const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
+
+export default function OrgManage() {
+  return <BusinessGate><OrgManageInner /></BusinessGate>;
+}
+
+function OrgManageInner() {
+  const { slug = '' } = useParams<{ slug: string }>();
+  const { user } = useAuth();
+  const [org, setOrg] = useState<Organization | null | undefined>(undefined);
+  const [role, setRole] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('Profile');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('organizations').select('*').eq('slug', slug).maybeSingle();
+    const o = data ? ({ ...data, brand: { ...DEFAULT_BRAND, ...(data.brand ?? {}) } } as Organization) : null;
+    setOrg(o);
+    if (o) {
+      const { data: r } = await supabase.rpc('org_role', { p_org: o.id });
+      setRole((r as string | null) ?? null);
+    }
+  }, [slug]);
+  useEffect(() => { load(); }, [load]);
+
+  async function save(patch: Partial<Organization>) {
+    if (!org) return;
+    setMsg(null);
+    const { error } = await supabase.from('organizations').update(patch).eq('id', org.id);
+    if (error) return setMsg({ ok: false, text: "Couldn't save. Please try again." });
+    setOrg({ ...org, ...patch });
+    setMsg({ ok: true, text: 'Saved.' });
+    window.setTimeout(() => setMsg(null), 2000);
+  }
+
+  if (org === undefined) return <p className="text-sm text-muted">Loading…</p>;
+  if (!org || !role) return <p className="mt-8 text-center text-sm text-muted">This organization doesn't exist or you're not on its team. <Link to="/business" className="text-marigold">TapIN for Business</Link></p>;
+  const canEdit = role === 'owner' || role === 'admin';
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-3"><BackButton fallback="/business" fallbackLabel="TapIN for Business" /></div>
+      <div className="flex items-center gap-3">
+        {org.logo_url ? <img src={org.logo_url} alt="" className="h-14 w-14 rounded-2xl object-cover" /> : <span className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white" style={{ background: org.brand.primary }}>{org.name.charAt(0)}</span>}
+        <div className="min-w-0">
+          <h1 className="truncate font-display text-2xl font-extrabold text-bone">{org.name}{org.verified && <span className="ml-1.5 text-[#C9A227]" title="Verified">✓</span>}</h1>
+          <p className="text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · you're {role === 'owner' ? 'the owner' : `an ${role}`} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
+        </div>
+      </div>
+
+      <div className="mt-5 flex gap-1 overflow-x-auto border-b border-gray-200">
+        {(['Profile', 'Brand kit', 'Team', 'Events'] as Tab[]).map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
+        ))}
+      </div>
+      {msg && <p role="status" className={`mt-3 text-sm ${msg.ok ? 'text-green-700' : 'text-red-600'}`}>{msg.text}</p>}
+
+      <div className="mt-5">
+        {tab === 'Profile' && <ProfileTab org={org} canEdit={canEdit} onSave={save} />}
+        {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
+        {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
+        {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} />}
+      </div>
+    </div>
+  );
+}
+
+function ProfileTab({ org, canEdit, onSave }: { org: Organization; canEdit: boolean; onSave: (p: Partial<Organization>) => void }) {
+  const [f, setF] = useState({ name: org.name, tagline: org.tagline ?? '', description: org.description ?? '', website: org.website ?? '', contact_email: org.contact_email ?? '', city: org.city ?? '', state: org.state ?? '' });
+  const field = 'mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 disabled:bg-gray-50';
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-6">
+        <ImagePicker label="Logo" value={org.logo_url} onChange={(url) => onSave({ logo_url: url })} hint="Square works best" />
+        <ImagePicker label="Cover image" shape="wide" value={org.cover_url} onChange={(url) => onSave({ cover_url: url })} hint="Wide, at least 1600 px" />
+      </div>
+      <label className="text-xs font-medium text-gray-500">Name<input disabled={!canEdit} className={field} value={f.name} maxLength={120} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+      <label className="text-xs font-medium text-gray-500">Tagline<input disabled={!canEdit} className={field} value={f.tagline} maxLength={160} onChange={(e) => setF({ ...f, tagline: e.target.value })} placeholder="One line about what you do" /></label>
+      <label className="text-xs font-medium text-gray-500">About<textarea disabled={!canEdit} rows={4} className={field} value={f.description} maxLength={3000} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-medium text-gray-500">Website<input disabled={!canEdit} className={field} value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} placeholder="https://" inputMode="url" /></label>
+        <label className="text-xs font-medium text-gray-500">Contact email<input disabled={!canEdit} className={field} value={f.contact_email} onChange={(e) => setF({ ...f, contact_email: e.target.value })} inputMode="email" /></label>
+        <label className="text-xs font-medium text-gray-500">City<input disabled={!canEdit} className={field} value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} /></label>
+        <label className="text-xs font-medium text-gray-500">State<input disabled={!canEdit} className={field} value={f.state} maxLength={30} onChange={(e) => setF({ ...f, state: e.target.value })} /></label>
+      </div>
+      {canEdit && <button onClick={() => onSave({ ...f, name: f.name.trim() || org.name, website: f.website.trim() || null, contact_email: f.contact_email.trim() || null })} className="self-start rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">Save profile</button>}
+    </div>
+  );
+}
+
+function BrandTab({ org, canEdit, onSave }: { org: Organization; canEdit: boolean; onSave: (p: Partial<Organization>) => void }) {
+  const [b, setB] = useState<Brand>(org.brand);
+  useEffect(() => { loadFont(b.font); }, [b.font]);
+  const dark = b.theme === 'dark';
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-muted">Set your brand once; every business event you create uses it automatically.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {(['primary', 'accent'] as const).map((k) => (
+            <label key={k} className="text-xs font-medium text-gray-500">{k === 'primary' ? 'Main color' : 'Accent color'}
+              <div className="mt-1 flex items-center gap-2 rounded-xl border border-gray-300 bg-white p-1.5">
+                <input type="color" disabled={!canEdit} value={b[k]} onChange={(e) => setB({ ...b, [k]: e.target.value })} className="h-9 w-12 cursor-pointer rounded-lg border-0 bg-transparent" />
+                <input disabled={!canEdit} value={b[k]} onChange={(e) => /^#[0-9a-fA-F]{0,6}$/.test(e.target.value) && setB({ ...b, [k]: e.target.value })} className="min-w-0 flex-1 text-sm text-gray-900 outline-none" />
+              </div>
+            </label>
+          ))}
+        </div>
+        <label className="text-xs font-medium text-gray-500">Font
+          <select disabled={!canEdit} value={b.font} onChange={(e) => setB({ ...b, font: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900">
+            {BRAND_FONTS.map((f) => <option key={f}>{f}</option>)}
+          </select>
+        </label>
+        <div className="text-xs font-medium text-gray-500">Page style
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            {(['light', 'dark'] as const).map((t) => (
+              <button key={t} disabled={!canEdit} onClick={() => setB({ ...b, theme: t })} className={`rounded-xl border px-3 py-2.5 text-sm font-medium ${b.theme === t ? 'border-[#C9A227] bg-[#C9A227]/10 text-gray-900' : 'border-gray-200 bg-white text-gray-600'}`}>{t === 'light' ? 'Light' : 'Dark'}</button>
+            ))}
+          </div>
+        </div>
+        {canEdit && <button onClick={() => onSave({ brand: b })} className="self-start rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">Save brand kit</button>}
+      </div>
+      {/* Live preview */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm" style={{ fontFamily: `'${b.font}', system-ui, sans-serif`, background: dark ? '#0B1020' : '#fff', color: dark ? '#E5E7EB' : '#111827' }}>
+        <div className="px-5 py-6 text-white" style={{ background: `linear-gradient(135deg, ${b.primary}, ${b.primary}cc)` }}>
+          <div className="flex items-center gap-2">
+            {org.logo_url ? <img src={org.logo_url} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm font-bold">{org.name.charAt(0)}</span>}
+            <span className="text-sm font-semibold">{org.name}</span>
+          </div>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-widest" style={{ color: b.accent }}>Annual Summit · 2027</p>
+          <p className="mt-1 text-2xl font-extrabold">Leading what's next</p>
+          <span className="mt-4 inline-block rounded-full px-4 py-2 text-xs font-bold" style={{ background: b.accent, color: '#111827' }}>Get tickets</span>
+        </div>
+        <div className="space-y-2 p-5 text-sm">
+          <p className="font-bold">Agenda</p>
+          {['9:00 AM · Opening keynote', '10:30 AM · Panel: The future of work', '1:00 PM · Workshops'].map((x) => (
+            <div key={x} className="rounded-lg px-3 py-2" style={{ background: dark ? '#111827' : '#F3F4F6', borderLeft: `3px solid ${b.accent}` }}>{x}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: string }) {
+  const [members, setMembers] = useState<{ user_email: string; role: string; full_name?: string | null }[]>([]);
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('admin');
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('organization_members').select('user_email, role').eq('org_id', orgId).order('created_at');
+    const list = (data ?? []) as { user_email: string; role: string }[];
+    const { data: ppl } = list.length ? await supabase.from('public_profiles').select('email, full_name').in('email', list.map((m) => m.user_email)) : { data: [] };
+    const names = new Map((ppl ?? []).map((p) => [p.email, p.full_name]));
+    setMembers(list.map((m) => ({ ...m, full_name: names.get(m.user_email) })));
+  }, [orgId]);
+  useEffect(() => { load(); }, [load]);
+  async function add() {
+    const e = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(e)) return setMsg('Enter a valid email.');
+    const { error } = await supabase.from('organization_members').insert({ org_id: orgId, user_email: e, role, added_by: me });
+    setMsg(error ? (/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them.") : 'Added. They can manage this organization once they sign in with that email.');
+    setEmail(''); load();
+  }
+  return (
+    <div>
+      <p className="text-sm text-muted">Owners and admins can edit the organization and manage its events. Members can view.</p>
+      {canEdit && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@company.com" className="min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900" />
+          <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm"><option value="admin">Admin</option><option value="member">Member</option></select>
+          <button onClick={add} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">Add</button>
+        </div>
+      )}
+      {msg && <p className="mt-2 text-sm text-gray-600">{msg}</p>}
+      <ul className="mt-4 divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-surface">
+        {members.map((m) => (
+          <li key={m.user_email} className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{m.full_name || m.user_email}</span><span className="block text-xs text-muted">{m.role}{m.user_email === me ? ' · you' : ''}</span></span>
+            {canEdit && m.role !== 'owner' && <button onClick={async () => { await supabase.from('organization_members').delete().eq('org_id', orgId).eq('user_email', m.user_email); load(); }} className="text-xs text-gray-400 hover:text-red-600">Remove</button>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function EventsTab({ org, canEdit }: { org: Organization; canEdit: boolean }) {
+  const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; status: string; is_test: boolean }[]>([]);
+  useEffect(() => {
+    supabase.from('events').select('id, title, start_date, status, is_test').eq('organization_id', org.id).order('start_date', { ascending: false }).then(({ data }) => setEvents((data ?? []) as typeof events));
+  }, [org.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div>
+      {canEdit && <Link to={`/organizer/new?org=${org.id}&kind=${org.kind}`} className="inline-block rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">+ Create {org.kind === 'nonprofit' ? 'nonprofit' : 'business'} event</Link>}
+      {events.length === 0 ? <p className="mt-4 text-sm text-muted">No events yet.</p> : (
+        <ul className="mt-4 flex flex-col gap-2">
+          {events.map((e) => (
+            <li key={e.id}><Link to={`/organizer/events/${e.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 hover:border-[#C9A227]">
+              <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{e.title}</span><span className="text-xs text-muted">{e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date'} · {e.status}{e.is_test ? ' · TEST' : ''}</span></span>
+              <span className="text-[#C9A227]">&rarr;</span>
+            </Link></li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
