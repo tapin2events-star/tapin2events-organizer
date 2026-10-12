@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import DonationSettings, { DEFAULT_DONATION_FORM, donationPatch, type DonationForm } from '../components/business/DonationSettings';
 import TierListEditor from '../components/business/TierListEditor';
 import { loadTierDrafts, newDraft, saveTierDrafts, tierProblems, type TierDraft } from '../lib/tiers';
 import EventKindPicker from '../components/business/EventKindPicker';
@@ -148,6 +149,8 @@ export default function EventForm() {
   const [orgId, setOrgId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('org'));
   // Ticket types (preview): several tiers instead of one price.
   const [useTiers, setUseTiers] = useState(false);
+  // Donations (nonprofit events, preview).
+  const [donationForm, setDonationForm] = useState<DonationForm>(DEFAULT_DONATION_FORM);
   const [tierDrafts, setTierDrafts] = useState<TierDraft[]>([]);
   const [tierOriginalIds, setTierOriginalIds] = useState<string[]>([]);
   const [tierSold, setTierSold] = useState<Record<string, number>>({});
@@ -302,6 +305,10 @@ export default function EventForm() {
       setIsTest(!!data.is_test);
       setAllowTransfers(data.allow_transfers !== false);
       setEventKind((data.event_kind as EventKind) ?? 'community');
+      setDonationForm({
+        enabled: !!data.donations_enabled, pitch: data.donation_description ?? '', goal: data.donation_goal ? String(data.donation_goal) : '',
+        min: String(Math.max(5, Number(data.min_donation_amount) || 5)), presets: (data.donation_presets ?? [25, 50, 100]).join(', '), show: data.show_donors !== false,
+      });
       loadTierDrafts(data.id).then(({ drafts, sold }) => {
         setTierDrafts(drafts); setTierSold(sold); setTierOriginalIds(drafts.map((d) => d.id as string));
         setUseTiers(drafts.some((d) => d.active));
@@ -370,6 +377,10 @@ export default function EventForm() {
     if (businessOn && useTiers && !seatingEnabled) {
       const problems = tierProblems(tierDrafts, tierSold);
       if (problems.length) { setError(problems[0]); setStep(1); return; }
+    }
+    if (businessOn && eventKind === 'nonprofit') {
+      const { problem } = donationPatch(donationForm);
+      if (problem) { setError(problem); setStep(1); return; }
     }
     if (businessOn && eventKind !== 'community' && !orgId) {
       setError('Choose the organization this event belongs to.');
@@ -458,6 +469,7 @@ export default function EventForm() {
       status,
       ...(isAdmin ? { is_test: isTest } : {}),
       allow_transfers: allowTransfers,
+      ...(businessOn && eventKind === 'nonprofit' ? donationPatch(donationForm).patch : {}),
       ...(businessOn && useTiers && !seatingEnabled ? (() => {
         const live = tierDrafts.filter((d) => d.active).map((d) => (d.price === '' ? 0 : Number(d.price)));
         const paid = live.filter((p) => p > 0);
@@ -845,6 +857,8 @@ export default function EventForm() {
                 {useTiers && <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
               </div>
             )}
+
+            {businessOn && eventKind === 'nonprofit' && <DonationSettings value={donationForm} onChange={setDonationForm} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
 
             <Field label="Tickets sold elsewhere? (optional)">
               <input
