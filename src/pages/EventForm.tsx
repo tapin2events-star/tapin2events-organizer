@@ -378,7 +378,7 @@ export default function EventForm() {
       const problems = tierProblems(tierDrafts, tierSold);
       if (problems.length) { setError(problems[0]); setStep(1); return; }
     }
-    if (businessOn && eventKind === 'nonprofit') {
+    if (businessOn && eventKind !== 'business') {
       const { problem } = donationPatch(donationForm);
       if (problem) { setError(problem); setStep(1); return; }
     }
@@ -469,7 +469,7 @@ export default function EventForm() {
       status,
       ...(isAdmin ? { is_test: isTest } : {}),
       allow_transfers: allowTransfers,
-      ...(businessOn && eventKind === 'nonprofit' ? donationPatch(donationForm).patch : {}),
+      ...(businessOn && eventKind !== 'business' ? donationPatch(donationForm).patch : {}),
       ...(businessOn && useTiers && !seatingEnabled ? (() => {
         const live = tierDrafts.filter((d) => d.active).map((d) => (d.price === '' ? 0 : Number(d.price)));
         const paid = live.filter((p) => p > 0);
@@ -858,7 +858,7 @@ export default function EventForm() {
               </div>
             )}
 
-            {businessOn && eventKind === 'nonprofit' && <DonationSettings value={donationForm} onChange={setDonationForm} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
+            {businessOn && eventKind !== 'business' && <DonationSettings nonprofit={eventKind === 'nonprofit'} value={donationForm} onChange={setDonationForm} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
 
             <Field label="Tickets sold elsewhere? (optional)">
               <input

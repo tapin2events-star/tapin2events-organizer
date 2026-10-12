@@ -16,7 +16,7 @@ export function donationPatch(f: DonationForm): { patch?: Record<string, unknown
 }
 
 // Donation settings inside the create/edit event form (nonprofit events).
-export default function DonationSettings({ value, onChange, inputClass }: { value: DonationForm; onChange: (f: DonationForm) => void; inputClass: string }) {
+export default function DonationSettings({ value, onChange, inputClass, nonprofit = true }: { value: DonationForm; onChange: (f: DonationForm) => void; inputClass: string; nonprofit?: boolean }) {
   const f = value;
   const set = (patch: Partial<DonationForm>) => onChange({ ...f, ...patch });
   const example = Number(f.presets.split(/[,\s]+/).map(Number).find((n) => n >= MIN_DONATION)) || 25;
@@ -24,12 +24,12 @@ export default function DonationSettings({ value, onChange, inputClass }: { valu
     <div className="-mx-1 rounded-2xl border border-rose-200 bg-rose-50/40 p-3 sm:mx-0 sm:p-4">
       <label className="flex items-start gap-3 text-sm text-bone">
         <input type="checkbox" checked={f.enabled} onChange={(e) => set({ enabled: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-        <span><strong>💛 Accept donations</strong> <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span>
-          <span className="block text-xs text-muted">Adds a donation card with a goal bar to your event page, and lets ticket buyers add a gift to their order.</span></span>
+        <span><strong>💛 {nonprofit ? 'Accept donations' : 'Accept support (contributions)'}</strong> <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span>
+          <span className="block text-xs text-muted">{nonprofit ? 'Adds a donation card with a goal bar to your event page, and lets ticket buyers add a gift to their order.' : 'Adds a "Support this event" card with a goal bar, and lets ticket buyers add a contribution. Contributions go to you as the organizer and aren\u2019t tax-deductible donations.'}</span></span>
       </label>
       {f.enabled && (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="min-w-0 text-xs font-medium text-gray-500 sm:col-span-2">Why give? <span className="font-normal text-gray-400">(shown on the card)</span>
+          <label className="min-w-0 text-xs font-medium text-gray-500 sm:col-span-2">{nonprofit ? 'Why give?' : 'What will support go toward?'} <span className="font-normal text-gray-400">(shown on the card)</span>
             <textarea rows={3} maxLength={1000} className={inputClass} value={f.pitch} onChange={(e) => set({ pitch: e.target.value })} placeholder="Every gift funds free arts programs for local youth." />
           </label>
           <label className="min-w-0 text-xs font-medium text-gray-500">Fundraising goal ($) <span className="font-normal text-gray-400">(optional)</span>

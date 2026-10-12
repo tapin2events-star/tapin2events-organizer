@@ -7,6 +7,8 @@ import type { TapEvent } from '../../lib/types';
 
 // Donation card for nonprofit events: goal progress, amount, "cover the fees", donor wall.
 export default function DonationCard({ event, recipient, accent }: { event: TapEvent; recipient: string; accent?: string }) {
+  const nonprofit = event.event_kind === 'nonprofit';
+  const giftWord = nonprofit ? 'gift' : 'contribution';
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -52,7 +54,7 @@ export default function DonationCard({ event, recipient, accent }: { event: TapE
       <div className="p-4 sm:p-5">
         <p className="font-display text-lg font-bold text-gray-900">💛 Support {recipient}</p>
         {event.donation_description && <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">{event.donation_description}</p>}
-        {thanks && <p role="status" className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-800">Thank you for your gift! A receipt is on its way to your email.</p>}
+        {thanks && <p role="status" className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-800">Thank you for your {nonprofit ? 'gift' : 'support'}! A receipt is on its way to your email.</p>}
 
         {summary && (summary.goal || summary.count > 0) && (
           <div className="mt-4">
@@ -78,7 +80,7 @@ export default function DonationCard({ event, recipient, accent }: { event: TapE
 
         <label className="mt-3 flex items-start gap-3 rounded-xl bg-gray-50 p-3 text-sm text-gray-700">
           <input type="checkbox" checked={cover} onChange={(e) => setCover(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-          <span>Cover the fees{value >= min ? ` (${money2(fee)})` : ''} so 100% of my gift goes to {recipient}
+          <span>Cover the fees{value >= min ? ` (${money2(fee)})` : ''} so 100% of my {giftWord} goes to {recipient}
             {!cover && value >= min && <span className="block text-xs text-gray-500">{recipient} will receive {money2(value - fee)}.</span>}</span>
         </label>
         <input value={message} maxLength={300} onChange={(e) => setMessage(e.target.value)} placeholder="Add a message (optional)" className="mt-2 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900" />
@@ -86,9 +88,9 @@ export default function DonationCard({ event, recipient, accent }: { event: TapE
 
         {error && <p role="alert" className="mt-2 text-sm text-magenta">{error}</p>}
         <button type="button" onClick={donate} disabled={busy || !(value >= min)} className="mt-3 w-full rounded-xl py-3.5 text-base font-bold text-white disabled:opacity-50" style={{ background: color }}>
-          {busy ? 'Please wait…' : !user ? 'Sign in to donate' : value >= min ? `Donate ${money2(total)}` : 'Choose an amount'}
+          {busy ? 'Please wait…' : !user ? `Sign in to ${nonprofit ? 'donate' : 'contribute'}` : value >= min ? `${nonprofit ? 'Donate' : 'Contribute'} ${money2(total)}` : 'Choose an amount'}
         </button>
-        <p className="mt-2 text-center text-[11px] text-gray-400">Secure payment by Stripe. You'll get an emailed receipt.</p>
+        <p className="mt-2 text-center text-[11px] text-gray-400">Secure payment by Stripe. You'll get an emailed receipt.{nonprofit ? '' : ' Contributions support the organizer and aren\u2019t tax-deductible.'}</p>
       </div>
       {summary && summary.donors.length > 0 && (
         <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-3 sm:px-5">

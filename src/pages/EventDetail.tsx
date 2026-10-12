@@ -52,7 +52,7 @@ export default function EventDetail() {
   useEffect(() => { if (id) supabase.rpc('event_team_role', { p_event_id: id }).then(({ data }) => setTeamRole((data as string | null) ?? null)); }, [id]);
   const limitedTabs: Record<string, readonly string[]> = { helper: ['Overview', 'Team & tasks'], vendor_manager: ['Overview', 'Vendor applications', 'Team & tasks'] };
   const businessOn = useFeature('business');
-  const visibleTabs = TABS.filter((t) => (t !== 'Donations' || (businessOn && event?.event_kind === 'nonprofit')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (t !== 'Bookings' || isOwner) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
+  const visibleTabs = TABS.filter((t) => (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (t !== 'Bookings' || isOwner) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
     (async () => {

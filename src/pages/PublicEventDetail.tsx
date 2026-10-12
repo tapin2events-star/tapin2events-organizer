@@ -50,7 +50,7 @@ export default function PublicEventDetail() {
   const askFirst = (mode: 'register' | 'request', items: { tier_id: string; qty: number }[] | null) => new Promise<boolean>((resolve) => setAskSheet({ mode, items, resolve }));
   const isHost = !!event && !!user && (event.organizer_id === user.id || ((event as { collaborators?: string[] }).collaborators ?? []).includes(user.email ?? ''));
   const approvalNeeded = businessOn && !!event?.requires_approval && !isHost && myRequest?.status !== 'approved';
-  const donationsOn = businessOn && event?.event_kind === 'nonprofit' && !!event?.donations_enabled && event?.status !== 'draft';
+  const donationsOn = businessOn && (event?.event_kind ?? 'community') !== 'business' && !!event?.donations_enabled && event?.status !== 'draft';
   // Before registering or paying: questions, or (approval events) a join request instead.
   const beforeContinue = async (items: { tier_id: string; qty: number }[] | null): Promise<'continue' | 'stop'> => {
     if (approvalNeeded) {
@@ -646,7 +646,7 @@ export default function PublicEventDetail() {
             )}
             <TierPicker eventId={event.id} tiers={tiers} accent={biz.org?.brand.accent}
               beforeContinue={beforeContinue} actionLabel={approvalNeeded ? (myRequest?.status === 'pending' ? 'Request sent' : 'Request to join') : undefined}
-              donation={donationsOn && !approvalNeeded ? { presets: (event.donation_presets ?? [25, 50, 100]).map(Number), min: Math.max(5, Number(event.min_donation_amount) || 5), recipient: biz.org?.name ?? event.title } : null}
+              donation={donationsOn && !approvalNeeded ? { presets: (event.donation_presets ?? [25, 50, 100]).map(Number), min: Math.max(5, Number(event.min_donation_amount) || 5), recipient: biz.org?.name ?? organizerName ?? event.title, nonprofit: event.event_kind === 'nonprofit' } : null}
               disabledReason={isPreview ? 'Available once published' : hasEnded ? 'This event has ended' : isFull ? 'This event is full' : null}
               onRegistered={async (ticketId) => {
                 const { data: t } = await supabase.from('tickets').select('*').eq('id', ticketId).maybeSingle();
@@ -792,7 +792,7 @@ export default function PublicEventDetail() {
           </div>
         )}
 
-        {donationsOn && <DonationCard event={event} recipient={biz.org?.name ?? event.title} accent={biz.org?.brand.accent} />}
+        {donationsOn && <DonationCard event={event} recipient={biz.org?.name ?? organizerName ?? event.title} accent={biz.org?.brand.accent} />}
         {businessOn && biz.isBiz && <BusinessEventSections event={event} data={biz} />}
         {askSheet && (
           <RegistrationSheet eventId={event.id} eventTitle={event.title} questions={questions} mode={askSheet.mode} items={askSheet.items}

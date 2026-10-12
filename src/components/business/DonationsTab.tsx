@@ -62,7 +62,7 @@ export default function DonationsTab({ event, onEventChange }: { event: TapEvent
       <section className="rounded-2xl border border-gray-200 bg-surface p-4">
         <label className="flex items-start gap-3">
           <input type="checkbox" checked={f.enabled} onChange={(e) => setF({ ...f, enabled: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-          <span><span className="block font-semibold text-bone">Accept donations</span><span className="block text-sm text-muted">Shows a donation card on your event page, and lets ticket buyers add a gift to their order.</span></span>
+          <span><span className="block font-semibold text-bone">{event.event_kind === 'nonprofit' ? 'Accept donations' : 'Accept support (contributions)'}</span><span className="block text-sm text-muted">{event.event_kind === 'nonprofit' ? 'Shows a donation card on your event page, and lets ticket buyers add a gift to their order.' : 'Shows a "Support this event" card on your event page, and lets ticket buyers add a contribution to their order. Contributions go to you as the organizer; they aren\u2019t tax-deductible donations.'}</span></span>
         </label>
         {f.enabled && (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

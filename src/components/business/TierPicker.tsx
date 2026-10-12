@@ -15,7 +15,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   beforeContinue?: (items: { tier_id: string; qty: number }[]) => Promise<'continue' | 'stop'>;
   actionLabel?: string;
   // Nonprofit events: let buyers add a donation to their order.
-  donation?: { presets: number[]; min: number; recipient: string } | null;
+  donation?: { presets: number[]; min: number; recipient: string; nonprofit?: boolean } | null;
 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -77,7 +77,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
       if (next === 'stop') return;
     }
     setBusy(true); setError(null);
-    if (donation && giftValue > 0 && !giftOk) { setBusy(false); return setError(`The minimum donation is $${donation.min}.`); }
+    if (donation && giftValue > 0 && !giftOk) { setBusy(false); return setError(`The minimum is $${donation.min}.`); }
     if (allFree) {
       const { data, error: err } = await supabase.rpc('register_tiers', { p_event_id: eventId, p_items: items, p_code: promo?.code ?? null });
       setBusy(false);
@@ -146,14 +146,14 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
           <div className="flex justify-between"><span>{count} ticket{count === 1 ? '' : 's'}</span><span>{fullSubtotal > 0 ? money(fullSubtotal) : 'Free'}</span></div>
           {savings > 0 && <div className="flex justify-between text-green-700"><span>Code {promo?.code}</span><span>−{money(savings)}</span></div>}
           {fees > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Service & processing fees</span><span>{money(fees)}</span></div>}
-          {giftOk && <div className="flex justify-between"><span>Donation to {donation?.recipient}</span><span>{money(giftValue)}</span></div>}
-          {giftOk && giftCover && <div className="flex justify-between text-xs text-gray-500"><span>Donation fees (covered by you)</span><span>{money(giftFee)}</span></div>}
+          {giftOk && <div className="flex justify-between"><span>{donation?.nonprofit ? 'Donation to' : 'Support for'} {donation?.recipient}</span><span>{money(giftValue)}</span></div>}
+          {giftOk && giftCover && <div className="flex justify-between text-xs text-gray-500"><span>{donation?.nonprofit ? 'Donation' : 'Contribution'} fees (covered by you)</span><span>{money(giftFee)}</span></div>}
           {(subtotal > 0 || giftOk) && <div className="mt-1 flex justify-between font-semibold text-gray-900"><span>Total</span><span>{money(subtotal + fees + giftCharge)}</span></div>}
         </div>
       )}
       {donation && count > 0 && (
         <div className="mt-3 rounded-xl bg-rose-50/60 p-3">
-          <p className="text-sm font-semibold text-gray-900">💛 Add a donation to {donation.recipient}?</p>
+          <p className="text-sm font-semibold text-gray-900">💛 {donation.nonprofit ? `Add a donation to ${donation.recipient}?` : `Add a contribution to support ${donation.recipient}?`}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {[0, ...donation.presets.slice(0, 3)].map((p) => (
               <button key={p} type="button" onClick={() => { setGift(p); setGiftCustom(''); }} aria-pressed={!giftCustom && gift === p}
@@ -165,10 +165,10 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
           {giftOk && (
             <label className="mt-2 flex items-start gap-2 text-xs text-gray-600">
               <input type="checkbox" checked={giftCover} onChange={(e) => setGiftCover(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-marigold" />
-              <span>Cover the donation fees ({money(giftFee)}) so 100% goes to {donation.recipient}</span>
+              <span>Cover the fees ({money(giftFee)}) so 100% goes to {donation.recipient}{donation.nonprofit ? '' : '. Not tax-deductible.'}</span>
             </label>
           )}
-          {giftValue > 0 && !giftOk && <p className="mt-1 text-xs text-magenta">Minimum donation is ${donation.min}.</p>}
+          {giftValue > 0 && !giftOk && <p className="mt-1 text-xs text-magenta">The minimum is ${donation.min}.</p>}
         </div>
       )}
       <div className="mt-3">
