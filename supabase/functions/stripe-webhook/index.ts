@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
         try {
           const recent = await stripe.refunds.list({ payment_intent: piId, limit: 1 });
           const reason = recent.data[0] && recent.data[0].metadata && recent.data[0].metadata.reason;
-          fromTapin = reason === "event_cancelled" || reason === "booking_cancelled";
+          fromTapin = reason === "event_cancelled" || reason === "booking_cancelled" || reason === "donation_refunded";
         } catch (e) {
           console.error("Refund lookup failed:", e);
         }
@@ -67,7 +67,9 @@ Deno.serve(async (req) => {
           const { data: order } = await admin.from("orders").select("id, customer_email, subtotal, refund_amount, event_id").eq("payment_intent_id", piId).maybeSingle();
           if (order && refundedCents > Math.round((Number(order.refund_amount) || 0) * 100)) {
             const newCents = refundedCents - Math.round((Number(order.refund_amount) || 0) * 100);
-            const covers = refundedCents >= Math.round((Number(order.subtotal) || 0) * 100);
+            // Free tickets (subtotal 0) aren't cancelled by a refund; a gift on the same payment
+            // may be what was refunded (handled with donations below).
+            const covers = Number(order.subtotal) > 0 && refundedCents >= Math.round((Number(order.subtotal) || 0) * 100);
             const update = { refund_amount: refundedCents / 100, refunded_at: nowIso };
             if (covers) update.payment_status = "refunded";
             await admin.from("orders").update(update).eq("id", order.id);
@@ -77,15 +79,18 @@ Deno.serve(async (req) => {
               const { data: ev } = await admin.from("events").select("title").eq("id", order.event_id).maybeSingle();
               if (ev) label = '"' + ev.title + '"';
             }
-            await admin.from("notifications").insert({
-              user_email: order.customer_email,
-              type: "refund_issued",
-              message: "A " + dollars(refundedCents) + " refund for " + label + " was issued to your card." + (covers ? "" : " Your ticket is still valid."),
-              link: "/activity",
-              related_entity_type: "order",
-              related_entity_id: order.id,
-            });
-            await sendAppEmail("refund_issued", { order_id: order.id, amount_cents: newCents, reason: "refund", partial: !covers });
+            // Orders of free tickets only had a gift refunded; the gift sends its own notice.
+            if (Number(order.subtotal) > 0) {
+              await admin.from("notifications").insert({
+                user_email: order.customer_email,
+                type: "refund_issued",
+                message: "A " + dollars(refundedCents) + " refund for " + label + " was issued to your card." + (covers ? "" : " Your ticket is still valid."),
+                link: "/activity",
+                related_entity_type: "order",
+                related_entity_id: order.id,
+              });
+              await sendAppEmail("refund_issued", { order_id: order.id, amount_cents: newCents, reason: "refund", partial: !covers });
+            }
           }
 
           const { data: application } = await admin.from("event_vendor_applications").select("id, resource_email, agreed_fee, refund_amount, event_id").eq("payment_intent_id", piId).maybeSingle();
@@ -122,6 +127,15 @@ Deno.serve(async (req) => {
               related_entity_type: "resource_booking",
               related_entity_id: booking.id,
             });
+          }
+
+          // Donations / contributions on this payment. A gift alone: the refund applies to it.
+          // A gift with tickets: refunds go to the tickets first, then the gift; a full refund covers both.
+          const { data: gifts } = await admin.from("donations").select("id, amount").eq("payment_intent_id", piId).in("payment_status", ["paid", "refunded"]);
+          for (const g of gifts || []) {
+            const ticketCents = order ? Math.round((Number(order.subtotal) || 0) * 100) : 0;
+            const giftRefunded = charge.refunded ? Number(g.amount) : Math.max(0, refundedCents - ticketCents) / 100;
+            if (giftRefunded > 0) await admin.rpc("record_donation_refund", { p_donation_id: g.id, p_refunded_total: giftRefunded });
           }
 
           if (charge.refunded) {
