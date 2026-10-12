@@ -38,6 +38,7 @@ interface ProfileRow {
     collaboration_invites?: boolean;
     followed_new_events?: boolean;
     followed_gigs?: boolean;
+    ticket_sales?: boolean;
   } | null;
 }
 
@@ -374,6 +375,7 @@ export default function Profile() {
           <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
             {([
               { key: 'event_updates', label: 'Event reminders & updates', desc: "Reminders the day before, and changes to events you're attending" },
+              { key: 'ticket_sales', label: 'Ticket sales on my events', desc: 'An email each time someone buys or registers (you always see them in your notifications)' },
               { key: 'followed_new_events', label: 'New events from people you follow', desc: 'When an organizer you follow posts a new event' },
               { key: 'followed_gigs', label: 'Gigs from artists & resources you follow', desc: "When someone you follow is added to an event's lineup" },
               { key: 'new_followers', label: 'New followers', desc: 'When someone follows your profile' },
