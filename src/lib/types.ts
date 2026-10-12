@@ -31,6 +31,7 @@ export interface TapEvent {
   // Where an imported event came from (prevents importing it twice).
   import_source_url?: string | null;
   status: EventStatus;
+  allow_transfers?: boolean; // ticket holders can send tickets to someone else
   is_test?: boolean; // visible only to the organizer, their team, and admins
   source_name?: string | null; // listed from another site (Admin > Imports)
   source_url?: string | null;
@@ -62,7 +63,7 @@ export interface EventTask {
   created_at: string;
 }
 
-export type TicketStatus = 'confirmed' | 'cancelled' | 'refunded' | 'pending';
+export type TicketStatus = 'confirmed' | 'cancelled' | 'refunded' | 'pending' | 'transferred';
 
 export interface Ticket {
   id: string;

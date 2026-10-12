@@ -33,6 +33,17 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
   const [adding, setAdding] = useState(false);
   const [newSrc, setNewSrc] = useState({ name: '', url: '', kind: 'page' as Source['kind'] });
   const [categoryFor, setCategoryFor] = useState<Record<string, string>>({});
+  const [removing, setRemoving] = useState<Source | null>(null);
+
+  async function removeSource(src: Source) {
+    // Finds still waiting (or set aside) go with it; events you already published stay up.
+    await supabase.from('imported_events').delete().eq('source_id', src.id).in('status', ['pending', 'duplicate', 'skipped']);
+    const { error } = await supabase.from('event_sources').delete().eq('id', src.id);
+    setRemoving(null);
+    if (error) return notify("Couldn't remove that source.", false);
+    notify(`Removed ${src.name}.`);
+    load();
+  }
 
   const load = useCallback(async () => {
     const [{ data: s }, { data: f }] = await Promise.all([
@@ -136,6 +147,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
                 <input type="checkbox" checked={s.use_images} onChange={async (e) => { await supabase.from('event_sources').update({ use_images: e.target.checked }).eq('id', s.id); load(); }} className="h-4 w-4 accent-marigold" />
                 Photos
               </label>
+              <button onClick={() => setRemoving(s)} className="text-xs text-gray-400 hover:text-red-600">Remove</button>
               <label className="flex items-center gap-1.5 text-xs text-gray-600">
                 <input type="checkbox" checked={s.active} onChange={async (e) => { await supabase.from('event_sources').update({ active: e.target.checked }).eq('id', s.id); load(); }} className="h-4 w-4 accent-marigold" />
                 On
@@ -157,6 +169,20 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         </div>
         <p className="mt-2 text-xs text-muted">Ticketmaster needs a free API key from developer.ticketmaster.com before it can be checked. Facebook and Instagram can't be used as sources.</p>
       </section>
+
+      {removing && (
+        <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setRemoving(null)}>
+          <div className="w-full max-w-md rounded-t-3xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:rounded-3xl" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Remove source">
+            <p className="font-display text-lg font-bold text-gray-900">Remove {removing.name}?</p>
+            <p className="mt-2 text-sm text-gray-600">It won't be checked anymore, and its finds still waiting for review are removed. Events you already published from it stay on TapIN.</p>
+            <p className="mt-2 text-xs text-gray-500">Just want to pause it? Turn it <strong>off</strong> instead.</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setRemoving(null)} className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-700">Cancel</button>
+              <button onClick={() => removeSource(removing)} className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white">Remove source</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <NotOnMap />
 

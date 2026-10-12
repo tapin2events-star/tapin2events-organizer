@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import TransferTicket, { canTransfer } from '../components/TransferTicket';
 import MyTasks, { loadMyTasks, type MyTask } from '../components/MyTasks';
 import EventCover from '../components/EventCover';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
@@ -392,6 +393,10 @@ export default function MyActivity() {
                         >
                           {emailedId === t.id ? 'Sent!' : 'Email ticket'}
                         </button>
+                        {canTransfer(t, t.event_start_date, t.ticket_type === 'series_pass') && (
+                          <TransferTicket ticketId={t.id} eventTitle={t.event_title} isSeriesPass={t.ticket_type === 'series_pass'}
+                            className="w-32 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-xs font-medium text-gray-700 hover:border-marigold hover:text-marigold" />
+                        )}
                         {canCancelRegistration(t, t.event_start_date) && (
                           <CancelRegistration ticketId={t.id} eventTitle={t.event_title} variant="button"
                             onCancelled={() => setTickets((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'cancelled' } : x)))} />

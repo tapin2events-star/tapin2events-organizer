@@ -136,6 +136,7 @@ export default function EventForm() {
   const [links, setLinks] = useState<Record<LinkKey, string>>({ instagram: '', tiktok: '', facebook: '', youtube: '', x: '', website: '' });
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   // Admin-only: a private test event (see Admin > Preview). ?test=1 starts one checked.
+  const [allowTransfers, setAllowTransfers] = useState(true);
   const [isTest, setIsTest] = useState(() => !isEdit && searchParams.get('test') === '1');
 
   const [loading, setLoading] = useState(isEdit);
@@ -285,6 +286,7 @@ export default function EventForm() {
       });
       setStatus(data.status === 'published' ? 'published' : 'draft');
       setIsTest(!!data.is_test);
+      setAllowTransfers(data.allow_transfers !== false);
       setIsRecurring(!!data.is_recurring);
       setWasAlreadyRecurring(!!data.is_recurring);
       setLoadedStart(data.start_date ?? null);
@@ -426,6 +428,7 @@ export default function EventForm() {
       social_links: Object.fromEntries(PLATFORMS.map((p) => [p.key, normalizeLink(p.key, links[p.key])])),
       status,
       ...(isAdmin ? { is_test: isTest } : {}),
+      allow_transfers: allowTransfers,
     };
     // Ownership is only ever set on creation. An edit must never touch
     // these fields — otherwise an admin editing someone else's event on
@@ -971,6 +974,10 @@ export default function EventForm() {
               </select>
               {status === 'published' && !isTest && <FollowerPublishNote email={user?.email} />}
             </Field>
+            <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-surface p-3 text-sm text-bone">
+              <input type="checkbox" checked={allowTransfers} onChange={(e) => setAllowTransfers(e.target.checked)} className="mt-0.5 h-4 w-4 accent-marigold" />
+              <span><strong>Let attendees transfer tickets</strong><span className="block text-xs text-muted">Ticket holders can send their ticket to a friend before the event. The friend gets a new QR code and the old one stops working.</span></span>
+            </label>
             {isAdmin && (
               <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 <input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} className="mt-0.5 h-4 w-4 accent-marigold" />

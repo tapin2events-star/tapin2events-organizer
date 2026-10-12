@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TransferTicket, { canTransfer } from '../components/TransferTicket';
 import EventCover from '../components/EventCover';
 import { useAuth } from '../context/AuthContext';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
@@ -27,6 +28,7 @@ interface PassData {
     is_online: boolean;
     poster_url: string | null;
     category?: string | null;
+    allow_transfers?: boolean;
     organizer_email: string;
   };
   organizerName: string | null;
@@ -122,7 +124,9 @@ export default function TicketPass() {
 
             {isCancelled ? (
               <div className="mt-4 rounded-xl bg-red-50 p-4 text-center text-sm font-medium text-magenta">
-                This ticket is {ticket.status} and is not valid for entry.
+                {ticket.status === 'transferred'
+                  ? 'This ticket was transferred to someone else and is no longer valid. The new holder has their own ticket.'
+                  : `This ticket is ${ticket.status} and is not valid for entry.`}
               </div>
             ) : (
               <>
@@ -213,6 +217,12 @@ export default function TicketPass() {
             >
               {emailState === 'sending' ? 'Sending…' : emailState === 'sent' ? 'Sent \u2713' : 'Email me this ticket'}
             </button>
+          </div>
+        )}
+        {!isCancelled && user?.email?.toLowerCase() === ticket.attendee_email.toLowerCase() && canTransfer(ticket, event.start_date, ticket.ticket_type === 'series_pass') && event.allow_transfers !== false && (
+          <div className="mt-4 text-center print:hidden">
+            <TransferTicket ticketId={ticket.id} eventTitle={event.title} isSeriesPass={ticket.ticket_type === 'series_pass'}
+              className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold" />
           </div>
         )}
         {!isCancelled && user?.email === ticket.attendee_email && canCancelRegistration(ticket, event.start_date) && (

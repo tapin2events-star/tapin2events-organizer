@@ -4,6 +4,7 @@ import type { Ticket } from '../../lib/types';
 import { downloadCsv, fileSlug } from '../../lib/csv';
 
 const STATUS_STYLES: Record<string, string> = {
+  transferred: 'bg-gray-100 text-gray-500',
   confirmed: 'bg-green-100 text-green-800',
   pending: 'bg-orange-100 text-orange-800',
   cancelled: 'bg-red-100 text-red-800',
@@ -119,7 +120,7 @@ export default function SalesTab({ eventId }: { eventId: string }) {
         <p className="text-sm text-muted">No tickets sold yet for this event.</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {tickets.map((t) => (
+          {tickets.filter((t) => t.status !== 'transferred').map((t) => (
             <li
               key={t.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3"
@@ -132,6 +133,10 @@ export default function SalesTab({ eventId }: { eventId: string }) {
                   {t.seat_assignment ? ` · Seat ${t.seat_assignment}` : ''}
                   {' · '}
                   {new Date(t.created_at).toLocaleDateString()}
+                  {(t as { transferred_from?: string | null }).transferred_from ? (() => {
+                    const from = tickets.find((x) => x.id === (t as { transferred_from?: string | null }).transferred_from);
+                    return <span className="ml-1 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">Transferred{from ? ` from ${from.attendee_email}` : ''}</span>;
+                  })() : null}
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
