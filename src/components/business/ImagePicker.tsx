@@ -8,15 +8,16 @@ export default function ImagePicker({ value, onChange, label, shape = 'square', 
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const box = shape === 'wide' ? 'h-24 w-full sm:w-64' : shape === 'round' ? 'h-20 w-20 rounded-full' : 'h-20 w-20';
+  const wide = shape === 'wide';
+  const box = wide ? 'h-32 w-full sm:h-24 sm:w-64' : shape === 'round' ? 'h-20 w-20 rounded-full' : 'h-20 w-20';
   return (
-    <div>
+    <div className={`min-w-0 ${wide ? 'w-full sm:w-auto' : ''}`}>
       <p className="text-xs font-medium text-gray-500">{label}</p>
-      <div className="mt-1 flex items-center gap-3">
+      <div className={`mt-1 flex gap-3 ${wide ? 'flex-col items-stretch sm:flex-row sm:items-center' : 'items-center'}`}>
         <button type="button" onClick={() => ref.current?.click()} className={`flex shrink-0 items-center justify-center overflow-hidden ${shape === 'round' ? 'rounded-full' : 'rounded-xl'} border border-dashed border-gray-300 bg-gray-50 ${box}`}>
           {value ? <img src={value} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-gray-400">{busy ? 'Uploading…' : '+ Add'}</span>}
         </button>
-        <div className="text-xs text-gray-500">
+        <div className="min-w-0 text-xs text-gray-500">
           <button type="button" onClick={() => ref.current?.click()} className="font-medium text-marigold">{value ? 'Change' : 'Upload'}</button>
           {value && <> · <button type="button" onClick={() => onChange(null)} className="text-gray-400 hover:text-red-600">Remove</button></>}
           {hint && <p className="mt-0.5 text-gray-400">{hint}</p>}

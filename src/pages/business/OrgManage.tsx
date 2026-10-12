@@ -48,19 +48,19 @@ function OrgManageInner() {
   const canEdit = role === 'owner' || role === 'admin';
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto w-full min-w-0 max-w-3xl">
       <div className="mb-3"><BackButton fallback="/business" fallbackLabel="TapIN for Business" /></div>
       <div className="flex items-center gap-3">
         {org.logo_url ? <img src={org.logo_url} alt="" className="h-14 w-14 rounded-2xl object-cover" /> : <span className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white" style={{ background: org.brand.primary }}>{org.name.charAt(0)}</span>}
         <div className="min-w-0">
           <h1 className="truncate font-display text-2xl font-extrabold text-bone">{org.name}{org.verified && <span className="ml-1.5 text-[#C9A227]" title="Verified">✓</span>}</h1>
-          <p className="text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · you're {role === 'owner' ? 'the owner' : `an ${role}`} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
+          <p className="break-words text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · you're {role === 'owner' ? 'the owner' : `an ${role}`} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
         </div>
       </div>
 
-      <div className="mt-5 flex gap-1 overflow-x-auto border-b border-gray-200">
+      <div className="mt-5 grid grid-cols-4 border-b border-gray-200 sm:flex sm:gap-1">
         {(['Profile', 'Brand kit', 'Team', 'Events'] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
+          <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium sm:px-4 ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
         ))}
       </div>
       {msg && <p role="status" className={`mt-3 text-sm ${msg.ok ? 'text-green-700' : 'text-red-600'}`}>{msg.text}</p>}
@@ -80,7 +80,7 @@ function ProfileTab({ org, canEdit, onSave }: { org: Organization; canEdit: bool
   const field = 'mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 disabled:bg-gray-50';
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-6">
+      <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:gap-6">
         <ImagePicker label="Logo" value={org.logo_url} onChange={(url) => onSave({ logo_url: url })} hint="Square works best" />
         <ImagePicker label="Cover image" shape="wide" value={org.cover_url} onChange={(url) => onSave({ cover_url: url })} hint="Wide, at least 1600 px" />
       </div>
@@ -103,14 +103,14 @@ function BrandTab({ org, canEdit, onSave }: { org: Organization; canEdit: boolea
   useEffect(() => { loadFont(b.font); }, [b.font]);
   const dark = b.theme === 'dark';
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_1.2fr]">
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted">Set your brand once; every business event you create uses it automatically.</p>
         <div className="grid grid-cols-2 gap-3">
           {(['primary', 'accent'] as const).map((k) => (
             <label key={k} className="text-xs font-medium text-gray-500">{k === 'primary' ? 'Main color' : 'Accent color'}
-              <div className="mt-1 flex items-center gap-2 rounded-xl border border-gray-300 bg-white p-1.5">
-                <input type="color" disabled={!canEdit} value={b[k]} onChange={(e) => setB({ ...b, [k]: e.target.value })} className="h-9 w-12 cursor-pointer rounded-lg border-0 bg-transparent" />
+              <div className="mt-1 flex min-w-0 items-center gap-2 rounded-xl border border-gray-300 bg-white p-1.5">
+                <input type="color" disabled={!canEdit} value={b[k]} onChange={(e) => setB({ ...b, [k]: e.target.value })} className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent" />
                 <input disabled={!canEdit} value={b[k]} onChange={(e) => /^#[0-9a-fA-F]{0,6}$/.test(e.target.value) && setB({ ...b, [k]: e.target.value })} className="min-w-0 flex-1 text-sm text-gray-900 outline-none" />
               </div>
             </label>
@@ -176,8 +176,8 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
     <div>
       <p className="text-sm text-muted">Owners and admins can edit the organization and manage its events. Members can view.</p>
       {canEdit && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@company.com" className="min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900" />
+        <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 sm:flex">
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@company.com" className="col-span-2 min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900" />
           <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm"><option value="admin">Admin</option><option value="member">Member</option></select>
           <button onClick={add} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">Add</button>
         </div>
