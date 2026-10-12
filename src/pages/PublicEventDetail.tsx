@@ -749,11 +749,11 @@ export default function PublicEventDetail() {
                     </button>
                   ) : (
                     <button
-                      onClick={handleBuySeriesPass}
+                      onClick={async () => { if ((await beforeContinue(null)) === 'stop') return; handleBuySeriesPass(); }}
                       disabled={registering || isPreview || hasEnded}
                       className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50"
                     >
-                      {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : 'Buy series pass'}
+                      {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : approvalNeeded ? (myRequest?.status === 'pending' ? 'Request sent' : 'Request to join') : 'Buy series pass'}
                     </button>
                   )}
                 </div>
