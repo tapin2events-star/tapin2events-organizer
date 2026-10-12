@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import TierListEditor from '../components/business/TierListEditor';
+import { loadTierDrafts, newDraft, saveTierDrafts, tierProblems, type TierDraft } from '../lib/tiers';
 import EventKindPicker from '../components/business/EventKindPicker';
 import { FEATURES, useFeature } from '../lib/preview';
 import type { EventKind } from '../lib/business';
@@ -144,6 +146,11 @@ export default function EventForm() {
   const businessOn = useFeature('business');
   const [eventKind, setEventKind] = useState<EventKind>(() => { const k = new URLSearchParams(window.location.search).get('kind'); return k === 'business' || k === 'nonprofit' ? k : 'community'; });
   const [orgId, setOrgId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('org'));
+  // Ticket types (preview): several tiers instead of one price.
+  const [useTiers, setUseTiers] = useState(false);
+  const [tierDrafts, setTierDrafts] = useState<TierDraft[]>([]);
+  const [tierOriginalIds, setTierOriginalIds] = useState<string[]>([]);
+  const [tierSold, setTierSold] = useState<Record<string, number>>({});
   const [isTest, setIsTest] = useState(() => !isEdit && searchParams.get('test') === '1');
 
   const [loading, setLoading] = useState(isEdit);
@@ -295,6 +302,10 @@ export default function EventForm() {
       setIsTest(!!data.is_test);
       setAllowTransfers(data.allow_transfers !== false);
       setEventKind((data.event_kind as EventKind) ?? 'community');
+      loadTierDrafts(data.id).then(({ drafts, sold }) => {
+        setTierDrafts(drafts); setTierSold(sold); setTierOriginalIds(drafts.map((d) => d.id as string));
+        setUseTiers(drafts.some((d) => d.active));
+      });
       setOrgId(data.organization_id ?? null);
       setIsRecurring(!!data.is_recurring);
       setWasAlreadyRecurring(!!data.is_recurring);
@@ -356,6 +367,10 @@ export default function EventForm() {
     const previewing = previewAfterSave.current;
     previewAfterSave.current = false;
     if (!user) return;
+    if (businessOn && useTiers && !seatingEnabled) {
+      const problems = tierProblems(tierDrafts, tierSold);
+      if (problems.length) { setError(problems[0]); setStep(1); return; }
+    }
     if (businessOn && eventKind !== 'community' && !orgId) {
       setError('Choose the organization this event belongs to.');
       setStep(1);
@@ -443,6 +458,11 @@ export default function EventForm() {
       status,
       ...(isAdmin ? { is_test: isTest } : {}),
       allow_transfers: allowTransfers,
+      ...(businessOn && useTiers && !seatingEnabled ? (() => {
+        const live = tierDrafts.filter((d) => d.active).map((d) => (d.price === '' ? 0 : Number(d.price)));
+        const paid = live.filter((p) => p > 0);
+        return { event_type: paid.length ? (eventType === 'private' ? 'private' : 'paid') : (eventType === 'private' ? 'private' : 'free'), ticket_price: paid.length ? Math.min(...paid) : 0 };
+      })() : {}),
       ...(businessOn ? { event_kind: eventKind, organization_id: eventKind === 'community' ? null : orgId } : {}),
       // While business events are in preview they stay private as test events.
       ...(businessOn && isAdmin && eventKind !== 'community' && FEATURES.business?.status === 'preview' ? { is_test: true } : {}),
@@ -570,6 +590,11 @@ export default function EventForm() {
           return;
         }
       }
+    }
+
+    if (businessOn && !seatingEnabled && (useTiers || tierOriginalIds.length)) {
+      const tierErr = await saveTierDrafts(data.id, tierDrafts, tierOriginalIds, tierSold, useTiers);
+      if (tierErr) { setSaving(false); setError(`Event saved, but ticket types didn't: ${tierErr} Open the event's Tickets tab to fix it.`); return; }
     }
 
     setSaving(false);
@@ -800,7 +825,7 @@ export default function EventForm() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {eventType !== 'free' && (
+              {eventType !== 'free' && !(businessOn && useTiers && !seatingEnabled) && (
                 <Field label="Ticket price ($)">
                   <input type="number" min="0" step="0.01" value={ticketPrice} onChange={(e) => setTicketPrice(e.target.value)} className={inputClass} />
                 </Field>
@@ -809,6 +834,17 @@ export default function EventForm() {
                 <input type="number" min="0" value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} className={inputClass} />
               </Field>
             </div>
+
+            {businessOn && !seatingEnabled && !externalTicketUrl.trim() && (
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4">
+                <label className="flex items-start gap-3 text-sm text-bone">
+                  <input type="checkbox" checked={useTiers} onChange={(e) => { setUseTiers(e.target.checked); if (e.target.checked && tierDrafts.length === 0) setTierDrafts([newDraft('General Admission', eventType === 'free' ? '' : ticketPrice !== '0' ? ticketPrice : '')]); }} className="mt-0.5 h-4 w-4 accent-marigold" />
+                  <span><strong>Offer multiple ticket types</strong> <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span>
+                    <span className="block text-xs text-muted">General, VIP, Early Bird and more, each with its own price, quantity and sales dates. Free and paid types can be mixed.</span></span>
+                </label>
+                {useTiers && <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1`} />}
+              </div>
+            )}
 
             <Field label="Tickets sold elsewhere? (optional)">
               <input
