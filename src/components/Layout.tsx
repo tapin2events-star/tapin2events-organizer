@@ -144,12 +144,12 @@ export default function Layout() {
           className="mb-1 flex items-center justify-center gap-2 rounded-xl bg-marigold px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-marigold/90">
           <NavIcon name="plus" className="h-4 w-4" /> Create event
         </Link>
-        <nav className="flex flex-col gap-0.5" aria-label="Organizer">{renderItems(ORGANIZER)}</nav>
+        <nav className="flex flex-col gap-0.5" aria-label="Organizer">{renderItems(businessOn ? [ORGANIZER[0], { to: '/business', label: 'TapIN for Business', icon: 'bookings' }, ...ORGANIZER.slice(1)] : ORGANIZER)}</nav>
 
         {isAdmin && (
           <>
             {heading('Platform')}
-            <nav className="flex flex-col gap-0.5" aria-label="Platform">{renderItems([{ to: '/admin', label: 'Admin Dashboard', icon: 'admin' }, ...(businessOn ? [{ to: '/business', label: 'TapIN for Business', icon: 'bookings' as const }] : [])])}</nav>
+            <nav className="flex flex-col gap-0.5" aria-label="Platform">{renderItems([{ to: '/admin', label: 'Admin Dashboard', icon: 'admin' }])}</nav>
           </>
         )}
 

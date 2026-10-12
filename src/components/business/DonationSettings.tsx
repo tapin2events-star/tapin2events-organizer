@@ -24,7 +24,7 @@ export default function DonationSettings({ value, onChange, inputClass, nonprofi
     <div className="-mx-1 rounded-2xl border border-rose-200 bg-rose-50/40 p-3 sm:mx-0 sm:p-4">
       <label className="flex items-start gap-3 text-sm text-bone">
         <input type="checkbox" checked={f.enabled} onChange={(e) => set({ enabled: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-        <span><strong>💛 {nonprofit ? 'Accept donations' : 'Accept support (contributions)'}</strong> <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span>
+        <span><strong>💛 {nonprofit ? 'Accept donations' : 'Accept support (contributions)'}</strong>
           <span className="block text-xs text-muted">{nonprofit ? 'Adds a donation card with a goal bar to your event page, and lets ticket buyers add a gift to their order.' : 'Adds a "Support this event" card with a goal bar, and lets ticket buyers add a contribution. Contributions go to you as the organizer and aren\u2019t tax-deductible donations.'}</span></span>
       </label>
       {f.enabled && (

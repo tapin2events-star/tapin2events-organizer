@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
-  business: { name: 'TapIN for Business', description: 'Organizations (companies and nonprofits) with brand kits, the Community / Business / Nonprofit event type picker, and business event pages with agenda, speakers and sponsors.', status: 'preview' },
+  business: { name: 'TapIN for Business', description: 'Organizations (companies and nonprofits) with brand kits, the Community / Business / Nonprofit event type picker, and business event pages with agenda, speakers and sponsors.', status: 'live' },
 };
 
 const KEY = 'tapin_preview_mode';

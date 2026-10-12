@@ -20,7 +20,7 @@ export default function EventKindPicker({ kind, onKind, orgId, onOrg }: { kind: 
 
   return (
     <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4">
-      <p className="text-sm font-semibold text-bone">What kind of event is this? <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+      <p className="text-sm font-semibold text-bone">What kind of event is this?</p>
       <div className="mt-2 grid gap-2 sm:grid-cols-3">
         {KINDS.map((k) => (
           <button type="button" key={k.key} onClick={() => onKind(k.key)} aria-pressed={kind === k.key}
@@ -43,7 +43,7 @@ export default function EventKindPicker({ kind, onKind, orgId, onOrg }: { kind: 
               </select>
             </label>
           )}
-          <p className="mt-2 text-xs text-muted">While TapIN for Business is in preview, these events are saved as <strong>test events</strong> only you can see. Add the agenda, speakers and sponsors from the event's dashboard after saving.</p>
+          <p className="mt-2 text-xs text-muted">After saving, add the agenda, speakers and sponsors from the event's dashboard (Business page tab).</p>
         </div>
       )}
     </div>

@@ -851,7 +851,7 @@ export default function EventForm() {
               <div className="-mx-1 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-3 sm:mx-0 sm:p-4">
                 <label className="flex items-start gap-3 text-sm text-bone">
                   <input type="checkbox" checked={useTiers} onChange={(e) => { setUseTiers(e.target.checked); if (e.target.checked && tierDrafts.length === 0) setTierDrafts([newDraft('General Admission', eventType === 'free' ? '' : ticketPrice !== '0' ? ticketPrice : '')]); }} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-                  <span><strong>Offer multiple ticket types</strong> <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span>
+                  <span><strong>Offer multiple ticket types</strong>
                     <span className="block text-xs text-muted">General, VIP, Early Bird and more, each with its own price, quantity and sales dates. Free and paid types can be mixed.</span></span>
                 </label>
                 {useTiers && <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
