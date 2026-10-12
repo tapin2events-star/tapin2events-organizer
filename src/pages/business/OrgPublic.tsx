@@ -41,13 +41,13 @@ function OrgPublicInner() {
         {org.cover_url && <img src={org.cover_url} alt="" className="h-full w-full object-cover" />}
       </div>
       <div className="mx-auto max-w-4xl px-6">
-        <div className="-mt-10 flex flex-wrap items-end gap-4">
-          {org.logo_url ? <img src={org.logo_url} alt="" className="h-24 w-24 rounded-3xl border-4 object-cover shadow-md" style={{ borderColor: dark ? '#0B1020' : '#fff' }} /> : <span className="flex h-24 w-24 items-center justify-center rounded-3xl border-4 text-3xl font-bold text-white shadow-md" style={{ background: b.primary, borderColor: dark ? '#0B1020' : '#fff' }}>{org.name.charAt(0)}</span>}
-          <div className="min-w-0 flex-1 pb-1">
-            <h1 className="text-3xl font-extrabold">{org.name}{org.verified && <span className="ml-2 text-xl" style={{ color: b.accent }} title="Verified">✓</span>}</h1>
-            <p className="text-sm opacity-70">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
-          </div>
-          {canManage && <Link to={`/business/${org.slug}/manage`} className="mb-1 rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background: b.primary }}>Manage</Link>}
+        <div className="relative z-10 -mt-12 flex items-end justify-between gap-3 sm:-mt-14">
+          {org.logo_url ? <img src={org.logo_url} alt="" className="h-24 w-24 shrink-0 rounded-3xl border-4 bg-white object-cover shadow-md sm:h-28 sm:w-28" style={{ borderColor: dark ? '#0B1020' : '#fff' }} /> : <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border-4 text-3xl font-bold text-white shadow-md sm:h-28 sm:w-28" style={{ background: b.primary, borderColor: dark ? '#0B1020' : '#fff' }}>{org.name.charAt(0)}</span>}
+          {canManage && <Link to={`/business/${org.slug}/manage`} className="mb-1 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm" style={{ background: b.primary }}>Manage</Link>}
+        </div>
+        <div className="mt-3 min-w-0">
+          <h1 className="break-words text-2xl font-extrabold leading-tight sm:text-3xl">{org.name}{org.verified && <span className="ml-2 text-xl" style={{ color: b.accent }} title="Verified">✓</span>}</h1>
+          <p className="mt-0.5 text-sm opacity-70">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
         </div>
         {org.tagline && <p className="mt-5 text-lg font-medium">{org.tagline}</p>}
         {org.description && <p className="mt-3 whitespace-pre-wrap leading-relaxed opacity-80">{org.description}</p>}

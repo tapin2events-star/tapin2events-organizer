@@ -18,18 +18,21 @@ function OrgManageInner() {
   const { slug = '' } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
   const [tab, setTab] = useState<Tab>('Profile');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('organizations').select('*').eq('slug', slug).maybeSingle();
     const o = data ? ({ ...data, brand: { ...DEFAULT_BRAND, ...(data.brand ?? {}) } } as Organization) : null;
-    setOrg(o);
     if (o) {
       const { data: r } = await supabase.rpc('org_role', { p_org: o.id });
       setRole((r as string | null) ?? null);
+    } else {
+      setRole(null);
     }
+    setOrg(o); // shown together with the role, so the page never flashes "not on the team"
+
   }, [slug]);
   useEffect(() => { load(); }, [load]);
 
@@ -43,7 +46,14 @@ function OrgManageInner() {
     window.setTimeout(() => setMsg(null), 2000);
   }
 
-  if (org === undefined) return <p className="text-sm text-muted">Loading…</p>;
+  if (org === undefined || (org && role === undefined)) return (
+    <div className="mx-auto max-w-3xl animate-pulse" aria-busy="true" aria-label="Loading">
+      <div className="mb-3 h-5 w-16 rounded bg-gray-200" />
+      <div className="flex items-center gap-3"><div className="h-14 w-14 rounded-2xl bg-gray-200" /><div className="flex-1"><div className="h-6 w-40 rounded bg-gray-200" /><div className="mt-2 h-3 w-56 rounded bg-gray-100" /></div></div>
+      <div className="mt-6 h-9 rounded-xl bg-gray-100" />
+      <div className="mt-6 h-28 rounded-xl bg-gray-100" />
+    </div>
+  );
   if (!org || !role) return <p className="mt-8 text-center text-sm text-muted">This organization doesn't exist or you're not on its team. <Link to="/business" className="text-marigold">TapIN for Business</Link></p>;
   const canEdit = role === 'owner' || role === 'admin';
 
