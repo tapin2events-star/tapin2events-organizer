@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import CardTask from './CardTask';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -117,7 +118,8 @@ export default function CardSheet({ card, resource, shows, addedByName, onClose,
             {show?.event_id && <button type="button" onClick={sendInvite} disabled={busy} className="rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Send free lineup invite</button>}
             <Link to={`/resources/${resource.id}#book`} className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700">Send a paid booking</Link>
           </div>
-          {!show?.event_id && <p className="mt-2 text-xs text-gray-500">To send a free lineup invite from here, pick a show that's linked to one of your events.</p>}
+          {!show?.event_id && <p className="mt-2 text-xs text-gray-500">To send a free lineup invite or make a team task from here, pick a show that's linked to one of your events.</p>}
+          {show?.event_id && <CardTask cardId={card.id} artistName={name} eventId={show.event_id} onCreated={onChanged} />}
         </div>
       )}
 

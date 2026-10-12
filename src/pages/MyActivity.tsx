@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import MyTasks, { loadMyTasks, type MyTask } from '../components/MyTasks';
 import EventCover from '../components/EventCover';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -74,12 +75,16 @@ export default function MyActivity() {
   const [search, setSearch] = useState('');
   // One place for everything you've done on TapIN, filtered by chips. The view
   // lives in the URL hash so email links (e.g. /activity#orders) open it.
-  type View = 'all' | 'tickets' | 'orders' | 'bookings' | 'vendor' | 'tips';
+  type View = 'all' | 'tickets' | 'tasks' | 'orders' | 'bookings' | 'vendor' | 'tips';
   const viewFromHash = (): View => {
     const h = window.location.hash.replace('#', '');
-    return (['tickets', 'orders', 'bookings', 'vendor', 'tips'] as string[]).includes(h) ? (h as View) : 'all';
+    return (['tickets', 'tasks', 'orders', 'bookings', 'vendor', 'tips'] as string[]).includes(h) ? (h as View) : 'all';
   };
   const [view, setViewState] = useState<View>(viewFromHash);
+  // Tasks assigned to me on any event's team.
+  const [myTasks, setMyTasks] = useState<MyTask[]>([]);
+  const [openTaskCount, setOpenTaskCount] = useState(0);
+  useEffect(() => { loadMyTasks().then((t) => { setMyTasks(t); setOpenTaskCount(t.filter((x) => x.status !== 'completed').length); }); }, []);
   const [counts, setCounts] = useState<{ orders: number; bookings: number; vendor: number; tips: number } | null>(null);
   const [bookingSplit, setBookingSplit] = useState({ mine: 0, received: 0, pending: 0 });
   function setView(v: View) {
@@ -232,12 +237,13 @@ export default function MyActivity() {
         {!holdTop && (() => {
           const chips: { key: View; label: string; count: number }[] = [
             { key: 'tickets', label: 'Tickets', count: tickets.length },
+            { key: 'tasks', label: 'Tasks', count: openTaskCount },
             { key: 'orders', label: 'Orders', count: counts?.orders ?? 0 },
             { key: 'bookings', label: 'Bookings', count: counts?.bookings ?? 0 },
             { key: 'vendor', label: 'Vendor spots', count: counts?.vendor ?? 0 },
             { key: 'tips', label: 'Tips', count: counts?.tips ?? 0 },
           ];
-          const shown = chips.filter((c) => c.key === 'tickets' || c.count > 0 || view === c.key);
+          const shown = chips.filter((c) => c.key === 'tickets' || c.count > 0 || view === c.key || (c.key === 'tasks' && myTasks.length > 0));
           if (shown.length < 2) return null;
           return (
             <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter your activity">
@@ -407,11 +413,12 @@ export default function MyActivity() {
           <>
             {(view === 'all' || view === 'orders') && <MyProductOrders title="Orders" />}
             {(view === 'all' || view === 'vendor') && <div id="vendor" className="scroll-mt-20"><MyVendorApplications title="Vendor Spots" /></div>}
+            {(view === 'tasks' || (view === 'all' && openTaskCount > 0)) && <div id="tasks" className="scroll-mt-20"><MyTasks initial={myTasks} onChange={setOpenTaskCount} /></div>}
             {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><BookingsSection mine={bookingSplit.mine} received={bookingSplit.received} pending={bookingSplit.pending} /></div>}
             {(view === 'all' || view === 'tips') && <MyTipsSent />}
           </>
         )}
-        {view !== 'all' && view !== 'tickets' && counts && counts[view] === 0 && (
+        {view !== 'all' && view !== 'tickets' && view !== 'tasks' && counts && counts[view] === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-12 text-center text-gray-500">Nothing here yet.</div>
         )}
       </div>

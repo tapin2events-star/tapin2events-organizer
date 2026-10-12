@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TeamTasksTab from '../components/tabs/TeamTasksTab';
 import ShareQR from '../components/ShareQR';
 import ScoutingTab from '../components/tabs/ScoutingTab';
 import BackButton from '../components/BackButton';
@@ -13,15 +14,13 @@ import OverviewTab from '../components/tabs/OverviewTab';
 import SalesTab from '../components/tabs/SalesTab';
 import MessagesTab from '../components/tabs/MessagesTab';
 import BookingsManager from '../components/bookings/BookingsManager';
-import TasksTab from '../components/tabs/TasksTab';
-import TeamTab from '../components/tabs/TeamTab';
 import VendorApplicationsTab from '../components/tabs/VendorApplicationsTab';
 import LineupScheduleTab from '../components/tabs/LineupScheduleTab';
 import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
-const TABS = ['Overview', 'Lineup & schedule', 'Scouting', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Tasks', 'Team', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Lineup', 'Ticket Sales', 'Messages', 'Products', 'Bookings', 'Team & tasks', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -43,7 +42,11 @@ export default function EventDetail() {
   useEscapeKey(() => setManageOpen(false), manageOpen);
   const isOwner = !!event && !!user && event.organizer_id === user.id;
   // Bookings belong to whoever made them, so only the event's owner sees this tab.
-  const visibleTabs = TABS.filter((t) => t !== 'Bookings' || isOwner);
+  // Helpers and vendor managers see a smaller dashboard.
+  const [teamRole, setTeamRole] = useState<string | null>(null);
+  useEffect(() => { if (id) supabase.rpc('event_team_role', { p_event_id: id }).then(({ data }) => setTeamRole((data as string | null) ?? null)); }, [id]);
+  const limitedTabs: Record<string, readonly string[]> = { helper: ['Overview', 'Team & tasks'], vendor_manager: ['Overview', 'Vendor applications', 'Team & tasks'] };
+  const visibleTabs = TABS.filter((t) => (t !== 'Bookings' || isOwner) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
     (async () => {
@@ -261,8 +264,7 @@ export default function EventDetail() {
       </div>
 
       {tab === 'Overview' && <OverviewTab event={event} />}
-      {tab === 'Lineup & schedule' && <LineupScheduleTab event={event} isOwner={isOwner} />}
-      {tab === 'Scouting' && <ScoutingTab event={event} />}
+      {tab === 'Lineup' && <LineupWithScouting event={event} isOwner={isOwner} />}
       {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (
@@ -272,9 +274,26 @@ export default function EventDetail() {
         </>
       )}
       {tab === 'Bookings' && isOwner && <BookingsManager eventId={id} />}
-      {tab === 'Tasks' && <TasksTab eventId={id} eventTitle={event.title} />}
-      {tab === 'Team' && <TeamTab eventId={id} eventTitle={event.title} />}
+      {tab === 'Team & tasks' && <TeamTasksTab eventId={id} eventTitle={event.title} />}
       {tab === 'Vendor applications' && <VendorApplicationsTab eventId={id} />}
+    </div>
+  );
+}
+
+// Lineup tab: the schedule, with Scouting one tap away.
+function LineupWithScouting({ event, isOwner }: { event: TapEvent; isOwner: boolean }) {
+  const [view, setView] = useState<'schedule' | 'scouting'>(() => (window.location.hash === '#scouting' ? 'scouting' : 'schedule'));
+  return (
+    <div>
+      <div className="mb-4 inline-flex rounded-xl bg-gray-100 p-1 text-sm" role="tablist" aria-label="Lineup views">
+        {(['schedule', 'scouting'] as const).map((v) => (
+          <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+            className={`rounded-lg px-4 py-1.5 font-medium ${view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+            {v === 'schedule' ? 'Lineup & schedule' : 'Scouting'}
+          </button>
+        ))}
+      </div>
+      {view === 'schedule' ? <LineupScheduleTab event={event} isOwner={isOwner} /> : <ScoutingTab event={event} />}
     </div>
   );
 }

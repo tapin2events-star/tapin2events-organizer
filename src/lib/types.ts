@@ -80,7 +80,7 @@ export interface Ticket {
   created_at: string;
 }
 
-export type CollaborationRole = 'admin' | 'editor' | 'viewer' | 'vendor_manager';
+export type CollaborationRole = 'admin' | 'editor' | 'viewer' | 'vendor_manager' | 'helper';
 export type CollaborationStatus = 'pending' | 'accepted' | 'declined';
 
 export interface EventCollaboration {
