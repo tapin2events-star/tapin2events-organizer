@@ -1,8 +1,9 @@
 import { supabase } from './supabaseClient';
 import type { TapEvent } from './types';
 
-// Earnings for an organizer's own events. Amounts are what the organizer
-// earns: ticket and product prices, vendor fees, and tips. The service and
+// Everything a person earns on TapIN. Amounts are what they keep: ticket and product prices,
+// vendor fees, donations and support received (after any fees deducted and refunds), shop
+// sales from their artist/resource profile, and tips. The service and
 // processing fees buyers pay on top go to TapIN/Stripe and are excluded.
 
 export type Range = 'month' | '30d' | 'year' | 'all';
@@ -13,8 +14,10 @@ export interface OrderRow { id: string; order_number: string | null; event_id: s
 export interface TicketRow { event_id: string; quantity: number | null; price_paid: number | null; status: string; created_at: string; checked_in_at: string | null }
 export interface VendorFeeRow { event_id: string; agreed_fee: number | null; business_name: string | null; created_at: string }
 export interface TipRow { amount: number; created_at: string; tipper_name: string | null }
+export interface DonationRow { event_id: string; amount: number; net_amount: number | null; refund_amount: number | null; paid_at: string; donor_name: string | null; is_anonymous: boolean }
+export interface ShopOrderRow { id: string; order_number: string | null; resource_id: string; items: OrderItem[] | null; subtotal: number | null; created_at: string; customer_name: string | null; customer_email: string | null }
 
-export interface EarningsData { events: TapEvent[]; orders: OrderRow[]; tickets: TicketRow[]; vendorFees: VendorFeeRow[]; tips: TipRow[] }
+export interface EarningsData { events: TapEvent[]; orders: OrderRow[]; tickets: TicketRow[]; vendorFees: VendorFeeRow[]; tips: TipRow[]; donations: DonationRow[]; shopOrders: ShopOrderRow[] }
 
 // Supabase returns at most 1,000 rows per request; page through larger sets.
 async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
@@ -32,13 +35,20 @@ export async function loadEarnings(userId: string, email: string): Promise<Earni
   const ids = (events ?? []).map((e) => e.id as string);
   const chunk = <T,>(arr: T[], n: number) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
   const idChunks = chunk(ids, 150); // keep request URLs a sane length
-  const [orders, tickets, vendorFees, tips] = await Promise.all([
+  // Artist/resource profiles this person owns (their shop sales count too).
+  const { data: myResources } = await supabase.from('resources').select('id').ilike('email', email).eq('kind', 'individual');
+  const resourceIds = (myResources ?? []).map((r) => r.id as string);
+  const [orders, tickets, vendorFees, tips, donations, shopOrders] = await Promise.all([
     Promise.all(idChunks.map((c) => fetchAll<OrderRow>((f, t) => supabase.from('orders').select('id, order_number, event_id, items, subtotal, created_at, customer_name, customer_email').in('event_id', c).eq('payment_status', 'paid').range(f, t)))).then((r) => r.flat()),
-    Promise.all(idChunks.map((c) => fetchAll<TicketRow>((f, t) => supabase.from('tickets').select('event_id, quantity, price_paid, status, created_at, checked_in_at').in('event_id', c).in('status', ['confirmed', 'checked_in']).range(f, t)))).then((r) => r.flat()),
+    Promise.all(idChunks.map((c) => fetchAll<TicketRow>((f, t) => supabase.from('tickets').select('event_id, quantity, price_paid, status, created_at, checked_in_at').in('event_id', c).in('status', ['confirmed', 'used']).range(f, t)))).then((r) => r.flat()),
     Promise.all(idChunks.map((c) => fetchAll<VendorFeeRow>((f, t) => supabase.from('event_vendor_applications').select('event_id, agreed_fee, business_name, created_at').in('event_id', c).eq('status', 'paid').range(f, t)))).then((r) => r.flat()),
     fetchAll<TipRow>((f, t) => supabase.from('tips').select('amount, created_at, tipper_name').eq('creator_email', email).eq('payment_status', 'paid').range(f, t)),
+    Promise.all(idChunks.map((c) => fetchAll<DonationRow>((f, t) => supabase.from('donations').select('event_id, amount, net_amount, refund_amount, paid_at, donor_name, is_anonymous').in('event_id', c).eq('payment_status', 'paid').range(f, t)))).then((r) => r.flat()),
+    resourceIds.length
+      ? fetchAll<ShopOrderRow>((f, t) => supabase.from('orders').select('id, order_number, resource_id, items, subtotal, created_at, customer_name, customer_email').in('resource_id', resourceIds).is('event_id', null).eq('payment_status', 'paid').range(f, t))
+      : Promise.resolve([] as ShopOrderRow[]),
   ]);
-  return { events: (events ?? []) as TapEvent[], orders, tickets, vendorFees, tips };
+  return { events: (events ?? []) as TapEvent[], orders, tickets, vendorFees, tips, donations, shopOrders };
 }
 
 const itemTotal = (i: OrderItem) => Number(i.total_price ?? (Number(i.unit_price ?? 0) * Number(i.quantity ?? 1))) || 0;
@@ -61,6 +71,14 @@ export const orderSplit = (o: OrderRow) => {
   return { tickets, products: Math.max(subtotal - tickets, 0) };
 };
 
+// What the organizer keeps from a gift: net of deducted fees, minus refunds.
+export const donationNet = (d: DonationRow) => Math.max(0, Number(d.net_amount ?? d.amount) - Number(d.refund_amount ?? 0));
+export const shopAmount = (o: ShopOrderRow) => {
+  const sub = Number(o.subtotal);
+  if (o.subtotal !== null && Number.isFinite(sub)) return sub;
+  return (o.items ?? []).reduce((n, i) => n + itemTotal(i), 0);
+};
+
 export function rangeStart(range: Range, now = new Date()): Date | null {
   if (range === 'all') return null;
   if (range === '30d') return new Date(now.getTime() - 30 * 86400000);
@@ -69,8 +87,9 @@ export function rangeStart(range: Range, now = new Date()): Date | null {
 }
 export const inRange = (iso: string, start: Date | null) => !start || new Date(iso) >= start;
 
-export interface EventStats { ticketRevenue: number; productRevenue: number; vendorRevenue: number; ticketsSold: number; paidTickets: number; freeRegistrations: number; checkedIn: number }
-const blank = (): EventStats => ({ ticketRevenue: 0, productRevenue: 0, vendorRevenue: 0, ticketsSold: 0, paidTickets: 0, freeRegistrations: 0, checkedIn: 0 });
+export interface EventStats { ticketRevenue: number; productRevenue: number; vendorRevenue: number; donationRevenue: number; ticketsSold: number; paidTickets: number; freeRegistrations: number; checkedIn: number }
+const blank = (): EventStats => ({ ticketRevenue: 0, productRevenue: 0, vendorRevenue: 0, donationRevenue: 0, ticketsSold: 0, paidTickets: 0, freeRegistrations: 0, checkedIn: 0 });
+export const eventTotal = (s: EventStats | undefined) => (s ? s.ticketRevenue + s.productRevenue + s.vendorRevenue + s.donationRevenue : 0);
 
 export function summarize(d: EarningsData, range: Range) {
   const start = rangeStart(range);
@@ -92,7 +111,10 @@ export function summarize(d: EarningsData, range: Range) {
     if (t.checked_in_at) st.checkedIn += q;
   }
   for (const v of d.vendorFees) if (inRange(v.created_at, start)) get(v.event_id).vendorRevenue += Number(v.agreed_fee ?? 0);
+  for (const g of d.donations) if (inRange(g.paid_at, start)) get(g.event_id).donationRevenue += donationNet(g);
   const tips = d.tips.filter((t) => inRange(t.created_at, start)).reduce((n, t) => n + Number(t.amount ?? 0), 0);
+  const shopList = d.shopOrders.filter((o) => inRange(o.created_at, start));
+  const shop = shopList.reduce((n, o) => n + shopAmount(o), 0);
 
   const totals = blank();
   byEvent.forEach((s) => (Object.keys(totals) as (keyof EventStats)[]).forEach((k) => (totals[k] += s[k])));
@@ -104,8 +126,9 @@ export function summarize(d: EarningsData, range: Range) {
     const s = byEvent.get(e.id);
     if (s) { startedTickets += s.ticketsSold; startedCheckins += s.checkedIn; }
   }
-  const earned = totals.ticketRevenue + totals.productRevenue + totals.vendorRevenue + tips;
-  return { byEvent, totals, tips, earned, checkInRate: startedTickets ? startedCheckins / startedTickets : null };
+  const eventsEarned = totals.ticketRevenue + totals.productRevenue + totals.vendorRevenue + totals.donationRevenue;
+  const earned = eventsEarned + tips + shop;
+  return { byEvent, totals, tips, shop, shopOrders: shopList, eventsEarned, earned, checkInRate: startedTickets ? startedCheckins / startedTickets : null };
 }
 
 /** Earnings per month for the last 12 months (oldest first). */
@@ -123,6 +146,8 @@ export function monthly(d: EarningsData) {
   d.orders.forEach((o) => { const s = orderSplit(o); add(o.created_at, s.tickets + s.products); });
   d.vendorFees.forEach((v) => add(v.created_at, Number(v.agreed_fee ?? 0)));
   d.tips.forEach((t) => add(t.created_at, Number(t.amount ?? 0)));
+  d.donations.forEach((g) => add(g.paid_at, donationNet(g)));
+  d.shopOrders.forEach((o) => add(o.created_at, shopAmount(o)));
   return months;
 }
 
@@ -132,19 +157,27 @@ export const money = (n: number) => n.toLocaleString('en-US', { style: 'currency
 export function earningsRows(d: EarningsData, range: Range): (string | number)[][] {
   const start = rangeStart(range);
   const title = new Map(d.events.map((e) => [e.id, e.title]));
-  const rows: (string | number)[][] = [['Date', 'Type', 'Event', 'Reference', 'From', 'Tickets', 'Merchandise & shipping', 'Vendor fees', 'Tips', 'Total earned']];
+  const rows: (string | number)[][] = [['Date', 'Type', 'Event', 'Reference', 'From', 'Tickets', 'Merchandise & shipping', 'Vendor fees', 'Tips', 'Donations & support', 'Shop', 'Total earned']];
   const date = (iso: string) => new Date(iso).toLocaleDateString('en-US');
   for (const o of d.orders.filter((o) => inRange(o.created_at, start))) {
     const s = orderSplit(o);
-    rows.push([date(o.created_at), 'Order', title.get(o.event_id) ?? '', o.order_number ?? o.id, o.customer_name || o.customer_email || '', s.tickets.toFixed(2), s.products.toFixed(2), '0.00', '0.00', (s.tickets + s.products).toFixed(2)]);
+    rows.push([date(o.created_at), 'Order', title.get(o.event_id) ?? '', o.order_number ?? o.id, o.customer_name || o.customer_email || '', s.tickets.toFixed(2), s.products.toFixed(2), '0.00', '0.00', '0.00', '0.00', (s.tickets + s.products).toFixed(2)]);
   }
   for (const v of d.vendorFees.filter((v) => inRange(v.created_at, start))) {
     const fee = Number(v.agreed_fee ?? 0);
-    rows.push([date(v.created_at), 'Vendor fee', title.get(v.event_id) ?? '', '', v.business_name ?? '', '0.00', '0.00', fee.toFixed(2), '0.00', fee.toFixed(2)]);
+    rows.push([date(v.created_at), 'Vendor fee', title.get(v.event_id) ?? '', '', v.business_name ?? '', '0.00', '0.00', fee.toFixed(2), '0.00', '0.00', '0.00', fee.toFixed(2)]);
   }
   for (const t of d.tips.filter((t) => inRange(t.created_at, start))) {
     const amt = Number(t.amount ?? 0);
-    rows.push([date(t.created_at), 'Tip', '', '', t.tipper_name ?? '', '0.00', '0.00', '0.00', amt.toFixed(2), amt.toFixed(2)]);
+    rows.push([date(t.created_at), 'Tip', '', '', t.tipper_name ?? '', '0.00', '0.00', '0.00', amt.toFixed(2), '0.00', '0.00', amt.toFixed(2)]);
+  }
+  for (const g of d.donations.filter((g) => inRange(g.paid_at, start))) {
+    const amt = donationNet(g);
+    rows.push([date(g.paid_at), 'Donation / support', title.get(g.event_id) ?? '', '', g.is_anonymous ? 'Anonymous' : g.donor_name ?? '', '0.00', '0.00', '0.00', '0.00', amt.toFixed(2), '0.00', amt.toFixed(2)]);
+  }
+  for (const o of d.shopOrders.filter((o) => inRange(o.created_at, start))) {
+    const amt = shopAmount(o);
+    rows.push([date(o.created_at), 'Shop order', '', o.order_number ?? o.id, o.customer_name || o.customer_email || '', '0.00', '0.00', '0.00', '0.00', '0.00', amt.toFixed(2), amt.toFixed(2)]);
   }
   return rows;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import BookingEarningsCard from '../components/resources/BookingEarningsCard';
+import ResourceEarningsOverview from '../components/resources/ResourceEarningsOverview';
 import AnnounceLineupsToggle from '../components/resources/AnnounceLineupsToggle';
 import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -56,7 +56,7 @@ const STATUS_LABELS: Record<string, string> = {
   deleted: 'Deleted',
 };
 
-const TABS = ['Bookings', 'Media', 'Products'] as const;
+const TABS = ['Overview', 'Bookings', 'Media', 'Products'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ResourceDashboard() {
@@ -66,7 +66,8 @@ export default function ResourceDashboard() {
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('booking');
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'media' ? 'Media' : 'Bookings');
+  // Overview first; links like ?tab=bookings (from notifications) still open the right tab.
+  const [tab, setTab] = useState<Tab>(() => ({ media: 'Media', bookings: 'Bookings', products: 'Products' } as Record<string, Tab>)[searchParams.get('tab') ?? ''] ?? 'Overview');
   const [resource, setResource] = useState<Resource | null>(null);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,6 +276,8 @@ export default function ResourceDashboard() {
           ))}
         </div>
 
+        {tab === 'Overview' && <ResourceEarningsOverview resourceId={resource.id} />}
+
         {tab === 'Bookings' && (
           <>
         {payouts && (
@@ -282,7 +285,6 @@ export default function ResourceDashboard() {
             <PayoutsCard hasAccount={payouts.hasAccount} chargesEnabled={payouts.chargesEnabled} variant="resource" />
           </div>
         )}
-        <div className="mt-4"><BookingEarningsCard /></div>
         <div className="mt-4"><AnnounceLineupsToggle resourceId={resource.id} /></div>
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
           <div className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 text-center sm:gap-2 sm:p-4">

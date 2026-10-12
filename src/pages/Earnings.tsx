@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import BackButton from '../components/BackButton';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { earningsRows, loadEarnings, money, monthly, RANGE_LABELS, summarize, type EarningsData, type Range } from '../lib/earnings';
+import { earningsRows, eventTotal, loadEarnings, money, shopAmount, monthly, RANGE_LABELS, summarize, type EarningsData, type Range } from '../lib/earnings';
 import { downloadCsv } from '../lib/csv';
 import { loadBookingMoney, summarizeBookings, type BookingCost, type BookingEarning } from '../lib/bookingEarnings';
 
@@ -21,6 +21,10 @@ export default function Earnings() {
   const [data, setData] = useState<EarningsData | null>(null);
   const [range, setRange] = useState<Range>('all');
   const [bookingMoney, setBookingMoney] = useState<{ earnings: BookingEarning[]; costs: BookingCost[] } | null>(null);
+  const [evQuery, setEvQuery] = useState('');
+  const [evWhen, setEvWhen] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [evSort, setEvSort] = useState<'newest' | 'earned' | 'tickets'>('newest');
+  const [evEarningOnly, setEvEarningOnly] = useState(false);
   useEffect(() => { if (user?.email) loadBookingMoney().then(setBookingMoney); }, [user?.email]);
   const bk = useMemo(() => (bookingMoney ? summarizeBookings(bookingMoney.earnings, bookingMoney.costs, range) : null), [bookingMoney, range]);
 
@@ -39,15 +43,27 @@ export default function Earnings() {
 
   if (!data || !summary) return <div className="mx-auto max-w-5xl"><p className="text-muted">Loading your earnings…</p></div>;
 
-  const { totals, tips, earned, checkInRate, byEvent } = summary;
+  const { totals, tips, shop, shopOrders, eventsEarned, earned, checkInRate, byEvent } = summary;
   const maxMonth = Math.max(...months.map((m) => m.total), 1);
-  const rows = data.events
+  const allRows = data.events
     .filter((e) => byEvent.has(e.id) || (range === 'all' && e.status !== 'draft'))
     .map((e) => {
       const s = byEvent.get(e.id);
-      return { e, s, total: s ? s.ticketRevenue + s.productRevenue + s.vendorRevenue : 0 };
+      return { e, s, total: eventTotal(s) };
     });
-  const hasActivity = earned > 0 || totals.ticketsSold > 0;
+  // By event filters
+  const nowMs = Date.now();
+  const q = evQuery.trim().toLowerCase();
+  const rows = allRows
+    .filter(({ e }) => !q || e.title.toLowerCase().includes(q) || (e.location_name ?? '').toLowerCase().includes(q))
+    .filter(({ e }) => {
+      if (evWhen === 'all') return true;
+      const end = new Date(e.end_date || e.start_date || 0).getTime();
+      return evWhen === 'upcoming' ? end >= nowMs : end < nowMs;
+    })
+    .filter(({ total, s }) => !evEarningOnly || total > 0 || (s?.ticketsSold ?? 0) > 0)
+    .sort((a, b) => evSort === 'earned' ? b.total - a.total : evSort === 'tickets' ? (b.s?.ticketsSold ?? 0) - (a.s?.ticketsSold ?? 0) : new Date(b.e.start_date || 0).getTime() - new Date(a.e.start_date || 0).getTime());
+  const hasActivity = earned > 0 || totals.ticketsSold > 0 || shopOrders.length > 0;
   const hasBookings = !!bk && (bk.paid.length > 0 || bk.upcoming.length > 0);
   const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 
@@ -72,20 +88,27 @@ export default function Earnings() {
         ))}
       </div>
 
-      {bk && hasBookings && (
-        <div className="mt-4 rounded-2xl bg-gradient-to-br from-marigold to-teal p-5 text-white">
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-90">Total earned on TapIN · {RANGE_LABELS[range].toLowerCase()}</p>
-          <p className="mt-1 font-display text-4xl font-extrabold">{money(earned + bk.earned)}</p>
-          <p className="mt-1 text-sm opacity-90">Events {money(earned)} · Bookings {money(bk.earned)}</p>
+      <div className="mt-4 rounded-2xl bg-gradient-to-br from-marigold to-teal p-5 text-white">
+        <p className="text-xs font-semibold uppercase tracking-wide opacity-90">Total earned on TapIN · {RANGE_LABELS[range].toLowerCase()}</p>
+        <p className="mt-1 font-display text-4xl font-extrabold">{money(earned + (bk?.earned ?? 0))}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+          {[['Events', eventsEarned, '#events'], ['Bookings', bk?.earned ?? 0, '#bookings'], ['Shop', shop, '#shop'], ['Tips', tips, '#events']].map(([label, value, href]) => (
+            <a key={label as string} href={href as string} className="rounded-xl bg-white/15 px-3 py-2 hover:bg-white/25">
+              <span className="block text-xs opacity-90">{label as string}</span>
+              <span className="block font-semibold">{money(value as number)}</span>
+            </a>
+          ))}
         </div>
-      )}
+        {bk && bk.upcomingTotal > 0 && <p className="mt-2 text-xs opacity-90">Plus {money(bk.upcomingTotal)} in accepted bookings not paid yet.</p>}
+      </div>
 
-      <h2 className="mt-6 font-display text-xl font-bold text-bone">From your events</h2>
+      <h2 id="events" className="mt-6 scroll-mt-20 font-display text-xl font-bold text-bone">From your events</h2>
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat big label={`Earned from events · ${RANGE_LABELS[range].toLowerCase()}`} value={money(earned)} sub="Before Stripe payouts. Buyer service fees aren't included." />
+        <Stat big label={`Earned from events · ${RANGE_LABELS[range].toLowerCase()}`} value={money(eventsEarned)} sub="Before Stripe payouts. Buyer service fees aren't included." />
         <Stat label="Ticket sales" value={money(totals.ticketRevenue)} sub={`${totals.paidTickets} paid ticket${totals.paidTickets === 1 ? '' : 's'}`} />
         <Stat label="Merch & shipping" value={money(totals.productRevenue)} />
         <Stat label="Vendor fees" value={money(totals.vendorRevenue)} />
+        <Stat label="Donations & support" value={money(totals.donationRevenue)} sub="What you receive, after refunds" />
         <Stat label="Tips" value={money(tips)} sub="From your videos" />
         <Stat label="Tickets & registrations" value={String(totals.ticketsSold)} sub={`${totals.paidTickets} paid · ${totals.freeRegistrations} free`} />
         <Stat label="Check-in rate" value={checkInRate === null ? '—' : `${Math.round(checkInRate * 100)}%`} sub={checkInRate === null ? 'After your events start' : 'Ticket holders who showed up'} />
@@ -137,6 +160,24 @@ export default function Earnings() {
         </section>
       )}
 
+      {shopOrders.length > 0 && (
+        <section id="shop" className="mt-8 scroll-mt-20">
+          <h2 className="font-display text-xl font-bold text-bone">From your shop</h2>
+          <p className="text-sm text-muted">Products sold from your artist or resource profile (including shipping).</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat big label={`Shop sales · ${RANGE_LABELS[range].toLowerCase()}`} value={money(shop)} sub={`${shopOrders.length} order${shopOrders.length === 1 ? '' : 's'}`} />
+          </div>
+          <ul className="mt-3 flex flex-col gap-2">
+            {shopOrders.slice(0, 20).map((o) => (
+              <li key={o.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                <span className="min-w-0"><span className="block truncate font-medium text-gray-900">{(o.items ?? []).map((i) => i.item_name).filter(Boolean).join(', ') || 'Order'}</span><span className="text-xs text-gray-500">{o.customer_name || o.customer_email} · {fmtDate(o.created_at)}</span></span>
+                <span className="shrink-0 font-semibold text-gray-900">{money(shopAmount(o))}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {bk && bk.costRows.length > 0 && (
         <section className="mt-8">
           <h2 className="font-display text-xl font-bold text-bone">Booking costs</h2>
@@ -146,7 +187,7 @@ export default function Earnings() {
           </div>
           <ul className="mt-3 flex flex-col gap-2">
             {bk.costRows.map((c) => {
-              const eventEarned = c.event_id ? (byEvent.get(c.event_id) ? (byEvent.get(c.event_id)!.ticketRevenue + byEvent.get(c.event_id)!.productRevenue + byEvent.get(c.event_id)!.vendorRevenue) : 0) : 0;
+              const eventEarned = c.event_id ? eventTotal(byEvent.get(c.event_id)) : 0;
               const eventCosts = c.event_id ? bk.costByEvent.get(c.event_id) ?? 0 : 0;
               return (
                 <li key={c.booking_id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm">
@@ -167,8 +208,25 @@ export default function Earnings() {
 
       <div className="mt-6">
         <h2 className="font-display text-xl font-bold text-bone">By event</h2>
+        {allRows.length > 0 && (
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <input value={evQuery} onChange={(e) => setEvQuery(e.target.value)} placeholder="Search events" aria-label="Search events"
+              className="min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:w-56 sm:text-sm" />
+            <div className="flex flex-wrap gap-1.5">
+              {([['all', 'All'], ['upcoming', 'Upcoming'], ['past', 'Past']] as const).map(([k, l]) => (
+                <button key={k} onClick={() => setEvWhen(k)} className={`rounded-full px-3 py-1.5 text-sm font-medium ${evWhen === k ? 'bg-marigold text-white' : 'bg-gray-100 text-muted hover:bg-gray-200'}`}>{l}</button>
+              ))}
+            </div>
+            <select value={evSort} onChange={(e) => setEvSort(e.target.value as typeof evSort)} aria-label="Sort events" className="rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-700">
+              <option value="newest">Newest first</option>
+              <option value="earned">Highest earned</option>
+              <option value="tickets">Most tickets</option>
+            </select>
+            <label className="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" checked={evEarningOnly} onChange={(e) => setEvEarningOnly(e.target.checked)} className="h-4 w-4 accent-marigold" /> With sales only</label>
+          </div>
+        )}
         {rows.length === 0 ? (
-          <p className="mt-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-muted">No sales or registrations {range === 'all' ? 'yet' : 'in this period'}.</p>
+          <p className="mt-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-muted">{allRows.length > 0 ? 'No events match these filters.' : `No sales or registrations ${range === 'all' ? 'yet' : 'in this period'}.`}</p>
         ) : (
           <>
             {/* Phones: cards. Wider screens: a table. */}
@@ -184,7 +242,7 @@ export default function Earnings() {
                     {e.status === 'cancelled' && ' · Cancelled'}
                   </p>
                   <p className="mt-1 text-sm text-gray-600">
-                    {s?.ticketsSold ?? 0}{e.max_capacity ? ` / ${e.max_capacity}` : ''} tickets · {s?.checkedIn ?? 0} checked in
+                    {s?.ticketsSold ?? 0}{e.max_capacity ? ` / ${e.max_capacity}` : ''} tickets · {s?.checkedIn ?? 0} checked in{(s?.donationRevenue ?? 0) > 0 ? ` · ${money(s!.donationRevenue)} gifts` : ''}
                   </p>
                 </Link>
               ))}
@@ -199,6 +257,7 @@ export default function Earnings() {
                     <th className="px-4 py-2.5 text-right font-semibold">Tickets $</th>
                     <th className="px-4 py-2.5 text-right font-semibold">Merch $</th>
                     <th className="px-4 py-2.5 text-right font-semibold">Vendors $</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Gifts $</th>
                     <th className="px-4 py-2.5 text-right font-semibold">Total</th>
                   </tr>
                 </thead>
@@ -217,6 +276,7 @@ export default function Earnings() {
                       <td className="px-4 py-2.5 text-right text-gray-700">{money(s?.ticketRevenue ?? 0)}</td>
                       <td className="px-4 py-2.5 text-right text-gray-700">{money(s?.productRevenue ?? 0)}</td>
                       <td className="px-4 py-2.5 text-right text-gray-700">{money(s?.vendorRevenue ?? 0)}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-700">{money(s?.donationRevenue ?? 0)}</td>
                       <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{money(total)}</td>
                     </tr>
                   ))}
@@ -227,7 +287,7 @@ export default function Earnings() {
         )}
       </div>
       <p className="mt-4 text-xs text-muted">
-        Earnings show what buyers paid for your tickets and products (including shipping), vendor fees, and tips. Stripe sends payouts to your bank on its own schedule. Only events you organize are included.
+        Earnings show what you keep from tickets and products (including shipping), vendor fees, donations and support (after refunds and any fees deducted), bookings, shop sales from your artist or resource profile, and tips. Buyer service fees aren't included. Stripe sends payouts to your bank on its own schedule.
       </p>
     </div>
   );
