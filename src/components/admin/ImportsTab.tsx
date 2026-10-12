@@ -48,7 +48,12 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
   const load = useCallback(async () => {
     const [{ data: s }, { data: f }] = await Promise.all([
       supabase.from('event_sources').select('*').order('created_at'),
-      supabase.from('imported_events').select('*').eq('status', view).gte('start_date', view === 'pending' || view === 'duplicate' ? new Date().toISOString() : '1970-01-01').order(view === 'pending' ? 'start_date' : 'found_at', { ascending: view === 'pending' }).limit(200),
+      // To review, Already listed and Skipped only show events that haven't ended yet
+      // (ended ones are cleaned up automatically a week later). Published keeps its history.
+      (view === 'approved'
+        ? supabase.from('imported_events').select('*').eq('status', view)
+        : supabase.from('imported_events').select('*').eq('status', view).or(`end_date.gte.${new Date().toISOString()},and(end_date.is.null,start_date.gte.${new Date(Date.now() - 6 * 3600000).toISOString()})`)
+      ).order(view === 'pending' ? 'start_date' : 'found_at', { ascending: view === 'pending' }).limit(200),
     ]);
     setSources((s ?? []) as Source[]);
     setFound((f ?? []) as Found[]);
@@ -199,7 +204,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         </div>
         {view === 'pending' && <p className="mt-1 text-xs text-muted">Published events show "Listed from [source]," send people to the original page for tickets, and include a "Claim this event" link for the real organizer. Images aren't copied from other sites (except Ticketmaster).</p>}
         {found === null ? <p className="mt-3 text-sm text-muted">Loading…</p> : found.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each morning’s check (or tap Check all now).' : 'Nothing here.'}</p>
+          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each morning’s check (or tap Check all now).' : view === 'skipped' ? 'Nothing skipped for upcoming events. Skipped events disappear once they’re over.' : 'Nothing here.'}</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {found.map((f) => (
