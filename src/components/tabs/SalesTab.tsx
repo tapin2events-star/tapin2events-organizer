@@ -20,7 +20,7 @@ export default function SalesTab({ eventId }: { eventId: string }) {
     (async () => {
       const { data } = await supabase
         .from('tickets')
-        .select('*')
+        .select('*, tier:event_ticket_tiers(name)')
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
       setTickets((data ?? []) as Ticket[]);
@@ -126,7 +126,7 @@ export default function SalesTab({ eventId }: { eventId: string }) {
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-bone">{t.attendee_email}</p>
+                <p className="truncate text-sm font-medium text-bone">{t.attendee_email}{(t as { tier?: { name?: string } | null }).tier?.name ? <span className="ml-1.5 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">{(t as { tier?: { name?: string } | null }).tier?.name}</span> : null}</p>
                 <p className="text-xs text-muted">
                   {t.ticket_type} · Qty {t.quantity}
                   {t.section_name ? ` · ${t.section_name}` : ''}

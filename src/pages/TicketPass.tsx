@@ -20,6 +20,7 @@ interface PassData {
     attendee_email: string;
     section_name: string | null;
     seat_assignment: string | null;
+    tier_name?: string | null;
   };
   event: {
     title: string;
@@ -118,7 +119,7 @@ export default function TicketPass() {
           )}
           <div className="p-6">
             <p className="text-xs uppercase tracking-widest text-gray-400">
-              {ticket.ticket_type === 'series_pass' ? 'Series Pass' : 'Event Ticket'}
+              {ticket.ticket_type === 'series_pass' ? 'Series Pass' : ticket.tier_name ? ticket.tier_name : 'Event Ticket'}
             </p>
             <h1 className="mt-1 font-display text-xl font-bold text-gray-900">{event.title}</h1>
 

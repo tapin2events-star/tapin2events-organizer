@@ -124,7 +124,7 @@ export default function MyActivity() {
     (async () => {
       const { data: ticketRows, error: ticketsError } = await supabase
         .from('tickets')
-        .select('id, event_id, ticket_type, status, price_paid, quantity, section_name, seat_assignment, attendee_email')
+        .select('id, event_id, ticket_type, status, price_paid, quantity, section_name, seat_assignment, attendee_email, tier:event_ticket_tiers(name)')
         .eq('attendee_email', user.email)
         .order('created_at', { ascending: false });
 
@@ -144,6 +144,7 @@ export default function MyActivity() {
         id: t.id,
         event_id: t.event_id,
         ticket_type: t.ticket_type,
+        tier_name: t.tier?.name ?? null,
         status: t.status,
         price_paid: t.price_paid,
         quantity: t.quantity,
@@ -366,7 +367,7 @@ export default function MyActivity() {
                         </p>
                         <p>{t.event_is_online ? 'Virtual event' : (t.event_location_name || 'Venue TBD')}</p>
                         <p>
-                          {t.ticket_type === 'series_pass' ? 'Series pass' : t.ticket_type === 'seated' ? 'Reserved seat' : t.ticket_type === 'vip' ? 'VIP' : t.ticket_type === 'early_bird' ? 'Early bird' : 'General admission'} &middot; Qty {t.quantity}
+                          {(t as { tier_name?: string | null }).tier_name ? (t as { tier_name?: string | null }).tier_name : t.ticket_type === 'series_pass' ? 'Series pass' : t.ticket_type === 'seated' ? 'Reserved seat' : t.ticket_type === 'vip' ? 'VIP' : t.ticket_type === 'early_bird' ? 'Early bird' : 'General admission'} &middot; Qty {t.quantity}
                           {t.price_paid > 0 ? ` \u00b7 $${t.price_paid}` : ' \u00b7 Free'}
                           {(t.section_name || t.seat_assignment) && ` \u00b7 ${seatText(t.section_name, t.seat_assignment)}`}
                         </p>
