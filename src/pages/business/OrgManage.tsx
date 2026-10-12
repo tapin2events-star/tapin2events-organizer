@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import EarlyAccessBadge from '../../components/business/EarlyAccessBadge';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -64,6 +65,11 @@ function OrgManageInner() {
         {org.logo_url ? <img src={org.logo_url} alt="" className="h-14 w-14 rounded-2xl object-cover" /> : <span className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white" style={{ background: org.brand.primary }}>{org.name.charAt(0)}</span>}
         <div className="min-w-0">
           <h1 className="truncate font-display text-2xl font-extrabold text-bone">{org.name}{org.verified && <span className="ml-1.5 text-[#C9A227]" title="Verified">✓</span>}</h1>
+          {(org as Organization & { founding_number?: number | null }).founding_number ? (
+            <p className="mt-1 inline-flex flex-wrap items-center gap-1 rounded-full bg-[#C9A227]/15 px-2.5 py-0.5 text-xs font-semibold text-[#8a6d12]">
+              🎉 Founding member #{(org as Organization & { founding_number?: number | null }).founding_number} · 40% off the Business plan for life
+            </p>
+          ) : null}
           <p className="break-words text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · you're {role === 'owner' ? 'the owner' : `an ${role}`} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
         </div>
       </div>
@@ -133,12 +139,12 @@ function BrandTab({ org, canEdit, onSave }: { org: Organization; canEdit: boolea
             </label>
           ))}
         </div>
-        <label className="text-xs font-medium text-gray-500">Font
+        <label className="text-xs font-medium text-gray-500"><span className="flex flex-wrap items-center gap-1.5">Font <EarlyAccessBadge /></span>
           <select disabled={!canEdit} value={b.font} onChange={(e) => setB({ ...b, font: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900">
             {BRAND_FONTS.map((f) => <option key={f}>{f}</option>)}
           </select>
         </label>
-        <div className="text-xs font-medium text-gray-500">Page style
+        <div className="text-xs font-medium text-gray-500"><span className="flex flex-wrap items-center gap-1.5">Page style <EarlyAccessBadge /></span>
           <div className="mt-1 grid grid-cols-2 gap-2">
             {(['light', 'dark'] as const).map((t) => (
               <button key={t} disabled={!canEdit} onClick={() => setB({ ...b, theme: t })} className={`rounded-xl border px-3 py-2.5 text-sm font-medium ${b.theme === t ? 'border-[#C9A227] bg-[#C9A227]/10 text-gray-900' : 'border-gray-200 bg-white text-gray-600'}`}>{t === 'light' ? 'Light' : 'Dark'}</button>

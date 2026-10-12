@@ -8,7 +8,7 @@ export interface Organization {
   website: string | null; contact_email: string | null; city: string | null; state: string | null;
   logo_url: string | null; cover_url: string | null; brand: Brand; verified: boolean; status: string; created_by: string | null;
 }
-export interface MyOrg { id: string; name: string; slug: string; kind: OrgKind; logo_url: string | null; brand: Brand; role: 'owner' | 'admin' | 'member'; verified: boolean }
+export interface MyOrg { id: string; name: string; slug: string; kind: OrgKind; logo_url: string | null; brand: Brand; role: 'owner' | 'admin' | 'member'; verified: boolean; founding_number: number | null }
 export interface Session { id: string; event_id: string; title: string; description: string | null; kind: string; starts_at: string | null; ends_at: string | null; room: string | null; track: string | null; capacity: number | null; sort_order: number }
 export interface Speaker { id: string; event_id: string; name: string; title: string | null; company: string | null; bio: string | null; photo_url: string | null; resource_id: string | null; link: string | null; featured: boolean; sort_order: number }
 export interface Sponsor { id: string; event_id: string; name: string; tier: string; logo_url: string | null; website: string | null; sort_order: number }

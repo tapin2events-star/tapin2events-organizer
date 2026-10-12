@@ -26,6 +26,8 @@ function BusinessHomeInner() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { if (user) loadMyOrgs().then(setOrgs); else setOrgs([]); }, [user]);
+  const [spotsLeft, setSpotsLeft] = useState<number | null>(null);
+  useEffect(() => { supabase.rpc('founding_spots_left').then(({ data }) => setSpotsLeft(typeof data === 'number' ? data : null)); }, []);
 
   async function create(e: FormEvent) {
     e.preventDefault();
@@ -45,6 +47,11 @@ function BusinessHomeInner() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business</p>
         <h1 className="mt-3 max-w-2xl font-display text-4xl font-extrabold leading-tight sm:text-5xl">Professional events, without the enterprise price.</h1>
         <p className="mt-4 max-w-xl text-base text-white/80">Conferences, summits, galas, workshops and fundraisers with agendas, speakers, sponsors and branded pages, on the same TapIN your community already uses.</p>
+        {spotsLeft !== null && spotsLeft > 0 && (
+          <p className="mt-5 inline-block rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white">
+            🎉 <strong style={{ color: GOLD }}>Founding members:</strong> {spotsLeft} of 20 spots left. Create your organization now, use everything free during early access, and get <strong>40% off the Business plan for life</strong>.
+          </p>
+        )}
         <div className="mt-6 flex flex-wrap gap-3">
           <button onClick={() => setCreating(true)} className="rounded-full px-6 py-3 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>Create your organization</button>
           <a href="#features" className="rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white">See what's included</a>
@@ -63,7 +70,7 @@ function BusinessHomeInner() {
                     {o.logo_url ? <img src={o.logo_url} alt="" className="h-12 w-12 rounded-xl object-cover" /> : <span className="flex h-12 w-12 items-center justify-center rounded-xl font-bold text-white" style={{ background: o.brand.primary }}>{o.name.charAt(0)}</span>}
                     <span className="min-w-0">
                       <span className="block truncate font-semibold text-bone">{o.name}{o.verified && <span className="ml-1 text-[#C9A227]" title="Verified">✓</span>}</span>
-                      <span className="block text-xs text-muted">{o.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · {o.role}</span>
+                      <span className="block text-xs text-muted">{o.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · {o.role}{o.founding_number ? ` · Founding member #${o.founding_number}` : ''}</span>
                     </span>
                   </Link>
                 </li>
@@ -122,7 +129,22 @@ function BusinessHomeInner() {
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-muted">Coming next: ticket tiers and promo codes, registration questions, donations and fundraising goals, networking, invoices, and white-label pages.</p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ['Ticket tiers & promo codes', 'General, VIP, Early Bird, comps and discount codes.'],
+              ['Registration questions & approval', 'Ask what you need to know; approve who attends.'],
+              ['Donations & support', 'Goal bar, "cover the fees", receipts and supporter wall.'],
+            ].map(([t, d]) => (
+              <div key={t} className="rounded-2xl border border-gray-200 bg-surface p-4"><p className="font-semibold text-bone">{t}</p><p className="mt-1 text-sm text-muted">{d}</p></div>
+            ))}
+          </div>
+          <h3 className="mt-8 font-display text-lg font-bold text-bone">Coming soon</h3>
+          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+            {['Designed page templates', 'Networking directory', 'Invoices & pay-by-invoice', 'Analytics', 'Workshop sign-ups, gala tables & volunteer shifts', 'Boost credit for promoting your events', 'White-label pages (add-on)'].map((t) => (
+              <li key={t} className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-bone"><span className="text-[#C9A227]">★</span>{t}</li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-muted">Core tools (organization pages, business event pages, tickets, registration, donations) stay free. Premium tools will be part of the Business plan; founding members get 40% off for life.</p>
         </section>
       </div>
     </div>
