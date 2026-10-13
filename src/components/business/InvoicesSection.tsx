@@ -51,7 +51,7 @@ export default function InvoicesSection({ eventId, ticketPrice, sections }: { ev
   };
 
   return (
-    <section className="mt-10">
+    <section className={sections ? '' : 'mt-10'}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">🧾 Invoices <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>

@@ -280,10 +280,10 @@ export default function EventDetail() {
       {tab === 'Registration' && <RegistrationTab event={event} onEventChange={setEvent} />}
       {tab === 'Donations' && <DonationsTab event={event} onEventChange={setEvent} />}
       {tab === 'Lineup & bookings' && <LineupWithScouting event={event} isOwner={isOwner} eventId={id!} initialView={tabParam === 'Bookings' ? 'bookings' : undefined} />}
-      {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
       {tab === 'Ticket Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
-        <InvoicesSection eventId={id!} ticketPrice={0} sections={(event.seating_sections ?? []).map((s) => ({ name: s.name, price: Number(s.price) || 0, seats: (s.num_tables ?? 0) * (s.seats_per_table ?? 0) }))} />
+        <div className="mb-8"><InvoicesSection eventId={id!} ticketPrice={0} sections={(event.seating_sections ?? []).map((s) => ({ name: s.name, price: Number(s.price) || 0, seats: (s.num_tables ?? 0) * (s.seats_per_table ?? 0) }))} /></div>
       )}
+      {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (
         <>
