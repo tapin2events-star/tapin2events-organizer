@@ -69,6 +69,15 @@ function addMonthsClamped(date: Date, months: number): Date {
   return d;
 }
 
+// How tickets are sold: one choice, so options can't conflict.
+type SellMode = 'single' | 'tiers' | 'seating' | 'external';
+const SELL_MODES: { id: SellMode; icon: string; label: string; desc: string }[] = [
+  { id: 'single', icon: '🎟️', label: 'One price', desc: 'Everyone pays the same, or it\u2019s free' },
+  { id: 'tiers', icon: '🏷️', label: 'Ticket types', desc: 'General, VIP, Early Bird, Student\u2026' },
+  { id: 'seating', icon: '💺', label: 'Reserved seating', desc: 'Sections and seats people pick from' },
+  { id: 'external', icon: '🔗', label: 'Sold elsewhere', desc: 'Link to Eventbrite or another site' },
+];
+
 export default function EventForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -123,6 +132,7 @@ export default function EventForm() {
   const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([]);
   const [sponsorTiers, setSponsorTiers] = useState<SponsorTier[]>([]);
   const [seatingEnabled, setSeatingEnabled] = useState(false);
+  const [externalChosen, setExternalChosen] = useState(false);
   const [seatingSections, setSeatingSections] = useState<{ name: string; price: number; num_tables: number; seats_per_table: number; total_seats: number; color: string; bundle_enabled: boolean; bundle_price: number; bundle_description: string; bundle_product_id: string | null }[]>([]);
   const [eventProducts, setEventProducts] = useState<{ id: string; name: string }[]>([]);
   const [posterFile, setPosterFile] = useState<File | null>(null);
@@ -154,6 +164,16 @@ export default function EventForm() {
   // Donations (nonprofit events, preview).
   const [donationForm, setDonationForm] = useState<DonationForm>(DEFAULT_DONATION_FORM);
   const [tierDrafts, setTierDrafts] = useState<TierDraft[]>([]);
+  // Which "How will you sell tickets?" card is selected (derived from the saved settings).
+  const sellMode: SellMode = externalChosen || externalTicketUrl.trim() ? 'external' : seatingEnabled ? 'seating' : useTiers ? 'tiers' : 'single';
+  function chooseSellMode(m: SellMode) {
+    setExternalChosen(m === 'external');
+    if (m !== 'external') setExternalTicketUrl('');
+    setSeatingEnabled(m === 'seating');
+    setUseTiers(m === 'tiers');
+    if (m === 'tiers' && tierDrafts.length === 0) setTierDrafts([newDraft('General Admission', eventType === 'free' ? '' : ticketPrice !== '0' ? ticketPrice : '')]);
+    if (m === 'seating' && eventType === 'free') setEventType('paid');
+  }
   // Promo codes typed into the form before the event exists (new events only).
   const [pendingCodes, setPendingCodes] = useState<PendingCode[]>([]);
   const [tierOriginalIds, setTierOriginalIds] = useState<string[]>([]);
@@ -850,29 +870,43 @@ export default function EventForm() {
               </Field>
             </div>
 
+            {/* How will you sell tickets? One clear choice; each shows only its own settings. */}
+            <div>
+              <p className="text-sm font-medium text-bone">How will you sell tickets?</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4" role="radiogroup" aria-label="How will you sell tickets?">
+                {SELL_MODES.map((m) => (
+                  <button key={m.id} type="button" role="radio" aria-checked={sellMode === m.id} onClick={() => chooseSellMode(m.id)}
+                    className={`flex min-h-[88px] flex-col items-start rounded-2xl border p-3 text-left transition ${sellMode === m.id ? 'border-marigold bg-marigold/5 ring-2 ring-marigold/30' : 'border-gray-200 bg-white hover:border-gray-400'}`}>
+                    <span className="text-xl leading-none" aria-hidden="true">{m.icon}</span>
+                    <span className="mt-1.5 text-sm font-semibold text-gray-900">{m.label}</span>
+                    <span className="mt-0.5 text-xs leading-snug text-gray-500">{m.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {eventType !== 'free' && !(businessOn && useTiers && !seatingEnabled) && (
+              {sellMode === 'single' && eventType !== 'free' && (
                 <Field label="Ticket price ($)">
                   <input type="number" min="0" step="0.01" value={ticketPrice} onChange={(e) => setTicketPrice(e.target.value)} className={inputClass} />
                 </Field>
               )}
-              <Field label="Max capacity">
-                <input type="number" min="0" value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} className={inputClass} />
-              </Field>
+              {(sellMode === 'single' || sellMode === 'tiers') && (
+                <Field label="Max capacity">
+                  <input type="number" min="0" value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} className={inputClass} />
+                </Field>
+              )}
             </div>
 
-            {businessOn && !seatingEnabled && !externalTicketUrl.trim() && (
+            {sellMode === 'tiers' && (
               <div className="-mx-1 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-3 sm:mx-0 sm:p-4">
-                <label className="flex items-start gap-3 text-sm text-bone">
-                  <input type="checkbox" checked={useTiers} onChange={(e) => { setUseTiers(e.target.checked); if (e.target.checked && tierDrafts.length === 0) setTierDrafts([newDraft('General Admission', eventType === 'free' ? '' : ticketPrice !== '0' ? ticketPrice : '')]); }} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-                  <span><strong>Offer multiple ticket types</strong>
-                    <span className="block text-xs text-muted">General, VIP, Early Bird and more, each with its own price, quantity and sales dates. Free and paid types can be mixed.</span></span>
-                </label>
-                {useTiers && <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
+                <p className="text-sm font-semibold text-bone">Ticket types</p>
+                <p className="text-xs text-muted">Each with its own price, quantity and sales dates. Free and paid types can be mixed.</p>
+                <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />
               </div>
             )}
 
-            {!seatingEnabled && !externalTicketUrl.trim() && (eventType !== 'free' || (useTiers && tierDrafts.some((d) => Number(d.price) > 0))) && (
+            {((sellMode === 'single' && eventType !== 'free') || (sellMode === 'tiers' && tierDrafts.some((d) => Number(d.price) > 0))) && (
               isEdit && id
                 ? <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4"><PromoCodes eventId={id} tiers={[]} /></div>
                 : <FormPromoCodes codes={pendingCodes} onChange={setPendingCodes} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />
@@ -880,7 +914,7 @@ export default function EventForm() {
 
             {businessOn && eventKind !== 'business' && <DonationSettings nonprofit={eventKind === 'nonprofit'} value={donationForm} onChange={setDonationForm} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
 
-            <Field label="Tickets sold elsewhere? (optional)">
+            {sellMode === 'external' && <Field label="Ticket link">
               <input
                 value={externalTicketUrl}
                 onChange={(e) => setExternalTicketUrl(e.target.value)}
@@ -897,19 +931,12 @@ export default function EventForm() {
               ) : (
                 <p className="mt-1 text-xs text-muted">Paste your Eventbrite or ticket link to send people there instead of selling tickets on TapIN.</p>
               )}
-            </Field>
+            </Field>}
 
-            <div className="border-t border-gray-200 pt-4">
-              {eventType === 'free' ? (
-                <p className="text-sm text-muted">
-                  Reserved seating sections are available for Paid or Private events — switch the Type above to enable this.
-                </p>
-              ) : (
+            <div className={sellMode === 'seating' ? '' : 'hidden'}>
+              {(
                 <>
-                  <label className="flex items-center gap-2 text-sm text-muted">
-                    <input type="checkbox" checked={seatingEnabled} onChange={(e) => setSeatingEnabled(e.target.checked)} />
-                    Use reserved seating sections instead of one flat price
-                  </label>
+                  <p className="text-sm font-semibold text-bone">💺 Reserved seating sections</p>
 
                 {seatingEnabled && (
                   <div className="mt-3 flex flex-col gap-3">
