@@ -29,7 +29,7 @@ function Chip({ ok, label, to, neutral = false }: { ok: boolean; label: string; 
 
 // Planning: what needs attention across your upcoming events, drafts, tasks and scouting.
 type View = 'all' | 'events' | 'drafts' | 'tasks' | 'team' | 'scouting';
-const VIEWS: View[] = ['all', 'team', 'events', 'drafts', 'tasks', 'scouting'];
+const VIEWS: View[] = ['all', 'team', 'scouting', 'drafts', 'events', 'tasks'];
 
 export default function Planning() {
   const { user } = useAuth();
@@ -76,10 +76,10 @@ export default function Planning() {
   const tabs: { v: View; label: string; count?: number; alert?: number }[] = [
     { v: 'all', label: 'Overview' },
     { v: 'team', label: 'Team' },
-    { v: 'events', label: 'Events', count: allUpcoming.length, alert: needsCount },
-    { v: 'drafts', label: 'Drafts', count: (events ?? []).filter((e) => e.status === 'draft').length },
-    { v: 'tasks', label: 'Tasks', count: tasks.length, alert: overdueCount },
     { v: 'scouting', label: 'Scouting', count: boards.length },
+    { v: 'drafts', label: 'Drafts', count: (events ?? []).filter((e) => e.status === 'draft').length },
+    { v: 'events', label: 'Events', count: allUpcoming.length, alert: needsCount },
+    { v: 'tasks', label: 'Tasks', count: tasks.length, alert: overdueCount },
   ];
 
   return (
@@ -113,10 +113,10 @@ export default function Planning() {
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {[
             { v: 'team' as View, n: busiest ? busiest.overdue : 0, label: busiest ? `overdue for ${busiest.name}` : 'teammates behind', warn: !!busiest },
-            { v: 'events' as View, n: needsCount, label: needsCount === 1 ? 'event needs attention' : 'events need attention', warn: needsCount > 0 },
-            { v: 'drafts' as View, n: (events ?? []).filter((e) => e.status === 'draft').length, label: 'drafts to finish', warn: false },
-            { v: 'tasks' as View, n: overdueCount, label: overdueCount === 1 ? 'overdue task' : 'overdue tasks', warn: overdueCount > 0 },
             { v: 'scouting' as View, n: boards.length, label: boards.length === 1 ? 'scouting board' : 'scouting boards', warn: false },
+            { v: 'drafts' as View, n: (events ?? []).filter((e) => e.status === 'draft').length, label: 'drafts to finish', warn: false },
+            { v: 'events' as View, n: needsCount, label: needsCount === 1 ? 'event needs attention' : 'events need attention', warn: needsCount > 0 },
+            { v: 'tasks' as View, n: overdueCount, label: overdueCount === 1 ? 'overdue task' : 'overdue tasks', warn: overdueCount > 0 },
           ].map((tile) => (
             <button key={tile.v} onClick={() => { if (tile.v === 'events' && tile.n > 0) setNeedsOnly(true); setView(tile.v); }}
               className={`rounded-2xl border p-3 text-left ${tile.warn ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-surface'}`}>
@@ -125,6 +125,57 @@ export default function Planning() {
             </button>
           ))}
         </div>
+      )}
+
+      {/* Team */}
+      {view === 'team' && (
+        <section className="mt-6">
+          <PlanningTeam query={query} tasks={tasks} events={(events ?? []).filter((e) => e.is_owner)} onChanged={() => setReloadKey((k) => k + 1)} />
+        </section>
+      )}
+
+      {/* Scouting */}
+      {show('scouting') && (
+      <section className="mt-8 mb-6">
+        <div className="flex items-end justify-between gap-3">
+          <h2 className="font-display text-xl font-bold text-bone">Scouting boards</h2>
+          <Link to="/organizer/scouting" className="text-sm font-medium text-marigold">All boards ›</Link>
+        </div>
+        <p className="text-sm text-muted">Keep a running list of artists you'd love to book. When a show takes shape, open the board and choose <strong>Start an event</strong>.</p>
+        {shownBoards.length === 0 && boards.length > 0 ? <p className="mt-3 text-sm text-muted">No boards match.</p> : boards.length === 0 ? (
+          <Link to="/organizer/scouting" className="mt-3 block rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm font-medium text-marigold">+ Start a scouting board</Link>
+        ) : (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {shownBoards.map((b) => (
+              <Link key={b.id} to={`/organizer/scouting/${b.id}`} className="rounded-xl border border-gray-200 bg-surface p-3 hover:border-marigold">
+                <span className="block truncate font-medium text-bone">{b.name}</span>
+                <span className="text-xs text-muted">{Number(b.card_count ?? 0)} artist{Number(b.card_count ?? 0) === 1 ? '' : 's'}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+      )}
+      {/* Drafts */}
+      {show('drafts') && (view === 'drafts' || drafts.length > 0) && (
+        <section className="mt-8">
+          <h2 className="font-display text-xl font-bold text-bone">Drafts to finish</h2>
+          {drafts.length === 0 && <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{q ? 'No drafts match.' : 'No drafts. Everything you started is published.'}</p>}
+          <ul className="mt-3 flex flex-col gap-2">
+            {drafts.map((e) => {
+              const missing = [!e.has_date && 'date', !e.has_location && 'location', !e.has_photo && 'photo', !e.has_details && 'description', !e.tickets_ready && 'tickets'].filter(Boolean) as string[];
+              return (
+                <li key={e.id}><Link to={`/organizer/events/${e.id}/edit`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 hover:border-marigold">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-bone">{decode(e.title)}</span>
+                    <span className="text-xs text-muted">{missing.length ? `Still needs: ${missing.join(', ')}` : 'Ready to publish'}{e.prospects ? ` · ${e.prospects} scouted` : ''}</span>
+                  </span>
+                  <span className="shrink-0 text-sm font-medium text-marigold">{missing.length ? 'Finish ›' : 'Publish ›'}</span>
+                </Link></li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       {/* Event readiness */}
@@ -172,28 +223,6 @@ export default function Planning() {
       </section>
       )}
 
-      {/* Drafts */}
-      {show('drafts') && (view === 'drafts' || drafts.length > 0) && (
-        <section className="mt-8">
-          <h2 className="font-display text-xl font-bold text-bone">Drafts to finish</h2>
-          {drafts.length === 0 && <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{q ? 'No drafts match.' : 'No drafts. Everything you started is published.'}</p>}
-          <ul className="mt-3 flex flex-col gap-2">
-            {drafts.map((e) => {
-              const missing = [!e.has_date && 'date', !e.has_location && 'location', !e.has_photo && 'photo', !e.has_details && 'description', !e.tickets_ready && 'tickets'].filter(Boolean) as string[];
-              return (
-                <li key={e.id}><Link to={`/organizer/events/${e.id}/edit`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 hover:border-marigold">
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-bone">{decode(e.title)}</span>
-                    <span className="text-xs text-muted">{missing.length ? `Still needs: ${missing.join(', ')}` : 'Ready to publish'}{e.prospects ? ` · ${e.prospects} scouted` : ''}</span>
-                  </span>
-                  <span className="shrink-0 text-sm font-medium text-marigold">{missing.length ? 'Finish ›' : 'Publish ›'}</span>
-                </Link></li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
       {/* Tasks */}
       {show('tasks') && (
       <section className="mt-8">
@@ -228,35 +257,6 @@ export default function Planning() {
       </section>
       )}
 
-      {/* Team */}
-      {view === 'team' && (
-        <section className="mt-6">
-          <PlanningTeam query={query} tasks={tasks} events={(events ?? []).filter((e) => e.is_owner)} onChanged={() => setReloadKey((k) => k + 1)} />
-        </section>
-      )}
-
-      {/* Scouting */}
-      {show('scouting') && (
-      <section className="mt-8 mb-6">
-        <div className="flex items-end justify-between gap-3">
-          <h2 className="font-display text-xl font-bold text-bone">Scouting boards</h2>
-          <Link to="/organizer/scouting" className="text-sm font-medium text-marigold">All boards ›</Link>
-        </div>
-        <p className="text-sm text-muted">Keep a running list of artists you'd love to book. When a show takes shape, open the board and choose <strong>Start an event</strong>.</p>
-        {shownBoards.length === 0 && boards.length > 0 ? <p className="mt-3 text-sm text-muted">No boards match.</p> : boards.length === 0 ? (
-          <Link to="/organizer/scouting" className="mt-3 block rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm font-medium text-marigold">+ Start a scouting board</Link>
-        ) : (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {shownBoards.map((b) => (
-              <Link key={b.id} to={`/organizer/scouting/${b.id}`} className="rounded-xl border border-gray-200 bg-surface p-3 hover:border-marigold">
-                <span className="block truncate font-medium text-bone">{b.name}</span>
-                <span className="text-xs text-muted">{Number(b.card_count ?? 0)} artist{Number(b.card_count ?? 0) === 1 ? '' : 's'}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-      )}
     </div>
   );
 }
