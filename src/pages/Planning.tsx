@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PlanningTeam from '../components/planning/PlanningTeam';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -27,8 +28,8 @@ function Chip({ ok, label, to, neutral = false }: { ok: boolean; label: string; 
 }
 
 // Planning: what needs attention across your upcoming events, drafts, tasks and scouting.
-type View = 'all' | 'events' | 'drafts' | 'tasks' | 'scouting';
-const VIEWS: View[] = ['all', 'events', 'drafts', 'tasks', 'scouting'];
+type View = 'all' | 'events' | 'drafts' | 'tasks' | 'team' | 'scouting';
+const VIEWS: View[] = ['all', 'events', 'drafts', 'tasks', 'team', 'scouting'];
 
 export default function Planning() {
   const { user } = useAuth();
@@ -43,11 +44,19 @@ export default function Planning() {
   const [events, setEvents] = useState<PlanEvent[] | null>(null);
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [busiest, setBusiest] = useState<{ name: string; overdue: number } | null>(null);
+  useEffect(() => {
+    supabase.rpc('planning_people').then(({ data }) => {
+      const top = ((data ?? []) as { full_name: string | null; email: string; overdue_tasks: number }[]).find((p) => Number(p.overdue_tasks) > 0);
+      setBusiest(top ? { name: (top.full_name || top.email).split(' ')[0], overdue: Number(top.overdue_tasks) } : null);
+    });
+  }, [reloadKey]);
   useEffect(() => {
     supabase.rpc('planning_overview').then(({ data }) => setEvents(((data ?? []) as PlanEvent[])));
     supabase.rpc('planning_tasks').then(({ data }) => setTasks((data ?? []) as PlanTask[]));
     supabase.rpc('my_scout_boards').then(({ data }) => setBoards((data ?? []) as Board[]));
-  }, []);
+  }, [reloadKey]);
 
   const q = query.trim().toLowerCase();
   const matches = (t: string) => !q || decode(t).toLowerCase().includes(q);
@@ -69,6 +78,7 @@ export default function Planning() {
     { v: 'events', label: 'Events', count: allUpcoming.length, alert: needsCount },
     { v: 'drafts', label: 'Drafts', count: (events ?? []).filter((e) => e.status === 'draft').length },
     { v: 'tasks', label: 'Tasks', count: tasks.length, alert: overdueCount },
+    { v: 'team', label: 'Team' },
     { v: 'scouting', label: 'Scouting', count: boards.length },
   ];
 
@@ -100,12 +110,13 @@ export default function Planning() {
 
       {/* Overview: quick summary tiles */}
       {view === 'all' && events !== null && (
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {[
             { v: 'events' as View, n: needsCount, label: needsCount === 1 ? 'event needs attention' : 'events need attention', warn: needsCount > 0 },
             { v: 'drafts' as View, n: (events ?? []).filter((e) => e.status === 'draft').length, label: 'drafts to finish', warn: false },
             { v: 'tasks' as View, n: overdueCount, label: overdueCount === 1 ? 'overdue task' : 'overdue tasks', warn: overdueCount > 0 },
             { v: 'scouting' as View, n: boards.length, label: boards.length === 1 ? 'scouting board' : 'scouting boards', warn: false },
+            { v: 'team' as View, n: busiest ? busiest.overdue : 0, label: busiest ? `overdue for ${busiest.name}` : 'teammates behind', warn: !!busiest },
           ].map((tile) => (
             <button key={tile.v} onClick={() => { if (tile.v === 'events' && tile.n > 0) setNeedsOnly(true); setView(tile.v); }}
               className={`rounded-2xl border p-3 text-left ${tile.warn ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-surface'}`}>
@@ -215,6 +226,13 @@ export default function Planning() {
         )}
         {view === 'all' && shownTasks.length > 8 && <button onClick={() => setView('tasks')} className="mt-2 text-sm font-medium text-marigold">See all {shownTasks.length} tasks ›</button>}
       </section>
+      )}
+
+      {/* Team */}
+      {view === 'team' && (
+        <section className="mt-6">
+          <PlanningTeam query={query} tasks={tasks} events={(events ?? []).filter((e) => e.is_owner)} onChanged={() => setReloadKey((k) => k + 1)} />
+        </section>
       )}
 
       {/* Scouting */}
