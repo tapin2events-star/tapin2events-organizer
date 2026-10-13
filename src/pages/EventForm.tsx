@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import TemplatePicker from '../components/business/TemplatePicker';
+import type { EventTemplate } from '../lib/eventTemplates';
 import FormPromoCodes, { codeProblem, pendingRow, type PendingCode } from '../components/business/FormPromoCodes';
 import PromoCodes from '../components/business/PromoCodes';
 import DonationSettings, { DEFAULT_DONATION_FORM, donationPatch, type DonationForm } from '../components/business/DonationSettings';
@@ -163,6 +165,9 @@ export default function EventForm() {
   const [useTiers, setUseTiers] = useState(false);
   // Donations (nonprofit events, preview).
   const [donationForm, setDonationForm] = useState<DonationForm>(DEFAULT_DONATION_FORM);
+  // Event templates (Preview): the chosen template's questions and agenda are added after saving.
+  const templatesOn = useFeature('templates');
+  const [template, setTemplate] = useState<EventTemplate | null>(null);
   const [tierDrafts, setTierDrafts] = useState<TierDraft[]>([]);
   // Which "How will you sell tickets?" card is selected (derived from the saved settings).
   const sellMode: SellMode = externalChosen || externalTicketUrl.trim() ? 'external' : seatingEnabled ? 'seating' : useTiers ? 'tiers' : 'single';
@@ -174,6 +179,40 @@ export default function EventForm() {
     if (m === 'tiers' && tierDrafts.length === 0) setTierDrafts([newDraft('General Admission', eventType === 'free' ? '' : ticketPrice !== '0' ? ticketPrice : '')]);
     if (m === 'seating' && eventType === 'free') setEventType('paid');
   }
+  function applyTemplate(t: EventTemplate) {
+    const prev = template;
+    setTemplate(t);
+    setEventKind(t.kind);
+    setCategory(CATEGORIES.includes(t.category) ? t.category : CATEGORIES[0]);
+    if (!title.trim() || (prev && title === prev.title)) setTitle(t.title);
+    if (!description.trim() || (prev && description === prev.description)) setDescription(t.description);
+    // Date: keep the chosen day (or about 4 weeks out) at the template's usual time and length.
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const local = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const day = startDate ? new Date(startDate) : new Date(Date.now() + 28 * 86400000);
+    day.setHours(t.startHour, 0, 0, 0);
+    setStartDate(local(day));
+    setEndDate(local(new Date(day.getTime() + t.durationHours * 3600000)));
+    if (t.capacity) setMaxCapacity(t.capacity);
+    // Tickets
+    if (t.sell.mode === 'single') {
+      chooseSellMode('single');
+      setEventType(Number(t.sell.price) > 0 ? 'paid' : 'free');
+      setTicketPrice(t.sell.price);
+    } else if (t.sell.mode === 'tiers') {
+      const tiers = t.sell.tiers;
+      setExternalChosen(false); setExternalTicketUrl(''); setSeatingEnabled(false); setUseTiers(true);
+      setEventType(tiers.some((x) => Number(x.price) > 0) ? 'paid' : 'free');
+      setTierDrafts(tiers.map((x) => ({ ...newDraft(x.name, x.price), quantity: x.quantity ?? '', description: x.description ?? '' })));
+    } else {
+      const sections = t.sell.sections;
+      setExternalChosen(false); setExternalTicketUrl(''); setUseTiers(false); setSeatingEnabled(true);
+      setEventType('paid');
+      setSeatingSections(sections.map((x) => ({ ...x, total_seats: x.num_tables * x.seats_per_table, bundle_enabled: false, bundle_price: x.price, bundle_description: '', bundle_product_id: null })));
+    }
+    setDonationForm(t.donations ? { enabled: true, pitch: t.donations.pitch, goal: t.donations.goal, min: '5', presets: t.donations.presets, show: true } : DEFAULT_DONATION_FORM);
+  }
+
   // Promo codes typed into the form before the event exists (new events only).
   const [pendingCodes, setPendingCodes] = useState<PendingCode[]>([]);
   const [tierOriginalIds, setTierOriginalIds] = useState<string[]>([]);
@@ -634,6 +673,24 @@ export default function EventForm() {
 
     if (businessOn && !seatingEnabled && (useTiers || tierOriginalIds.length)) {
       const tierErr = await saveTierDrafts(data.id, tierDrafts, tierOriginalIds, tierSold, useTiers);
+      // Template extras (new events): registration questions and, for business/nonprofit events, the agenda.
+      if (!isEdit && template) {
+        if (template.questions?.length) {
+          const { error: qErr } = await supabase.from('event_questions').insert(template.questions.map((q, i) => ({
+            event_id: data.id, label: q.label, help: q.help ?? null, kind: q.kind, options: q.options ?? null, required: !!q.required, sort_order: i, active: true,
+          })));
+          if (qErr) console.error('[event form] template questions', qErr);
+        }
+        if (template.agenda?.length && eventKind !== 'community') {
+          const base = data.start_date ? new Date(data.start_date).getTime() : null;
+          const { error: aErr } = await supabase.from('event_sessions').insert(template.agenda.map((a, i) => ({
+            event_id: data.id, title: a.title, kind: a.kind, sort_order: i,
+            starts_at: base ? new Date(base + a.offsetMin * 60000).toISOString() : null,
+            ends_at: base ? new Date(base + (a.offsetMin + a.durationMin) * 60000).toISOString() : null,
+          })));
+          if (aErr) console.error('[event form] template agenda', aErr);
+        }
+      }
       // Promo codes added while creating the event (a first code on a single-price event turns
       // its price into a General Admission ticket type so checkout can apply it).
       if (!isEdit && pendingCodes.length > 0 && eventType !== 'free') {
@@ -685,6 +742,7 @@ export default function EventForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {step === 1 && (
           <>
+            {!isEdit && templatesOn && <TemplatePicker selected={template?.id ?? null} onPick={applyTemplate} />}
             {businessOn && <EventKindPicker kind={eventKind} onKind={setEventKind} orgId={orgId} onOrg={setOrgId} />}
             {!isEdit && quickOpen && (
               <div className="rounded-2xl border border-marigold/30 bg-marigold/5 p-4">
