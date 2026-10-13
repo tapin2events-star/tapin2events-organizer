@@ -205,7 +205,7 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
     const e = email.trim().toLowerCase();
     if (!EMAIL_RE.test(e)) return setMsg('Enter a valid email.');
     const { error } = await supabase.from('organization_members').insert({ org_id: orgId, user_email: e, role, added_by: me });
-    setMsg(error ? (/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them.") : 'Added. They can manage this organization once they sign in with that email.');
+    setMsg(error ? (/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them.") : `Added. We've emailed ${e} to let them know${role === 'admin' ? ' they can now manage this organization' : ''}.`);
     setEmail(''); load();
   }
   return (
