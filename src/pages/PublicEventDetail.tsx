@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NetworkingInvite } from '../components/business/NetworkingCards';
 import { MoreFromOrg, OrgHostedBy } from '../components/business/OrgHostedBy';
 import DonationCard from '../components/business/DonationCard';
 import RegistrationSheet from '../components/business/RegistrationSheet';
@@ -30,6 +31,7 @@ import CommunityPosts from '../components/discover/CommunityPosts';
 import { EventPageSkeleton } from '../components/ui/Skeleton';
 
 export default function PublicEventDetail() {
+  const networkingOn = useFeature('networking');
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { user, isAdmin } = useAuth();
@@ -831,6 +833,7 @@ export default function PublicEventDetail() {
           </div>
         )}
 
+        {networkingOn && id && <NetworkingInvite eventId={id} />}
         {donationsOn && <DonationCard event={event} recipient={biz.org?.name ?? organizerName ?? event.title} accent={biz.org?.brand.accent} />}
         {businessOn && biz.isBiz && <BusinessEventSections event={event} data={biz} />}
         {businessOn && biz.org && <MoreFromOrg org={biz.org} currentEventId={event.id} />}

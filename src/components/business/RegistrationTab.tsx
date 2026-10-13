@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
+import { NetworkingSwitch } from './NetworkingCards';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
@@ -16,6 +18,7 @@ const PRESETS: { label: string; kind: QuestionKind; options?: string[] }[] = [
 
 // Event dashboard > Registration: approval switch, join requests, questions, and answers.
 export default function RegistrationTab({ event, onEventChange }: { event: TapEvent; onEventChange: (e: TapEvent) => void }) {
+  const networkingOn = useFeature('networking');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [people, setPeople] = useState<Registrant[]>([]);
   const [peopleLoaded, setPeopleLoaded] = useState(false);
@@ -64,6 +67,7 @@ export default function RegistrationTab({ event, onEventChange }: { event: TapEv
 
   return (
     <div className="mt-2 flex flex-col gap-8">
+      {networkingOn && <NetworkingSwitch eventId={event.id} />}
       {/* Approval */}
       <section className="rounded-2xl border border-gray-200 bg-surface p-4">
         <label className="flex items-start gap-3">
