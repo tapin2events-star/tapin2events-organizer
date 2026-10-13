@@ -12,6 +12,7 @@ import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
 type Tab = 'Profile' | 'Brand kit' | 'Photos' | 'Team' | 'Events' | 'Payouts';
+const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Photos: '🖼️', Team: '👥', Events: '📅', Payouts: '💳' };
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -23,6 +24,7 @@ function OrgManageInner() {
   const { user } = useAuth();
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
+  const tabList = (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(role === 'owner' || role === 'admin' ? ['Payouts'] : [])] as Tab[]);
   const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -70,16 +72,25 @@ function OrgManageInner() {
           <h1 className="truncate font-display text-2xl font-extrabold text-bone">{org.name}{org.verified && <span className="ml-1.5 text-[#C9A227]" title="Verified">✓</span>}</h1>
           {(org as Organization & { founding_number?: number | null }).founding_number ? (
             <p className="mt-1 inline-flex flex-wrap items-center gap-1 rounded-full bg-[#C9A227]/15 px-2.5 py-0.5 text-xs font-semibold text-[#8a6d12]">
-              🎉 Founding member #{(org as Organization & { founding_number?: number | null }).founding_number} · 40% off the Business plan for life
+              🎉 Founding member #{(org as Organization & { founding_number?: number | null }).founding_number}<span className="hidden sm:inline"> · 40% off the Business plan for life</span><span className="sm:hidden"> · 40% off for life</span>
             </p>
           ) : null}
           <p className="break-words text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : org.kind === 'community' ? 'Community group' : 'Business'} · you're {role === 'owner' ? 'the owner' : role === 'admin' ? 'an Admin' : role === 'editor' ? 'an Editor' : role === 'helper' ? 'a Helper' : 'a Viewer'} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
         </div>
       </div>
 
-      <div className="-mx-4 mt-5 flex overflow-x-auto border-b border-gray-200 px-4 sm:mx-0 sm:gap-1 sm:px-0">
-        {(['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(role === 'owner' || role === 'admin' ? ['Payouts'] : [])] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium sm:px-4 ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
+      {/* Phones: every section visible as a grid of buttons. Larger screens: underline tabs. */}
+      <div className="mt-5 grid grid-cols-3 gap-2 sm:hidden" role="tablist" aria-label="Organization settings">
+        {tabList.map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+            className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl text-xs font-semibold ${tab === t ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>
+            <span className="text-base leading-none" aria-hidden="true">{TAB_ICON[t]}</span>{t}
+          </button>
+        ))}
+      </div>
+      <div className="mt-5 hidden border-b border-gray-200 sm:flex sm:gap-1" role="tablist" aria-label="Organization settings">
+        {tabList.map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
         ))}
       </div>
       {org.status === 'deleted' && (
