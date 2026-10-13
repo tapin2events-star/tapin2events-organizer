@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -203,7 +204,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
           </div>
         </div>
         {view === 'pending' && <p className="mt-1 text-xs text-muted">Published events show "Listed from [source]," send people to the original page for tickets, and include a "Claim this event" link for the real organizer. Images aren't copied from other sites (except Ticketmaster).</p>}
-        {found === null ? <p className="mt-3 text-sm text-muted">Loading…</p> : found.length === 0 ? (
+        {found === null ? <ListSkeleton rows={4} className="mt-4" /> : found.length === 0 ? (
           <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each morning’s check (or tap Check all now).' : view === 'skipped' ? 'Nothing skipped for upcoming events. Skipped events disappear once they’re over.' : 'Nothing here.'}</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">

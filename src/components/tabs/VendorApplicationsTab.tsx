@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import type { VendorApplication, VendorApplicationStatus } from '../../lib/types';
 
@@ -72,7 +73,7 @@ export default function VendorApplicationsTab({ eventId }: { eventId: string }) 
     load();
   }
 
-  if (loading) return <p className="text-muted">Loading…</p>;
+  if (loading) return <ListSkeleton rows={4} className="mt-4" />;
 
   return (
     <div>

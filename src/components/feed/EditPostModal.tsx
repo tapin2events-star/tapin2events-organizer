@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { POST_CATEGORIES } from '../../lib/postOptions';
@@ -133,7 +134,7 @@ export default function EditPostModal({ postId, onClose, onSaved }: { postId: st
         </div>
 
         {loading ? (
-          <p className="py-8 text-center text-sm text-muted">Loading…</p>
+          <ListSkeleton rows={3} className="mt-2" />
         ) : (
           <div className="mt-4 flex flex-col gap-4">
             <label className="block">

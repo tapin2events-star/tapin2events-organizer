@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -106,7 +107,7 @@ export default function MyProducts() {
       </p>
     );
   }
-  if (loading) return <p className="mt-6 text-gray-500">Loading…</p>;
+  if (loading) return <ListSkeleton rows={4} className="mt-4" />;
 
   if (!hasAnyStorefront) {
     return (

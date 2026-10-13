@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ListSkeleton } from '../components/ui/Skeleton';
 import VendorProfileOffer from '../components/vendors/VendorProfileOffer';
 import BackButton from '../components/BackButton';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -97,7 +98,7 @@ export default function MyVendorApplicationsPage() {
         )}
 
         {loading ? (
-          <p className="mt-6 text-gray-500">Loading…</p>
+          <ListSkeleton rows={4} className="mt-4" />
         ) : apps.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-16 text-center">
             <p className="text-lg font-semibold text-gray-500">No vendor applications yet</p>

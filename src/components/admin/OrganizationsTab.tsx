@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -54,7 +55,7 @@ export default function OrganizationsTab({ notify }: { notify: (kind: 'ok' | 'er
           </button>
         ))}
       </div>
-      {orgs === null ? <p className="text-sm text-muted">Loading…</p> : shown.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">Nothing here.</p> : (
+      {orgs === null ? <ListSkeleton rows={4} className="mt-4" /> : shown.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">Nothing here.</p> : (
         <ul className="flex flex-col gap-2">
           {shown.map((o) => (
             <li key={o.id} className={`rounded-2xl border border-gray-200 bg-surface p-4 ${o.status === 'suspended' ? 'opacity-60' : ''}`}>

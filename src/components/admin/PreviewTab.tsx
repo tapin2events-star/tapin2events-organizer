@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { FEATURES, usePreviewMode } from '../../lib/preview';
@@ -47,7 +48,7 @@ export default function PreviewTab() {
           <Link to="/organizer/new?test=1" className="rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white">+ New test event</Link>
         </div>
         <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">Heads up: payments on test events are real (Stripe is live). For checkout tests, use a free event, or refund right after (Stripe's fees aren't returned).</p>
-        {tests === null ? <p className="mt-3 text-sm text-muted">Loading…</p> : tests.length === 0 ? (
+        {tests === null ? <ListSkeleton rows={4} className="mt-4" /> : tests.length === 0 ? (
           <p className="mt-3 text-sm text-muted">No test events yet.</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">

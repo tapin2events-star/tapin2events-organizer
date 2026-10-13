@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 import BackButton from '../components/BackButton';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -133,7 +134,7 @@ export default function ResourceSignup() {
     }
   }
 
-  if (loading) return <div className="p-10 text-center text-gray-500">Loading…</div>;
+  if (loading) return <DetailSkeleton className="mx-auto max-w-3xl py-4" />;
 
   const fieldClass = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none placeholder:text-gray-400 focus-visible:border-marigold';
 

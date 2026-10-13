@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import type { MyBoard } from '../../lib/scouting';
@@ -41,7 +42,7 @@ export default function SaveToBoard({ resourceId, name }: { resourceId: string; 
       {open && (
         <div className="absolute left-0 z-30 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
           <p className="px-2 pb-1 text-xs text-gray-500">Private. {name} won't be notified.</p>
-          {boards === null ? <p className="p-2 text-sm text-gray-500">Loading…</p> : boards.length === 0 ? (
+          {boards === null ? <ListSkeleton rows={3} className="mt-2" /> : boards.length === 0 ? (
             <div className="p-2 text-sm text-gray-600">You don't have a scouting board yet. <Link to="/organizer/scouting" className="font-medium text-marigold">Create one</Link></div>
           ) : (
             <ul className="max-h-64 overflow-y-auto">

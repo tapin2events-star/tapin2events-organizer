@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
 
@@ -15,6 +16,7 @@ const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-wh
 // with a payment page; once paid, tickets go to the billing contact (who can transfer them).
 export default function InvoicesSection({ eventId, ticketPrice, sections }: { eventId: string; ticketPrice: number; sections?: SectionOpt[] }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoaded, setInvoicesLoaded] = useState(false);
   const [tiers, setTiers] = useState<TierOpt[]>([]);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function InvoicesSection({ eventId, ticketPrice, sections }: { ev
       supabase.from('invoices').select('*').eq('event_id', eventId).order('created_at', { ascending: false }),
       supabase.rpc('tier_availability', { p_event_id: eventId }),
     ]);
-    setInvoices(((inv ?? []) as Invoice[]).map((x) => ({ ...x, subtotal: Number(x.subtotal), fee_amount: Number(x.fee_amount), total: Number(x.total) })));
+    setInvoices(((inv ?? []) as Invoice[]).map((x) => ({ ...x, subtotal: Number(x.subtotal), fee_amount: Number(x.fee_amount), total: Number(x.total) }))); setInvoicesLoaded(true);
     setTiers(((av ?? []) as TierOpt[]).map((t) => ({ ...t, price: Number(t.price) })));
   }, [eventId]);
   useEffect(() => { load(); }, [load]);
@@ -60,7 +62,7 @@ export default function InvoicesSection({ eventId, ticketPrice, sections }: { ev
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New invoice</button>
       </div>
       {msg && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
-      {invoices.length === 0 ? <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No invoices yet.</p> : (
+      {invoices.length === 0 ? !invoicesLoaded ? <ListSkeleton rows={2} className="mt-3" /> : <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No invoices yet.</p> : (
         <ul className="mt-3 flex flex-col gap-2">
           {invoices.map((inv) => (
             <li key={inv.id} className="rounded-2xl border border-gray-200 bg-surface p-3">

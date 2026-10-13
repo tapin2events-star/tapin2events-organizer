@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 import BoardOrgSheet from '../components/scouting/BoardOrgSheet';
 import StartEventSheet from '../components/scouting/StartEventSheet';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -80,7 +81,7 @@ export default function ScoutingBoard() {
     await supabase.from('scout_cards').update({ stage }).eq('id', cardId);
   }
 
-  if (board === undefined) return <p className="text-sm text-muted">Loading…</p>;
+  if (board === undefined) return <DetailSkeleton className="mx-auto max-w-3xl py-4" />;
   if (board === null) {
     return (
       <div className="mx-auto max-w-2xl">

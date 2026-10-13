@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../../components/ui/Skeleton';
 import { cachedOrg, primeOrg, type CachedOrg } from '../../lib/orgCache';
 import OrgFollowButton from '../../components/business/OrgFollowButton';
 import { Link, useParams } from 'react-router-dom';
@@ -16,6 +17,7 @@ function OrgPublicInner() {
   const { slug = '' } = useParams<{ slug: string }>();
   const [org, setOrg] = useState<Organization | null | undefined>(() => { const c = cachedOrg(slug); return c ? ({ description: null, website: null, contact_email: null, ...c, brand: { ...DEFAULT_BRAND, ...(c.brand ?? {}) } } as unknown as Organization) : undefined; });
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; location_name: string | null; poster_url: string | null; category: string | null }[]>([]);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
   const [canManage, setCanManage] = useState(false);
   useEffect(() => {
     (async () => {
@@ -29,7 +31,7 @@ function OrgPublicInner() {
         supabase.from('events').select('id, title, start_date, location_name, poster_url, category').eq('organization_id', o.id).neq('status', 'cancelled').gte('start_date', new Date(Date.now() - 86400000).toISOString()).order('start_date'),
         supabase.rpc('org_role', { p_org: o.id }),
       ]);
-      setEvents((ev ?? []) as typeof events);
+      setEvents((ev ?? []) as typeof events); setEventsLoaded(true);
       setCanManage(role === 'owner' || role === 'admin');
     })();
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -73,7 +75,7 @@ function OrgPublicInner() {
         </div>
 
         <h2 className="mt-10 text-xl font-bold">Upcoming events</h2>
-        {events.length === 0 ? <p className="mt-2 pb-10 text-sm opacity-70">No upcoming events right now.</p> : (
+        {events.length === 0 ? !eventsLoaded ? <ListSkeleton rows={2} className="mt-3" /> : <p className="mt-2 pb-10 text-sm opacity-70">No upcoming events right now.</p> : (
           <div className="mt-4 grid gap-4 pb-10 sm:grid-cols-2">
             {events.map((e) => (
               <Link key={e.id} to={`/events/${e.id}`} className="overflow-hidden rounded-2xl border transition hover:shadow-md" style={{ borderColor: dark ? '#1F2937' : '#E5E7EB' }}>

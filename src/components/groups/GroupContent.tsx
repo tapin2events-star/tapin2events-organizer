@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import ProductManager from '../products/ProductManager';
@@ -74,7 +75,7 @@ export default function GroupContent({ groupId, groupName, isAdmin }: { groupId:
       {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       <h3 className="mt-4 text-sm font-semibold text-bone">Your videos</h3>
-      {mine === null ? <p className="mt-2 text-sm text-muted">Loading…</p> : mine.length === 0 ? (
+      {mine === null ? <ListSkeleton rows={4} className="mt-4" /> : mine.length === 0 ? (
         <p className="mt-2 text-sm text-muted">You haven't posted any videos yet. When you post one from the Feed, you can choose to show it here.</p>
       ) : (
         <>

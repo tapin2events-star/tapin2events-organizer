@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -128,7 +129,7 @@ export default function FollowListModal({ email, direction, isPrivate, isOwnList
           {hidden ? (
             <p className="p-6 text-center text-sm text-muted">This person's {direction} list is private.</p>
           ) : loading ? (
-            <p className="p-6 text-center text-sm text-muted">Loading…</p>
+            <ListSkeleton rows={3} className="mt-2" />
           ) : error && entries.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted">Couldn't load this list. Please try again.</p>
           ) : entries.length === 0 ? (

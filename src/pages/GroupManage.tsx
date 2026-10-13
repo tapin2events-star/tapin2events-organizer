@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 import AnnounceLineupsToggle from '../components/resources/AnnounceLineupsToggle';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -114,7 +115,7 @@ export default function GroupManage() {
     return true;
   }
 
-  if (loading) return <p className="text-sm text-muted">Loading…</p>;
+  if (loading) return <DetailSkeleton className="mx-auto max-w-3xl py-4" />;
   if (!group || !role) {
     return (
       <div className="mx-auto max-w-2xl">

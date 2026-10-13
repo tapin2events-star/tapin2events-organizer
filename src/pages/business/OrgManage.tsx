@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ListSkeleton } from '../../components/ui/Skeleton';
 import OrgPayoutsTab from '../../components/business/OrgPayoutsTab';
 import OrgPhotosTab from '../../components/business/OrgPhotosTab';
 import DeleteOrgSheet from '../../components/business/DeleteOrgSheet';
@@ -255,13 +256,14 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
 
 function EventsTab({ org, canEdit }: { org: Organization; canEdit: boolean }) {
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; status: string; is_test: boolean }[]>([]);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
   useEffect(() => {
-    supabase.from('events').select('id, title, start_date, status, is_test').eq('organization_id', org.id).order('start_date', { ascending: false }).then(({ data }) => setEvents((data ?? []) as typeof events));
+    supabase.from('events').select('id, title, start_date, status, is_test').eq('organization_id', org.id).order('start_date', { ascending: false }).then(({ data }) => { setEvents((data ?? []) as typeof events); setEventsLoaded(true); });
   }, [org.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div>
       {canEdit && <Link to={`/organizer/new?org=${org.id}&kind=${org.kind}`} className="inline-block rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">+ Create {org.kind === 'nonprofit' ? 'nonprofit' : 'business'} event</Link>}
-      {events.length === 0 ? <p className="mt-4 text-sm text-muted">No events yet.</p> : (
+      {events.length === 0 ? !eventsLoaded ? <ListSkeleton rows={3} className="mt-3" /> : <p className="mt-4 text-sm text-muted">No events yet.</p> : (
         <ul className="mt-4 flex flex-col gap-2">
           {events.map((e) => (
             <li key={e.id}><Link to={`/organizer/events/${e.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 hover:border-[#C9A227]">

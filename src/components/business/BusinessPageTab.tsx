@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import ImagePicker from './ImagePicker';
@@ -20,6 +21,7 @@ const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('
 export default function BusinessPageTab({ event, onEventChange }: { event: TapEvent; onEventChange: (e: TapEvent) => void }) {
   const [section, setSection] = useState<Section>('Agenda');
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [links, setLinks] = useState<{ session_id: string; speaker_id: string }[]>([]);
@@ -34,7 +36,7 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
       supabase.from('event_sponsors').select('*').eq('event_id', event.id).order('sort_order').order('created_at'),
     ]);
     const ss = (a.data ?? []) as Session[];
-    setSessions(ss); setSpeakers((b.data ?? []) as Speaker[]); setSponsors((c.data ?? []) as Sponsor[]);
+    setSessions(ss); setSpeakers((b.data ?? []) as Speaker[]); setSponsors((c.data ?? []) as Sponsor[]); setSessionsLoaded(true);
     if (ss.length) {
       const { data } = await supabase.from('session_speakers').select('session_id, speaker_id').in('session_id', ss.map((s) => s.id));
       setLinks((data ?? []) as { session_id: string; speaker_id: string }[]);
@@ -58,7 +60,7 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
       {section === 'Agenda' && (
         <div className="mt-4">
           <button onClick={() => setEditSession('new')} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">+ Add session</button>
-          {sessions.length === 0 ? <p className="mt-4 text-sm text-muted">No sessions yet. Add keynotes, panels, workshops, breaks and networking.</p> : (
+          {sessions.length === 0 ? !sessionsLoaded ? <ListSkeleton rows={2} className="mt-3" /> : <p className="mt-4 text-sm text-muted">No sessions yet. Add keynotes, panels, workshops, breaks and networking.</p> : (
             <ul className="mt-4 flex flex-col gap-2">
               {sessions.map((s) => {
                 const who = links.filter((l) => l.session_id === s.id).map((l) => speakers.find((k) => k.id === l.speaker_id)?.name).filter(Boolean);
@@ -80,7 +82,7 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
       {section === 'Speakers' && (
         <div className="mt-4">
           <button onClick={() => setEditSpeaker('new')} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">+ Add speaker</button>
-          {speakers.length === 0 ? <p className="mt-4 text-sm text-muted">No speakers yet.</p> : (
+          {speakers.length === 0 ? !sessionsLoaded ? <ListSkeleton rows={2} className="mt-3" /> : <p className="mt-4 text-sm text-muted">No speakers yet.</p> : (
             <ul className="mt-4 grid gap-2 sm:grid-cols-2">
               {speakers.map((k) => (
                 <li key={k.id}><button onClick={() => setEditSpeaker(k)} className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-surface p-3 text-left hover:border-[#C9A227]">
@@ -96,7 +98,7 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
       {section === 'Sponsors' && (
         <div className="mt-4">
           <button onClick={() => setEditSponsor('new')} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">+ Add sponsor</button>
-          {sponsors.length === 0 ? <p className="mt-4 text-sm text-muted">No sponsors yet.</p> : (
+          {sponsors.length === 0 ? !sessionsLoaded ? <ListSkeleton rows={2} className="mt-3" /> : <p className="mt-4 text-sm text-muted">No sponsors yet.</p> : (
             <div className="mt-4 flex flex-col gap-4">
               {SPONSOR_TIERS.filter((t) => sponsors.some((s) => s.tier === t)).concat(sponsors.filter((s) => !SPONSOR_TIERS.includes(s.tier)).map((s) => s.tier).filter((v, i, a) => a.indexOf(v) === i)).map((tier) => (
                 <div key={tier}>

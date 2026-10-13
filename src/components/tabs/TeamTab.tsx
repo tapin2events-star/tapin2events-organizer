@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { CollaborationRole, EventCollaboration } from '../../lib/types';
@@ -164,7 +165,7 @@ export default function TeamTab({ eventId, team = [], canManageTeam = true, filt
       {error && <p className="text-sm text-magenta">{error}</p>}
 
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <ListSkeleton rows={4} className="mt-4" />
       ) : collabs.length === 0 ? (
         <p className="text-sm text-muted">{canManageTeam ? 'No one else yet. Invite your team above.' : 'No one else on this team yet.'}</p>
       ) : (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from './Sheet';
 
@@ -22,7 +23,7 @@ export default function BoardOrgSheet({ boardId, current, onClose, onSaved }: { 
   return (
     <Sheet title="Share with an organization" onClose={onClose}>
       <p className="-mt-2 text-sm text-gray-600">Everyone on the organization's team who's an Owner, Admin or Editor can see this board and add prospects. People you invited to the board keep their access either way.</p>
-      {orgs === null ? <p className="mt-3 text-sm text-gray-500">Loading…</p> : (
+      {orgs === null ? <ListSkeleton rows={3} className="mt-2" /> : (
         <div className="mt-3 flex flex-col gap-2">
           <label className={`flex min-h-[48px] items-center gap-3 rounded-xl border px-3 text-sm ${choice === '' ? 'border-marigold bg-marigold/5' : 'border-gray-200 bg-white'}`}>
             <input type="radio" checked={choice === ''} onChange={() => setChoice('')} className="h-4 w-4 accent-marigold" />

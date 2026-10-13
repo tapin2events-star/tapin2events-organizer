@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABEL, type TeamMember } from '../../lib/useEventTeam';
@@ -15,6 +16,7 @@ export default function TasksTab({ eventId, team, canManage, filter, onFilter, o
 }) {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksLoaded, setTasksLoaded] = useState(false);
   const [title, setTitle] = useState('');
   const [assignee, setAssignee] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -25,7 +27,7 @@ export default function TasksTab({ eventId, team, canManage, filter, onFilter, o
 
   async function load() {
     const { data } = await supabase.from('event_tasks').select('*').eq('event_id', eventId).order('due_date', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
-    setTasks((data ?? []) as Task[]);
+    setTasks((data ?? []) as Task[]); setTasksLoaded(true);
   }
   useEffect(() => { load(); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -113,7 +115,7 @@ export default function TasksTab({ eventId, team, canManage, filter, onFilter, o
       )}
       {msg && <p role={msg.ok ? 'status' : 'alert'} className={`mt-2 text-sm ${msg.ok ? 'text-green-700' : 'text-magenta'}`}>{msg.text}</p>}
 
-      {visible.length === 0 ? (
+      {visible.length === 0 ? !tasksLoaded ? <ListSkeleton rows={3} className="mt-3" /> : (
         <p className="mt-4 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{tasks.length === 0 ? 'No tasks yet.' : 'Nothing open here.'}</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2">

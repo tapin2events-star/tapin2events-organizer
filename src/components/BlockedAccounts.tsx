@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from './ui/Skeleton';
 import { supabase } from '../lib/supabaseClient';
 import { unblockUser } from '../lib/blocks';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +26,7 @@ export default function BlockedAccounts() {
   return (
     <div className="rounded-xl border border-gray-200 bg-surface px-4 py-4">
       {list === null ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <ListSkeleton rows={3} className="mt-2" />
       ) : list.length === 0 ? (
         <p className="text-sm text-muted">You haven't blocked anyone. To block someone, use <strong>Report or block</strong> on their post or comment, or the Block button on their profile.</p>
       ) : (

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import Sheet from '../scouting/Sheet';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -15,10 +16,11 @@ export default function DonationsTab({ event, onEventChange }: { event: TapEvent
     presets: (event.donation_presets ?? [25, 50, 100]).join(', '), min: String(Math.max(MIN_DONATION, Number(event.min_donation_amount) || MIN_DONATION)), show: event.show_donors !== false,
   });
   const [gifts, setGifts] = useState<Gift[]>([]);
+  const [giftsLoaded, setGiftsLoaded] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const load = useCallback(async () => {
     const { data } = await supabase.rpc('event_donations', { p_event_id: event.id });
-    setGifts(((data ?? []) as Gift[]).map((g) => ({ ...g, amount: Number(g.amount), fee_amount: Number(g.fee_amount), net_amount: g.net_amount === null ? null : Number(g.net_amount), refund_amount: Number(g.refund_amount) || 0 })));
+    setGifts(((data ?? []) as Gift[]).map((g) => ({ ...g, amount: Number(g.amount), fee_amount: Number(g.fee_amount), net_amount: g.net_amount === null ? null : Number(g.net_amount), refund_amount: Number(g.refund_amount) || 0 }))); setGiftsLoaded(true);
   }, [event.id]);
   useEffect(() => { load(); }, [load]);
 
@@ -91,7 +93,7 @@ export default function DonationsTab({ event, onEventChange }: { event: TapEvent
           <h3 className="font-display text-lg font-bold text-bone">Gifts</h3>
           {gifts.length > 0 && <button onClick={csv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Download spreadsheet (CSV)</button>}
         </div>
-        {gifts.length === 0 ? <p className="mt-2 text-sm text-muted">No gifts yet.</p> : (
+        {gifts.length === 0 ? !giftsLoaded ? <ListSkeleton rows={3} className="mt-3" /> : <p className="mt-2 text-sm text-muted">No gifts yet.</p> : (
           <ul className="mt-3 flex flex-col gap-2">
             {gifts.map((g) => (
               <li key={g.id} className="rounded-xl border border-gray-200 bg-white p-3">

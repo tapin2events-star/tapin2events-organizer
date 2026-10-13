@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { PRODUCT_CATEGORIES, type Product, type ProductCategory } from '../../lib/types';
 import MultiImageUpload from '../MultiImageUpload';
@@ -322,7 +323,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
       )}
 
       {loading ? (
-        <p className="mt-4 text-sm text-gray-400">Loading…</p>
+        <ListSkeleton rows={4} className="mt-4" />
       ) : products.length === 0 && !showForm ? (
         <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-10 text-center">
           <p className="text-gray-500">No products yet</p>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { STAGES, type Stage } from '../lib/scouting';
@@ -13,7 +14,7 @@ export default function SharedScoutBoard() {
   const [showFilter, setShowFilter] = useState('all');
   useEffect(() => { supabase.rpc('scout_board_shared', { p_token: token }).then(({ data: d }) => setData((d as Shared) ?? null)); }, [token]);
 
-  if (data === undefined) return <p className="text-sm text-muted">Loading…</p>;
+  if (data === undefined) return <DetailSkeleton className="mx-auto max-w-3xl py-4" />;
   if (data === null) {
     return (
       <div className="mx-auto max-w-md rounded-3xl border border-gray-200 bg-surface p-8 text-center">

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -117,7 +118,7 @@ export default function GroupChat() {
     setNotice(err ? "Couldn't send the report. Please try again." : 'Thanks. TapIN will review this message.');
   }
 
-  if (role === undefined) return <p className="text-sm text-muted">Loading…</p>;
+  if (role === undefined) return <DetailSkeleton className="mx-auto max-w-3xl py-4" />;
   if (role === null) {
     return (
       <div className="mx-auto max-w-2xl">

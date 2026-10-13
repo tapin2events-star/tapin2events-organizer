@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../ImageUpload';
@@ -257,7 +258,7 @@ export default function LineupScheduleTab({ event, isOwner }: { event: TapEvent;
     return null;
   }
 
-  if (loading) return <p className="text-sm text-muted">Loading…</p>;
+  if (loading) return <ListSkeleton rows={4} className="mt-4" />;
   const byId = new Map(lineup.map((p) => [p.id, p]));
 
   return (

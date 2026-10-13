@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { FULFILLMENT_STYLES, FULFILLMENT_LABELS, type FulfillmentStatus, type ProductOrder } from '../../lib/types';
 
@@ -74,7 +75,7 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
     updateStatus(order, status);
   }
 
-  if (loading) return <p className="mt-4 text-sm text-gray-400">Loading…</p>;
+  if (loading) return <ListSkeleton rows={4} className="mt-4" />;
 
   const revenue = orders.reduce((sum, o) => sum + o.total_amount, 0);
 

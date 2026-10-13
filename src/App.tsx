@@ -64,7 +64,7 @@ export default function App() {
           <Route
             path="/feed"
             element={
-              <Suspense fallback={<div className="flex h-screen items-center justify-center bg-black text-white">Loading…</div>}>
+              <Suspense fallback={<div className="flex h-screen items-center justify-center bg-black" role="status" aria-label="Loading"><span className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" /></div>}>
                 <Feed />
               </Suspense>
             }

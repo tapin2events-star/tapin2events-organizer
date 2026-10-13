@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import Sheet from '../scouting/Sheet';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -30,7 +31,7 @@ export default function ScoutingTab({ event }: { event: TapEvent }) {
     load();
   }
 
-  if (shows === null) return <p className="mt-6 text-sm text-muted">Loading…</p>;
+  if (shows === null) return <ListSkeleton rows={4} className="mt-4" />;
   if (shows.length === 0) {
     return (
       <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-surface p-6 text-center">

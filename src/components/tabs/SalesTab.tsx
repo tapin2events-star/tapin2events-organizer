@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import type { Ticket } from '../../lib/types';
 import { downloadCsv, fileSlug } from '../../lib/csv';
@@ -28,7 +29,7 @@ export default function SalesTab({ eventId }: { eventId: string }) {
     })();
   }, [eventId]);
 
-  if (loading) return <p className="text-muted">Loading…</p>;
+  if (loading) return <ListSkeleton rows={4} className="mt-4" />;
 
   const confirmed = tickets.filter((t) => t.status === 'confirmed');
   const totalAttendees = confirmed.reduce((sum, t) => sum + (t.quantity || 1), 0);

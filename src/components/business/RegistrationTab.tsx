@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
 import { answerText, KIND_LABEL, loadQuestions, type Question, type QuestionKind } from '../../lib/registration';
@@ -17,6 +18,7 @@ const PRESETS: { label: string; kind: QuestionKind; options?: string[] }[] = [
 export default function RegistrationTab({ event, onEventChange }: { event: TapEvent; onEventChange: (e: TapEvent) => void }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [people, setPeople] = useState<Registrant[]>([]);
+  const [peopleLoaded, setPeopleLoaded] = useState(false);
   const [editing, setEditing] = useState<Question | 'new' | null>(null);
   const [preset, setPreset] = useState<(typeof PRESETS)[number] | null>(null);
   const [deciding, setDeciding] = useState<{ r: Registrant; approve: boolean } | null>(null);
@@ -25,7 +27,7 @@ export default function RegistrationTab({ event, onEventChange }: { event: TapEv
   const load = useCallback(async () => {
     const [qs, { data }] = await Promise.all([loadQuestions(event.id, true), supabase.rpc('event_registrants', { p_event_id: event.id })]);
     setQuestions(qs);
-    setPeople(((data ?? []) as Registrant[]).map((p) => ({ ...p, tickets: Number(p.tickets) })));
+    setPeople(((data ?? []) as Registrant[]).map((p) => ({ ...p, tickets: Number(p.tickets) }))); setPeopleLoaded(true);
   }, [event.id]);
   useEffect(() => { load(); }, [load]);
 
@@ -78,7 +80,7 @@ export default function RegistrationTab({ event, onEventChange }: { event: TapEv
             <h3 className="font-display text-lg font-bold text-bone">Requests {pending.length > 0 && <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">{pending.length} waiting</span>}</h3>
             {pending.length > 1 && <button onClick={approveAll} disabled={busy} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 disabled:opacity-50">{busy ? 'Approving…' : `Approve all ${pending.length}`}</button>}
           </div>
-          {pending.length === 0 ? <p className="mt-2 text-sm text-muted">No requests waiting.</p> : (
+          {pending.length === 0 ? !peopleLoaded ? <ListSkeleton rows={3} className="mt-3" /> : <p className="mt-2 text-sm text-muted">No requests waiting.</p> : (
             <ul className="mt-3 flex flex-col gap-3">
               {pending.map((p) => (
                 <li key={p.email} className="rounded-2xl border border-gray-200 bg-white p-4">
@@ -137,7 +139,7 @@ export default function RegistrationTab({ event, onEventChange }: { event: TapEv
           <h3 className="font-display text-lg font-bold text-bone">Attendees & answers <span className="text-sm font-normal text-muted">({people.length})</span></h3>
           {people.length > 0 && <button onClick={downloadCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Download spreadsheet (CSV)</button>}
         </div>
-        {people.length === 0 ? <p className="mt-2 text-sm text-muted">No one yet.</p> : (
+        {people.length === 0 ? !peopleLoaded ? <ListSkeleton rows={3} className="mt-3" /> : <p className="mt-2 text-sm text-muted">No one yet.</p> : (
           <div className="mt-3 overflow-x-auto rounded-2xl border border-gray-200">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead className="bg-gray-50 text-xs text-gray-500"><tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Status</th>{activeQs.map((q) => <th key={q.id} className="px-3 py-2">{q.label}</th>)}</tr></thead>

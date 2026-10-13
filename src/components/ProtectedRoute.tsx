@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
+import { DetailSkeleton } from './ui/Skeleton';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -6,7 +7,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const location = useLocation();
 
   if (loading) {
-    return <p className="text-muted">Loading…</p>;
+    return <DetailSkeleton className="mx-auto max-w-3xl py-4" />;
   }
 
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;

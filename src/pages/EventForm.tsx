@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { DetailSkeleton } from '../components/ui/Skeleton';
 import TemplatePicker from '../components/business/TemplatePicker';
 import type { EventTemplate } from '../lib/eventTemplates';
 import FormPromoCodes, { codeProblem, pendingRow, type PendingCode } from '../components/business/FormPromoCodes';
@@ -704,7 +705,7 @@ export default function EventForm() {
     navigate(previewing ? `/events/${data.id}` : `/organizer/events/${data.id}`);
   }
 
-  if (loading) return <p className="text-muted">Loading…</p>;
+  if (loading) return <DetailSkeleton className="mx-auto max-w-3xl py-4" />;
 
   const isLastStep = step === STEPS.length;
 

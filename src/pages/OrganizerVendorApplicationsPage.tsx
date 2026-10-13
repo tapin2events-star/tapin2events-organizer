@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ListSkeleton } from '../components/ui/Skeleton';
 import BackButton from '../components/BackButton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -83,7 +84,7 @@ export default function OrganizerVendorApplicationsPage() {
       <p className="mt-1 text-muted">Review vendor applications across all of your events in one place.</p>
 
       {loading ? (
-        <p className="mt-6 text-muted">Loading…</p>
+        <ListSkeleton rows={4} className="mt-4" />
       ) : events.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-14 text-center">
           <p className="font-display text-lg font-semibold text-bone">No vendor applications yet</p>
