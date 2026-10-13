@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import InvoicesSection from '../components/business/InvoicesSection';
 import DonationsTab from '../components/business/DonationsTab';
 import RegistrationTab from '../components/business/RegistrationTab';
 import TiersTab from '../components/business/TiersTab';
@@ -55,6 +56,7 @@ export default function EventDetail() {
   useEffect(() => { if (id) supabase.rpc('event_team_role', { p_event_id: id }).then(({ data }) => setTeamRole((data as string | null) ?? null)); }, [id]);
   const limitedTabs: Record<string, readonly string[]> = { helper: ['Overview', 'Team & tasks'], vendor_manager: ['Overview', 'Vendor applications', 'Team & tasks'] };
   const businessOn = useFeature('business');
+  const invoicesOn = useFeature('invoices');
   const visibleTabs = TABS.filter((t) => (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
@@ -279,6 +281,9 @@ export default function EventDetail() {
       {tab === 'Donations' && <DonationsTab event={event} onEventChange={setEvent} />}
       {tab === 'Lineup & bookings' && <LineupWithScouting event={event} isOwner={isOwner} eventId={id!} initialView={tabParam === 'Bookings' ? 'bookings' : undefined} />}
       {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
+      {tab === 'Ticket Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
+        <InvoicesSection eventId={id!} ticketPrice={0} sections={(event.seating_sections ?? []).map((s) => ({ name: s.name, price: Number(s.price) || 0, seats: (s.num_tables ?? 0) * (s.seats_per_table ?? 0) }))} />
+      )}
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (
         <>

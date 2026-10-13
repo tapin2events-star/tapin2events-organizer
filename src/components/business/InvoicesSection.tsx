@@ -7,12 +7,13 @@ interface Invoice {
   subtotal: number; fee_amount: number; total: number; due_date: string; status: 'open' | 'paid' | 'void'; hosted_url: string | null; pdf_url: string | null; created_at: string; paid_at: string | null;
 }
 interface TierOpt { id: string; name: string; price: number; remaining: number | null }
+interface SectionOpt { name: string; price: number; seats: number }
 const money = (n: number) => `$${(Number(n) || 0).toFixed(2)}`;
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 
 // Event > Tickets > Invoices (Preview): bill a company for a group of tickets. Stripe emails the invoice
 // with a payment page; once paid, tickets go to the billing contact (who can transfer them).
-export default function InvoicesSection({ eventId, ticketPrice }: { eventId: string; ticketPrice: number }) {
+export default function InvoicesSection({ eventId, ticketPrice, sections }: { eventId: string; ticketPrice: number; sections?: SectionOpt[] }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [tiers, setTiers] = useState<TierOpt[]>([]);
   const [creating, setCreating] = useState(false);
@@ -66,7 +67,8 @@ export default function InvoicesSection({ eventId, ticketPrice }: { eventId: str
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold text-bone">{inv.company_name} {statusBadge(inv)}</p>
-                  <p className="text-xs text-muted">{inv.number} · {inv.items.reduce((n, i) => n + i.qty, 0)} tickets · {inv.contact_email}</p>
+                  <p className="text-xs text-muted">{inv.number} · {inv.items.reduce((n, i) => n + i.qty, 0)} {sections ? 'seats' : 'tickets'} · {inv.contact_email}</p>
+                  {sections && <p className="text-xs text-muted">{inv.items.map((i) => i.label).join(' · ')}</p>}
                   <p className="text-xs text-muted">{inv.status === 'paid' && inv.paid_at ? `Paid ${new Date(inv.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : `Due ${new Date(inv.due_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}</p>
                 </div>
                 <p className="shrink-0 text-right font-bold text-bone">{money(inv.total)}<span className="block text-[11px] font-normal text-muted">incl. {money(inv.fee_amount)} fees</span></p>
@@ -82,16 +84,19 @@ export default function InvoicesSection({ eventId, ticketPrice }: { eventId: str
           ))}
         </ul>
       )}
-      <p className="mt-2 text-xs text-muted">Payments are checked automatically every 15 minutes. Reserved-seating events can't be invoiced yet.</p>
-      {creating && <NewInvoiceSheet eventId={eventId} tiers={tiers} ticketPrice={ticketPrice} onClose={() => setCreating(false)} onDone={(t) => { setCreating(false); flash(t); load(); }} />}
+      <p className="mt-2 text-xs text-muted">Payments are checked automatically every 15 minutes.{sections ? ' Seats are held for the group until the invoice is paid, cancelled, or a week past its due date.' : ''}</p>
+      {creating && <NewInvoiceSheet eventId={eventId} tiers={tiers} sections={sections} ticketPrice={ticketPrice} onClose={() => setCreating(false)} onDone={(t) => { setCreating(false); flash(t); load(); }} />}
     </section>
   );
 }
 
-function NewInvoiceSheet({ eventId, tiers, ticketPrice, onClose, onDone }: { eventId: string; tiers: TierOpt[]; ticketPrice: number; onClose: () => void; onDone: (msg: string) => void }) {
+function NewInvoiceSheet({ eventId, tiers, sections, ticketPrice, onClose, onDone }: { eventId: string; tiers: TierOpt[]; sections?: SectionOpt[]; ticketPrice: number; onClose: () => void; onDone: (msg: string) => void }) {
+  const seated = !!sections?.length;
   const due = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
   const [f, setF] = useState({ company: '', contact: '', email: '', address: '', po: '', notes: '', due });
-  const [lines, setLines] = useState<{ tier_id: string; qty: string; price: string }[]>([{ tier_id: tiers[0]?.id ?? '', qty: '10', price: String(tiers[0]?.price ?? ticketPrice) }]);
+  const [lines, setLines] = useState<{ tier_id: string; qty: string; price: string }[]>(() => seated
+    ? [{ tier_id: sections![0].name, qty: '8', price: String(sections![0].price) }]
+    : [{ tier_id: tiers[0]?.id ?? '', qty: '10', price: String(tiers[0]?.price ?? ticketPrice) }]);
   const [send, setSend] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -104,7 +109,7 @@ function NewInvoiceSheet({ eventId, tiers, ticketPrice, onClose, onDone }: { eve
     const { data, error } = await supabase.functions.invoke('invoice-manage', { body: {
       action: 'create', event_id: eventId, company_name: f.company, contact_name: f.contact, contact_email: f.email, billing_address: f.address,
       po_number: f.po, notes: f.notes, due_date: f.due, send,
-      items: lines.map((l) => (l.tier_id ? { tier_id: l.tier_id, qty: Number(l.qty), unit_price: l.price } : { label: 'Ticket', qty: Number(l.qty), unit_price: l.price })),
+      items: lines.map((l) => (seated ? { section: l.tier_id, qty: Number(l.qty), unit_price: l.price } : l.tier_id ? { tier_id: l.tier_id, qty: Number(l.qty), unit_price: l.price } : { label: 'Ticket', qty: Number(l.qty), unit_price: l.price })),
     } });
     setBusy(false);
     if (error || !data?.success) {
@@ -112,7 +117,8 @@ function NewInvoiceSheet({ eventId, tiers, ticketPrice, onClose, onDone }: { eve
       try { const j = await (error as { context?: Response })?.context?.json(); if (j?.error) m = j.error; } catch { /* default */ }
       return setErr(m);
     }
-    onDone(send ? `Invoice ${data.number} emailed to ${f.email}.` : `Invoice ${data.number} created. Copy its payment link to share it.`);
+    const held = Array.isArray(data.seats) && data.seats.length ? ` ${data.seats.length} seats are held for them.` : '';
+    onDone((send ? `Invoice ${data.number} emailed to ${f.email}.` : `Invoice ${data.number} created. Copy its payment link to share it.`) + held);
   }
 
   return (
@@ -126,10 +132,17 @@ function NewInvoiceSheet({ eventId, tiers, ticketPrice, onClose, onDone }: { eve
         <label className="block min-w-0 text-xs font-medium text-gray-500">Due date<input type="date" value={f.due} onChange={(e) => setF({ ...f, due: e.target.value })} className={`${field} h-12 appearance-none`} /></label>
       </div>
 
-      <p className="mt-4 text-xs font-medium text-gray-500">Tickets</p>
+      <p className="mt-4 text-xs font-medium text-gray-500">{seated ? 'Seats' : 'Tickets'}</p>
       {lines.map((l, i) => (
         <div key={i} className="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
-          {tiers.length > 0 && (
+          {seated && (
+            <label className="block text-xs font-medium text-gray-500">Section
+              <select value={l.tier_id} onChange={(e) => { const sec = sections!.find((x) => x.name === e.target.value); setLines(lines.map((x, j) => (j === i ? { ...x, tier_id: e.target.value, price: String(sec?.price ?? x.price) } : x))); }} className={field}>
+                {sections!.map((sec) => <option key={sec.name} value={sec.name}>{sec.name} ({money(sec.price)} a seat, {sec.seats} seats)</option>)}
+              </select>
+            </label>
+          )}
+          {!seated && tiers.length > 0 && (
             <label className="block text-xs font-medium text-gray-500">Ticket type
               <select value={l.tier_id} onChange={(e) => { const t = tiers.find((x) => x.id === e.target.value); setLines(lines.map((x, j) => (j === i ? { ...x, tier_id: e.target.value, price: String(t?.price ?? x.price) } : x))); }} className={field}>
                 {tiers.map((t) => <option key={t.id} value={t.id}>{t.name} ({money(t.price)}{t.remaining !== null ? `, ${t.remaining} left` : ''})</option>)}
@@ -143,8 +156,9 @@ function NewInvoiceSheet({ eventId, tiers, ticketPrice, onClose, onDone }: { eve
           {lines.length > 1 && <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="mt-2 text-xs text-gray-500 hover:text-red-600">Remove</button>}
         </div>
       ))}
-      {tiers.length > 1 && <button type="button" onClick={() => setLines([...lines, { tier_id: tiers[0].id, qty: '1', price: String(tiers[0].price) }])} className="mt-2 text-sm font-semibold text-marigold">+ Add another ticket type</button>}
-      <p className="mt-1 text-xs text-gray-500">You can lower the price for a group discount.</p>
+      {!seated && tiers.length > 1 && <button type="button" onClick={() => setLines([...lines, { tier_id: tiers[0].id, qty: '1', price: String(tiers[0].price) }])} className="mt-2 text-sm font-semibold text-marigold">+ Add another ticket type</button>}
+      {seated && sections!.length > 1 && <button type="button" onClick={() => setLines([...lines, { tier_id: sections![0].name, qty: '1', price: String(sections![0].price) }])} className="mt-2 text-sm font-semibold text-marigold">+ Add another section</button>}
+      <p className="mt-1 text-xs text-gray-500">{seated ? 'Seats are picked for you, filling whole tables first so the group sits together, and held until the invoice is paid. ' : ''}You can lower the price for a group discount.</p>
 
       <label className="mt-3 block text-xs font-medium text-gray-500">Note on the invoice (optional)<textarea rows={2} value={f.notes} maxLength={1000} onChange={(e) => setF({ ...f, notes: e.target.value })} className={field} /></label>
 
