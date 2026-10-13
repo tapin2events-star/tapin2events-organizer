@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PlanningTaskSheet from '../components/planning/PlanningTaskSheet';
 import PlanningTeam from '../components/planning/PlanningTeam';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +12,7 @@ interface PlanEvent {
   lineup_confirmed: number; lineup_total: number; open_tasks: number; overdue_tasks: number; tickets_sold: number; capacity: number | null; prospects: number;
   my_role: string | null; organization_id: string | null; org_name: string | null; org_slug: string | null; org_logo: string | null; org_color: string | null;
 }
-interface PlanTask { id: string; event_id: string; event_title: string; title: string; status: string; due_date: string | null; assigned_to: string | null; assignee_name: string | null; organization_id: string | null }
+interface PlanTask { id: string; event_id: string; event_title: string; title: string; status: string; due_date: string | null; assigned_to: string | null; assignee_name: string | null; organization_id: string | null; can_manage: boolean }
 interface Board { id: string; name: string; card_count?: number; organization_id: string | null; org_name: string | null; org_logo: string | null; is_owner: boolean }
 interface MyOrg { id: string; name: string; slug: string; logo_url: string | null; role: string; status?: string }
 
@@ -74,6 +75,8 @@ export default function Planning() {
   const inScope = (orgId: string | null) => scope === 'all' || (scope === 'me' ? !orgId : orgId === scopeOrg?.id);
   const [needsOnly, setNeedsOnly] = useState(false);
   const [taskFilter, setTaskFilter] = useState<'all' | 'mine' | 'overdue' | 'unassigned'>('all');
+  const [taskSheet, setTaskSheet] = useState<null | 'new' | PlanTask>(null);
+  const [taskMsg, setTaskMsg] = useState<string | null>(null);
   const [events, setEvents] = useState<PlanEvent[] | null>(null);
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
@@ -103,6 +106,12 @@ export default function Planning() {
   const needsCount = allUpcoming.filter(needsAttention).length;
   const me = (user?.email ?? '').toLowerCase();
   const scopedTasks = tasks.filter((t) => inScope(t.organization_id));
+  const taskEvents = scopedEvents.filter((e) => e.is_owner || e.my_role === 'owner' || e.my_role === 'admin' || e.my_role === 'editor')
+    .map((e) => ({ id: e.id, title: e.title, start_date: e.start_date }));
+  async function completeTask(t: PlanTask) {
+    const { error } = await supabase.from('event_tasks').update({ status: 'completed' }).eq('id', t.id);
+    if (!error) { setTasks((list) => list.filter((x) => x.id !== t.id)); setTaskMsg(`Marked "${t.title}" done.`); setTimeout(() => setTaskMsg(null), 3000); }
+  }
   const shownTasks = scopedTasks
     .filter((t) => matches(t.title) || matches(t.event_title))
     .filter((t) => taskFilter === 'all' ? true : taskFilter === 'mine' ? (t.assigned_to ?? '').toLowerCase() === me : taskFilter === 'overdue' ? !!t.due_date && t.due_date < today : !t.assigned_to);
@@ -279,8 +288,12 @@ export default function Planning() {
       <section className="mt-8">
         <div className="flex items-end justify-between gap-3">
           <h2 className="font-display text-xl font-bold text-bone">Open tasks</h2>
-          <Link to="/activity#tasks" className="text-sm font-medium text-marigold">Assigned to me ›</Link>
+          <span className="flex items-center gap-3">
+            <Link to="/activity#tasks" className="text-sm font-medium text-marigold">Assigned to me ›</Link>
+            {taskEvents.length > 0 && <button onClick={() => setTaskSheet('new')} className="rounded-xl bg-marigold px-3 py-2 text-sm font-semibold text-white">+ New task</button>}
+          </span>
         </div>
+        {taskMsg && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{taskMsg}</p>}
         {scopedTasks.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {([['all', 'All'], ['mine', 'Mine'], ['overdue', `Overdue${overdueCount ? ` (${overdueCount})` : ''}`], ['unassigned', 'Unassigned']] as const).map(([k, l]) => (
@@ -293,13 +306,18 @@ export default function Planning() {
             {shownTasks.slice(0, view === 'tasks' ? 100 : 8).map((t) => {
               const overdue = t.due_date && t.due_date < today;
               return (
-                <li key={t.id}><Link to={`/organizer/events/${t.event_id}?tab=Team %26 tasks`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 hover:border-marigold">
-                  <span className="min-w-0">
+                <li key={t.id} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-surface p-2 pl-3">
+                  {(t.can_manage || (t.assigned_to ?? '').toLowerCase() === me) && (
+                    <button onClick={() => completeTask(t)} aria-label={`Mark "${t.title}" done`} title="Mark done"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 text-transparent hover:border-green-600 hover:text-green-600">✓</button>
+                  )}
+                  <Link to={`/organizer/events/${t.event_id}?tab=Team %26 tasks`} className="min-w-0 flex-1 py-1">
                     <span className="block truncate text-sm font-medium text-bone">{t.title}</span>
-                    <span className="block truncate text-xs text-muted">{decode(t.event_title)} · {t.assignee_name || t.assigned_to || 'Unassigned'}</span>
-                  </span>
+                    <span className="block truncate text-xs text-muted">{decode(t.event_title)} · <span className={t.assigned_to ? '' : 'font-semibold text-amber-700'}>{t.assignee_name || t.assigned_to || 'Unassigned'}</span></span>
+                  </Link>
                   {t.due_date && <span className={`shrink-0 text-xs font-semibold ${overdue ? 'text-red-600' : 'text-muted'}`}>{overdue ? 'Overdue · ' : ''}{new Date(t.due_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                </Link></li>
+                  {t.can_manage && <button onClick={() => setTaskSheet(t)} className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-medium text-marigold hover:bg-marigold/10">{t.assigned_to ? 'Reassign' : 'Assign'}</button>}
+                </li>
               );
             })}
           </ul>
@@ -308,6 +326,14 @@ export default function Planning() {
       </section>
       )}
 
+      {taskSheet && (
+        <PlanningTaskSheet
+          events={taskSheet === 'new' ? taskEvents : [{ id: taskSheet.event_id, title: taskSheet.event_title, start_date: null }]}
+          task={taskSheet === 'new' ? null : taskSheet}
+          onClose={() => setTaskSheet(null)}
+          onDone={(m) => { setTaskSheet(null); setTaskMsg(m); setTimeout(() => setTaskMsg(null), 3500); setReloadKey((k) => k + 1); }}
+        />
+      )}
     </div>
   );
 }
