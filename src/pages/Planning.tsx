@@ -29,7 +29,7 @@ function Chip({ ok, label, to, neutral = false }: { ok: boolean; label: string; 
 
 // Planning: what needs attention across your upcoming events, drafts, tasks and scouting.
 type View = 'all' | 'events' | 'drafts' | 'tasks' | 'team' | 'scouting';
-const VIEWS: View[] = ['all', 'events', 'drafts', 'tasks', 'team', 'scouting'];
+const VIEWS: View[] = ['all', 'team', 'events', 'drafts', 'tasks', 'scouting'];
 
 export default function Planning() {
   const { user } = useAuth();
@@ -75,10 +75,10 @@ export default function Planning() {
   const show = (v: View) => view === 'all' || view === v;
   const tabs: { v: View; label: string; count?: number; alert?: number }[] = [
     { v: 'all', label: 'Overview' },
+    { v: 'team', label: 'Team' },
     { v: 'events', label: 'Events', count: allUpcoming.length, alert: needsCount },
     { v: 'drafts', label: 'Drafts', count: (events ?? []).filter((e) => e.status === 'draft').length },
     { v: 'tasks', label: 'Tasks', count: tasks.length, alert: overdueCount },
-    { v: 'team', label: 'Team' },
     { v: 'scouting', label: 'Scouting', count: boards.length },
   ];
 
@@ -112,11 +112,11 @@ export default function Planning() {
       {view === 'all' && events !== null && (
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {[
+            { v: 'team' as View, n: busiest ? busiest.overdue : 0, label: busiest ? `overdue for ${busiest.name}` : 'teammates behind', warn: !!busiest },
             { v: 'events' as View, n: needsCount, label: needsCount === 1 ? 'event needs attention' : 'events need attention', warn: needsCount > 0 },
             { v: 'drafts' as View, n: (events ?? []).filter((e) => e.status === 'draft').length, label: 'drafts to finish', warn: false },
             { v: 'tasks' as View, n: overdueCount, label: overdueCount === 1 ? 'overdue task' : 'overdue tasks', warn: overdueCount > 0 },
             { v: 'scouting' as View, n: boards.length, label: boards.length === 1 ? 'scouting board' : 'scouting boards', warn: false },
-            { v: 'team' as View, n: busiest ? busiest.overdue : 0, label: busiest ? `overdue for ${busiest.name}` : 'teammates behind', warn: !!busiest },
           ].map((tile) => (
             <button key={tile.v} onClick={() => { if (tile.v === 'events' && tile.n > 0) setNeedsOnly(true); setView(tile.v); }}
               className={`rounded-2xl border p-3 text-left ${tile.warn ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-surface'}`}>
