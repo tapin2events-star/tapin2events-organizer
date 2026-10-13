@@ -906,7 +906,7 @@ export default function EventForm() {
               </div>
             )}
 
-            {((sellMode === 'single' && eventType !== 'free') || (sellMode === 'tiers' && tierDrafts.some((d) => Number(d.price) > 0))) && (
+            {((sellMode === 'single' && eventType !== 'free') || (sellMode === 'tiers' && tierDrafts.some((d) => Number(d.price) > 0)) || (sellMode === 'seating' && seatingSections.some((x) => Number(x.price) > 0))) && (
               isEdit && id
                 ? <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4"><PromoCodes eventId={id} tiers={[]} /></div>
                 : <FormPromoCodes codes={pendingCodes} onChange={setPendingCodes} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />

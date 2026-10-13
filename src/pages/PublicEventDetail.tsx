@@ -66,6 +66,11 @@ export default function PublicEventDetail() {
   const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string }[]>([]);
   const [selectedSectionName, setSelectedSectionName] = useState<string | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  // Promo code for reserved seats (checked with check_promo_code, applied by the seated checkout).
+  const [seatCodeOpen, setSeatCodeOpen] = useState(false);
+  const [seatCodeInput, setSeatCodeInput] = useState('');
+  const [seatPromo, setSeatPromo] = useState<{ code: string; kind: 'percent' | 'amount'; value: number } | null>(null);
+  const [seatCodeErr, setSeatCodeErr] = useState<string | null>(null);
   const [useBundle, setUseBundle] = useState(false);
   const [organizerName, setOrganizerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -277,6 +282,7 @@ export default function PublicEventDetail() {
         section_name: selectedSectionName,
         seat_labels: selectedSeats,
         use_bundle: useBundle,
+        promo_code: seatPromo?.code ?? null,
         successUrl: `${base}events/${id}?checkout=success`,
         cancelUrl: `${base}events/${id}?checkout=cancelled`,
       },
@@ -284,10 +290,22 @@ export default function PublicEventDetail() {
 
     setRegistering(false);
     if (error || !data?.url) {
-      setRegisterError(error?.message || 'Something went wrong starting checkout. Please try again.');
+      let msg = 'Something went wrong starting checkout. Please try again.';
+      try { const j = await (error as { context?: Response })?.context?.json(); if (j?.error) msg = String(j.error); } catch { /* default */ }
+      setRegisterError(msg);
       return;
     }
     window.location.href = data.url;
+  }
+
+  async function applySeatCode() {
+    if (!id) return;
+    setSeatCodeErr(null);
+    const { data, error } = await supabase.rpc('check_promo_code', { p_event_id: id, p_code: seatCodeInput });
+    const row = ((data ?? []) as { code: string; kind: 'percent' | 'amount'; value: number; tier_ids: string[] | null }[])[0];
+    if (error || !row) { setSeatCodeErr(error?.message?.replace(/^.*?: /, '') || "That code isn't valid for this event."); return; }
+    if (row.tier_ids && row.tier_ids.length) { setSeatCodeErr('That code only works on certain ticket types, not reserved seats.'); return; }
+    setSeatPromo({ code: row.code, kind: row.kind, value: Number(row.value) });
   }
 
   function toggleSeat(seatLabel: string) {
@@ -595,8 +613,10 @@ export default function PublicEventDetail() {
 
                 {selectedSeats.length > 0 && (() => {
                   const section = event.seating_sections!.find((s) => s.name === selectedSectionName);
-                  const perSeatPrice = useBundle && section ? section.bundle_price! : section?.price ?? 0;
+                  const fullSeat = useBundle && section ? section.bundle_price! : section?.price ?? 0;
+                  const perSeatPrice = seatPromo ? Math.max(0, seatPromo.kind === 'percent' ? Math.round(fullSeat * (100 - seatPromo.value)) / 100 : fullSeat - seatPromo.value) : fullSeat;
                   const total = selectedSeats.length * (perSeatPrice ?? 0);
+                  const saved = selectedSeats.length * (fullSeat - perSeatPrice);
                   return (
                     <div className="mt-4 flex flex-col gap-3 border-t border-gray-800 pt-4">
                       <p className="text-sm text-gray-300">
@@ -619,6 +639,24 @@ export default function PublicEventDetail() {
                           </span>
                         </label>
                       )}
+
+                      <div className="text-sm">
+                        {seatPromo ? (
+                          <p className="flex flex-wrap items-center gap-2 text-green-300">
+                            🏷️ Code <strong>{seatPromo.code}</strong> applied: you save ${saved.toFixed(2)}
+                            <button type="button" onClick={() => { setSeatPromo(null); setSeatCodeInput(''); }} className="text-xs text-gray-400 underline">Remove</button>
+                          </p>
+                        ) : seatCodeOpen ? (
+                          <div className="flex gap-2">
+                            <input value={seatCodeInput} onChange={(e) => setSeatCodeInput(e.target.value.toUpperCase())} placeholder="Promo code" aria-label="Promo code"
+                              className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-base uppercase text-white sm:text-sm" />
+                            <button type="button" onClick={applySeatCode} disabled={!seatCodeInput.trim()} className="rounded-lg bg-gray-700 px-3 text-sm font-semibold text-white disabled:opacity-50">Apply</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setSeatCodeOpen(true)} className="text-sm text-gray-300 underline">Have a promo code?</button>
+                        )}
+                        {seatCodeErr && <p className="mt-1 text-xs text-magenta">{seatCodeErr}</p>}
+                      </div>
 
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <span />
