@@ -12,7 +12,7 @@ const decode = (t: string) => t.replace(/&#8217;|&rsquo;/g, '\u2019').replace(/&
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 
 // Planning > Tasks: create a task for a teammate on one of your events, or reassign an existing one.
-export default function PlanningTaskSheet({ events, task, onClose, onDone }: { events: TaskEventOption[]; task?: EditTask | null; onClose: () => void; onDone: (msg: string) => void }) {
+export default function PlanningTaskSheet({ events, task, meetingId, onClose, onDone }: { events: TaskEventOption[]; task?: EditTask | null; meetingId?: string; onClose: () => void; onDone: (msg: string) => void }) {
   const { user } = useAuth();
   const editing = !!task;
   const [eventId, setEventId] = useState(task?.event_id ?? events[0]?.id ?? '');
@@ -48,7 +48,7 @@ export default function PlanningTaskSheet({ events, task, onClose, onDone }: { e
       return onDone(assignee && assignee !== (task.assigned_to ?? '').toLowerCase() ? `Reassigned to ${nameOf(assignee)}.` : 'Task updated.');
     }
     const { data, error } = await supabase.from('event_tasks')
-      .insert({ event_id: eventId, title: title.trim().slice(0, 200), assigned_to: assignee || null, assigned_by: user.email, status: 'todo', due_date: due || null })
+      .insert({ event_id: eventId, title: title.trim().slice(0, 200), assigned_to: assignee || null, assigned_by: user.email, status: 'todo', due_date: due || null, ...(meetingId ? { meeting_id: meetingId } : {}) })
       .select('id').single();
     setBusy(false);
     if (error) return setErr("Couldn't add the task. You need to be the organizer, an Admin or an Editor of that event.");
@@ -58,7 +58,7 @@ export default function PlanningTaskSheet({ events, task, onClose, onDone }: { e
   const nameOf = (email: string) => team?.find((m) => m.email.toLowerCase() === email)?.full_name || email;
 
   return (
-    <Sheet title={editing ? 'Edit task' : 'New task'} onClose={onClose}>
+    <Sheet title={editing ? 'Edit task' : meetingId ? 'New action item' : 'New task'} onClose={onClose}>
       <label className="block text-xs font-medium text-gray-500">Task
         <input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} placeholder="Confirm the sound check time" className={field} autoFocus={!editing} />
       </label>

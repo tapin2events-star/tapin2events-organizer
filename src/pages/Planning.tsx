@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import MeetingsTab from '../components/planning/MeetingsTab';
+import { meetingWhen, type MeetingRow, type PlanTarget, type PollRow } from '../lib/meetings';
 import PlanningTaskSheet from '../components/planning/PlanningTaskSheet';
 import PlanningTeam from '../components/planning/PlanningTeam';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -42,8 +44,8 @@ function Chip({ ok, label, to, neutral = false }: { ok: boolean; label: string; 
 }
 
 // Planning: what needs attention across your upcoming events, drafts, tasks and scouting.
-type View = 'all' | 'events' | 'drafts' | 'tasks' | 'team' | 'scouting';
-const VIEWS: View[] = ['all', 'team', 'scouting', 'drafts', 'events', 'tasks'];
+type View = 'all' | 'events' | 'drafts' | 'tasks' | 'team' | 'meetings' | 'scouting';
+const VIEWS: View[] = ['all', 'team', 'meetings', 'scouting', 'drafts', 'events', 'tasks'];
 
 export default function Planning() {
   const { user } = useAuth();
@@ -81,6 +83,12 @@ export default function Planning() {
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
+  const [meetings, setMeetings] = useState<MeetingRow[]>([]);
+  const [polls, setPolls] = useState<PollRow[]>([]);
+  useEffect(() => {
+    supabase.rpc('my_meetings').then(({ data }) => setMeetings((data ?? []) as MeetingRow[]));
+    supabase.rpc('my_polls').then(({ data }) => setPolls((data ?? []) as PollRow[]));
+  }, [reloadKey]);
   const [busiest, setBusiest] = useState<{ name: string; overdue: number } | null>(null);
   useEffect(() => {
     supabase.rpc('planning_people').then(({ data }) => {
@@ -117,12 +125,23 @@ export default function Planning() {
     .filter((t) => taskFilter === 'all' ? true : taskFilter === 'mine' ? (t.assigned_to ?? '').toLowerCase() === me : taskFilter === 'overdue' ? !!t.due_date && t.due_date < today : !t.assigned_to);
   const overdueCount = scopedTasks.filter((t) => t.due_date && t.due_date < today).length;
   const scopedBoards = boards.filter((b) => inScope(b.organization_id));
+  const scopedMeetings = meetings.filter((m) => inScope(m.organization_id));
+  const scopedPolls = polls.filter((p) => inScope(p.organization_id));
+  const nextMeeting = scopedMeetings.find((m) => m.status === 'scheduled' && new Date(m.starts_at).getTime() > Date.now() - 30 * 60000) ?? null;
+  const pendingAnswers = scopedPolls.filter((p) => !p.i_voted).length + scopedMeetings.filter((m) => m.status === 'scheduled' && m.my_rsvp === 'pending' && new Date(m.starts_at).getTime() > Date.now()).length;
+  // Where you can schedule meetings/polls: events where you're organizer/Admin/Editor, and organizations where you're Owner/Admin/Editor.
+  const planTargets: PlanTarget[] = [
+    ...orgs.filter((o) => ['owner', 'admin', 'editor'].includes(o.role)).map((o) => ({ kind: 'org' as const, id: o.id, label: o.name, orgId: o.id })),
+    ...scopedEvents.filter((e) => e.is_owner || ['owner', 'admin', 'editor'].includes(e.my_role ?? '')).map((e) => ({ kind: 'event' as const, id: e.id, label: e.title, orgId: e.organization_id })),
+  ];
+  const defaultTarget = scope === 'org' && scopeOrg && ['owner', 'admin', 'editor'].includes(scopeOrg.role) ? `org:${scopeOrg.id}` : '';
   const draftCount = scopedEvents.filter((e) => e.status === 'draft').length;
   const shownBoards = scopedBoards.filter((b) => matches(b.name)).slice(0, view === 'scouting' ? 100 : 6);
   const show = (v: View) => view === 'all' || view === v;
   const tabs: { v: View; label: string; count?: number; alert?: number }[] = [
     { v: 'all', label: 'Overview' },
     { v: 'team', label: 'Team' },
+    { v: 'meetings', label: 'Meetings', count: scopedMeetings.filter((m) => m.status === 'scheduled' && new Date(m.starts_at).getTime() > Date.now() - 30 * 60000).length + scopedPolls.length, alert: pendingAnswers },
     { v: 'scouting', label: 'Scouting', count: scopedBoards.length },
     { v: 'drafts', label: 'Drafts', count: draftCount },
     { v: 'events', label: 'Events', count: allUpcoming.length, alert: needsCount },
@@ -166,6 +185,21 @@ export default function Planning() {
           className="mt-2 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 sm:text-sm" />
       </div>
 
+      {/* Overview: next meeting */}
+      {view === 'all' && (nextMeeting || pendingAnswers > 0) && (
+        <button onClick={() => setView('meetings')} className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-left">
+          <span className="text-2xl" aria-hidden="true">📅</span>
+          <span className="min-w-0 flex-1">
+            {nextMeeting ? <>
+              <span className="block truncate text-sm font-semibold text-bone">Next meeting: {nextMeeting.title}</span>
+              <span className="block truncate text-xs text-muted">{meetingWhen(nextMeeting.starts_at)} · {nextMeeting.going} going{nextMeeting.my_rsvp === 'pending' ? ' · you haven’t replied' : ''}</span>
+            </> : <span className="block text-sm font-semibold text-bone">Meetings & polls</span>}
+            {pendingAnswers > 0 && <span className="block text-xs font-semibold text-amber-800">{pendingAnswers} waiting for your answer</span>}
+          </span>
+          <span className="shrink-0 text-sm font-medium text-marigold">Open ›</span>
+        </button>
+      )}
+
       {/* Overview: quick summary tiles */}
       {view === 'all' && events !== null && (
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -183,6 +217,13 @@ export default function Planning() {
             </button>
           ))}
         </div>
+      )}
+
+      {/* Meetings */}
+      {view === 'meetings' && (
+        <section className="mt-6">
+          <MeetingsTab meetings={scopedMeetings} polls={scopedPolls} targets={planTargets} defaultTarget={defaultTarget} canSchedule={planTargets.length > 0 || scope !== 'org'} query={query} onChanged={() => setReloadKey((k) => k + 1)} />
+        </section>
       )}
 
       {/* Team */}
