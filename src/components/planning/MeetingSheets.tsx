@@ -9,6 +9,9 @@ const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-wh
 const decode = (t: string) => t.replace(/&#8217;|&rsquo;/g, '\u2019').replace(/&amp;/g, '&');
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 const ROLE_NAME: Record<string, string> = { owner: 'Owner', admin: 'Admin', editor: 'Editor', viewer: 'Viewer', helper: 'Helper', vendor_manager: 'Vendor Manager' };
+// Date/time boxes: full width and a fixed height so iPhones don't collapse them when empty.
+const dt = 'mt-1 block h-12 w-full min-w-0 appearance-none rounded-xl border border-gray-300 bg-white px-3 text-left text-base text-gray-900';
+const pretty = (date: string, time: string) => (date ? new Date(`${date}T${time || '19:00'}`).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(':00 ', ' ') : '');
 const DURATIONS = [[30, '30 min'], [45, '45 min'], [60, '1 hour'], [90, '1.5 hours'], [120, '2 hours'], [180, '3 hours']] as const;
 
 // Who it's for (an event or organization) and who's invited (that team, plus any email).
@@ -105,10 +108,11 @@ export function MeetingSheet({ targets, defaultTarget = '', initial, onClose, on
   return (
     <Sheet title={editing ? 'Edit meeting' : 'Schedule a meeting'} onClose={onClose}>
       <label className="block text-xs font-medium text-gray-500">Meeting name<input value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} placeholder="Lineup check-in" className={field} autoFocus={!editing} /></label>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <label className="min-w-0 text-xs font-medium text-gray-500">Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} /></label>
-        <label className="min-w-0 text-xs font-medium text-gray-500">Time<input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={field} /></label>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block min-w-0 text-xs font-medium text-gray-500">Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={dt} /></label>
+        <label className="block min-w-0 text-xs font-medium text-gray-500">Time<input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={dt} /></label>
       </div>
+      {date && <p className="mt-1 text-xs text-gray-500">{pretty(date, time)}</p>}
       <label className="mt-3 block text-xs font-medium text-gray-500">How long
         <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} className={field}>{DURATIONS.map(([m, l]) => <option key={m} value={m}>{l}</option>)}</select>
       </label>
@@ -160,13 +164,24 @@ export function PollSheet({ targets, defaultTarget = '', onClose }: { targets: P
       <div className="mt-3">
         <span className="text-xs font-medium text-gray-500">Times to choose from</span>
         {options.map((o, i) => (
-          <div key={i} className="mt-1.5 flex items-center gap-2">
-            <input type="date" value={o.date} onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, date: e.target.value } : x)))} aria-label={`Option ${i + 1} date`} className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-2 py-2 text-base text-gray-900 sm:text-sm" />
-            <input type="time" value={o.time} onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))} aria-label={`Option ${i + 1} time`} className="w-28 shrink-0 rounded-xl border border-gray-300 bg-white px-2 py-2 text-base text-gray-900 sm:text-sm" />
-            {options.length > 2 && <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))} aria-label="Remove time" className="shrink-0 px-1 text-gray-400 hover:text-red-600">×</button>}
+          <div key={i} className="mt-2 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-gray-900">Option {i + 1}</span>
+              {options.length > 2 && <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))} className="min-h-[36px] rounded-lg px-2 text-sm text-gray-500 hover:text-red-600">Remove</button>}
+            </div>
+            <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label className="block min-w-0 text-xs font-medium text-gray-500">Date
+                <input type="date" value={o.date} onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, date: e.target.value } : x)))} className={dt} />
+              </label>
+              <label className="block min-w-0 text-xs font-medium text-gray-500">Time
+                <input type="time" value={o.time} onChange={(e) => setOptions(options.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))} className={dt} />
+              </label>
+            </div>
+            <p className={`mt-1.5 text-xs ${o.date ? 'font-medium text-indigo-700' : 'text-gray-400'}`}>{o.date ? pretty(o.date, o.time) : 'Pick a date'}</p>
           </div>
         ))}
-        {options.length < 8 && <button type="button" onClick={() => setOptions([...options, { date: options[options.length - 1]?.date ?? '', time: options[options.length - 1]?.time ?? '19:00' }])} className="mt-2 text-sm font-medium text-marigold">+ Add another time</button>}
+        {options.length < 8 && <button type="button" onClick={() => setOptions([...options, { date: options[options.length - 1]?.date ?? '', time: options[options.length - 1]?.time ?? '19:00' }])} className="mt-2 min-h-[44px] w-full rounded-xl border border-dashed border-gray-300 text-sm font-semibold text-marigold">+ Add another time</button>}
+        <p className="mt-1 text-xs text-gray-500">{filled.length} of {options.length} times picked · at least 2 needed</p>
       </div>
       <label className="mt-3 block text-xs font-medium text-gray-500">Video link (optional)<input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://…" className={field} inputMode="url" /></label>
       <label className="mt-3 block text-xs font-medium text-gray-500">Place (optional)<input value={location} maxLength={300} onChange={(e) => setLocation(e.target.value)} className={field} /></label>
