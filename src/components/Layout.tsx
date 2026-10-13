@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { scrollPageToTop } from '../lib/scroll';
 import { useFeature } from '../lib/preview';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -80,7 +81,8 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen bg-ink text-bone">
       {/* Mobile top bar: only visible below md */}
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
+        onClick={(e) => { if (!(e.target as HTMLElement).closest('a, button')) scrollPageToTop(); }}>
         <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           <span className="bg-gradient-to-r from-marigold to-teal bg-clip-text text-transparent">TapIN</span>
         </Link>

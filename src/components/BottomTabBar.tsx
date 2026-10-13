@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { scrollPageToTop } from '../lib/scroll';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import CreateSheet from './CreateSheet';
 import { useAuth } from '../context/AuthContext';
@@ -53,6 +54,13 @@ export default function BottomTabBar() {
   const location = useLocation();
   useEffect(() => { setCreating(false); }, [location.pathname]);
 
+  // Already on this tab's page (not a sub-page)? Then the tap means "back to the top".
+  const onTab = (to: string, end?: boolean) => {
+    const path = location.pathname.replace(/\/+$/, '') || '/';
+    const target = to.replace(/\/+$/, '') || '/';
+    return end || target === '/' ? path === target : path === target;
+  };
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-[1000] flex items-center justify-around border-t border-gray-200 bg-surface/95 backdrop-blur-sm md:hidden"
@@ -63,6 +71,7 @@ export default function BottomTabBar() {
           key={tab.to}
           to={tab.to}
           end={tab.end}
+          onClick={(e) => { if (onTab(tab.to, tab.end)) { e.preventDefault(); scrollPageToTop(); } }}
           className={({ isActive }) =>
             `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
               isActive ? 'text-marigold' : 'text-muted'
@@ -95,6 +104,7 @@ export default function BottomTabBar() {
           key={tab.to}
           to={tab.to}
           end={tab.end}
+          onClick={(e) => { if (onTab(tab.to, tab.end)) { e.preventDefault(); scrollPageToTop(); } }}
           className={({ isActive }) =>
             `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
               isActive ? 'text-marigold' : 'text-muted'
