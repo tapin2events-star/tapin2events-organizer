@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
+  profile_qr: { name: 'Personal TapIN QR', description: 'A QR code on your profile that opens your public TapIN profile, to share anywhere.', status: 'preview' },
   networking: { name: 'Attendee networking', description: 'Organizers turn on networking for an event; ticket holders add a card (title, company, what they\u2019re looking for), browse who\u2019s going and send connection requests. Contact info is shared only between connections.', status: 'preview' },
   invoices: { name: 'Invoices & receipts', description: 'Pay-by-invoice for group and company ticket purchases (Tickets tab), and printable receipts where buyers can add company, address, tax ID and PO number.', status: 'preview' },
   templates: { name: 'Event templates', description: 'Start a new event from a template (Conference, Summit, Gala, Workshop series, Networking night, Fundraiser, Concert / showcase, Open mic) that fills in the description, tickets, registration questions and agenda.', status: 'preview' },

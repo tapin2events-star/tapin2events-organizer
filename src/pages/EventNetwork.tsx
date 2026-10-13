@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import ShareQR from '../components/ShareQR';
 import { supabase } from '../lib/supabaseClient';
 import BackButton from '../components/BackButton';
 import { ListSkeleton } from '../components/ui/Skeleton';
 
 const LOOKING = ['Hiring', 'A new role', 'Partners', 'Clients', 'Mentors', 'Investors', 'Just networking'];
-interface Status { enabled: boolean; can_join: boolean; can_manage: boolean; members: number; requests: number; me: { title: string | null; company: string | null; looking_for: string[]; intro: string | null; linkedin: string | null } | null }
+interface CardInfo { title: string | null; company: string | null; looking_for: string[]; intro: string | null; linkedin: string | null }
+interface Status { enabled: boolean; can_join: boolean; can_manage: boolean; members: number; requests: number; me: (CardInfo & { qr_token: string }) | null; defaults: CardInfo | null }
+interface Scanned { full_name: string | null; photo: string | null; title: string | null; company: string | null; looking_for: string[]; intro: string | null; is_me: boolean; connected: boolean }
 interface Member { member_key: string; full_name: string | null; photo: string | null; title: string | null; company: string | null; looking_for: string[]; intro: string | null; connection: 'none' | 'sent' | 'received' | 'connected'; connection_id: string | null }
 interface Contact { full_name: string | null; photo: string | null; email: string; title: string | null; company: string | null; linkedin: string | null }
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
@@ -19,8 +22,10 @@ function Avatar({ name, photo, size = 'h-12 w-12' }: { name: string | null; phot
 // Attendee networking (Preview): opt in with a card, browse people going (give to get), send connection
 // requests; contact info is shared only between accepted connections.
 export default function EventNetwork() {
-  const { id } = useParams();
+  const { id, token } = useParams();
+  const navigate = useNavigate();
   const [title, setTitle] = useState('');
+  const [scanned, setScanned] = useState<Scanned | null | undefined>(undefined);
   const [status, setStatus] = useState<Status | null | undefined>(undefined);
   const [view, setView] = useState<'people' | 'connections' | 'card'>('people');
   const [people, setPeople] = useState<Member[] | null>(null);
@@ -39,6 +44,18 @@ export default function EventNetwork() {
     setStatus((s ?? null) as Status | null);
   }, [id]);
   useEffect(() => { loadStatus(); }, [loadStatus]);
+  // Opened from someone's QR code: show their card with a one-tap connect.
+  useEffect(() => {
+    if (!token) { setScanned(undefined); return; }
+    supabase.rpc('networking_card', { p_event_id: id, p_token: token }).then(({ data }) => setScanned((data ?? null) as Scanned | null));
+  }, [id, token]);
+  async function connectScanned() {
+    const { error } = await supabase.rpc('connect_by_qr', { p_event_id: id, p_token: token });
+    if (error) return flash(errText(error, "Couldn't connect."));
+    flash(`You're connected with ${scanned?.full_name || 'them'}! Their contact info is in My connections.`);
+    navigate(`/events/${id}/network`, { replace: true });
+    setView('connections'); loadStatus();
+  }
 
   const loadPeople = useCallback(async () => {
     const { data } = await supabase.rpc('networking_directory', { p_event_id: id, p_query: q.trim() || null, p_looking: looking });
@@ -54,6 +71,11 @@ export default function EventNetwork() {
     supabase.rpc('my_connections', { p_event_id: id }).then(({ data }) => setContacts((data ?? []) as Contact[]));
   }, [view, id]);
 
+  async function removeConnection(c: Contact) {
+    if (!window.confirm(`Remove ${c.full_name || c.email} from your connections? You'll stop seeing each other's contact info.`)) return;
+    await supabase.rpc('remove_connection', { p_event_id: id, p_other_email: c.email });
+    setContacts((list) => (list ?? []).filter((x) => x.email !== c.email));
+  }
   async function connect(m: Member) {
     const note = window.prompt(`Add a short note to ${m.full_name?.split(' ')[0] || 'them'} (optional):`, '') ?? null;
     if (note === null) return;
@@ -86,6 +108,28 @@ export default function EventNetwork() {
       <h1 className="font-display text-2xl font-extrabold text-bone sm:text-3xl">Meet people going to {title || 'this event'}</h1>
       <p className="mt-1 text-sm text-muted">{status.members} {status.members === 1 ? 'person has' : 'people have'} joined. Contact info is shared only when you both connect.</p>
       {msg && <p role="status" className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
+      {token && scanned !== undefined && (
+        <div className="mt-4 rounded-2xl border-2 border-indigo-300 bg-white p-4">
+          {scanned === null ? <p className="text-sm text-muted">This code isn't valid for this event, or you're not going.</p> : (
+            <>
+              <div className="flex items-start gap-3">
+                <Avatar name={scanned.full_name} photo={scanned.photo} size="h-14 w-14" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-lg font-bold text-gray-900">{scanned.full_name || 'TapIN member'}</p>
+                  <p className="text-sm text-gray-600">{[scanned.title, scanned.company].filter(Boolean).join(' · ')}</p>
+                  {scanned.intro && <p className="mt-1 text-sm text-gray-800">{scanned.intro}</p>}
+                </div>
+              </div>
+              <div className="mt-3">
+                {scanned.is_me ? <p className="text-sm text-muted">That's your own code. Show it to someone so they can scan it.</p>
+                  : scanned.connected ? <p className="text-sm font-semibold text-green-700">✓ You're already connected.</p>
+                  : joined ? <button onClick={connectScanned} className="w-full rounded-xl bg-marigold py-3 text-sm font-bold text-white">🤝 Connect now</button>
+                  : <p className="text-sm text-gray-700">Create your card below, then connect.</p>}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {!joined && !status.can_join && !status.can_manage ? (
         <div className="mt-6 rounded-2xl border border-gray-200 bg-surface p-5 text-sm text-muted">
@@ -109,10 +153,15 @@ export default function EventNetwork() {
             </button>
           ))}
           {joined && <button onClick={() => setView('card')} className="whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700">My card</button>}
+          {joined && status.me && <ShareQR path={`/events/${id}/network/qr/${status.me.qr_token}`} title={title || 'Networking'} subtitle="Scan to connect with me" label="My QR"
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white" />}
         </div>
       )}
 
-      {view === 'card' && <CardForm eventId={id!} me={status.me} onSaved={(left) => { flash(left ? 'You left the networking list.' : 'Your card is saved.'); setView('people'); loadStatus(); }} onCancel={() => setView('people')} />}
+      {view === 'card' && <CardForm eventId={id!} me={status.me ?? status.defaults} isNew={!status.me} onSaved={async (left) => {
+        flash(left ? 'You left the networking list.' : 'Your card is saved.'); setView('people'); await loadStatus();
+        if (!left && token && scanned && !scanned.is_me && !scanned.connected) connectScanned();
+      }} onCancel={() => setView('people')} />}
 
       {view === 'people' && (joined || status.can_manage) && (
         <>
@@ -171,6 +220,7 @@ export default function EventNetwork() {
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                     <a href={`mailto:${c.email}`} className="font-medium text-marigold">✉️ {c.email}</a>
                     {c.linkedin && <a href={c.linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-marigold">LinkedIn ↗</a>}
+                    <button onClick={() => removeConnection(c)} className="text-gray-400 hover:text-red-600">Remove</button>
                   </div>
                 </div>
               </li>
@@ -182,7 +232,7 @@ export default function EventNetwork() {
   );
 }
 
-function CardForm({ eventId, me, onSaved, onCancel }: { eventId: string; me: Status['me']; onSaved: (left: boolean) => void; onCancel: () => void }) {
+function CardForm({ eventId, me, isNew, onSaved, onCancel }: { eventId: string; me: CardInfo | null; isNew: boolean; onSaved: (left: boolean) => void; onCancel: () => void }) {
   const [f, setF] = useState({ title: me?.title ?? '', company: me?.company ?? '', intro: me?.intro ?? '', linkedin: me?.linkedin ?? '' });
   const [looking, setLooking] = useState<string[]>(me?.looking_for ?? []);
   const [busy, setBusy] = useState(false);
@@ -201,8 +251,8 @@ function CardForm({ eventId, me, onSaved, onCancel }: { eventId: string; me: Sta
   }
   return (
     <div className="mt-5 rounded-2xl border border-gray-200 bg-surface p-4">
-      <p className="font-semibold text-bone">{me ? 'Your networking card' : 'Create your card'}</p>
-      <p className="text-xs text-muted">Your name and photo come from your TapIN profile. Your email stays private until you connect.</p>
+      <p className="font-semibold text-bone">{!isNew ? 'Your networking card' : 'Create your card'}</p>
+      <p className="text-xs text-muted">Your name and photo come from your TapIN profile. Your email stays private until you connect.{isNew && me ? ' Filled in from your last card.' : ''} Saving also updates your card for future events.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block min-w-0 text-xs font-medium text-gray-500">Title<input value={f.title} maxLength={100} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Marketing Director" className={field} /></label>
         <label className="block min-w-0 text-xs font-medium text-gray-500">Company<input value={f.company} maxLength={100} onChange={(e) => setF({ ...f, company: e.target.value })} placeholder="Acme" className={field} /></label>
@@ -218,9 +268,9 @@ function CardForm({ eventId, me, onSaved, onCancel }: { eventId: string; me: Sta
       <label className="mt-3 block text-xs font-medium text-gray-500">LinkedIn (optional, shared only with connections)<input value={f.linkedin} onChange={(e) => setF({ ...f, linkedin: e.target.value })} placeholder="linkedin.com/in/yourname" inputMode="url" className={field} /></label>
       {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button onClick={save} disabled={busy} className="rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Saving…' : me ? 'Save' : 'Join the list'}</button>
+        <button onClick={save} disabled={busy} className="rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Saving…' : !isNew ? 'Save' : 'Join the list'}</button>
         <button onClick={onCancel} className="rounded-xl px-3 py-2.5 text-sm text-gray-500">Cancel</button>
-        {me && <button onClick={leave} className="ml-auto text-sm text-gray-400 hover:text-red-600">Leave the list</button>}
+        {!isNew && <button onClick={leave} className="ml-auto text-sm text-gray-400 hover:text-red-600">Leave the list</button>}
       </div>
     </div>
   );

@@ -40,6 +40,8 @@ interface TaggedTile {
 
 export default function CreatorProfile() {
   const { email } = useParams<{ email: string }>();
+  const [pro, setPro] = useState<{ title: string | null; company: string | null; linkedin: string | null } | null>(null);
+  useEffect(() => { if (email) supabase.rpc('public_pro_info', { p_email: email }).then(({ data }) => setPro((data ?? null) as typeof pro)); }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
   const { user } = useAuth();
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -173,6 +175,12 @@ export default function CreatorProfile() {
         )}
         <div>
           <p className="font-display text-xl font-bold text-bone">{profile.full_name || profile.email}</p>
+          {pro && (pro.title || pro.company || pro.linkedin) && (
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-muted">
+              {(pro.title || pro.company) && <span>{[pro.title, pro.company].filter(Boolean).join(' · ')}</span>}
+              {pro.linkedin && <a href={pro.linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-marigold">LinkedIn ↗</a>}
+            </p>
+          )}
           <div className="mt-1 flex gap-2">
             {profile.is_organizer && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-marigold">💼 Organizer</span>}
             {profile.is_resource && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple">⭐ Resource</span>}
