@@ -39,13 +39,13 @@ export default function TransferTicket({ ticketId, eventTitle, isSeriesPass = fa
         {isSeriesPass ? 'Transfer pass' : 'Transfer ticket'}
       </button>
       {open && (
-        <Sheet title={done ? 'Ticket sent' : isSeriesPass ? 'Transfer your series pass' : 'Transfer your ticket'} onClose={() => { if (done) navigate('/my-activity#tickets'); setOpen(false); }}>
+        <Sheet title={done ? 'Ticket sent' : isSeriesPass ? 'Transfer your series pass' : 'Transfer your ticket'} onClose={() => { if (done) navigate('/activity#tickets'); setOpen(false); }}>
           {done ? (
             <div className="text-center">
               <div className="text-4xl">🎟️</div>
               <p className="mt-2 text-sm text-gray-700">Your {isSeriesPass ? 'pass' : 'ticket'} for <strong>{eventTitle}</strong> is on its way to <strong>{done}</strong>. They'll get an email with their own ticket and QR code.</p>
               <p className="mt-2 text-xs text-gray-500">This {isSeriesPass ? 'pass' : 'ticket'} no longer works for you.</p>
-              <button type="button" onClick={() => navigate('/my-activity#tickets')} className="mt-4 w-full rounded-xl bg-marigold py-3 text-sm font-semibold text-white">Done</button>
+              <button type="button" onClick={() => navigate('/activity#tickets')} className="mt-4 w-full rounded-xl bg-marigold py-3 text-sm font-semibold text-white">Done</button>
             </div>
           ) : (
             <form onSubmit={submit}>

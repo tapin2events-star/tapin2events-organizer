@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react';
+import ActivityRedirect from './components/ActivityRedirect';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="/events/:id" element={<PublicEventDetail />} />
             <Route path="/pass/:ticketId" element={<TicketPass />} />
             <Route path="/activity" element={<MyActivity />} />
+            <Route path="/my-activity" element={<ActivityRedirect />} />
             <Route path="/saved" element={<SavedEvents />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />

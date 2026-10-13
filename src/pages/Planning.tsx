@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import EventCover from '../components/EventCover';
 
@@ -26,20 +27,50 @@ function Chip({ ok, label, to, neutral = false }: { ok: boolean; label: string; 
 }
 
 // Planning: what needs attention across your upcoming events, drafts, tasks and scouting.
+type View = 'all' | 'events' | 'drafts' | 'tasks' | 'scouting';
+const VIEWS: View[] = ['all', 'events', 'drafts', 'tasks', 'scouting'];
+
 export default function Planning() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // The section shown comes from the address (#events, #tasks…), so Back and links work.
+  const view: View = (VIEWS as string[]).includes(location.hash.slice(1)) ? (location.hash.slice(1) as View) : 'all';
+  const setView = (v: View) => navigate({ hash: v === 'all' ? '' : v }, { replace: true });
+  const [query, setQuery] = useState('');
+  const [needsOnly, setNeedsOnly] = useState(false);
+  const [taskFilter, setTaskFilter] = useState<'all' | 'mine' | 'overdue' | 'unassigned'>('all');
   const [events, setEvents] = useState<PlanEvent[] | null>(null);
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   useEffect(() => {
     supabase.rpc('planning_overview').then(({ data }) => setEvents(((data ?? []) as PlanEvent[])));
     supabase.rpc('planning_tasks').then(({ data }) => setTasks((data ?? []) as PlanTask[]));
-    supabase.rpc('my_scout_boards').then(({ data }) => setBoards(((data ?? []) as Board[]).slice(0, 6)));
+    supabase.rpc('my_scout_boards').then(({ data }) => setBoards((data ?? []) as Board[]));
   }, []);
 
-  const upcoming = (events ?? []).filter((e) => e.status === 'published');
-  const drafts = (events ?? []).filter((e) => e.status === 'draft');
+  const q = query.trim().toLowerCase();
+  const matches = (t: string) => !q || decode(t).toLowerCase().includes(q);
+  const needsAttention = (e: PlanEvent) => !e.has_details || !e.has_photo || !e.has_location || !e.tickets_ready || e.needs_payouts || e.overdue_tasks > 0 || (e.lineup_total > 0 && e.lineup_confirmed < e.lineup_total);
+  const allUpcoming = (events ?? []).filter((e) => e.status === 'published');
+  const upcoming = allUpcoming.filter((e) => matches(e.title) && (!needsOnly || needsAttention(e)));
+  const drafts = (events ?? []).filter((e) => e.status === 'draft' && matches(e.title));
   const today = new Date().toISOString().slice(0, 10);
-  const needsCount = upcoming.filter((e) => !e.has_details || !e.has_photo || !e.tickets_ready || e.needs_payouts || e.overdue_tasks > 0 || (e.lineup_total > 0 && e.lineup_confirmed < e.lineup_total)).length;
+  const needsCount = allUpcoming.filter(needsAttention).length;
+  const me = (user?.email ?? '').toLowerCase();
+  const shownTasks = tasks
+    .filter((t) => matches(t.title) || matches(t.event_title))
+    .filter((t) => taskFilter === 'all' ? true : taskFilter === 'mine' ? (t.assigned_to ?? '').toLowerCase() === me : taskFilter === 'overdue' ? !!t.due_date && t.due_date < today : !t.assigned_to);
+  const overdueCount = tasks.filter((t) => t.due_date && t.due_date < today).length;
+  const shownBoards = boards.filter((b) => matches(b.name)).slice(0, view === 'scouting' ? 100 : 6);
+  const show = (v: View) => view === 'all' || view === v;
+  const tabs: { v: View; label: string; count?: number; alert?: number }[] = [
+    { v: 'all', label: 'Overview' },
+    { v: 'events', label: 'Events', count: allUpcoming.length, alert: needsCount },
+    { v: 'drafts', label: 'Drafts', count: (events ?? []).filter((e) => e.status === 'draft').length },
+    { v: 'tasks', label: 'Tasks', count: tasks.length, alert: overdueCount },
+    { v: 'scouting', label: 'Scouting', count: boards.length },
+  ];
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -51,14 +82,56 @@ export default function Planning() {
         <Link to="/organizer/new" className="rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white">+ New event</Link>
       </div>
 
+      {/* Section switcher (sticky) + search */}
+      <div className="sticky top-[calc(3.6rem+env(safe-area-inset-top,0px))] z-20 -mx-4 md:top-0 mt-4 border-b border-gray-200 bg-[var(--color-bg,#F7F7FB)]/95 px-4 pb-3 pt-2 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:px-3">
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Planning sections">
+          {tabs.map((t) => (
+            <button key={t.v} role="tab" aria-selected={view === t.v} onClick={() => setView(t.v)}
+              className={`inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium ${view === t.v ? 'bg-marigold text-white' : 'border border-gray-300 bg-white text-gray-700'}`}>
+              {t.label}
+              {t.count !== undefined && <span className={`rounded-full px-1.5 text-xs ${view === t.v ? 'bg-white/25' : 'bg-gray-100 text-gray-600'}`}>{t.count}</span>}
+              {!!t.alert && <span className="h-2 w-2 rounded-full bg-amber-500" title={`${t.alert} need${t.alert === 1 ? 's' : ''} attention`} />}
+            </button>
+          ))}
+        </div>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search events, tasks and boards" aria-label="Search planning"
+          className="mt-2 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 sm:text-sm" />
+      </div>
+
+      {/* Overview: quick summary tiles */}
+      {view === 'all' && events !== null && (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { v: 'events' as View, n: needsCount, label: needsCount === 1 ? 'event needs attention' : 'events need attention', warn: needsCount > 0 },
+            { v: 'drafts' as View, n: (events ?? []).filter((e) => e.status === 'draft').length, label: 'drafts to finish', warn: false },
+            { v: 'tasks' as View, n: overdueCount, label: overdueCount === 1 ? 'overdue task' : 'overdue tasks', warn: overdueCount > 0 },
+            { v: 'scouting' as View, n: boards.length, label: boards.length === 1 ? 'scouting board' : 'scouting boards', warn: false },
+          ].map((tile) => (
+            <button key={tile.v} onClick={() => { if (tile.v === 'events' && tile.n > 0) setNeedsOnly(true); setView(tile.v); }}
+              className={`rounded-2xl border p-3 text-left ${tile.warn ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-surface'}`}>
+              <span className={`block font-display text-2xl font-extrabold ${tile.warn ? 'text-amber-900' : 'text-bone'}`}>{tile.n}</span>
+              <span className={`text-xs ${tile.warn ? 'text-amber-900' : 'text-muted'}`}>{tile.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Event readiness */}
+      {show('events') && (
       <section className="mt-6">
         <div className="flex items-end justify-between gap-3">
           <h2 className="font-display text-xl font-bold text-bone">Upcoming events</h2>
-          {upcoming.length > 0 && <span className="text-xs text-muted">{needsCount ? `${needsCount} need${needsCount === 1 ? 's' : ''} attention` : 'All set'}</span>}
+          {allUpcoming.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input type="checkbox" checked={needsOnly} onChange={(e) => setNeedsOnly(e.target.checked)} className="h-4 w-4 accent-marigold" />
+              Needs attention only{needsCount ? ` (${needsCount})` : ''}
+            </label>
+          )}
         </div>
         {events === null ? <div className="mt-3 h-32 animate-pulse rounded-2xl bg-gray-100" /> : upcoming.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No upcoming published events. <Link to="/organizer/new" className="font-medium text-marigold">Create one</Link></p>
+          <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">
+            {allUpcoming.length === 0 ? <>No upcoming published events. <Link to="/organizer/new" className="font-medium text-marigold">Create one</Link></> : needsOnly && !q ? 'Everything is set. Nice work!' : 'No events match.'}
+          </p>
         ) : (
           <ul className="mt-3 flex flex-col gap-3">
             {upcoming.map((e) => {
@@ -86,11 +159,13 @@ export default function Planning() {
           </ul>
         )}
       </section>
+      )}
 
       {/* Drafts */}
-      {drafts.length > 0 && (
+      {show('drafts') && (view === 'drafts' || drafts.length > 0) && (
         <section className="mt-8">
           <h2 className="font-display text-xl font-bold text-bone">Drafts to finish</h2>
+          {drafts.length === 0 && <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{q ? 'No drafts match.' : 'No drafts. Everything you started is published.'}</p>}
           <ul className="mt-3 flex flex-col gap-2">
             {drafts.map((e) => {
               const missing = [!e.has_date && 'date', !e.has_location && 'location', !e.has_photo && 'photo', !e.has_details && 'description', !e.tickets_ready && 'tickets'].filter(Boolean) as string[];
@@ -109,14 +184,22 @@ export default function Planning() {
       )}
 
       {/* Tasks */}
+      {show('tasks') && (
       <section className="mt-8">
         <div className="flex items-end justify-between gap-3">
           <h2 className="font-display text-xl font-bold text-bone">Open tasks</h2>
-          <Link to="/my-activity#tasks" className="text-sm font-medium text-marigold">Assigned to me ›</Link>
+          <Link to="/activity#tasks" className="text-sm font-medium text-marigold">Assigned to me ›</Link>
         </div>
-        {tasks.length === 0 ? <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No open tasks across your events.</p> : (
+        {tasks.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {([['all', 'All'], ['mine', 'Mine'], ['overdue', `Overdue${overdueCount ? ` (${overdueCount})` : ''}`], ['unassigned', 'Unassigned']] as const).map(([k, l]) => (
+              <button key={k} onClick={() => setTaskFilter(k)} className={`min-h-[36px] rounded-full px-3 text-sm font-medium ${taskFilter === k ? 'bg-marigold text-white' : 'bg-gray-100 text-gray-600'}`}>{l}</button>
+            ))}
+          </div>
+        )}
+        {shownTasks.length === 0 ? <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{tasks.length === 0 ? 'No open tasks across your events.' : 'No tasks match.'}</p> : (
           <ul className="mt-3 flex flex-col gap-2">
-            {tasks.slice(0, 15).map((t) => {
+            {shownTasks.slice(0, view === 'tasks' ? 100 : 8).map((t) => {
               const overdue = t.due_date && t.due_date < today;
               return (
                 <li key={t.id}><Link to={`/organizer/events/${t.event_id}?tab=Team %26 tasks`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 hover:border-marigold">
@@ -130,20 +213,23 @@ export default function Planning() {
             })}
           </ul>
         )}
+        {view === 'all' && shownTasks.length > 8 && <button onClick={() => setView('tasks')} className="mt-2 text-sm font-medium text-marigold">See all {shownTasks.length} tasks ›</button>}
       </section>
+      )}
 
       {/* Scouting */}
+      {show('scouting') && (
       <section className="mt-8 mb-6">
         <div className="flex items-end justify-between gap-3">
           <h2 className="font-display text-xl font-bold text-bone">Scouting boards</h2>
           <Link to="/organizer/scouting" className="text-sm font-medium text-marigold">All boards ›</Link>
         </div>
         <p className="text-sm text-muted">Keep a running list of artists you'd love to book. When a show takes shape, open the board and choose <strong>Start an event</strong>.</p>
-        {boards.length === 0 ? (
+        {shownBoards.length === 0 && boards.length > 0 ? <p className="mt-3 text-sm text-muted">No boards match.</p> : boards.length === 0 ? (
           <Link to="/organizer/scouting" className="mt-3 block rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm font-medium text-marigold">+ Start a scouting board</Link>
         ) : (
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {boards.map((b) => (
+            {shownBoards.map((b) => (
               <Link key={b.id} to={`/organizer/scouting/${b.id}`} className="rounded-xl border border-gray-200 bg-surface p-3 hover:border-marigold">
                 <span className="block truncate font-medium text-bone">{b.name}</span>
                 <span className="text-xs text-muted">{Number(b.card_count ?? 0)} artist{Number(b.card_count ?? 0) === 1 ? '' : 's'}</span>
@@ -152,6 +238,7 @@ export default function Planning() {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }
