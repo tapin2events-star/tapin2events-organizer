@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../lib/preview';
 import GroupBadges from '../components/groups/GroupBadges';
 import BackButton from '../components/BackButton';
 import { blockUser, hasBlocked, unblockUser } from '../lib/blocks';
@@ -41,6 +42,10 @@ interface TaggedTile {
 export default function CreatorProfile() {
   const { email } = useParams<{ email: string }>();
   const [pro, setPro] = useState<{ title: string | null; company: string | null; linkedin: string | null } | null>(null);
+  const networkingOn = useFeature('networking');
+  const [shared, setShared] = useState<{ event_id: string; title: string; i_joined: boolean; connected: boolean }[]>([]);
+  const [connMsg, setConnMsg] = useState<string | null>(null);
+  useEffect(() => { if (networkingOn && email) supabase.rpc('shared_networking_events', { p_email: email }).then(({ data }) => setShared((data ?? []) as typeof shared)); }, [networkingOn, email]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (email) supabase.rpc('public_pro_info', { p_email: email }).then(({ data }) => setPro((data ?? null) as typeof pro)); }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
   const { user } = useAuth();
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
@@ -175,6 +180,15 @@ export default function CreatorProfile() {
         )}
         <div>
           <p className="font-display text-xl font-bold text-bone">{profile.full_name || profile.email}</p>
+          {shared.filter((x) => !x.connected).slice(0, 1).map((x) => (
+            <div key={x.event_id} className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm">
+              <p className="text-gray-800">🤝 You're both going to <strong>{x.title}</strong></p>
+              {x.i_joined
+                ? <button onClick={async () => { const { error } = await supabase.rpc('connect_in_person', { p_event_id: x.event_id, p_email: email }); setConnMsg(error ? "Couldn't connect." : "You're connected! Their contact info is in your connections."); if (!error) setShared((l) => l.map((y) => (y.event_id === x.event_id ? { ...y, connected: true } : y))); }} className="mt-1.5 rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Connect</button>
+                : <Link to={`/events/${x.event_id}/network?connect=${encodeURIComponent(email ?? '')}`} className="mt-1.5 inline-block rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Join networking & connect</Link>}
+            </div>
+          ))}
+          {connMsg && <p className="mt-1 text-sm text-green-700">{connMsg}</p>}
           {pro && (pro.title || pro.company || pro.linkedin) && (
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-muted">
               {(pro.title || pro.company) && <span>{[pro.title, pro.company].filter(Boolean).join(' · ')}</span>}

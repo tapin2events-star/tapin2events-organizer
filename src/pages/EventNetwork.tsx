@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import ShareQR from '../components/ShareQR';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import QrScanButtons from '../components/networking/QrScanButtons';
+import Sheet from '../components/scouting/Sheet';
 import { supabase } from '../lib/supabaseClient';
 import BackButton from '../components/BackButton';
 import { ListSkeleton } from '../components/ui/Skeleton';
@@ -24,6 +25,10 @@ function Avatar({ name, photo, size = 'h-12 w-12' }: { name: string | null; phot
 export default function EventNetwork() {
   const { id, token } = useParams();
   const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const connectEmail = search.get('connect');
+  const [connectTo, setConnectTo] = useState<Member | null>(null);
+  const [myName, setMyName] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [scanned, setScanned] = useState<Scanned | null | undefined>(undefined);
   const [status, setStatus] = useState<Status | null | undefined>(undefined);
@@ -41,6 +46,7 @@ export default function EventNetwork() {
       supabase.from('events').select('title').eq('id', id!).maybeSingle(),
     ]);
     setTitle((ev as { title: string } | null)?.title ?? '');
+    supabase.auth.getUser().then(({ data: u }) => { if (u.user) supabase.from('profiles').select('full_name').eq('id', u.user.id).maybeSingle().then(({ data: p }) => setMyName((p as { full_name: string | null } | null)?.full_name ?? null)); });
     setStatus((s ?? null) as Status | null);
   }, [id]);
   useEffect(() => { loadStatus(); }, [loadStatus]);
@@ -71,14 +77,30 @@ export default function EventNetwork() {
     supabase.rpc('my_connections', { p_event_id: id }).then(({ data }) => setContacts((data ?? []) as Contact[]));
   }, [view, id]);
 
+  async function joinWithSaved() {
+    const { error } = await supabase.rpc('join_networking_with_saved_card', { p_event_id: id });
+    if (error) return flash(errText(error, "Couldn't join."));
+    flash("You're on the list!");
+    await loadStatus();
+    afterJoin();
+  }
+  // Came here from scanning someone's personal QR ("Join & connect"): connect once you're on the list.
+  async function afterJoin() {
+    if (connectEmail) {
+      const { error } = await supabase.rpc('connect_in_person', { p_event_id: id, p_email: connectEmail });
+      if (!error) { flash("You're on the list and connected! Their contact info is in Connections."); setView('connections'); navigate(`/events/${id}/network`, { replace: true }); }
+    }
+  }
+  useEffect(() => {
+    if (connectEmail && status?.me) afterJoin();
+  }, [connectEmail, !!status?.me]); // eslint-disable-line react-hooks/exhaustive-deps
   async function removeConnection(c: Contact) {
     if (!window.confirm(`Remove ${c.full_name || c.email} from your connections? You'll stop seeing each other's contact info.`)) return;
     await supabase.rpc('remove_connection', { p_event_id: id, p_other_email: c.email });
     setContacts((list) => (list ?? []).filter((x) => x.email !== c.email));
   }
-  async function connect(m: Member) {
-    const note = window.prompt(`Add a short note to ${m.full_name?.split(' ')[0] || 'them'} (optional):`, '') ?? null;
-    if (note === null) return;
+  async function connect(m: Member, note: string) {
+    setConnectTo(null);
     const { error } = await supabase.rpc('request_connection', { p_event_id: id, p_member_key: m.member_key, p_message: note });
     if (error) return flash(errText(error, "Couldn't send the request."));
     flash(m.connection === 'received' ? `You're connected with ${m.full_name || 'them'}!` : 'Request sent.');
@@ -107,6 +129,7 @@ export default function EventNetwork() {
       <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">🤝 Networking · Preview</p>
       <h1 className="font-display text-2xl font-extrabold text-bone sm:text-3xl">Meet people going to {title || 'this event'}</h1>
       <p className="mt-1 text-sm text-muted">{status.members} {status.members === 1 ? 'person has' : 'people have'} joined. Contact info is shared only when you both connect.</p>
+      {(status.can_join || joined) && <div className="mt-4"><QrScanButtons name={myName} /></div>}
       {msg && <p role="status" className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
       {token && scanned !== undefined && (
         <div className="mt-4 rounded-2xl border-2 border-indigo-300 bg-white p-4">
@@ -138,8 +161,13 @@ export default function EventNetwork() {
       ) : !joined && view !== 'card' ? (
         <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5">
           <p className="font-semibold text-bone">Join the networking list</p>
-          <p className="mt-1 text-sm text-muted">Add a quick card so others know who you are and what you're looking for. Only people who join can browse the list, and you can leave anytime.</p>
-          <button onClick={() => setView('card')} className="mt-3 rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white">Create my card</button>
+          <p className="mt-1 text-sm text-muted">{connectEmail ? 'Join to connect with the person you scanned. ' : ''}Only people who join can browse the list, and you can leave anytime.</p>
+          {status.defaults && (status.defaults.title || status.defaults.company) ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button onClick={joinWithSaved} className="rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white">Join as {[status.defaults.title, status.defaults.company].filter(Boolean).join(' at ')}</button>
+              <button onClick={() => setView('card')} className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600">Edit first</button>
+            </div>
+          ) : <button onClick={() => setView('card')} className="mt-3 rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white">Create my card</button>}
           {status.can_manage && <button onClick={() => setView('people')} className="ml-2 mt-3 rounded-xl px-3 py-2.5 text-sm text-gray-600">Browse as organizer</button>}
         </div>
       ) : null}
@@ -149,18 +177,17 @@ export default function EventNetwork() {
           {(['people', 'connections'] as const).map((v) => (
             <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
               className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${view === v ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>
-              {v === 'people' ? `People${status.requests ? ` · ${status.requests} new` : ''}` : 'My connections'}
+              {v === 'people' ? `People${status.requests ? ` · ${status.requests} new` : ''}` : 'Connections'}
             </button>
           ))}
-          {joined && <button onClick={() => setView('card')} className="whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700">My card</button>}
-          {joined && status.me && <ShareQR path={`/events/${id}/network/qr/${status.me.qr_token}`} title={title || 'Networking'} subtitle="Scan to connect with me" label="My QR"
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white" />}
+          {joined && <button onClick={() => setView('card')} className="ml-auto shrink-0 whitespace-nowrap px-2 py-2 text-sm font-medium text-marigold">Edit my card</button>}
         </div>
       )}
 
       {view === 'card' && <CardForm eventId={id!} me={status.me ?? status.defaults} isNew={!status.me} onSaved={async (left) => {
         flash(left ? 'You left the networking list.' : 'Your card is saved.'); setView('people'); await loadStatus();
         if (!left && token && scanned && !scanned.is_me && !scanned.connected) connectScanned();
+        if (!left) afterJoin();
       }} onCancel={() => setView('people')} />}
 
       {view === 'people' && (joined || status.can_manage) && (
@@ -190,7 +217,7 @@ export default function EventNetwork() {
                   </div>
                   {joined && (
                     <div className="mt-2 flex flex-wrap justify-end gap-2">
-                      {m.connection === 'none' && <button onClick={() => connect(m)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">Connect</button>}
+                      {m.connection === 'none' && <button onClick={() => setConnectTo(m)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">Connect</button>}
                       {m.connection === 'sent' && <span className="rounded-xl bg-gray-100 px-4 py-2 text-sm text-gray-600">Requested</span>}
                       {m.connection === 'received' && <>
                         <button onClick={() => respond(m, false)} className="rounded-xl px-3 py-2 text-sm text-gray-500">Decline</button>
@@ -205,6 +232,8 @@ export default function EventNetwork() {
           )}
         </>
       )}
+
+      {connectTo && <ConnectSheet member={connectTo} onSend={(note) => connect(connectTo, note)} onClose={() => setConnectTo(null)} />}
 
       {view === 'connections' && (
         contacts === null ? <ListSkeleton rows={3} className="mt-4" /> : contacts.length === 0 ? (
@@ -273,5 +302,27 @@ function CardForm({ eventId, me, isNew, onSaved, onCancel }: { eventId: string; 
         {!isNew && <button onClick={leave} className="ml-auto text-sm text-gray-400 hover:text-red-600">Leave the list</button>}
       </div>
     </div>
+  );
+}
+
+// Connect with a quick note (tap a suggestion or write your own).
+function ConnectSheet({ member, onSend, onClose }: { member: Member; onSend: (note: string) => void; onClose: () => void }) {
+  const first = member.full_name?.split(' ')[0] || 'them';
+  const suggestions = ['Great to meet you!', 'Would love to connect.', ...(member.looking_for.includes('Partners') ? ["Let's talk partnerships."] : []), ...(member.looking_for.includes('Hiring') ? ["I'd love to hear about your openings."] : []), ...(member.looking_for.includes('Clients') ? ['I may be able to help with what you do.'] : [])];
+  const [note, setNote] = useState('');
+  return (
+    <Sheet title={`Connect with ${first}`} onClose={onClose}>
+      <div className="flex items-center gap-3">
+        <Avatar name={member.full_name} photo={member.photo} />
+        <div className="min-w-0"><p className="truncate font-semibold text-gray-900">{member.full_name || 'TapIN member'}</p><p className="truncate text-sm text-gray-500">{[member.title, member.company].filter(Boolean).join(' · ')}</p></div>
+      </div>
+      <p className="mt-4 text-xs font-medium text-gray-500">Add a note (optional)</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {suggestions.map((t) => <button key={t} type="button" onClick={() => setNote(t)} className={`rounded-full px-3 py-1.5 text-sm ${note === t ? 'bg-marigold font-semibold text-white' : 'border border-gray-300 bg-white text-gray-700'}`}>{t}</button>)}
+      </div>
+      <textarea rows={2} maxLength={280} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Or write your own" className="mt-2 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900" />
+      <button onClick={() => onSend(note)} className="mt-4 w-full rounded-xl bg-marigold py-3 text-sm font-bold text-white">Send request</button>
+      <p className="mt-2 text-center text-xs text-gray-500">Your contact info is shared only if {first} accepts.</p>
+    </Sheet>
   );
 }

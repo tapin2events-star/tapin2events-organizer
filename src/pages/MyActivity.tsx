@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useFeature } from '../lib/preview';
 import TransferTicket, { canTransfer } from '../components/TransferTicket';
 import MyTasks, { loadMyTasks, type MyTask } from '../components/MyTasks';
 import EventCover from '../components/EventCover';
@@ -63,6 +64,17 @@ async function downloadBlob(url: string, filename: string, init?: RequestInit) {
 
 
 export default function MyActivity() {
+  // Networking (Preview): which of your events have it on.
+  const networkingOn = useFeature('networking');
+  const [netEvents, setNetEvents] = useState<Record<string, { members: number; requests: number; joined: boolean }>>({});
+  useEffect(() => {
+    if (!networkingOn) return;
+    supabase.rpc('my_networking_events').then(({ data }) => {
+      const m: Record<string, { members: number; requests: number; joined: boolean }> = {};
+      for (const e of (data ?? []) as { event_id: string; members: number; requests: number; joined: boolean }[]) m[e.event_id] = { members: Number(e.members), requests: Number(e.requests), joined: e.joined };
+      setNetEvents(m);
+    });
+  }, [networkingOn]);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -375,6 +387,11 @@ export default function MyActivity() {
                       <Link to={`/pass/${t.id}`} className="mt-3 inline-block text-sm font-medium text-marigold hover:underline">
                         View full ticket &rarr;
                       </Link>
+                      {netEvents[t.event_id] && (
+                        <Link to={`/events/${t.event_id}/network`} className="ml-3 mt-3 inline-block rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">
+                          🤝 Networking · {netEvents[t.event_id].members}{netEvents[t.event_id].requests ? ` · ${netEvents[t.event_id].requests} new` : netEvents[t.event_id].joined ? '' : ' · Join'}
+                        </Link>
+                      )}
                     </div>
 
                     {t.status === 'confirmed' && (

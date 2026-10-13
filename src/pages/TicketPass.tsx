@@ -47,6 +47,8 @@ export default function TicketPass() {
   const [data, setData] = useState<PassData | null>(null);
   const { user } = useAuth();
   const invoicesOn = useFeature('invoices');
+  const networkingOn = useFeature('networking');
+  const [net, setNet] = useState<{ enabled: boolean; members: number; me: object | null; requests: number } | null>(null);
   const [cancelledNow, setCancelledNow] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -222,6 +224,7 @@ export default function TicketPass() {
             </button>
           </div>
         )}
+        <NetworkingButton on={networkingOn} eventId={ticket.event_id} net={net} setNet={setNet} />
         {invoicesOn && user?.email?.toLowerCase() === ticket.attendee_email.toLowerCase() && Number(ticket.price_paid ?? 0) > 0 && (
           <div className="mt-3 text-center print:hidden">
             <Link to={`/receipt?ticket=${ticket.id}`} className="text-sm font-medium text-marigold">🧾 Receipt (for expense reports)</Link>
@@ -248,6 +251,19 @@ export default function TicketPass() {
           <p className="mt-2 text-center text-sm text-magenta print:hidden">Something went wrong sending that. Please try again.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+// Ticket pass (Preview): jump into the event's networking list.
+function NetworkingButton({ on, eventId, net, setNet }: { on: boolean; eventId: string; net: { enabled: boolean; members: number; me: object | null; requests: number } | null; setNet: (n: { enabled: boolean; members: number; me: object | null; requests: number } | null) => void }) {
+  useEffect(() => { if (on && eventId) supabase.rpc('networking_status', { p_event_id: eventId }).then(({ data }) => setNet((data ?? null) as typeof net)); }, [on, eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!on || !net?.enabled) return null;
+  return (
+    <div className="mt-3 text-center print:hidden">
+      <Link to={`/events/${eventId}/network`} className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+        🤝 Networking · {net.members} {net.members === 1 ? 'person' : 'people'}{net.requests ? ` · ${net.requests} new` : ''}{!net.me ? ' · Join' : ''}
+      </Link>
     </div>
   );
 }

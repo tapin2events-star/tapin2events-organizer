@@ -39,6 +39,7 @@ const ORGANIZER: Item[] = [
 export default function Layout() {
   const { user, isAdmin, signOut } = useAuth();
   const businessOn = useFeature('business');
+  const networkingOn = useFeature('networking');
   const [menuOpen, setMenuOpen] = useState(false);
   useEscapeKey(() => setMenuOpen(false), menuOpen);
   const location = useLocation();
@@ -138,7 +139,7 @@ export default function Layout() {
         {user && (
           <>
             {heading('My stuff')}
-            <nav className="flex flex-col gap-0.5" aria-label="My stuff">{renderItems(MY_STUFF)}</nav>
+            <nav className="flex flex-col gap-0.5" aria-label="My stuff">{renderItems(networkingOn ? [...MY_STUFF, { to: '/network', label: 'Networking', icon: 'groups', end: true }] : MY_STUFF)}</nav>
           </>
         )}
 
