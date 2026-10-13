@@ -13,6 +13,7 @@ import EventDetail from './pages/EventDetail';
 import Discover from './pages/Discover';
 import PublicEventDetail from './pages/PublicEventDetail';
 import TicketPass from './pages/TicketPass';
+import Planning from './pages/Planning';
 import MyActivity from './pages/MyActivity';
 import SavedEvents from './pages/SavedEvents';
 import RefundPolicy from './pages/RefundPolicy';
@@ -103,6 +104,7 @@ export default function App() {
             <Route path="/organizer/vendor-applications" element={<ProtectedRoute><OrganizerVendorApplicationsPage /></ProtectedRoute>} />
             <Route path="/organizer/bookings" element={<ProtectedRoute><OrganizerBookings /></ProtectedRoute>} />
             <Route path="/organizer/new" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
+            <Route path="/organizer/planning" element={<ProtectedRoute><Planning /></ProtectedRoute>} />
             <Route path="/organizer/import" element={<ProtectedRoute><ImportEvents /></ProtectedRoute>} />
             <Route path="/organizer/earnings" element={<ProtectedRoute><Earnings /></ProtectedRoute>} />
             <Route path="/organizer/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />

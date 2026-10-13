@@ -29,7 +29,7 @@ const MY_STUFF: Item[] = [
 const ORGANIZER: Item[] = [
   { to: '/organizer', label: 'Organizer Dashboard', icon: 'dashboard', end: true },
   { to: '/organizer/bookings', label: 'Bookings', icon: 'bookings', end: true, badge: 'bookings' },
-  { to: '/organizer/scouting', label: 'Scouting', icon: 'scouting' },
+  { to: '/organizer/planning', label: 'Planning', icon: 'scouting' },
   { to: '/organizer/vendor-applications', label: 'Vendor Applications', icon: 'vendors', end: true, badge: 'vendorApps' },
   { to: '/organizer/earnings', label: 'Earnings', icon: 'earnings', end: true },
   { to: '/organizer/import', label: 'Import Events', icon: 'import', end: true },

@@ -33,7 +33,8 @@ export default function EventDetail() {
   const [event, setEvent] = useState<TapEvent | null>(null);
   const [seriesEvents, setSeriesEvents] = useState<{ id: string; start_date: string; status?: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>('Overview');
+  // ?tab=Lineup (etc.) opens that tab, e.g. from the Planning page.
+  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (TABS as readonly string[]).includes(t ?? '') ? (t as Tab) : 'Overview'; });
   const { user } = useAuth();
   const navigate = useNavigate();
   // Cancel / delete (organizer only). An event with any tickets, registrations,
