@@ -9,8 +9,22 @@ import { Badge, Chips, ConfirmDialog, Empty, FormDialog, PAGE_SIZE, Pager, Row, 
 interface UserRow {
   id: string; email: string; full_name: string | null; is_organizer: boolean | null; is_resource: boolean | null; is_admin: boolean | null;
   is_banned: boolean | null; stripe_charges_enabled: boolean | null; created_at: string;
+  first_signed_in_at: string | null; last_signed_in_at: string | null;
 }
 type Filter = 'all' | 'organizers' | 'resources' | 'admins' | 'banned';
+// Activity: who's new (joined, or signed in to the new app for the first time), who's active, who hasn't signed in yet.
+type Activity = 'any' | 'joined' | 'first_signin' | 'active' | 'never';
+const ACTIVITY: { id: Activity; label: string }[] = [
+  { id: 'any', label: 'Everyone' }, { id: 'first_signin', label: 'First signed in' }, { id: 'joined', label: 'New sign-ups' }, { id: 'active', label: 'Active' }, { id: 'never', label: "Haven't signed in yet" },
+];
+type Range = '1' | '7' | '30' | 'all';
+const RANGES: { id: Range; label: string }[] = [{ id: '1', label: 'Last 24 hours' }, { id: '7', label: 'Last 7 days' }, { id: '30', label: 'Last 30 days' }, { id: 'all', label: 'All time' }];
+const ago = (iso: string) => {
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 60) return `${Math.max(m, 1)}m ago`;
+  if (m < 1440) return `${Math.round(m / 60)}h ago`;
+  return `${Math.round(m / 1440)}d ago`;
+};
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'organizers', label: 'Organizers' }, { id: 'resources', label: 'Resources' }, { id: 'admins', label: 'Admins' }, { id: 'banned', label: 'Banned' },
 ];
@@ -21,6 +35,8 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+  const [activity, setActivity] = useState<Activity>('any');
+  const [range, setRange] = useState<Range>('7');
   const [search, setSearch] = useState(initialSearch);
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<UserRow | null>(null);
@@ -28,19 +44,23 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
   const [adminChange, setAdminChange] = useState<UserRow | null>(null);
   const q = useDebounced(safeSearch(search));
 
-  useEffect(() => { setPage(0); }, [filter, q]);
+  useEffect(() => { setPage(0); }, [filter, q, activity, range]);
   useEffect(() => { setSearch(initialSearch); }, [initialSearch]);
 
   useEffect(() => {
     let stale = false;
     setLoading(true);
-    let query = supabase.from('profiles').select('id, email, full_name, is_organizer, is_resource, is_admin, is_banned, stripe_charges_enabled, created_at', { count: 'exact' });
+    let query = supabase.from('profiles').select('id, email, full_name, is_organizer, is_resource, is_admin, is_banned, stripe_charges_enabled, created_at, first_signed_in_at, last_signed_in_at', { count: 'exact' });
+    const since = range === 'all' ? null : new Date(Date.now() - Number(range) * 86400000).toISOString();
+    const col = activity === 'joined' ? 'created_at' : activity === 'first_signin' ? 'first_signed_in_at' : activity === 'active' ? 'last_signed_in_at' : null;
+    if (activity === 'never') query = query.is('first_signed_in_at', null);
+    else if (col) { query = query.not(col, 'is', null); if (since) query = query.gte(col, since); }
     if (filter === 'organizers') query = query.eq('is_organizer', true);
     if (filter === 'resources') query = query.eq('is_resource', true);
     if (filter === 'admins') query = query.eq('is_admin', true);
     if (filter === 'banned') query = query.eq('is_banned', true);
     if (q) query = query.or(`email.ilike.%${q}%,full_name.ilike.%${q}%`);
-    query.order('created_at', { ascending: false }).range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1).then(({ data, count, error }) => {
+    query.order(col ?? 'created_at', { ascending: false, nullsFirst: false }).range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1).then(({ data, count, error }) => {
       if (stale) return;
       if (error) { console.error(error); notify('err', "Couldn't load users."); }
       setRows((data ?? []) as UserRow[]);
@@ -48,7 +68,7 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
       setLoading(false);
     });
     return () => { stale = true; };
-  }, [filter, q, page, notify]);
+  }, [filter, q, page, notify, activity, range]);
 
   async function setBanned(u: UserRow, banned: boolean, reason: string) {
     const { data, error } = await supabase.functions.invoke('admin-user-action', { body: { action: banned ? 'ban' : 'unban', user_id: u.id, reason } });
@@ -75,6 +95,15 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
     <div className="mt-6">
       <SearchBox value={search} onChange={setSearch} placeholder="Search by name or email" />
       <div className="mt-3"><Chips options={FILTERS} value={filter} onChange={setFilter} /></div>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Chips options={ACTIVITY} value={activity} onChange={setActivity} />
+        {activity !== 'any' && activity !== 'never' && (
+          <select value={range} onChange={(e) => setRange(e.target.value as Range)} aria-label="Time range" className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-700">
+            {RANGES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+          </select>
+        )}
+      </div>
+      {!loading && activity !== 'any' && <p className="mt-2 text-xs text-gray-500">{total} {total === 1 ? 'person' : 'people'}{activity === 'never' ? " haven't signed in to the new app yet" : activity === 'joined' ? ' signed up' : activity === 'first_signin' ? ' signed in for the first time' : ' were active'}{activity !== 'never' && range !== 'all' ? ` in the ${RANGES.find((r) => r.id === range)?.label.toLowerCase()}` : ''}.</p>}
       {loading ? <ListSkeleton rows={5} className="mt-4" /> : rows.length === 0 ? <div className="mt-4"><Empty text="No users match." /></div> : (
         <div className="mt-4 flex flex-col gap-2">
           {rows.map((u) => {
@@ -85,6 +114,11 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
                   <div className="min-w-0">
                     <Link to={`/creator/${encodeURIComponent(u.email)}`} className="font-medium text-gray-900 hover:text-marigold">{u.full_name || u.email}</Link>{me && <span className="ml-1 text-xs text-gray-400">(you)</span>}
                     <p className="truncate text-xs text-gray-500">{u.email} · joined {fmtDate(u.created_at)}</p>
+                    <p className="truncate text-xs text-gray-500">
+                      {u.first_signed_in_at
+                        ? <>First signed in {fmtDate(u.first_signed_in_at)}{u.last_signed_in_at ? ` · last active ${ago(u.last_signed_in_at)}` : ''}</>
+                        : <span className="text-amber-700">Hasn't signed in to the new app yet</span>}
+                    </p>
                   </div>
                   <div className="flex flex-wrap justify-end gap-1.5">
                     {u.is_admin && <Badge tone="purple">Admin</Badge>}
