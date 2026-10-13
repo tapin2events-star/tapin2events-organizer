@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
+import { primeOrg, type CachedOrg } from '../../lib/orgCache';
 import OrgFollowButton from './OrgFollowButton';
 import type { DirOrg } from '../../lib/orgDirectory';
 
 // Organization card for the directory and the Discover row.
 export default function OrgCard({ org, compact = false }: { org: DirOrg; compact?: boolean }) {
+  primeOrg(org as unknown as CachedOrg);
   return (
     <div className={`flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white ${compact ? 'w-64 shrink-0 snap-start' : ''}`}>
       <Link to={`/o/${org.slug}`} className="block">

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ProfileOrgLinks from '../components/business/ProfileOrgLinks';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FollowListModal from '../components/profile/FollowListModal';
 import PayoutsCard from '../components/PayoutsCard';
@@ -264,6 +265,7 @@ export default function Profile() {
             <p className="text-xs text-muted">Events you organize</p>
           </Link>
         )}
+        <ProfileOrgLinks />
         {profile.is_resource && (
           <Link to="/resources/dashboard" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
             <p className="font-medium text-bone">Resource Dashboard</p>

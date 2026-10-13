@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { cachedOrg, primeOrg, type CachedOrg } from '../../lib/orgCache';
 import OrgFollowButton from '../../components/business/OrgFollowButton';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -13,7 +14,7 @@ export default function OrgPublic() {
 
 function OrgPublicInner() {
   const { slug = '' } = useParams<{ slug: string }>();
-  const [org, setOrg] = useState<Organization | null | undefined>(undefined);
+  const [org, setOrg] = useState<Organization | null | undefined>(() => { const c = cachedOrg(slug); return c ? ({ description: null, website: null, contact_email: null, ...c, brand: { ...DEFAULT_BRAND, ...(c.brand ?? {}) } } as unknown as Organization) : undefined; });
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; location_name: string | null; poster_url: string | null; category: string | null }[]>([]);
   const [canManage, setCanManage] = useState(false);
   useEffect(() => {
@@ -22,6 +23,7 @@ function OrgPublicInner() {
       const o = data ? ({ ...data, brand: { ...DEFAULT_BRAND, ...(data.brand ?? {}) } } as Organization) : null;
       setOrg(o);
       if (!o) return;
+      primeOrg(o as unknown as CachedOrg);
       loadFont(o.brand.font);
       const [{ data: ev }, { data: role }] = await Promise.all([
         supabase.from('events').select('id, title, start_date, location_name, poster_url, category').eq('organization_id', o.id).neq('status', 'cancelled').gte('start_date', new Date(Date.now() - 86400000).toISOString()).order('start_date'),
@@ -32,7 +34,17 @@ function OrgPublicInner() {
     })();
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (org === undefined) return <p className="text-sm text-muted">Loading…</p>;
+  if (org === undefined) return (
+    <div className="-mx-4 -mt-4 sm:-mx-6" aria-busy="true" aria-label="Loading organization">
+      <div className="h-40 animate-pulse bg-gray-200 sm:h-56" />
+      <div className="px-4 sm:px-6">
+        <div className="-mt-10 h-20 w-20 animate-pulse rounded-2xl border-4 border-white bg-gray-200" />
+        <div className="mt-4 h-7 w-56 animate-pulse rounded-lg bg-gray-200" />
+        <div className="mt-2 h-4 w-40 animate-pulse rounded bg-gray-100" />
+        <div className="mt-6 space-y-2"><div className="h-4 w-full animate-pulse rounded bg-gray-100" /><div className="h-4 w-11/12 animate-pulse rounded bg-gray-100" /><div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" /></div>
+      </div>
+    </div>
+  );
   if (!org) return <p className="mt-10 text-center text-sm text-muted">This organization page doesn't exist.</p>;
   const b = org.brand;
   const dark = b.theme === 'dark';

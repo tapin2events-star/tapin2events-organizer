@@ -42,27 +42,26 @@ function BusinessHomeInner() {
   const field = 'mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-base text-gray-900';
   return (
     <div className="-mx-4 -mt-4 sm:-mx-6">
-      {/* Hero */}
-      <section className="px-6 py-14 text-white sm:px-10" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1E3A8A 100%)` }}>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business</p>
-        <h1 className="mt-3 max-w-2xl font-display text-4xl font-extrabold leading-tight sm:text-5xl">Professional events, without the enterprise price.</h1>
-        <p className="mt-4 max-w-xl text-base text-white/80">Conferences, summits, galas, workshops and fundraisers with agendas, speakers, sponsors and branded pages, on the same TapIN your community already uses. Community crews and collectives are welcome too.</p>
-        {spotsLeft !== null && spotsLeft > 0 && (
-          <p className="mt-5 inline-block rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white">
-            🎉 <strong style={{ color: GOLD }}>Founding members:</strong> {spotsLeft} of 20 spots left for businesses and nonprofits. Create your organization now, use everything free during early access, and get <strong>40% off the Business plan for life</strong>.
-          </p>
-        )}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button onClick={() => setCreating(true)} className="rounded-full px-6 py-3 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>Create your organization</button>
-          <a href="#features" className="rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white">See what's included</a>
-        </div>
-      </section>
-
-      <div className="px-6 py-8 sm:px-10">
+      {/* People with organizations see theirs first (slim header); everyone else sees the full pitch. */}
+      {user && orgs === null ? (
+        <section className="px-6 py-8 sm:px-10" aria-busy="true">
+          <div className="h-6 w-48 animate-pulse rounded bg-gray-200" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="h-20 animate-pulse rounded-2xl bg-gray-100" /><div className="h-20 animate-pulse rounded-2xl bg-gray-100" /></div>
+        </section>
+      ) : orgs && orgs.length > 0 ? (
+        <>
+          <section className="flex flex-wrap items-center justify-between gap-3 px-6 py-5 text-white sm:px-10" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1E3A8A 100%)` }}>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business</p>
+              <p className="mt-1 font-display text-2xl font-extrabold">Your organizations</p>
+            </div>
+            <button onClick={() => { setCreating(true); setTimeout(() => document.getElementById('create-org')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="rounded-full px-5 py-2.5 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>+ New organization</button>
+          </section>
+          <div className="px-6 pt-6 sm:px-10">
         {/* Your organizations */}
         {orgs && orgs.length > 0 && (
-          <section className="mb-10">
-            <h2 className="font-display text-xl font-bold text-bone">Your organizations</h2>
+          <section className="mb-6">
+            <h2 className="sr-only">Your organizations</h2>
             <ul className="mt-3 grid gap-3 sm:grid-cols-2">
               {orgs.map((o) => (
                 <li key={o.id}>
@@ -78,9 +77,29 @@ function BusinessHomeInner() {
             </ul>
           </section>
         )}
+          </div>
+        </>
+      ) : (
+      <section className="px-6 py-14 text-white sm:px-10" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1E3A8A 100%)` }}>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business</p>
+        <h1 className="mt-3 max-w-2xl font-display text-4xl font-extrabold leading-tight sm:text-5xl">Professional events, without the enterprise price.</h1>
+        <p className="mt-4 max-w-xl text-base text-white/80">Conferences, summits, galas, workshops and fundraisers with agendas, speakers, sponsors and branded pages, on the same TapIN your community already uses. Community crews and collectives are welcome too.</p>
+        {spotsLeft !== null && spotsLeft > 0 && (
+          <p className="mt-5 inline-block rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white">
+            🎉 <strong style={{ color: GOLD }}>Founding members:</strong> {spotsLeft} of 20 spots left for businesses and nonprofits. Create your organization now, use everything free during early access, and get <strong>40% off the Business plan for life</strong>.
+          </p>
+        )}
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button onClick={() => setCreating(true)} className="rounded-full px-6 py-3 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>Create your organization</button>
+          <a href="#features" className="rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white">See what's included</a>
+        </div>
+      </section>
+      )}
+
+      <div className="px-6 py-8 sm:px-10">
 
         {creating && (
-          <form onSubmit={create} className="mb-10 max-w-lg rounded-2xl border border-gray-200 bg-surface p-5">
+          <form id="create-org" onSubmit={create} className="mb-10 max-w-lg scroll-mt-24 rounded-2xl border border-gray-200 bg-surface p-5">
             <h2 className="font-display text-lg font-bold text-bone">Create your organization</h2>
             {!user ? <p className="mt-2 text-sm text-muted"><Link to="/login" className="text-marigold">Sign in</Link> first.</p> : (
               <>

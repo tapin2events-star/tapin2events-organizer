@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { primeOrg, type CachedOrg } from '../../lib/orgCache';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import OrgCard from '../../components/business/OrgCard';
@@ -7,20 +8,28 @@ import { loadOrgDirectory, type DirOrg } from '../../lib/orgDirectory';
 const PAGE = 24;
 
 // Organizations directory: find companies, nonprofits and community groups on TapIN.
+// The unfiltered list from the last visit, shown instantly when coming back.
+let lastDirectory: DirOrg[] | null = null;
+
 export default function OrgDirectory() {
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<'' | 'business' | 'nonprofit' | 'community'>('');
   const [verified, setVerified] = useState(false);
   const [city, setCity] = useState('');
   const [cities, setCities] = useState<string[]>([]);
-  const [orgs, setOrgs] = useState<DirOrg[] | null>(null);
+  const [orgs, setOrgs] = useState<DirOrg[] | null>(() => lastDirectory ?? null);
   const [more, setMore] = useState(false);
 
   useEffect(() => { supabase.rpc('organization_cities').then(({ data }) => setCities(((data ?? []) as { city: string }[]).map((c) => c.city))); }, []);
   useEffect(() => {
-    const t = setTimeout(() => {
-      loadOrgDirectory({ query, kind: kind || null, verified, city: city || null, limit: PAGE }).then((list) => { setOrgs(list); setMore(list.length === PAGE); });
-    }, 250);
+    const run = () => loadOrgDirectory({ query, kind: kind || null, verified, city: city || null, limit: PAGE }).then((list) => {
+      setOrgs(list); setMore(list.length === PAGE);
+      if (!query && !kind && !verified && !city) lastDirectory = list;
+      for (const o of list) primeOrg(o as unknown as CachedOrg);
+    });
+    // Only wait while someone is typing a search; filters and the first load run right away.
+    if (!query) { run(); return; }
+    const t = setTimeout(run, 250);
     return () => clearTimeout(t);
   }, [query, kind, verified, city]);
 
