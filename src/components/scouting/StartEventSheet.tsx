@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from './Sheet';
@@ -12,11 +12,16 @@ export default function StartEventSheet({ boardId, boardName, shows, onClose }: 
   const [title, setTitle] = useState(chosen?.name ?? boardName);
   const [date, setDate] = useState(chosen?.target_date ?? '');
   const [busy, setBusy] = useState(false);
+  const [hostOrgs, setHostOrgs] = useState<{ id: string; name: string }[]>([]);
+  const [host, setHost] = useState('');
+  useEffect(() => {
+    supabase.rpc('my_organizations').then(({ data }) => setHostOrgs(((data ?? []) as { id: string; name: string; role: string; status?: string }[]).filter((o) => o.status !== 'deleted' && (o.role === 'owner' || o.role === 'admin'))));
+  }, []);
   const [err, setErr] = useState<string | null>(null);
   const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
   async function go() {
     setBusy(true); setErr(null);
-    const { data, error } = await supabase.rpc('start_event_from_board', { p_board_id: boardId, p_show_id: showId || null, p_title: title.trim() || null, p_date: date || null });
+    const { data, error } = await supabase.rpc('start_event_from_board', { p_board_id: boardId, p_show_id: showId || null, p_title: title.trim() || null, p_date: date || null, p_org_id: host || null });
     setBusy(false);
     if (error || !data) return setErr(error?.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't start the event.");
     navigate(`/organizer/events/${data}/edit`);
@@ -32,6 +37,15 @@ export default function StartEventSheet({ boardId, boardName, shows, onClose }: 
       </label>
       <label className="mt-3 block text-xs font-medium text-gray-500">Event name<input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} className={field} /></label>
       <label className="mt-3 block text-xs font-medium text-gray-500">Date (optional)<input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} /></label>
+      {hostOrgs.length > 0 && (
+        <label className="mt-3 block text-xs font-medium text-gray-500">Host as
+          <select value={host} onChange={(e) => setHost(e.target.value)} className={field}>
+            <option value="">Me</option>
+            {hostOrgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          {host && <span className="mt-1 block font-normal text-gray-500">The organization's team is added with their roles.</span>}
+        </label>
+      )}
       <p className="mt-2 text-xs text-gray-500">You'll add the details, time, location and tickets next.</p>
       {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
       <button onClick={go} disabled={busy} className="mt-4 w-full rounded-xl bg-marigold py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create draft event'}</button>

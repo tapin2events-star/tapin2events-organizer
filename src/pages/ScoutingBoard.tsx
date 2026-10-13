@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import BoardOrgSheet from '../components/scouting/BoardOrgSheet';
 import StartEventSheet from '../components/scouting/StartEventSheet';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -25,7 +26,7 @@ export default function ScoutingBoard() {
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [showFilter, setShowFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [sheet, setSheet] = useState<null | 'add' | 'share' | 'shows' | 'rename' | 'delete' | 'start'>(null);
+  const [sheet, setSheet] = useState<null | 'add' | 'share' | 'shows' | 'rename' | 'delete' | 'start' | 'org'>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [showPassed, setShowPassed] = useState(false);
@@ -128,6 +129,7 @@ export default function ScoutingBoard() {
             <div className="absolute right-0 top-11 z-30 w-48 rounded-xl border border-gray-200 bg-white p-1 shadow-lg" onMouseLeave={() => setMenuOpen(false)}>
               <button onClick={() => { setMenuOpen(false); setSheet('start'); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-marigold hover:bg-gray-50">Start an event</button>
               <button onClick={() => { setMenuOpen(false); setSheet('shows'); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Manage shows</button>
+              {isOwner && <button onClick={() => { setMenuOpen(false); setSheet('org'); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Share with an organization</button>}
               {isOwner && <button onClick={() => { setMenuOpen(false); setSheet('rename'); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Rename board</button>}
               {isOwner && <button onClick={() => { setMenuOpen(false); setSheet('delete'); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Delete board</button>}
             </div>
@@ -203,6 +205,7 @@ export default function ScoutingBoard() {
       )}
       {sheet === 'share' && <ShareSheet boardId={board.id} boardName={board.name} isOwner={!!isOwner} members={members} onClose={() => setSheet(null)} onChanged={load} onLeft={() => navigate('/organizer/scouting')} />}
       {sheet === 'shows' && <ShowsSheet boardId={board.id} shows={shows} onClose={() => setSheet(null)} onChanged={load} />}
+      {sheet === 'org' && board && <BoardOrgSheet boardId={board.id} current={(board as { organization_id?: string | null }).organization_id ?? null} onClose={() => setSheet(null)} onSaved={() => { setSheet(null); load(); }} />}
       {sheet === 'start' && board && <StartEventSheet boardId={board.id} boardName={board.name} shows={shows as { id: string; name: string; target_date: string | null; event_id: string | null }[]} onClose={() => setSheet(null)} />}
       {sheet === 'rename' && <RenameSheet board={board} onClose={() => setSheet(null)} onChanged={load} />}
       {sheet === 'delete' && (

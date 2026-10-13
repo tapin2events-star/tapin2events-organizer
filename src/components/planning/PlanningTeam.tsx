@@ -27,7 +27,9 @@ function Avatar({ p }: { p: Person }) {
 }
 
 // Planning > Team: your planning team (on all your events) and everyone you work with.
-export default function PlanningTeam({ query, tasks, events, onChanged }: { query: string; tasks: PlanTask[]; events: MyEvent[]; onChanged: () => void }) {
+interface OrgTeam { id: string; name: string; slug: string; logo_url: string | null; kind: string; color: string | null; my_role: string; members: { email: string; role: string; full_name: string | null; photo: string | null }[] | null }
+
+export default function PlanningTeam({ query, tasks, events, onChanged, scope = 'all', scopeOrgId = null }: { query: string; tasks: PlanTask[]; events: MyEvent[]; onChanged: () => void; scope?: 'all' | 'me' | 'org'; scopeOrgId?: string | null }) {
   const { user } = useAuth();
   const [people, setPeople] = useState<Person[] | null>(null);
   const [team, setTeam] = useState<{ member_email: string; role: string }[]>([]);
@@ -36,6 +38,8 @@ export default function PlanningTeam({ query, tasks, events, onChanged }: { quer
   const [addTo, setAddTo] = useState<Person | null>(null);
   const [assign, setAssign] = useState<Person | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [orgTeams, setOrgTeams] = useState<OrgTeam[]>([]);
+  useEffect(() => { supabase.rpc('my_org_teams').then(({ data }) => setOrgTeams((data ?? []) as OrgTeam[])); }, []);
 
   const load = useCallback(async () => {
     const [{ data: ppl }, { data: pt }] = await Promise.all([
@@ -49,7 +53,12 @@ export default function PlanningTeam({ query, tasks, events, onChanged }: { quer
   const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(null), 4000); };
 
   const q = query.trim().toLowerCase();
-  const shown = (people ?? []).filter((p) => !q || (p.full_name ?? '').toLowerCase().includes(q) || p.email.includes(q) || p.events.some((e) => e.title.toLowerCase().includes(q)));
+  const scopeOrg = orgTeams.find((o) => o.id === scopeOrgId) ?? null;
+  const scopeEmails = new Set((scopeOrg?.members ?? []).map((m) => m.email));
+  const shown = (people ?? [])
+    .filter((p) => scope !== 'org' || scopeEmails.has(p.email))
+    .filter((p) => !q || (p.full_name ?? '').toLowerCase().includes(q) || p.email.includes(q) || p.events.some((e) => e.title.toLowerCase().includes(q)));
+  const shownOrgTeams = orgTeams.filter((o) => scope === 'all' || (scope === 'org' && o.id === scopeOrgId));
   const nameOf = (email: string) => (people ?? []).find((p) => p.email === email.toLowerCase())?.full_name || email;
 
   async function changeRole(email: string, role: string) {
@@ -66,7 +75,8 @@ export default function PlanningTeam({ query, tasks, events, onChanged }: { quer
     <div className="flex flex-col gap-6">
       {msg && <p role="status" className="rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 
-      {/* Planning team */}
+      {/* Planning team (follows you) */}
+      {scope !== 'org' && (
       <section className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -94,6 +104,32 @@ export default function PlanningTeam({ query, tasks, events, onChanged }: { quer
           </ul>
         )}
       </section>
+      )}
+
+      {/* Organization teams (follow each organization's events) */}
+      {shownOrgTeams.map((o) => (
+        <section key={o.id} className="rounded-2xl border border-gray-200 bg-surface p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-3">
+              {o.logo_url ? <img src={o.logo_url} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold text-white" style={{ background: o.color || '#0F1B3D' }}>{o.name.charAt(0)}</span>}
+              <div className="min-w-0">
+                <h3 className="truncate font-display text-lg font-bold text-bone">{o.name} team</h3>
+                <p className="text-xs text-muted">On all of {o.name}'s events with their role · you're {ROLE_NAME[o.my_role] ?? o.my_role}</p>
+              </div>
+            </div>
+            {(o.my_role === 'owner' || o.my_role === 'admin') && <Link to={`/business/${o.slug}/manage`} className="shrink-0 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Manage team ›</Link>}
+          </div>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {(o.members ?? []).map((m) => (
+              <li key={m.email} className="flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3 text-sm ring-1 ring-gray-200">
+                {m.photo ? <img src={m.photo} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{(m.full_name || m.email).charAt(0).toUpperCase()}</span>}
+                <span className="max-w-[10rem] truncate text-gray-900">{m.full_name || m.email}</span>
+                <span className="text-xs text-gray-500">{ROLE_NAME[m.role] ?? m.role}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
 
       {/* Everyone you work with */}
       <section>
