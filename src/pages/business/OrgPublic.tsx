@@ -61,8 +61,8 @@ function OrgPublicInner() {
         </div>
 
         <h2 className="mt-10 text-xl font-bold">Upcoming events</h2>
-        {events.length === 0 ? <p className="mt-2 pb-16 text-sm opacity-70">No upcoming events right now.</p> : (
-          <div className="mt-4 grid gap-4 pb-16 sm:grid-cols-2">
+        {events.length === 0 ? <p className="mt-2 pb-10 text-sm opacity-70">No upcoming events right now.</p> : (
+          <div className="mt-4 grid gap-4 pb-10 sm:grid-cols-2">
             {events.map((e) => (
               <Link key={e.id} to={`/events/${e.id}`} className="overflow-hidden rounded-2xl border transition hover:shadow-md" style={{ borderColor: dark ? '#1F2937' : '#E5E7EB' }}>
                 {e.poster_url ? <img src={e.poster_url} alt="" className="h-40 w-full object-cover" /> : <EventCover category={e.category} title={e.title} className="h-40 w-full" />}
@@ -75,7 +75,72 @@ function OrgPublicInner() {
             ))}
           </div>
         )}
+        <OrgGallery orgId={org.id} accent={b.accent} dark={dark} />
+        <PastEvents orgId={org.id} accent={b.accent} dark={dark} />
       </div>
     </div>
+  );
+}
+
+// Photo gallery (up to 24); tap a photo to see it full size.
+function OrgGallery({ orgId }: { orgId: string; accent?: string; dark?: boolean }) {
+  const [photos, setPhotos] = useState<{ id: string; url: string; caption: string | null }[]>([]);
+  const [open, setOpen] = useState<number | null>(null);
+  useEffect(() => {
+    supabase.from('organization_media').select('id, url, caption').eq('org_id', orgId).order('sort_order').order('created_at')
+      .then(({ data }) => setPhotos((data ?? []) as { id: string; url: string; caption: string | null }[]));
+  }, [orgId]);
+  if (photos.length === 0) return null;
+  const cur = open === null ? null : photos[open];
+  return (
+    <section className="pb-10">
+      <h2 className="text-xl font-bold">Photos</h2>
+      <div className="mt-4 grid grid-cols-3 gap-1.5 sm:gap-2">
+        {photos.map((p, i) => (
+          <button key={p.id} onClick={() => setOpen(i)} className="overflow-hidden rounded-xl" aria-label={p.caption || `Photo ${i + 1}`}>
+            <img src={p.url} alt={p.caption ?? ''} className="aspect-square w-full object-cover transition hover:scale-105" loading="lazy" />
+          </button>
+        ))}
+      </div>
+      {cur && open !== null && (
+        <div className="fixed inset-0 z-[1100] flex flex-col items-center justify-center bg-black/90 p-4" onClick={() => setOpen(null)} role="dialog" aria-label="Photo">
+          <img src={cur.url} alt={cur.caption ?? ''} className="max-h-[80dvh] max-w-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+          {cur.caption && <p className="mt-3 text-center text-sm text-white/90">{cur.caption}</p>}
+          <div className="mt-4 flex gap-3" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setOpen((open - 1 + photos.length) % photos.length)} className="rounded-full bg-white/15 px-4 py-2 text-white" aria-label="Previous">←</button>
+            <span className="self-center text-sm text-white/70">{open + 1} / {photos.length}</span>
+            <button onClick={() => setOpen((open + 1) % photos.length)} className="rounded-full bg-white/15 px-4 py-2 text-white" aria-label="Next">→</button>
+          </div>
+          <button onClick={() => setOpen(null)} className="absolute right-4 top-[calc(1rem+env(safe-area-inset-top,0px))] rounded-full bg-white/15 px-3 py-1.5 text-white" aria-label="Close">✕</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Past events, automatically: the organization's most recent finished public events.
+function PastEvents({ orgId, accent, dark }: { orgId: string; accent: string; dark: boolean }) {
+  const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; poster_url: string | null; category: string | null }[]>([]);
+  useEffect(() => {
+    supabase.from('events').select('id, title, start_date, poster_url, category').eq('organization_id', orgId).in('status', ['published', 'completed'])
+      .eq('is_test', false).is('parent_event_id', null).lt('start_date', new Date().toISOString()).order('start_date', { ascending: false }).limit(6)
+      .then(({ data }) => setEvents((data ?? []) as typeof events));
+  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (events.length === 0) return null;
+  return (
+    <section className="pb-16">
+      <h2 className="text-xl font-bold">Past events</h2>
+      <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+        {events.map((e) => (
+          <Link key={e.id} to={`/events/${e.id}`} className="w-56 shrink-0 snap-start overflow-hidden rounded-2xl border" style={{ borderColor: dark ? '#1F2937' : '#E5E7EB' }}>
+            {e.poster_url ? <img src={e.poster_url} alt="" className="h-28 w-full object-cover" /> : <EventCover category={e.category} title={e.title} className="h-28 w-full" />}
+            <div className="p-3">
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: accent }}>{e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</p>
+              <p className="mt-0.5 line-clamp-2 text-sm font-semibold">{e.title}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

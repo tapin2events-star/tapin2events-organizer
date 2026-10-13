@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import OrgPayoutsTab from '../../components/business/OrgPayoutsTab';
+import OrgPhotosTab from '../../components/business/OrgPhotosTab';
 import DeleteOrgSheet from '../../components/business/DeleteOrgSheet';
 import EarlyAccessBadge from '../../components/business/EarlyAccessBadge';
 import { Link, useParams } from 'react-router-dom';
@@ -9,7 +11,7 @@ import BusinessGate from '../../components/business/BusinessGate';
 import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
-type Tab = 'Profile' | 'Brand kit' | 'Team' | 'Events';
+type Tab = 'Profile' | 'Brand kit' | 'Photos' | 'Team' | 'Events' | 'Payouts';
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -21,7 +23,7 @@ function OrgManageInner() {
   const { user } = useAuth();
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
-  const [tab, setTab] = useState<Tab>('Profile');
+  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -75,8 +77,8 @@ function OrgManageInner() {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-4 border-b border-gray-200 sm:flex sm:gap-1">
-        {(['Profile', 'Brand kit', 'Team', 'Events'] as Tab[]).map((t) => (
+      <div className="-mx-4 mt-5 flex overflow-x-auto border-b border-gray-200 px-4 sm:mx-0 sm:gap-1 sm:px-0">
+        {(['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(role === 'owner' || role === 'admin' ? ['Payouts'] : [])] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium sm:px-4 ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
         ))}
       </div>
@@ -95,6 +97,8 @@ function OrgManageInner() {
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} />}
+        {tab === 'Photos' && (role === 'owner' || role === 'admin' || role === 'editor' ? <OrgPhotosTab orgId={org.id} /> : <p className="text-sm text-muted">Owners, Admins and Editors can manage photos.</p>)}
+        {tab === 'Payouts' && (role === 'owner' || role === 'admin') && <OrgPayoutsTab orgId={org.id} orgName={org.name} slug={org.slug} />}
       </div>
     </div>
   );
