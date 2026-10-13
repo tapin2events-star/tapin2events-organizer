@@ -14,7 +14,7 @@ const describe = (c: Pick<Code, 'kind' | 'value'>) => (c.kind === 'percent' ? (N
 const randomCode = () => Array.from({ length: 8 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
 
 // Tickets tab > Promo codes: discounts and comps for ticket tiers.
-export default function PromoCodes({ eventId, tiers }: { eventId: string; tiers: { id: string; name: string; price: number }[] }) {
+export default function PromoCodes({ eventId, tiers, onChanged }: { eventId: string; tiers: { id: string; name: string; price: number }[]; onChanged?: () => void }) {
   const [codes, setCodes] = useState<Code[]>([]);
   const [editing, setEditing] = useState<Code | 'new' | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function PromoCodes({ eventId, tiers }: { eventId: string; tiers:
           })}
         </ul>
       )}
-      {editing && <CodeSheet eventId={eventId} code={editing === 'new' ? null : editing} tiers={paidTiers} onClose={() => setEditing(null)} onSaved={load} />}
+      {editing && <CodeSheet eventId={eventId} code={editing === 'new' ? null : editing} tiers={paidTiers} onClose={() => setEditing(null)} onSaved={() => { load(); onChanged?.(); }} />}
     </section>
   );
 }
@@ -79,7 +79,7 @@ function CodeSheet({ eventId, code, tiers, onClose, onSaved }: { eventId: string
       starts_at: f.starts_at ? new Date(f.starts_at).toISOString() : null, ends_at: f.ends_at ? new Date(f.ends_at).toISOString() : null,
       tier_ids: f.all ? null : f.tier_ids, active: f.active, note: f.note.trim() || null };
     const { error } = code ? await supabase.from('promo_codes').update(row).eq('id', code.id) : await supabase.from('promo_codes').insert(row);
-    if (error) return setErr(/duplicate|unique/i.test(error.message) ? 'That code already exists for this event.' : "Couldn't save the code.");
+    if (error) return setErr(/duplicate|unique/i.test(error.message) ? 'That code already exists for this event.' : /paid tickets/i.test(error.message) ? error.message : "Couldn't save the code.");
     onSaved(); onClose();
   }
   return (

@@ -80,7 +80,12 @@ export default function TiersTab({ event }: { event: TapEvent }) {
           <button onClick={() => { setPreset(null); setEditing('new'); }} className="mt-3 rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">+ Add tier</button>
         </>
       )}
-      {tiers.length > 0 && <PromoCodes eventId={event.id} tiers={tiers.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name, price: Number(t.price) }))} />}
+      {(event.event_type !== 'free' || tiers.some((t) => Number(t.price) > 0)) ? (
+        <PromoCodes eventId={event.id} tiers={tiers.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name, price: Number(t.price) }))} onChanged={load} />
+      ) : (
+        <p className="mt-8 rounded-xl border border-dashed border-gray-300 p-4 text-sm text-muted">Promo codes are for paid tickets. Add a paid ticket type (or set a ticket price) to create codes.</p>
+      )}
+      {tiers.length === 0 && event.event_type !== 'free' && <p className="mt-2 text-xs text-muted">Adding your first code turns your ticket price into a "General Admission" ticket type at the same price, so the code works at checkout.</p>}
       <p className="mt-4 text-xs text-muted">Attendees pay the same service fees as today (3.7% + $1.79 per paid ticket, plus 2.9% processing). You keep 100% of the ticket price. Your event's overall capacity still applies across all tiers.</p>
 
       {editing && <TierSheet event={event} tier={editing === 'new' ? null : editing} preset={preset} soldCount={editing === 'new' ? 0 : sold[editing.id] ?? 0} nextSort={tiers.length} onClose={() => setEditing(null)} onSaved={load} />}

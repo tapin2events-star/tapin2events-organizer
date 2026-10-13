@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import FormPromoCodes, { codeProblem, pendingRow, type PendingCode } from '../components/business/FormPromoCodes';
+import PromoCodes from '../components/business/PromoCodes';
 import DonationSettings, { DEFAULT_DONATION_FORM, donationPatch, type DonationForm } from '../components/business/DonationSettings';
 import TierListEditor from '../components/business/TierListEditor';
 import { loadTierDrafts, newDraft, saveTierDrafts, tierProblems, type TierDraft } from '../lib/tiers';
@@ -152,6 +154,8 @@ export default function EventForm() {
   // Donations (nonprofit events, preview).
   const [donationForm, setDonationForm] = useState<DonationForm>(DEFAULT_DONATION_FORM);
   const [tierDrafts, setTierDrafts] = useState<TierDraft[]>([]);
+  // Promo codes typed into the form before the event exists (new events only).
+  const [pendingCodes, setPendingCodes] = useState<PendingCode[]>([]);
   const [tierOriginalIds, setTierOriginalIds] = useState<string[]>([]);
   const [tierSold, setTierSold] = useState<Record<string, number>>({});
   const [isTest, setIsTest] = useState(() => !isEdit && searchParams.get('test') === '1');
@@ -374,6 +378,10 @@ export default function EventForm() {
     const previewing = previewAfterSave.current;
     previewAfterSave.current = false;
     if (!user) return;
+    {
+      const codeErr = isEdit ? null : pendingCodes.map(codeProblem).find(Boolean);
+      if (codeErr) { setError(codeErr); return; }
+    }
     if (businessOn && useTiers && !seatingEnabled) {
       const problems = tierProblems(tierDrafts, tierSold);
       if (problems.length) { setError(problems[0]); setStep(1); return; }
@@ -606,6 +614,12 @@ export default function EventForm() {
 
     if (businessOn && !seatingEnabled && (useTiers || tierOriginalIds.length)) {
       const tierErr = await saveTierDrafts(data.id, tierDrafts, tierOriginalIds, tierSold, useTiers);
+      // Promo codes added while creating the event (a first code on a single-price event turns
+      // its price into a General Admission ticket type so checkout can apply it).
+      if (!isEdit && pendingCodes.length > 0 && eventType !== 'free') {
+        const { error: codeSaveErr } = await supabase.from('promo_codes').insert(pendingCodes.map((c) => pendingRow(data.id, c)));
+        if (codeSaveErr) console.error('[event form] promo codes', codeSaveErr);
+      }
       if (tierErr) { setSaving(false); setError(`Event saved, but ticket types didn't: ${tierErr} Open the event's Tickets tab to fix it.`); return; }
     }
 
@@ -856,6 +870,12 @@ export default function EventForm() {
                 </label>
                 {useTiers && <TierListEditor drafts={tierDrafts} onChange={setTierDrafts} sold={tierSold} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
               </div>
+            )}
+
+            {!seatingEnabled && !externalTicketUrl.trim() && (eventType !== 'free' || (useTiers && tierDrafts.some((d) => Number(d.price) > 0))) && (
+              isEdit && id
+                ? <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4"><PromoCodes eventId={id} tiers={[]} /></div>
+                : <FormPromoCodes codes={pendingCodes} onChange={setPendingCodes} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />
             )}
 
             {businessOn && eventKind !== 'business' && <DonationSettings nonprofit={eventKind === 'nonprofit'} value={donationForm} onChange={setDonationForm} inputClass={`${inputClass} mt-1 block w-full min-w-0 text-base`} />}
