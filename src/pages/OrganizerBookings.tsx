@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ListSkeleton } from '../components/ui/Skeleton';
 import BackButton from '../components/BackButton';
 import BookingsSection from '../components/bookings/BookingsSection';
 import { supabase } from '../lib/supabaseClient';
@@ -24,7 +25,7 @@ export default function OrganizerBookings() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-3"><BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" /></div>
       <h1 className="mb-4 font-display text-3xl font-extrabold text-bone">Bookings</h1>
-      {counts ? <BookingsSection mine={counts.mine} received={counts.received} pending={counts.pending} standalone /> : <p className="text-sm text-muted">Loading…</p>}
+      {counts ? <BookingsSection mine={counts.mine} received={counts.received} pending={counts.pending} standalone /> : <ListSkeleton rows={4} className="mt-4" />}
     </div>
   );
 }
