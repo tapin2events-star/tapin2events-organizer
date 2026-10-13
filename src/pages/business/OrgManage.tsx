@@ -71,7 +71,7 @@ function OrgManageInner() {
               🎉 Founding member #{(org as Organization & { founding_number?: number | null }).founding_number} · 40% off the Business plan for life
             </p>
           ) : null}
-          <p className="break-words text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · you're {role === 'owner' ? 'the owner' : `an ${role}`} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
+          <p className="break-words text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : org.kind === 'community' ? 'Community group' : 'Business'} · you're {role === 'owner' ? 'the owner' : role === 'admin' ? 'an Admin' : role === 'editor' ? 'an Editor' : role === 'helper' ? 'a Helper' : 'a Viewer'} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
         </div>
       </div>
 
@@ -210,11 +210,11 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
   }
   return (
     <div>
-      <p className="text-sm text-muted">Owners and admins can edit the organization and manage its events. Members can view.</p>
+      <p className="text-sm text-muted">Everyone here is added to <strong>all of this organization's events</strong> (current and future) with their role. Owners and Admins also manage the organization itself.</p>
       {canEdit && (
         <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 sm:flex">
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@company.com" className="col-span-2 min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900" />
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm"><option value="admin">Admin</option><option value="member">Member</option></select>
+          <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role" className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm"><option value="admin">Admin: everything, including the team</option><option value="editor">Editor: edit events, lineups and tasks</option><option value="viewer">Viewer: see everything</option><option value="helper">Helper: their own tasks</option></select>
           <button onClick={add} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">Add</button>
         </div>
       )}
@@ -222,8 +222,15 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
       <ul className="mt-4 divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-surface">
         {members.map((m) => (
           <li key={m.user_email} className="flex items-center justify-between gap-3 px-4 py-3">
-            <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{m.full_name || m.user_email}</span><span className="block text-xs text-muted">{m.role}{m.user_email === me ? ' · you' : ''}</span></span>
-            {canEdit && m.role !== 'owner' && <button onClick={async () => { await supabase.from('organization_members').delete().eq('org_id', orgId).eq('user_email', m.user_email); load(); }} className="text-xs text-gray-400 hover:text-red-600">Remove</button>}
+            <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{m.full_name || m.user_email}</span><span className="block text-xs text-muted">{({ owner: 'Owner', admin: 'Admin', editor: 'Editor', viewer: 'Viewer', helper: 'Helper' } as Record<string, string>)[m.role] ?? m.role}{m.user_email === me ? ' · you' : ''}</span></span>
+            {canEdit && m.role !== 'owner' && (
+              <span className="flex items-center gap-2">
+                <select value={m.role} onChange={async (e) => { await supabase.from('organization_members').update({ role: e.target.value }).eq('org_id', orgId).eq('user_email', m.user_email); load(); }} aria-label="Role" className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs">
+                  <option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="helper">Helper</option>
+                </select>
+                <button onClick={async () => { await supabase.from('organization_members').delete().eq('org_id', orgId).eq('user_email', m.user_email); load(); }} className="text-xs text-gray-400 hover:text-red-600">Remove</button>
+              </span>
+            )}
           </li>
         ))}
       </ul>

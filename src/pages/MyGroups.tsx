@@ -33,8 +33,8 @@ export default function MyGroups() {
       <div className="mb-3"><BackButton fallback="/profile" fallbackLabel="Profile" /></div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-extrabold text-bone">Groups</h1>
-          <p className="mt-1 text-sm text-muted">Bands, crews, collectives, teams: a shared profile for people who work together.</p>
+          <h1 className="font-display text-3xl font-extrabold text-bone">Artist groups</h1>
+          <p className="mt-1 text-sm text-muted">Bands, duos, crews and collectives that <strong>get booked</strong> together, with a shared profile and split payouts. Hosting events as a team? Use <a href="/organizations" className="font-medium text-marigold">Organizations</a>.</p>
         </div>
         <Link to="/groups/new" className="rounded-lg bg-marigold px-4 py-2.5 text-sm font-semibold text-white hover:bg-marigold/90">+ Create a group</Link>
       </div>
@@ -60,7 +60,7 @@ export default function MyGroups() {
           )}
 
           <section className="mt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Your groups</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Your artist groups</h2>
             {mine.length === 0 ? (
               <p className="mt-2 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">You're not in any groups yet. Create one and invite the people you perform or work with.</p>
             ) : (

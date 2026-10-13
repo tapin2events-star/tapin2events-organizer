@@ -118,7 +118,7 @@ export default function GroupManage() {
   if (!group || !role) {
     return (
       <div className="mx-auto max-w-2xl">
-        <BackButton fallback="/groups" fallbackLabel="Groups" />
+        <BackButton fallback="/groups" fallbackLabel="Artist groups" />
         <p className="mt-4 rounded-xl border border-gray-200 bg-surface p-6 text-center text-sm text-muted">This group doesn't exist or you're not a member.</p>
       </div>
     );
@@ -126,7 +126,7 @@ export default function GroupManage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-3"><BackButton fallback="/groups" fallbackLabel="Groups" /></div>
+      <div className="mb-3"><BackButton fallback="/groups" fallbackLabel="Artist groups" /></div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted">{ROLE_LABELS[role]}</p>

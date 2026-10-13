@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 import { DEFAULT_BRAND, type Brand } from './business';
 
-export interface DirOrg { id: string; name: string; slug: string; kind: 'business' | 'nonprofit'; tagline: string | null; logo_url: string | null; cover_url: string | null; brand: Brand; verified: boolean; city: string | null; state: string | null; upcoming_events: number; followers: number }
+export interface DirOrg { id: string; name: string; slug: string; kind: 'business' | 'nonprofit' | 'community'; tagline: string | null; logo_url: string | null; cover_url: string | null; brand: Brand; verified: boolean; city: string | null; state: string | null; upcoming_events: number; followers: number }
 
 export async function loadOrgDirectory(opts: { query?: string; kind?: string | null; verified?: boolean; city?: string | null; featured?: boolean; limit?: number; offset?: number } = {}): Promise<DirOrg[]> {
   const { data } = await supabase.rpc('organization_directory', {

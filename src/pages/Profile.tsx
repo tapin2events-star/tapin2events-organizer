@@ -271,7 +271,7 @@ export default function Profile() {
           </Link>
         )}
         <Link to="/groups" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-          <p className="font-medium text-bone">Groups</p>
+          <p className="font-medium text-bone">Artist groups</p>
           <p className="text-xs text-muted">Bands, crews, and collectives you're in</p>
         </Link>
         {profile.is_resource && myResourceId && (

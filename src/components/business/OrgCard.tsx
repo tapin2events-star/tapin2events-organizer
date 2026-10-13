@@ -16,7 +16,7 @@ export default function OrgCard({ org, compact = false }: { org: DirOrg; compact
         <Link to={`/o/${org.slug}`} className="font-semibold text-gray-900 hover:underline">
           <span className="line-clamp-1">{org.name}{org.verified && <span className="ml-1" style={{ color: org.brand.accent }} title="Verified">✓</span>}</span>
         </Link>
-        <p className="text-xs text-gray-500">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
+        <p className="text-xs text-gray-500">{org.kind === 'nonprofit' ? 'Nonprofit' : org.kind === 'community' ? 'Community group' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
         {org.tagline && <p className="mt-1.5 line-clamp-2 text-sm text-gray-600">{org.tagline}</p>}
         <p className="mt-2 text-xs font-medium" style={{ color: org.upcoming_events ? org.brand.primary : '#9CA3AF' }}>
           {org.upcoming_events ? `${org.upcoming_events} upcoming event${org.upcoming_events === 1 ? '' : 's'}` : 'No upcoming events'}

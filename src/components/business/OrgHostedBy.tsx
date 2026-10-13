@@ -16,7 +16,7 @@ export function OrgHostedBy({ org }: { org: Organization }) {
         </Link>
         <div className="min-w-0 flex-1">
           <Link to={`/o/${org.slug}`} className="block truncate font-semibold text-gray-900 hover:underline">{org.name}{org.verified && <span className="ml-1" style={{ color: org.brand.accent }} title="Verified">✓</span>}</Link>
-          <p className="truncate text-xs text-gray-500">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
+          <p className="truncate text-xs text-gray-500">{org.kind === 'nonprofit' ? 'Nonprofit' : org.kind === 'community' ? 'Community group' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
         </div>
       </div>
       {org.tagline && <p className="mt-2 text-sm text-gray-600">{org.tagline}</p>}

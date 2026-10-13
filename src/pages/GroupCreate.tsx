@@ -29,8 +29,8 @@ export default function GroupCreate() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-3"><BackButton fallback="/groups" fallbackLabel="Groups" /></div>
-      <h1 className="font-display text-3xl font-extrabold text-bone">Create a group</h1>
+      <div className="mb-3"><BackButton fallback="/groups" fallbackLabel="Artist groups" /></div>
+      <h1 className="font-display text-3xl font-extrabold text-bone">Create an artist group</h1>
       <p className="mt-1 text-sm text-muted">Your group gets its own page in Artists &amp; Resources. You'll invite members next.</p>
       <form onSubmit={submit} className="mt-6 flex flex-col gap-5 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-6">
         <GroupProfileFields value={fields} onChange={setFields} />

@@ -9,7 +9,7 @@ const PAGE = 24;
 // Organizations directory: find companies, nonprofits and community groups on TapIN.
 export default function OrgDirectory() {
   const [query, setQuery] = useState('');
-  const [kind, setKind] = useState<'' | 'business' | 'nonprofit'>('');
+  const [kind, setKind] = useState<'' | 'business' | 'nonprofit' | 'community'>('');
   const [verified, setVerified] = useState(false);
   const [city, setCity] = useState('');
   const [cities, setCities] = useState<string[]>([]);
@@ -43,6 +43,7 @@ export default function OrgDirectory() {
         <button onClick={() => setKind('')} className={chip(kind === '')}>All</button>
         <button onClick={() => setKind('business')} className={chip(kind === 'business')}>Businesses</button>
         <button onClick={() => setKind('nonprofit')} className={chip(kind === 'nonprofit')}>Nonprofits</button>
+        <button onClick={() => setKind('community')} className={chip(kind === 'community')}>Community groups</button>
         <button onClick={() => setVerified(!verified)} className={chip(verified)} aria-pressed={verified}>✓ Verified</button>
         {cities.length > 0 && (
           <select value={city} onChange={(e) => setCity(e.target.value)} aria-label="City" className="min-h-[40px] rounded-full border border-gray-300 bg-white px-3 text-sm text-gray-700">

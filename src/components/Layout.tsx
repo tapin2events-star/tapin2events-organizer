@@ -24,7 +24,7 @@ const EXPLORE: Item[] = [
 const MY_STUFF: Item[] = [
   { to: '/activity', label: 'My Activity', icon: 'activity', end: true, desktopOnly: true },
   { to: '/resources/dashboard', label: 'Resource Dashboard', icon: 'resourceDash', end: true, badge: 'resourceRequests' },
-  { to: '/groups', label: 'Groups', icon: 'groups', badge: 'groupInvites' },
+  { to: '/groups', label: 'Artist groups', icon: 'groups', badge: 'groupInvites' },
 ];
 const ORGANIZER: Item[] = [
   { to: '/organizer', label: 'Organizer Dashboard', icon: 'dashboard', end: true },

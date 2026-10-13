@@ -121,7 +121,7 @@ export default function GroupChat() {
   if (role === null) {
     return (
       <div className="mx-auto max-w-2xl">
-        <BackButton fallback="/groups" fallbackLabel="Groups" />
+        <BackButton fallback="/groups" fallbackLabel="Artist groups" />
         <p className="mt-4 rounded-xl border border-gray-200 bg-surface p-6 text-center text-sm text-muted">Only members of this group can see its chat.</p>
       </div>
     );

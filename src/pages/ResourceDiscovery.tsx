@@ -175,7 +175,7 @@ export default function ResourceDiscovery() {
           <select value={kind} onChange={(e) => setKind(e.target.value as '' | 'individual' | 'group')} aria-label="Individuals or groups" className={selectClass}>
             <option value="">Individuals &amp; groups</option>
             <option value="individual">Individuals</option>
-            <option value="group">Groups</option>
+            <option value="group">Artist groups</option>
           </select>
         </div>
         {locating && <p className="mt-2 text-sm text-gray-500">Finding your location…</p>}

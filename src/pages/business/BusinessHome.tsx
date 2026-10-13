@@ -46,10 +46,10 @@ function BusinessHomeInner() {
       <section className="px-6 py-14 text-white sm:px-10" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1E3A8A 100%)` }}>
         <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business</p>
         <h1 className="mt-3 max-w-2xl font-display text-4xl font-extrabold leading-tight sm:text-5xl">Professional events, without the enterprise price.</h1>
-        <p className="mt-4 max-w-xl text-base text-white/80">Conferences, summits, galas, workshops and fundraisers with agendas, speakers, sponsors and branded pages, on the same TapIN your community already uses.</p>
+        <p className="mt-4 max-w-xl text-base text-white/80">Conferences, summits, galas, workshops and fundraisers with agendas, speakers, sponsors and branded pages, on the same TapIN your community already uses. Community crews and collectives are welcome too.</p>
         {spotsLeft !== null && spotsLeft > 0 && (
           <p className="mt-5 inline-block rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white">
-            🎉 <strong style={{ color: GOLD }}>Founding members:</strong> {spotsLeft} of 20 spots left. Create your organization now, use everything free during early access, and get <strong>40% off the Business plan for life</strong>.
+            🎉 <strong style={{ color: GOLD }}>Founding members:</strong> {spotsLeft} of 20 spots left for businesses and nonprofits. Create your organization now, use everything free during early access, and get <strong>40% off the Business plan for life</strong>.
           </p>
         )}
         <div className="mt-6 flex flex-wrap gap-3">
@@ -70,7 +70,7 @@ function BusinessHomeInner() {
                     {o.logo_url ? <img src={o.logo_url} alt="" className="h-12 w-12 rounded-xl object-cover" /> : <span className="flex h-12 w-12 items-center justify-center rounded-xl font-bold text-white" style={{ background: o.brand.primary }}>{o.name.charAt(0)}</span>}
                     <span className="min-w-0">
                       <span className="block truncate font-semibold text-bone">{o.name}{o.verified && <span className="ml-1 text-[#C9A227]" title="Verified">✓</span>}</span>
-                      <span className="block text-xs text-muted">{o.status === 'deleted' ? <span className="font-semibold text-red-600">Deleted · restore by {o.deleted_at ? new Date(new Date(o.deleted_at).getTime() + 30 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'soon'}</span> : <>{o.kind === 'nonprofit' ? 'Nonprofit' : 'Business'} · {o.role}{o.founding_number ? ` · Founding member #${o.founding_number}` : ''}</>}</span>
+                      <span className="block text-xs text-muted">{o.status === 'deleted' ? <span className="font-semibold text-red-600">Deleted · restore by {o.deleted_at ? new Date(new Date(o.deleted_at).getTime() + 30 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'soon'}</span> : <>{o.kind === 'nonprofit' ? 'Nonprofit' : o.kind === 'community' ? 'Community' : 'Business'} · {o.role}{o.founding_number ? ` · Founding member #${o.founding_number}` : ''}</>}</span>
                     </span>
                   </Link>
                 </li>
@@ -84,11 +84,11 @@ function BusinessHomeInner() {
             <h2 className="font-display text-lg font-bold text-bone">Create your organization</h2>
             {!user ? <p className="mt-2 text-sm text-muted"><Link to="/login" className="text-marigold">Sign in</Link> first.</p> : (
               <>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {(['business', 'nonprofit'] as OrgKind[]).map((k) => (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {(['business', 'nonprofit', 'community'] as OrgKind[]).map((k) => (
                     <button type="button" key={k} onClick={() => setKind(k)} className={`rounded-xl border p-3 text-left text-sm ${kind === k ? 'border-[#C9A227] bg-[#C9A227]/10' : 'border-gray-200 bg-white'}`}>
-                      <span className="block font-semibold text-gray-900">{k === 'business' ? 'Business' : 'Nonprofit'}</span>
-                      <span className="block text-xs text-gray-500">{k === 'business' ? 'Companies, associations, schools' : 'Charities and 501(c)(3)s'}</span>
+                      <span className="block font-semibold text-gray-900">{k === 'business' ? 'Business' : k === 'nonprofit' ? 'Nonprofit' : 'Community'}</span>
+                      <span className="block text-xs text-gray-500">{k === 'business' ? 'Companies, associations, schools' : k === 'nonprofit' ? 'Charities and 501(c)(3)s' : 'Crews, collectives, series and arts groups'}</span>
                     </button>
                   ))}
                 </div>

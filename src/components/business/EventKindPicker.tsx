@@ -12,9 +12,11 @@ const KINDS: { key: EventKind; title: string; desc: string; icon: string }[] = [
 export default function EventKindPicker({ kind, onKind, orgId, onOrg }: { kind: EventKind; onKind: (k: EventKind) => void; orgId: string | null; onOrg: (id: string | null) => void }) {
   const [orgs, setOrgs] = useState<MyOrg[] | null>(null);
   useEffect(() => { loadMyOrgs().then(setOrgs); }, []);
-  const fitting = (orgs ?? []).filter((o) => o.role !== 'member' && (kind === 'community' || o.kind === kind || kind === 'business'));
+  // Organizations you can host events for (owner or admin). Business events: business or community orgs;
+  // nonprofit events: nonprofit orgs; community events: any of them (optional).
+  const fitting = (orgs ?? []).filter((o) => (o.role === 'owner' || o.role === 'admin') && (kind === 'community' || (kind === 'nonprofit' ? o.kind === 'nonprofit' : o.kind !== 'nonprofit')));
   useEffect(() => {
-    if (kind === 'community') { if (orgId) onOrg(null); return; }
+    if (kind === 'community') { if (orgId && orgs && !fitting.some((o) => o.id === orgId)) onOrg(null); return; }
     if (orgs && !orgId && fitting.length === 1) onOrg(fitting[0].id);
   }, [kind, orgs]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -31,6 +33,15 @@ export default function EventKindPicker({ kind, onKind, orgId, onOrg }: { kind: 
           </button>
         ))}
       </div>
+      {kind === 'community' && fitting.length > 0 && (
+        <label className="mt-3 block text-xs font-medium text-gray-500">Host this event as
+          <select value={orgId ?? ''} onChange={(e) => onOrg(e.target.value || null)} className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900">
+            <option value="">Me</option>
+            {fitting.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          <span className="mt-1 block font-normal text-muted">{orgId ? "The organization's team is added to this event with their roles." : 'Hosted under your own name.'}</span>
+        </label>
+      )}
       {kind !== 'community' && (
         <div className="mt-3">
           {orgs === null ? <p className="text-xs text-muted">Loading your organizations…</p> : fitting.length === 0 ? (
@@ -43,7 +54,7 @@ export default function EventKindPicker({ kind, onKind, orgId, onOrg }: { kind: 
               </select>
             </label>
           )}
-          <p className="mt-2 text-xs text-muted">After saving, add the agenda, speakers and sponsors from the event's dashboard (Business page tab).</p>
+          <p className="mt-2 text-xs text-muted">The organization's team is added with their roles. After saving, add the agenda, speakers and sponsors from the Business page tab.</p>
         </div>
       )}
     </div>

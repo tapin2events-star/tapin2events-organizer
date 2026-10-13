@@ -51,7 +51,7 @@ function OrgPublicInner() {
         </div>
         <div className="mt-3 min-w-0">
           <h1 className="break-words text-2xl font-extrabold leading-tight sm:text-3xl">{org.name}{org.verified && <span className="ml-2 text-xl" style={{ color: b.accent }} title="Verified">✓</span>}</h1>
-          <p className="mt-0.5 text-sm opacity-70">{org.kind === 'nonprofit' ? 'Nonprofit' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
+          <p className="mt-0.5 text-sm opacity-70">{org.kind === 'nonprofit' ? 'Nonprofit' : org.kind === 'community' ? 'Community group' : 'Organization'}{org.city ? ` · ${org.city}${org.state ? `, ${org.state}` : ''}` : ''}</p>
         </div>
         {org.tagline && <p className="mt-5 text-lg font-medium">{org.tagline}</p>}
         {org.description && <p className="mt-3 whitespace-pre-wrap leading-relaxed opacity-80">{org.description}</p>}
