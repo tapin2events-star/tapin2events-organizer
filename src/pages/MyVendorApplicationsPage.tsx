@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import VendorProfileOffer from '../components/vendors/VendorProfileOffer';
 import BackButton from '../components/BackButton';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -89,6 +90,11 @@ export default function MyVendorApplicationsPage() {
         <div className="mb-3"><BackButton fallback="/activity" fallbackLabel="My Activity" /></div>
         <h1 className="font-display text-3xl font-extrabold text-gray-900">My Vendor Applications</h1>
         <p className="mt-1 text-gray-500">Every event you've applied to be a vendor at.</p>
+
+        {/* From the approval nudge (?profile=1): offer the vendor profile, prefilled from the latest application. */}
+        {!loading && apps.length > 0 && new URLSearchParams(location.search).get('profile') === '1' && (
+          <VendorProfileOffer force businessName={apps[0].business_name} description={apps[0].description} />
+        )}
 
         {loading ? (
           <p className="mt-6 text-gray-500">Loading…</p>

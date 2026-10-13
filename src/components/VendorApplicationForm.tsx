@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import VendorProfileOffer from './vendors/VendorProfileOffer';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +31,18 @@ export default function VendorApplicationForm({ eventId, feeTiers, groups }: Ven
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Vendors with a profile: prefill from it and link the application to it.
+  const [resourceId, setResourceId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.email) return;
+    supabase.from('resources').select('id, display_name, bio').ilike('email', user.email).eq('kind', 'individual').limit(1).then(({ data }) => {
+      const r = (data ?? [])[0] as { id: string; display_name: string; bio: string | null } | undefined;
+      if (!r) return;
+      setResourceId(r.id);
+      setBusinessName((v) => v || r.display_name);
+      setDescription((v) => v || (r.bio ?? ''));
+    });
+  }, [user?.email]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +62,7 @@ export default function VendorApplicationForm({ eventId, feeTiers, groups }: Ven
       event_id: eventId,
       resource_email: user.email,
       business_name: businessName,
+      resource_id: resourceId,
       description,
       requirements: requirements || null,
       selected_fee_tier: selectedTier,
@@ -72,6 +86,7 @@ export default function VendorApplicationForm({ eventId, feeTiers, groups }: Ven
           The organizer will review it and follow up. You can check your status anytime on{' '}
           <Link to="/vendor-applications" className="underline">My Vendor Applications</Link>.
         </p>
+        {!resourceId && <VendorProfileOffer businessName={businessName} description={description} />}
       </div>
     );
   }

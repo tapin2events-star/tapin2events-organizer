@@ -155,7 +155,8 @@ export interface Resource {
 
 export const RESOURCE_CATEGORIES = [
   'DJ/Music', 'Photography', 'Videography', 'Catering', 'Decor & Design',
-  'Florist', 'Security', 'Transportation', 'Entertainment', 'Venue', 'Rentals', 'Other',
+  'Florist', 'Security', 'Transportation', 'Entertainment', 'Venue', 'Rentals',
+  'Food & Drink', 'Merchandise & Retail', 'Art & Crafts', 'Other',
 ] as const;
 
 export type ResourceBookingStatus = 'pending' | 'accepted' | 'rejected' | 'counter_offered' | 'confirmed' | 'completed' | 'cancelled' | 'deleted';
