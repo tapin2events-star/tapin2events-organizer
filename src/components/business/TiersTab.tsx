@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import InvoicesSection from './InvoicesSection';
+import { useFeature } from '../../lib/preview';
 import PromoCodes from './PromoCodes';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -25,6 +27,7 @@ export default function TiersTab({ event }: { event: TapEvent }) {
   const [editing, setEditing] = useState<Tier | 'new' | null>(null);
   const [preset, setPreset] = useState<{ name: string; price: number } | null>(null);
 
+  const invoicesOn = useFeature('invoices');
   const load = useCallback(async () => {
     const { data } = await supabase.from('event_ticket_tiers').select('*').eq('event_id', event.id).order('sort_order').order('price').order('created_at');
     const list = (data ?? []) as Tier[];
@@ -86,6 +89,7 @@ export default function TiersTab({ event }: { event: TapEvent }) {
         <p className="mt-8 rounded-xl border border-dashed border-gray-300 p-4 text-sm text-muted">Promo codes are for paid tickets. Add a paid ticket type (or set a ticket price) to create codes.</p>
       )}
       {tiers.length === 0 && event.event_type !== 'free' && <p className="mt-2 text-xs text-muted">Adding your first code turns your ticket price into a "General Admission" ticket type at the same price, so the code works at checkout.</p>}
+      {invoicesOn && (event.event_type !== 'free' || tiers.some((t) => Number(t.price) > 0)) && <InvoicesSection eventId={event.id} ticketPrice={Number(event.ticket_price) || 0} />}
       <p className="mt-4 text-xs text-muted">Attendees pay the same service fees as today (3.7% + $1.79 per paid ticket, plus 2.9% processing). You keep 100% of the ticket price. Your event's overall capacity still applies across all tiers.</p>
 
       {editing && <TierSheet event={event} tier={editing === 'new' ? null : editing} preset={preset} soldCount={editing === 'new' ? 0 : sold[editing.id] ?? 0} nextSort={tiers.length} onClose={() => setEditing(null)} onSaved={load} />}

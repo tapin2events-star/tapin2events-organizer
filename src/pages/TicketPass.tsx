@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../lib/preview';
 import TransferTicket, { canTransfer } from '../components/TransferTicket';
 import EventCover from '../components/EventCover';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +46,7 @@ export default function TicketPass() {
   const location = useLocation();
   const [data, setData] = useState<PassData | null>(null);
   const { user } = useAuth();
+  const invoicesOn = useFeature('invoices');
   const [cancelledNow, setCancelledNow] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -218,6 +220,11 @@ export default function TicketPass() {
             >
               {emailState === 'sending' ? 'Sending…' : emailState === 'sent' ? 'Sent \u2713' : 'Email me this ticket'}
             </button>
+          </div>
+        )}
+        {invoicesOn && user?.email?.toLowerCase() === ticket.attendee_email.toLowerCase() && Number(ticket.price_paid ?? 0) > 0 && (
+          <div className="mt-3 text-center print:hidden">
+            <Link to={`/receipt?ticket=${ticket.id}`} className="text-sm font-medium text-marigold">🧾 Receipt (for expense reports)</Link>
           </div>
         )}
         {!isCancelled && user?.email?.toLowerCase() === ticket.attendee_email.toLowerCase() && canTransfer(ticket, event.start_date, ticket.ticket_type === 'series_pass') && event.allow_transfers !== false && (

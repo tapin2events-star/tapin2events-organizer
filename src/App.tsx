@@ -14,6 +14,7 @@ import EventDetail from './pages/EventDetail';
 import Discover from './pages/Discover';
 import PublicEventDetail from './pages/PublicEventDetail';
 import TicketPass from './pages/TicketPass';
+import Receipt from './pages/Receipt';
 import Planning from './pages/Planning';
 import MeetingDetail from './pages/MeetingDetail';
 import PollDetail from './pages/PollDetail';
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/" element={<Discover />} />
             <Route path="/events/:id" element={<PublicEventDetail />} />
             <Route path="/pass/:ticketId" element={<TicketPass />} />
+            <Route path="/receipt" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
             <Route path="/activity" element={<MyActivity />} />
             <Route path="/my-activity" element={<ActivityRedirect />} />
             <Route path="/saved" element={<SavedEvents />} />
