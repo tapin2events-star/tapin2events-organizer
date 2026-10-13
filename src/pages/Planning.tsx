@@ -50,14 +50,27 @@ export default function Planning() {
   const navigate = useNavigate();
   // The section shown comes from the address (#events, #tasks…), so Back and links work.
   const view: View = (VIEWS as string[]).includes(location.hash.slice(1)) ? (location.hash.slice(1) as View) : 'all';
-  const setView = (v: View) => navigate({ hash: v === 'all' ? '' : v }, { replace: true });
+  // Switching tabs keeps the "Planning for" choice (?for=) in the address.
+  const setView = (v: View) => navigate({ search: location.search, hash: v === 'all' ? '' : v }, { replace: true });
   const [query, setQuery] = useState('');
   // "Planning for": everything, just me, or one organization (?for=me / ?for=<org slug>).
   const [orgs, setOrgs] = useState<MyOrg[]>([]);
   const forParam = new URLSearchParams(location.search).get('for') ?? '';
   const scopeOrg = orgs.find((o) => o.slug === forParam) ?? null;
   const scope: 'all' | 'me' | 'org' = forParam === 'me' ? 'me' : scopeOrg ? 'org' : 'all';
-  const setScope = (v: string) => { const sp = new URLSearchParams(location.search); if (v) sp.set('for', v); else sp.delete('for'); navigate({ search: sp.toString() ? `?${sp}` : '', hash: location.hash }, { replace: true }); };
+  const setScope = (v: string) => {
+    const sp = new URLSearchParams(location.search);
+    if (v) sp.set('for', v); else sp.delete('for');
+    try { if (v) localStorage.setItem('tapin_planning_for', v); else localStorage.removeItem('tapin_planning_for'); } catch { /* storage unavailable */ }
+    navigate({ search: sp.toString() ? `?${sp}` : '', hash: location.hash }, { replace: true });
+  };
+  // Opening Planning with no choice in the address: use the one you picked last time.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).has('for')) return;
+    let saved: string | null = null;
+    try { saved = localStorage.getItem('tapin_planning_for'); } catch { /* storage unavailable */ }
+    if (saved) navigate({ search: `?for=${encodeURIComponent(saved)}`, hash: location.hash }, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const inScope = (orgId: string | null) => scope === 'all' || (scope === 'me' ? !orgId : orgId === scopeOrg?.id);
   const [needsOnly, setNeedsOnly] = useState(false);
   const [taskFilter, setTaskFilter] = useState<'all' | 'mine' | 'overdue' | 'unassigned'>('all');
