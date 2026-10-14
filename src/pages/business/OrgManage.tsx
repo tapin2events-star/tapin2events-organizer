@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
+import { OrgAttendees, OrgPromoteTab, OrgSales, useOrgAttendance } from '../../components/business/OrgInsights';
 import { ListSkeleton } from '../../components/ui/Skeleton';
 import OrgPayoutsTab from '../../components/business/OrgPayoutsTab';
 import OrgPhotosTab from '../../components/business/OrgPhotosTab';
@@ -12,8 +14,8 @@ import BusinessGate from '../../components/business/BusinessGate';
 import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
-type Tab = 'Profile' | 'Brand kit' | 'Photos' | 'Team' | 'Events' | 'Payouts';
-const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Photos: '🖼️', Team: '👥', Events: '📅', Payouts: '💳' };
+type Tab = 'Profile' | 'Brand kit' | 'Photos' | 'Team' | 'Events' | 'Promote' | 'Payouts';
+const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Photos: '🖼️', Team: '👥', Events: '📅', Promote: '📣', Payouts: '💳' };
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -25,8 +27,11 @@ function OrgManageInner() {
   const { user } = useAuth();
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
-  const tabList = (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(role === 'owner' || role === 'admin' ? ['Payouts'] : [])] as Tab[]);
-  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
+  const insightsOn = useFeature('org_insights');
+  const isLead = role === 'owner' || role === 'admin';
+  const tabList = (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
+  const tabLabel = (t: Tab) => (t === 'Payouts' && insightsOn ? 'Sales & payouts' : t);
+  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', 'Promote', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -85,13 +90,13 @@ function OrgManageInner() {
         {tabList.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
             className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl text-xs font-semibold ${tab === t ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>
-            <span className="text-base leading-none" aria-hidden="true">{TAB_ICON[t]}</span>{t}
+            <span className="text-base leading-none" aria-hidden="true">{TAB_ICON[t]}</span>{t === 'Payouts' && insightsOn ? 'Sales' : t}
           </button>
         ))}
       </div>
       <div className="mt-5 hidden border-b border-gray-200 sm:flex sm:gap-1" role="tablist" aria-label="Organization settings">
         {tabList.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{t}</button>
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{tabLabel(t)}</button>
         ))}
       </div>
       {org.status === 'deleted' && (
@@ -108,8 +113,10 @@ function OrgManageInner() {
         {tab === 'Profile' && role === 'owner' && org.status !== 'deleted' && <DangerZone orgId={org.id} orgName={org.name} />}
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
-        {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} />}
+        {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} />}
+        {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}
         {tab === 'Photos' && (role === 'owner' || role === 'admin' || role === 'editor' ? <OrgPhotosTab orgId={org.id} /> : <p className="text-sm text-muted">Owners, Admins and Editors can manage photos.</p>)}
+        {tab === 'Payouts' && isLead && insightsOn && <OrgSales orgId={org.id} />}
         {tab === 'Payouts' && (role === 'owner' || role === 'admin') && <OrgPayoutsTab orgId={org.id} orgName={org.name} slug={org.slug} />}
       </div>
     </div>
@@ -254,7 +261,8 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
   );
 }
 
-function EventsTab({ org, canEdit }: { org: Organization; canEdit: boolean }) {
+function EventsTab({ org, canEdit, insights = false }: { org: Organization; canEdit: boolean; insights?: boolean }) {
+  const attendance = useOrgAttendance(org.id, insights);
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; status: string; is_test: boolean }[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);
   useEffect(() => {
@@ -267,12 +275,13 @@ function EventsTab({ org, canEdit }: { org: Organization; canEdit: boolean }) {
         <ul className="mt-4 flex flex-col gap-2">
           {events.map((e) => (
             <li key={e.id}><Link to={`/organizer/events/${e.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 hover:border-[#C9A227]">
-              <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{e.title}</span><span className="text-xs text-muted">{e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date'} · {e.status}{e.is_test ? ' · TEST' : ''}</span></span>
+              <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{e.title}</span><span className="text-xs text-muted">{e.start_date ? new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date'} · {e.status}{e.is_test ? ' · TEST' : ''}</span>{insights && attendance[e.id] && <span className="block text-xs text-muted">👥 {attendance[e.id].tickets} attending{attendance[e.id].checked_in ? ` · ${attendance[e.id].checked_in} checked in` : ''}</span>}</span>
               <span className="text-[#C9A227]">&rarr;</span>
             </Link></li>
           ))}
         </ul>
       )}
+      {insights && <OrgAttendees orgId={org.id} orgName={org.name} />}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
+  org_insights: { name: 'Organization insights', description: 'In organization settings: a Promote tab (links, promoters and boosts across events), attendee counts and an All attendees list (CSV) on Events, and sales across events in Sales & payouts.', status: 'preview' },
   promote: { name: 'Promotion links', description: 'Tracking links per event (Instagram bio, flyers, promoters with commission) with visits, tickets and revenue per link; promoters see their own links and earnings.', status: 'preview' },
   profile_qr: { name: 'Personal TapIN QR', description: 'A QR code on your profile that opens your public TapIN profile, to share anywhere.', status: 'preview' },
   networking: { name: 'Attendee networking', description: 'Organizers turn on networking for an event; ticket holders add a card (title, company, what they\u2019re looking for), browse who\u2019s going and send connection requests. Contact info is shared only between connections.', status: 'preview' },
