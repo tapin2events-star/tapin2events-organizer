@@ -30,7 +30,8 @@ import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
-const TABS = ['Overview', 'Business page', 'Tickets', 'Registration', 'Attendees', 'Donations', 'Lineup & bookings', 'Promote', 'Sales', 'Messages', 'Products', 'Team & tasks', 'Vendor applications'] as const;
+// Ordered by how often organizers use them: daily checks first, then running the event, then setup.
+const TABS = ['Overview', 'Sales', 'Attendees', 'Messages', 'Promote', 'Team & tasks', 'Lineup & bookings', 'Tickets', 'Registration', 'Products', 'Donations', 'Vendor applications', 'Business page'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
