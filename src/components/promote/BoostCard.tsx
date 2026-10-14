@@ -53,7 +53,7 @@ export default function BoostCard({ eventId }: { eventId: string }) {
   const shown = boosts.filter((b) => b.status !== 'pending');
   return (
     <section className="mb-8 rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-teal-50 p-4">
-      <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">🚀 Boost this event <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+      <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">🚀 Boost this event <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase text-gray-600">Pay per boost</span></p>
       <p className="text-sm text-muted">Show it in the <strong>Promoted</strong> row at the top of Discover for people nearby, and first in matching searches. Up to 6 events are promoted at once in an area.</p>
       {msg && <p role="status" className={`mt-3 rounded-xl px-3 py-2 text-sm ${msg.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{msg.text}</p>}
       {!canBoost ? (

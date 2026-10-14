@@ -128,7 +128,7 @@ export default function EventNetwork() {
   return (
     <div className="mx-auto max-w-3xl">
       <BackButton fallback={`/events/${id}`} fallbackLabel="Event" />
-      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">🤝 Networking · Preview</p>
+      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">🤝 Networking</p>
       <h1 className="font-display text-2xl font-extrabold text-bone sm:text-3xl">Meet people going to {title || 'this event'}</h1>
       <p className="mt-1 text-sm text-muted">{status.members} {status.members === 1 ? 'person has' : 'people have'} joined. Contact info is shared only when you both connect.</p>
       {(status.can_join || joined) && <div className="mt-4"><QrScanButtons name={myName} /></div>}

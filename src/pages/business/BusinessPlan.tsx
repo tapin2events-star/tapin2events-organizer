@@ -15,12 +15,12 @@ const PREMIUM: { icon: string; name: string; desc: string }[] = [
   { icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature events in Discover' },
   { icon: '🤝', name: 'Attendee networking', desc: 'Cards, suggestions and QR connect at your events' },
   { icon: '💸', name: 'Revenue splits', desc: 'Split event money by percentage with partners' },
-  { icon: '🎬', name: 'Video & highlight reel', desc: 'Video on your organization page' },
+  { icon: '🎬', name: 'Video headers & highlight reel', desc: 'A trailer at the top of event pages and your organization page, plus a past-events reel' },
   { icon: '📝', name: 'Meeting extras', desc: 'Recurring meetings, minutes as PDF, agenda templates' },
   { icon: '⭐', name: 'Featured on Discover', desc: 'Your organization in the Featured row' },
 ];
 const FREE = ['Create events and sell tickets (buyers pay the fees)', 'Organization page with your brand', 'Team roles across all your events', 'Planning hub, tasks, meetings and polls',
-  'Photo gallery (24 photos)', 'Promo codes', 'Donations and support', 'Payouts to your own bank'];
+  'Photo gallery (24 photos)', 'Promo codes', 'Donations and support', 'Payouts to your own bank', 'Personal TapIN QR and profile sharing', 'Feed videos (and, coming soon, featuring them on your organization page)'];
 const PLANS = [
   { id: 'monthly', label: 'Monthly', price: '$59', per: '/month' },
   { id: 'yearly', label: 'Yearly', price: '$590', per: '/year', note: '2 months free' },
@@ -63,7 +63,8 @@ export default function BusinessPlan() {
       <section className="px-6 py-10 text-white sm:px-10" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1E3A8A 100%)` }}>
         <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business · Coming soon</p>
         <h1 className="mt-3 max-w-2xl font-display text-3xl font-extrabold leading-tight sm:text-5xl">The Business plan</h1>
-        <p className="mt-3 max-w-xl text-white/85">Premium tools for organizations that run events seriously. Everything is free during early access, and the core of TapIN stays free forever.</p>
+        <p className="mt-3 max-w-xl text-white/85">Premium tools for organizations that run events seriously. The core of TapIN stays free forever.</p>
+        <p className="mt-2 max-w-xl text-sm text-white/70">Plans are for organizations. Organizing on your own? The per-event option unlocks premium tools for a single event.</p>
         <div className="mt-5 grid max-w-2xl grid-cols-3 gap-2">
           {PLANS.map((p) => (
             <div key={p.id} className="rounded-2xl bg-white/10 p-3 text-center">
@@ -79,6 +80,10 @@ export default function BusinessPlan() {
       </section>
 
       <div className="px-6 py-8 sm:px-10">
+        <div className="mb-6 rounded-2xl border border-[#C9A227]/50 bg-[#C9A227]/10 p-4 text-sm text-[#5A460A]">
+          <p className="font-semibold">⭐ Free during early access, paid after launch</p>
+          <p className="mt-1">Features marked <strong>Business plan</strong> in the app are free to use right now. When the Business plan launches, they'll require a paid plan, so you'll need a plan to keep using them. Founding members keep 40% off for life.</p>
+        </div>
         <h2 className="font-display text-2xl font-bold text-bone">What's planned for the Business plan</h2>
         <p className="mt-1 text-sm text-muted">Planned features; the final list may change based on what organizations tell us matters most.</p>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -89,7 +94,23 @@ export default function BusinessPlan() {
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-sm text-muted">Need it to look like your own brand? <strong className="text-bone">White-label events</strong> are planned as a $299-per-event add-on.</p>
+        <section className="mt-8 overflow-hidden rounded-2xl text-white" style={{ background: `linear-gradient(135deg, #111827 0%, ${NAVY} 100%)` }}>
+          <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>Add-on</p>
+              <h3 className="mt-1 font-display text-2xl font-extrabold">White-label events</h3>
+              <p className="mt-2 max-w-lg text-sm text-white/80">Run an event that looks entirely like your own brand: your logo, colors and name across the event page, tickets and emails, without TapIN branding. Ideal for conferences, galas and corporate events.</p>
+              <ul className="mt-3 grid gap-1.5 text-sm text-white/90 sm:grid-cols-2">
+                <li>✓ Your branding on the event page</li><li>✓ Branded tickets and emails</li><li>✓ No TapIN branding for attendees</li><li>✓ Works with any Business plan</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl bg-white/10 p-4 text-center sm:min-w-[170px]">
+              <p className="text-4xl font-extrabold">$299</p>
+              <p className="text-sm text-white/70">per event</p>
+              <a href="#reserve" onClick={() => setWanted((w) => (w.includes('White-label events') ? w : [...w, 'White-label events']))} className="mt-3 inline-block rounded-full px-4 py-2 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>I'm interested</a>
+            </div>
+          </div>
+        </section>
 
         <h2 className="mt-10 font-display text-2xl font-bold text-bone">Free forever</h2>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -122,7 +143,7 @@ export default function BusinessPlan() {
               </div>
               <p className="mt-4 text-xs font-medium text-gray-500">What matters most to you? (pick any)</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {PREMIUM.map((f) => (
+                {[...PREMIUM, { icon: '🏷️', name: 'White-label events', desc: '' }].map((f) => (
                   <button key={f.name} type="button" aria-pressed={wanted.includes(f.name)} onClick={() => setWanted(wanted.includes(f.name) ? wanted.filter((x) => x !== f.name) : [...wanted, f.name])}
                     className={`min-h-[36px] rounded-full px-3 text-sm ${wanted.includes(f.name) ? 'bg-marigold font-semibold text-white' : 'border border-gray-300 bg-white text-gray-700'}`}>{f.icon} {f.name}</button>
                 ))}

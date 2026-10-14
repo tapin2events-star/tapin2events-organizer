@@ -25,7 +25,6 @@ export default function NetworkHome() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Preview</p>
       <h1 className="font-display text-3xl font-extrabold text-bone">🤝 Networking</h1>
       <p className="mt-1 text-sm text-muted">Meet people at events. Show your code or scan theirs to connect instantly.</p>
 

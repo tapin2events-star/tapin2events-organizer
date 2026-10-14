@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PremiumBadge, { PremiumNotice } from '../business/PremiumBadge';
 import FeatureFeedback from '../feedback/FeatureFeedback';
 import BoostCard from './BoostCard';
 import { supabase } from '../../lib/supabaseClient';
@@ -40,8 +41,9 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
       <BoostCard eventId={eventId} />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">📣 Promotion links <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
-          <p className="text-sm text-muted">Make a link for each place you share this event (or each promoter) and see which ones sell tickets.</p>
+          <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">📣 Promotion links <PremiumBadge /></p>
+          <PremiumNotice feature="Promotion links" />
+          <p className="mt-1 text-sm text-muted">Make a link for each place you share this event (or each promoter) and see which ones sell tickets.</p>
         </div>
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New link</button>
       </div>

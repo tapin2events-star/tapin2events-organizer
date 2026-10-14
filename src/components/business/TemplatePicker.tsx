@@ -1,4 +1,5 @@
 import { EVENT_TEMPLATES, type EventTemplate } from '../../lib/eventTemplates';
+import PremiumBadge, { PremiumNotice } from './PremiumBadge';
 
 // "Start from a template" (Preview): a row of templates; picking one fills in the form.
 export default function TemplatePicker({ selected, onPick }: { selected: string | null; onPick: (t: EventTemplate) => void }) {
@@ -7,9 +8,10 @@ export default function TemplatePicker({ selected, onPick }: { selected: string 
     <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-3 sm:p-4">
       <div className="flex flex-wrap items-center gap-2">
         <p className="font-semibold text-bone">✨ Start from a template</p>
-        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span>
+        <PremiumBadge />
       </div>
-      <p className="mt-0.5 text-sm text-muted">Pick one to fill in the description, tickets, registration questions and agenda. You can change everything.</p>
+      <PremiumNotice feature="Starting from a template" />
+      <p className="mt-1 text-sm text-muted">Pick one to fill in the description, tickets, registration questions and agenda. You can change everything.</p>
       <div className="-mx-3 mt-3 flex snap-x gap-2 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
         {EVENT_TEMPLATES.map((t) => (
           <button key={t.id} type="button" onClick={() => onPick(t)} aria-pressed={selected === t.id}

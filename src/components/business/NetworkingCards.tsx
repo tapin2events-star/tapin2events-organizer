@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PremiumBadge, { PremiumNotice } from './PremiumBadge';
 import ShareQR from '../ShareQR';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -54,8 +55,9 @@ export function NetworkingSwitch({ eventId, eventTitle }: { eventId: string; eve
       <label className="flex items-start gap-3">
         <input type="checkbox" checked={s.enabled} disabled={busy} onChange={(e) => toggle(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
         <span>
-          <span className="flex items-center gap-2 font-semibold text-bone">🤝 Attendee networking <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></span>
-          <span className="block text-sm text-muted">Ticket holders add a networking card and connect before and during the event. Contact info is shared only when both connect.</span>
+          <span className="flex items-center gap-2 font-semibold text-bone">🤝 Attendee networking <PremiumBadge /></span>
+          <PremiumNotice feature="Attendee networking" />
+          <span className="mt-1 block text-sm text-muted">Ticket holders add a networking card and connect before and during the event. Contact info is shared only when both connect.</span>
         </span>
       </label>
       {s.enabled && (

@@ -41,7 +41,7 @@ export default function PeopleIveMet() {
   return (
     <div className="mx-auto max-w-3xl">
       <BackButton fallback="/profile" fallbackLabel="Profile" />
-      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">🤝 Networking · Preview</p>
+      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">🤝 Networking</p>
       <h1 className="font-display text-3xl font-extrabold text-bone">People I've met</h1>
       <p className="mt-1 text-sm text-muted">Everyone you've connected with at events. Only you can see this list.</p>
 

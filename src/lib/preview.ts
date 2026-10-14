@@ -5,13 +5,13 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
-  business_plan_page: { name: 'Business plan page', description: 'The "Business plan, coming soon" page (/business/plan) with planned premium features, free-forever features, and founding-price reservations, linked from TapIN for Business and Sales & payouts.', status: 'preview' },
-  org_insights: { name: 'Organization insights', description: 'In organization settings: a Promote tab (links, promoters and boosts across events), attendee counts and an All attendees list (CSV) on Events, and sales across events in Sales & payouts.', status: 'preview' },
-  promote: { name: 'Promotion links', description: 'Tracking links per event (Instagram bio, flyers, promoters with commission) with visits, tickets and revenue per link; promoters see their own links and earnings.', status: 'preview' },
-  profile_qr: { name: 'Personal TapIN QR', description: 'A QR code on your profile that opens your public TapIN profile, to share anywhere.', status: 'preview' },
-  networking: { name: 'Attendee networking', description: 'Organizers turn on networking for an event; ticket holders add a card (title, company, what they\u2019re looking for), browse who\u2019s going and send connection requests. Contact info is shared only between connections.', status: 'preview' },
-  invoices: { name: 'Invoices & receipts', description: 'Pay-by-invoice for group and company ticket purchases (Tickets tab), and printable receipts where buyers can add company, address, tax ID and PO number.', status: 'preview' },
-  templates: { name: 'Event templates', description: 'Start a new event from a template (Conference, Summit, Gala, Workshop series, Networking night, Fundraiser, Concert / showcase, Open mic) that fills in the description, tickets, registration questions and agenda.', status: 'preview' },
+  business_plan_page: { name: 'Business plan page', description: 'The "Business plan, coming soon" page (/business/plan) with planned premium features, free-forever features, and founding-price reservations, linked from TapIN for Business and Sales & payouts.', status: 'live' },
+  org_insights: { name: 'Organization insights', description: 'In organization settings: a Promote tab (links, promoters and boosts across events), attendee counts and an All attendees list (CSV) on Events, and sales across events in Sales & payouts.', status: 'live' },
+  promote: { name: 'Promotion links', description: 'Tracking links per event (Instagram bio, flyers, promoters with commission) with visits, tickets and revenue per link; promoters see their own links and earnings.', status: 'live' },
+  profile_qr: { name: 'Personal TapIN QR', description: 'A QR code on your profile that opens your public TapIN profile, to share anywhere.', status: 'live' },
+  networking: { name: 'Attendee networking', description: 'Organizers turn on networking for an event; ticket holders add a card (title, company, what they\u2019re looking for), browse who\u2019s going and send connection requests. Contact info is shared only between connections.', status: 'live' },
+  invoices: { name: 'Invoices & receipts', description: 'Pay-by-invoice for group and company ticket purchases (Tickets tab), and printable receipts where buyers can add company, address, tax ID and PO number.', status: 'live' },
+  templates: { name: 'Event templates', description: 'Start a new event from a template (Conference, Summit, Gala, Workshop series, Networking night, Fundraiser, Concert / showcase, Open mic) that fills in the description, tickets, registration questions and agenda.', status: 'live' },
   business: { name: 'TapIN for Business', description: 'Organizations (companies and nonprofits) with brand kits, the Community / Business / Nonprofit event type picker, and business event pages with agenda, speakers and sponsors.', status: 'live' },
 };
 
