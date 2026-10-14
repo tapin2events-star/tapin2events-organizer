@@ -34,10 +34,12 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   const [stage, setStage] = useState<'pick' | 'uploading' | 'processing' | 'error'>('pick');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
   // Tapping outside or pressing Escape closes, but never mid-upload, and
   // asks first if a video or caption would be lost.
   function requestClose() {
-    if (stage === 'uploading' || stage === 'processing') return;
+    if (stage === 'uploading') return;
+    if (stage === 'processing') { onPosted(); return; }
     if ((file || caption.trim()) && !window.confirm('Discard this post?')) return;
     onClose();
   }
@@ -93,109 +95,111 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
     setCustomThumbnailPreview(URL.createObjectURL(selected));
   }
 
+  // Keep the screen on while uploading so the phone doesn't auto-lock mid-upload.
+  const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
+  async function keepAwake(on: boolean) {
+    try {
+      if (on) wakeLock.current = await (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock?.request('screen') ?? null;
+      else { await wakeLock.current?.release(); wakeLock.current = null; }
+    } catch { /* not supported: fine */ }
+  }
+  // Warn before leaving the page mid-upload.
+  useEffect(() => {
+    if (stage !== 'uploading') return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [stage]);
+
+  // One upload attempt to Gumlet's signed URL, with progress.
+  function putFile(url: string, f: File) {
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100)); };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(Object.assign(new Error('Upload failed'), { status: xhr.status })));
+      xhr.onerror = () => reject(Object.assign(new Error('Upload failed'), { status: 0 }));
+      xhr.send(f);
+    });
+  }
+  // If the upload is interrupted (phone locked, app switched, connection dropped), wait until TapIN is
+  // back on screen and try again, up to 3 times. A fresh upload link is used if the old one expired.
+  const waitUntilVisible = () => new Promise<void>((res) => {
+    if (!document.hidden) return res();
+    const on = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', on); res(); } };
+    document.addEventListener('visibilitychange', on);
+  });
+
   async function handlePost() {
     if (!file || !user?.email) return;
     setStage('uploading');
     setError(null);
+    setUploadNote(null);
+    await keepAwake(true);
 
-    // Step 1: ask our own backend for a signed Gumlet upload URL -- the
-    // Gumlet API key never touches the browser.
-    const { data: uploadData, error: uploadInitError } = await supabase.functions.invoke('create-gumlet-upload', { body: {} });
-    if (uploadInitError || !uploadData?.upload_url) {
-      setError('Could not start the upload. Please try again.');
-      setStage('error');
-      return;
+    // Step 1: a signed Gumlet upload link from our backend (the API key never touches the browser).
+    const getLink = async () => {
+      const { data, error: e } = await supabase.functions.invoke('create-gumlet-upload', { body: {} });
+      return e || !data?.upload_url ? null : (data as { upload_url: string; asset_id: string });
+    };
+    let link = await getLink();
+    if (!link) { await keepAwake(false); setError('Could not start the upload. Please try again.'); setStage('error'); return; }
+
+    // Step 2: upload, retrying automatically after interruptions.
+    let uploaded = false;
+    for (let attempt = 1; attempt <= 4 && !uploaded; attempt++) {
+      try {
+        await putFile(link.upload_url, file);
+        uploaded = true;
+      } catch (e) {
+        if (attempt === 4) break;
+        const status = (e as { status?: number }).status ?? 0;
+        setUploadNote(document.hidden ? 'Paused while TapIN was in the background. It will continue when you come back.' : 'Connection interrupted. Retrying…');
+        await waitUntilVisible();
+        await new Promise((r) => setTimeout(r, 1500));
+        if (status === 403 || status === 400) { const fresh = await getLink(); if (fresh) link = fresh; }
+        setUploadNote('Resuming upload…');
+        setUploadProgress(0);
+      }
     }
+    await keepAwake(false);
+    if (!uploaded) { setError('The upload kept getting interrupted. Check your connection and try again.'); setStage('error'); return; }
 
-    // Step 2: upload the actual file straight to Gumlet's storage.
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', uploadData.upload_url);
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('Upload failed')));
-        xhr.onerror = () => reject(new Error('Upload failed'));
-        xhr.send(file);
-      });
-    } catch {
-      setError('The video upload failed partway through. Please try again.');
-      setStage('error');
-      return;
-    }
-
-    // Step 2b: if a custom thumbnail was provided, upload it in parallel --
-    // otherwise Gumlet's auto-generated one (from status polling) is used.
+    // Optional custom thumbnail.
     let customThumbnailUrl: string | null = null;
     if (customThumbnail) {
       const path = `${user.id}/post-thumbnail-${Date.now()}-${customThumbnail.name}`;
       const { error: thumbUploadError } = await supabase.storage.from('user-uploads').upload(path, customThumbnail, { upsert: true });
-      if (!thumbUploadError) {
-        const { data: publicUrlData } = supabase.storage.from('user-uploads').getPublicUrl(path);
-        customThumbnailUrl = publicUrlData.publicUrl;
-      }
+      if (!thumbUploadError) customThumbnailUrl = supabase.storage.from('user-uploads').getPublicUrl(path).data.publicUrl;
     }
 
-    // Step 3: Gumlet needs a little time to transcode -- poll until ready.
-    setStage('processing');
-    const assetId = uploadData.asset_id;
-    let playbackUrl: string | null = null;
-    let generatedThumbnailUrl: string | null = null;
-    for (let attempt = 0; attempt < 60; attempt++) {
-      await new Promise((r) => setTimeout(r, 3000));
-      const { data: statusData } = await supabase.functions.invoke('check-gumlet-asset-status', { body: { asset_id: assetId } });
-      if (statusData?.status === 'ready') {
-        playbackUrl = statusData.playback_url;
-        generatedThumbnailUrl = statusData.thumbnail_url;
-        break;
-      }
-      if (statusData?.status === 'error' || statusData?.status === 'errored') {
-        setError('Gumlet had trouble processing this video. Please try a different file.');
-        setStage('error');
-        return;
-      }
-    }
-
-    if (!playbackUrl) {
-      setError('This video is taking longer than expected to process. It may still finish in the background -- check back shortly.');
-      setStage('error');
-      return;
-    }
-
-    const tags = tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    // Step 4: the post only becomes visible in the feed once we have a
-    // real, working playback URL -- never before.
+    // Step 3: save the post as "processing". TapIN finishes it on the server and publishes it when the
+    // video is ready, so you can lock your phone or leave. You'll get a notification when it's live.
+    const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
     const { data: created, error: insertError } = await supabase.from('posts').insert({
       author_email: user.email,
       poster_type: posterType,
       caption: caption.trim() || null,
-      video_url: playbackUrl,
-      gumlet_asset_id: assetId,
-      thumbnail_url: customThumbnailUrl ?? generatedThumbnailUrl,
+      video_url: null,
+      status: 'processing',
+      processing_started_at: new Date().toISOString(),
+      gumlet_asset_id: link.asset_id,
+      thumbnail_url: customThumbnailUrl,
       category: category || null,
       tags: tags.length > 0 ? tags : null,
       event_id: selectedEvent?.id ?? null,
       group_id: groupId || null,
     }).select('id').single();
     if (insertError || !created) {
-      setError('Your video processed successfully, but saving the post failed. Please try again.');
+      setError('Your video uploaded, but saving the post failed. Please try again.');
       setStage('error');
       return;
     }
-
-    // Tag creators one by one, so one person who can't be tagged doesn't
-    // stop the others. The post itself is already live either way.
     if (taggedPeople.length > 0) {
       const results = await Promise.all(taggedPeople.map((p) => supabase.from('post_tags').insert({ post_id: created.id, tagged_email: p.email })));
       results.forEach((r, i) => r.error && console.error('Could not tag', taggedPeople[i].email, r.error.message));
     }
-
-    onPosted();
+    setStage('processing');
   }
 
   return (
@@ -377,17 +381,20 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
 
         {stage === 'uploading' && (
           <div className="mt-6 flex flex-col items-center gap-3 py-6 text-center">
-            <p className="text-sm text-muted">Uploading… {uploadProgress}%</p>
+            <p className="text-sm font-medium text-bone">Uploading… {uploadProgress}%</p>
             <div className="h-2 w-full rounded-full bg-gray-100">
               <div className="h-2 rounded-full bg-marigold transition-all" style={{ width: `${uploadProgress}%` }} />
             </div>
+            <p className="text-xs text-muted">{uploadNote ?? 'Keep TapIN open until the upload finishes. After that, you can close it.'}</p>
           </div>
         )}
 
         {stage === 'processing' && (
           <div className="mt-6 flex flex-col items-center gap-2 py-6 text-center">
-            <p className="text-sm font-medium text-bone">Processing your video…</p>
-            <p className="text-xs text-muted">This can take a minute or two depending on length.</p>
+            <p className="text-3xl" aria-hidden="true">🎬</p>
+            <p className="text-sm font-semibold text-bone">Uploaded! Your video is processing.</p>
+            <p className="text-xs text-muted">It usually takes a minute or two. You can close this or lock your phone. We'll post it automatically and let you know when it's live.</p>
+            <button onClick={() => onPosted()} className="mt-2 rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-white">Done</button>
           </div>
         )}
 

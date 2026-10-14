@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ProcessingChip from '../components/feed/ProcessingChip';
 import VideoSeekControls from '../components/feed/VideoSeekControls';
 import { blockUser } from '../lib/blocks';
 import BlockConfirm from '../components/BlockConfirm';
@@ -67,6 +68,7 @@ function timeAgo(dateStr: string): string {
 type FeedMode = 'for_you' | 'following';
 
 export default function Feed() {
+  const [processingKey, setProcessingKey] = useState(0);
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -472,7 +474,7 @@ export default function Feed() {
           </button>
         )}
         {showCreateModal && (
-          <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
+          <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); setProcessingKey((k) => k + 1); loadPosts(); }} />
         )}
         <BottomTabBar />
       </div>
@@ -481,6 +483,7 @@ export default function Feed() {
 
   return (
     <>
+    <ProcessingChip refreshKey={processingKey} onLive={() => loadPosts()} />
     {/* Revealed behind the feed while swiping right toward Discover */}
     {dragging && (
       <div className="fixed inset-0 z-20 flex items-center bg-gray-50" aria-hidden="true">
@@ -899,7 +902,7 @@ export default function Feed() {
         </div>
       )}
       {showCreateModal && (
-        <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); loadPosts(); }} />
+        <CreatePostModal onClose={() => setShowCreateModal(false)} onPosted={() => { setShowCreateModal(false); setProcessingKey((k) => k + 1); loadPosts(); }} />
       )}
       {editingPostId && (
         <EditPostModal postId={editingPostId} onClose={() => setEditingPostId(null)} onSaved={() => refreshPost(editingPostId)} />
