@@ -162,7 +162,8 @@ function PastEvents({ orgId, accent, dark }: { orgId: string; accent: string; da
 
 // Our artists, Videos and Shop, chosen in the organization's Page settings.
 function OrgSections({ orgId, accent, dark }: { orgId: string; accent: string; dark: boolean }) {
-  const [s, setS] = useState<{ artists: { id: string; name: string; photo: string | null; categories: string[] | null; city: string | null }[]; videos: { id: string; thumbnail: string | null; caption: string | null; author: string | null }[]; products: { id: string; name: string; price: number; image: string | null; seller: string | null }[] } | null>(null);
+  const [person, setPerson] = useState<{ name: string; photo: string | null; title?: string | null; bio?: string | null; link?: string | null } | null>(null);
+  const [s, setS] = useState<{ roster_heading?: string | null; artists: { id: string; resource_id?: string | null; name: string; photo: string | null; categories: string[] | null; city: string | null; title?: string | null; bio?: string | null; link?: string | null }[]; videos: { id: string; thumbnail: string | null; caption: string | null; author: string | null }[]; products: { id: string; name: string; price: number; image: string | null; seller: string | null }[] } | null>(null);
   useEffect(() => { supabase.rpc('org_page_sections', { p_org_id: orgId }).then(({ data }) => setS((data ?? null) as typeof s)); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!s) return null;
   const card = dark ? '#111827' : '#FFFFFF';
@@ -171,17 +172,36 @@ function OrgSections({ orgId, accent, dark }: { orgId: string; accent: string; d
     <>
       {s.artists.length > 0 && (
         <section className="pb-10">
-          <h2 className="text-xl font-bold">Our artists</h2>
+          <h2 className="text-xl font-bold">{s.roster_heading || 'Our artists'}</h2>
           <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
-            {s.artists.map((a) => (
-              <Link key={a.id} to={`/resources/${a.id}`} className="w-36 shrink-0 snap-start rounded-2xl border p-3 text-center" style={{ background: card, borderColor: line }}>
-                {a.photo ? <img src={a.photo} alt="" className="mx-auto h-20 w-20 rounded-full object-cover" /> : <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white" style={{ background: accent }}>{a.name.charAt(0)}</span>}
-                <p className="mt-2 truncate text-sm font-semibold">{a.name}</p>
-                <p className="truncate text-xs opacity-70">{(a.categories ?? []).slice(0, 2).join(' · ') || a.city || 'Artist'}</p>
-              </Link>
-            ))}
+            {s.artists.map((a) => {
+              const inner = (
+                <>
+                  {a.photo ? <img src={a.photo} alt="" className="mx-auto h-20 w-20 rounded-full object-cover" /> : <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white" style={{ background: accent }}>{a.name.charAt(0)}</span>}
+                  <p className="mt-2 truncate text-sm font-semibold">{a.name}</p>
+                  <p className="line-clamp-2 text-xs opacity-70">{a.title || (a.categories ?? []).slice(0, 2).join(' · ') || a.city || ''}</p>
+                </>
+              );
+              return a.resource_id
+                ? <Link key={a.id} to={`/resources/${a.resource_id}`} className="w-36 shrink-0 snap-start rounded-2xl border p-3 text-center" style={{ background: card, borderColor: line }}>{inner}</Link>
+                : <button key={a.id} type="button" onClick={() => setPerson(a)} className="w-36 shrink-0 snap-start rounded-2xl border p-3 text-center" style={{ background: card, borderColor: line }}>{inner}</button>;
+            })}
           </div>
         </section>
+      )}
+      {person && (
+        <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setPerson(null)} role="dialog" aria-label={person.name}>
+          <div className="w-full max-w-sm rounded-2xl p-5 text-center" style={{ background: card }} onClick={(e) => e.stopPropagation()}>
+            {person.photo ? <img src={person.photo} alt="" className="mx-auto h-24 w-24 rounded-full object-cover" /> : <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white" style={{ background: accent }}>{person.name.charAt(0)}</span>}
+            <p className="mt-3 text-lg font-bold">{person.name}</p>
+            {person.title && <p className="text-sm opacity-75">{person.title}</p>}
+            {person.bio && <p className="mt-3 whitespace-pre-line text-left text-sm leading-relaxed opacity-90">{person.bio}</p>}
+            <div className="mt-4 flex justify-center gap-2">
+              {person.link && <a href={person.link} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background: accent }}>Learn more ↗</a>}
+              <button onClick={() => setPerson(null)} className="rounded-full border px-4 py-2 text-sm" style={{ borderColor: line }}>Close</button>
+            </div>
+          </div>
+        </div>
       )}
       {s.videos.length > 0 && (
         <section className="pb-10">
