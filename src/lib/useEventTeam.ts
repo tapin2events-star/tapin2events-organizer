@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 
-export interface TeamMember { email: string; full_name: string | null; profile_photo: string | null; role: string; status: string; open_tasks: number }
+export interface TeamMember { email: string; full_name: string | null; profile_photo: string | null; role: string; status: string; open_tasks: number; via_org_id?: string | null; via_org_name?: string | null; via_org_slug?: string | null }
 export const ROLE_LABEL: Record<string, string> = { owner: 'Organizer', admin: 'Admin', editor: 'Editor', viewer: 'Viewer', vendor_manager: 'Vendor Manager', helper: 'Helper' };
 
 // An event's team with each person's open-task count, plus my own role.

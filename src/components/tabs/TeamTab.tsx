@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -169,8 +170,10 @@ export default function TeamTab({ eventId, team = [], canManageTeam = true, filt
       ) : collabs.length === 0 ? (
         <p className="text-sm text-muted">{canManageTeam ? 'No one else yet. Invite your team above.' : 'No one else on this team yet.'}</p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {collabs.map((c) => (
+        <>
+          {collabs.filter((c) => !(c as { via_org?: string | null }).via_org).length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {collabs.filter((c) => !(c as { via_org?: string | null }).via_org).map((c) => (
             <li
               key={c.id}
               className="flex items-center justify-between rounded-xl bg-surface px-4 py-3"
@@ -191,7 +194,9 @@ export default function TeamTab({ eventId, team = [], canManageTeam = true, filt
                   </button>
                 );
               })()}
-              {canManageTeam && <div className="flex items-center gap-3">
+              {(c as { via_org?: string | null }).via_org ? (
+                <Link to={`/business/${team.find((x) => x.email === c.collaborator_email.toLowerCase())?.via_org_slug ?? ''}/manage?tab=Team`} className="shrink-0 text-xs font-medium text-indigo-700">Managed by organization ›</Link>
+              ) : canManageTeam && <div className="flex items-center gap-3">
                 <button
                   onClick={() => resendInvite(c.id)}
                   disabled={resendingId === c.id}
@@ -204,8 +209,60 @@ export default function TeamTab({ eventId, team = [], canManageTeam = true, filt
                 </button>
               </div>}
             </li>
-          ))}
-        </ul>
+              ))}
+            </ul>
+          )}
+          {(() => {
+            const fromOrg = collabs.filter((c) => (c as { via_org?: string | null }).via_org);
+            if (!fromOrg.length) return null;
+            const org = team.find((x) => x.via_org_id)?.via_org_name ?? 'the organization';
+            return (
+              <div className="mt-2">
+                <p className="text-sm font-semibold text-bone">From {org}</p>
+                <p className="mb-2 text-xs text-muted">Everyone on {org}'s team is added to its events automatically. Change their roles or remove them in the organization's Team settings.</p>
+                <ul className="flex flex-col gap-2">
+                  {fromOrg.map((c) => (
+            <li
+              key={c.id}
+              className="flex items-center justify-between rounded-xl bg-surface px-4 py-3"
+            >
+              {(() => {
+                const m = team.find((x) => x.email === c.collaborator_email.toLowerCase());
+                const selected = filter === c.collaborator_email.toLowerCase();
+                return (
+                  <button type="button" onClick={() => onPick?.(selected ? 'all' : c.collaborator_email.toLowerCase())} className="flex min-w-0 items-center gap-3 text-left" title="Show their tasks">
+                    {m?.profile_photo ? <img src={m.profile_photo} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600">{(m?.full_name || c.collaborator_email).charAt(0).toUpperCase()}</span>}
+                    <span className="min-w-0">
+                      <span className={`block truncate text-sm font-medium ${selected ? 'text-marigold' : 'text-bone'}`}>{m?.full_name || c.collaborator_email}</span>
+                      <span className="block text-xs text-muted">
+                        {ROLE_LABEL[c.role] ?? c.role}{c.status && c.status !== 'accepted' ? ` · ${c.status}` : ''}
+                        {m ? ` · ${m.open_tasks} open task${m.open_tasks === 1 ? '' : 's'}` : ''}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })()}
+              {(c as { via_org?: string | null }).via_org ? (
+                <Link to={`/business/${team.find((x) => x.email === c.collaborator_email.toLowerCase())?.via_org_slug ?? ''}/manage?tab=Team`} className="shrink-0 text-xs font-medium text-indigo-700">Managed by organization ›</Link>
+              ) : canManageTeam && <div className="flex items-center gap-3">
+                <button
+                  onClick={() => resendInvite(c.id)}
+                  disabled={resendingId === c.id}
+                  className="text-xs text-marigold hover:text-marigold/80 disabled:opacity-50"
+                >
+                  {resendingId === c.id ? 'Sending…' : resentId === c.id ? 'Sent!' : 'Resend invite'}
+                </button>
+                <button onClick={() => remove(c.id, c.collaborator_email)} className="text-xs text-magenta hover:text-magenta/80">
+                  Remove
+                </button>
+              </div>}
+            </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
+        </>
       )}
     </div>
   );

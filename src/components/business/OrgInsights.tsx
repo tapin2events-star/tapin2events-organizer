@@ -204,7 +204,7 @@ export function OrgSales({ orgId }: { orgId: string }) {
           {s.by_event.length === 0 ? <p className="mt-1 text-sm text-muted">No sales in this period.</p> : (
             <ul className="mt-2 flex flex-col gap-2">
               {s.by_event.map((e) => (
-                <li key={e.id}><Link to={`/organizer/events/${e.id}?tab=Ticket Sales`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 text-sm hover:border-[#C9A227]">
+                <li key={e.id}><Link to={`/organizer/events/${e.id}?tab=Sales`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface p-3 text-sm hover:border-[#C9A227]">
                   <span className="min-w-0"><span className="block truncate font-medium text-bone">{e.title}</span><span className="text-xs text-muted">{day(e.start_date)} · {Number(e.tickets_sold)} sold{Number(e.registrations) ? ` · ${Number(e.registrations)} registered` : ''}</span></span>
                   <span className="shrink-0 text-right"><span className="block font-bold text-bone">{money(Number(e.gross) - Number(e.refunds))}</span>{Number(e.refunds) > 0 && <span className="text-xs text-red-600">−{money(Number(e.refunds))} refunds</span>}</span>
                 </Link></li>

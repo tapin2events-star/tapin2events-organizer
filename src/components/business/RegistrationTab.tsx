@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
-import { answerText, KIND_LABEL, loadQuestions, type Question, type QuestionKind } from '../../lib/registration';
+import { KIND_LABEL, loadQuestions, type Question, type QuestionKind } from '../../lib/registration';
 import type { TapEvent } from '../../lib/types';
 
-interface Registrant { email: string; full_name: string | null; tickets: number; request_id: string | null; request_status: string | null; request_message: string | null; requested_at: string | null; answers: Record<string, unknown> }
+export interface Registrant { email: string; full_name: string | null; tickets: number; request_id: string | null; request_status: string | null; request_message: string | null; requested_at: string | null; answers: Record<string, unknown> }
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 const PRESETS: { label: string; kind: QuestionKind; options?: string[] }[] = [
   { label: 'Company', kind: 'short_text' }, { label: 'Job title', kind: 'short_text' },
@@ -14,45 +13,25 @@ const PRESETS: { label: string; kind: QuestionKind; options?: string[] }[] = [
   { label: 'Phone', kind: 'phone' }, { label: 'How did you hear about us?', kind: 'short_text' },
 ];
 
-// Event dashboard > Registration: approval switch, join requests, questions, and answers.
-export default function RegistrationTab({ event, onEventChange }: { event: TapEvent; onEventChange: (e: TapEvent) => void }) {
+// Event dashboard > Registration: approval switch and registration questions (people, answers and requests are in Attendees).
+export default function RegistrationTab({ event, onEventChange, onGoAttendees }: { event: TapEvent; onEventChange: (e: TapEvent) => void; onGoAttendees?: () => void }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [people, setPeople] = useState<Registrant[]>([]);
-  const [peopleLoaded, setPeopleLoaded] = useState(false);
   const [editing, setEditing] = useState<Question | 'new' | null>(null);
   const [preset, setPreset] = useState<(typeof PRESETS)[number] | null>(null);
-  const [deciding, setDeciding] = useState<{ r: Registrant; approve: boolean } | null>(null);
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     const [qs, { data }] = await Promise.all([loadQuestions(event.id, true), supabase.rpc('event_registrants', { p_event_id: event.id })]);
     setQuestions(qs);
-    setPeople(((data ?? []) as Registrant[]).map((p) => ({ ...p, tickets: Number(p.tickets) }))); setPeopleLoaded(true);
+    setPeople(((data ?? []) as Registrant[]).map((p) => ({ ...p, tickets: Number(p.tickets) })));
   }, [event.id]);
   useEffect(() => { load(); }, [load]);
 
   const pending = people.filter((p) => p.request_status === 'pending');
-  const activeQs = questions.filter((q) => q.active);
 
   async function toggleApproval(on: boolean) {
     const { error } = await supabase.from('events').update({ requires_approval: on }).eq('id', event.id);
     if (!error) onEventChange({ ...event, requires_approval: on });
-  }
-  async function approveAll() {
-    setBusy(true);
-    for (const p of pending) if (p.request_id) await supabase.rpc('decide_registration', { p_request_id: p.request_id, p_approve: true, p_note: null });
-    setBusy(false); load();
-  }
-  function downloadCsv() {
-    const cols = ['Name', 'Email', 'Tickets', 'Request', ...activeQs.map((q) => q.label)];
-    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = people.map((p) => [p.full_name ?? '', p.email, p.tickets, p.request_status ?? '', ...activeQs.map((q) => answerText(p.answers[q.id]))].map(esc).join(','));
-    const blob = new Blob([[cols.map(esc).join(','), ...rows].join('\n')], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${event.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-registrations.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
   }
   async function move(i: number, dir: -1 | 1) {
     const list = [...questions]; const j = i + dir;
@@ -73,37 +52,12 @@ export default function RegistrationTab({ event, onEventChange }: { event: TapEv
         </label>
       </section>
 
-      {/* Requests */}
-      {(event.requires_approval || pending.length > 0) && (
-        <section>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-display text-lg font-bold text-bone">Requests {pending.length > 0 && <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">{pending.length} waiting</span>}</h3>
-            {pending.length > 1 && <button onClick={approveAll} disabled={busy} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 disabled:opacity-50">{busy ? 'Approving…' : `Approve all ${pending.length}`}</button>}
-          </div>
-          {pending.length === 0 ? !peopleLoaded ? <ListSkeleton rows={3} className="mt-3" /> : <p className="mt-2 text-sm text-muted">No requests waiting.</p> : (
-            <ul className="mt-3 flex flex-col gap-3">
-              {pending.map((p) => (
-                <li key={p.email} className="rounded-2xl border border-gray-200 bg-white p-4">
-                  <p className="font-semibold text-gray-900">{p.full_name || p.email}</p>
-                  <p className="text-xs text-gray-500">{p.email}{p.requested_at ? ` · asked ${new Date(p.requested_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}</p>
-                  {p.request_message && <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">"{p.request_message}"</p>}
-                  {activeQs.some((q) => p.answers[q.id] != null) && (
-                    <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
-                      {activeQs.filter((q) => p.answers[q.id] != null).map((q) => (
-                        <div key={q.id} className="min-w-0"><dt className="text-xs text-gray-500">{q.label}</dt><dd className="break-words text-gray-900">{answerText(p.answers[q.id])}</dd></div>
-                      ))}
-                    </dl>
-                  )}
-                  <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">
-                    <button onClick={() => setDeciding({ r: p, approve: true })} className="min-h-[44px] rounded-xl bg-[#0F1B3D] px-4 text-sm font-bold text-white">Approve</button>
-                    <button onClick={() => setDeciding({ r: p, approve: false })} className="min-h-[44px] rounded-xl border border-gray-300 px-4 text-sm font-medium text-gray-700">Decline</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+      {/* Requests and answers now live in the Attendees tab */}
+      <button type="button" onClick={onGoAttendees} className="-mt-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-left text-sm">
+        <span><strong className="text-gray-900">{pending.length > 0 ? `${pending.length} request${pending.length === 1 ? '' : 's'} waiting` : 'Attendees, answers & requests'}</strong>
+          <span className="block text-gray-600">See who's coming, their answers{event.requires_approval ? ', and approve requests' : ''} in the Attendees tab.</span></span>
+        <span className="shrink-0 font-semibold text-indigo-700">Open ›</span>
+      </button>
 
       {/* Questions */}
       <section>
@@ -133,32 +87,7 @@ export default function RegistrationTab({ event, onEventChange }: { event: TapEv
         </div>
       </section>
 
-      {/* Answers */}
-      <section>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-display text-lg font-bold text-bone">Attendees & answers <span className="text-sm font-normal text-muted">({people.length})</span></h3>
-          {people.length > 0 && <button onClick={downloadCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Download spreadsheet (CSV)</button>}
-        </div>
-        {people.length === 0 ? !peopleLoaded ? <ListSkeleton rows={3} className="mt-3" /> : <p className="mt-2 text-sm text-muted">No one yet.</p> : (
-          <div className="mt-3 overflow-x-auto rounded-2xl border border-gray-200">
-            <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-500"><tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Status</th>{activeQs.map((q) => <th key={q.id} className="px-3 py-2">{q.label}</th>)}</tr></thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {people.map((p) => (
-                  <tr key={p.email}>
-                    <td className="px-3 py-2"><span className="block font-medium text-gray-900">{p.full_name || p.email}</span><span className="text-xs text-gray-500">{p.email}</span></td>
-                    <td className="px-3 py-2 text-xs">{p.tickets > 0 ? `${p.tickets} ticket${p.tickets === 1 ? '' : 's'}` : p.request_status ?? ''}</td>
-                    {activeQs.map((q) => <td key={q.id} className="px-3 py-2 text-gray-700">{answerText(p.answers[q.id])}</td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
       {editing && <QuestionSheet eventId={event.id} question={editing === 'new' ? null : editing} preset={preset} nextSort={questions.length} onClose={() => setEditing(null)} onSaved={load} />}
-      {deciding && <DecideSheet r={deciding.r} approve={deciding.approve} onClose={() => setDeciding(null)} onDone={() => { setDeciding(null); load(); }} />}
     </div>
   );
 }
@@ -198,7 +127,7 @@ function QuestionSheet({ eventId, question, preset, nextSort, onClose, onSaved }
   );
 }
 
-function DecideSheet({ r, approve, onClose, onDone }: { r: Registrant; approve: boolean; onClose: () => void; onDone: () => void }) {
+export function DecideSheet({ r, approve, onClose, onDone }: { r: Registrant; approve: boolean; onClose: () => void; onDone: () => void }) {
   const [note, setNote] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

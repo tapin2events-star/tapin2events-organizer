@@ -2,20 +2,10 @@ import { useEffect, useState } from 'react';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import type { Ticket } from '../../lib/types';
-import { downloadCsv, fileSlug } from '../../lib/csv';
 
-const STATUS_STYLES: Record<string, string> = {
-  transferred: 'bg-gray-100 text-gray-500',
-  confirmed: 'bg-green-100 text-green-800',
-  pending: 'bg-orange-100 text-orange-800',
-  cancelled: 'bg-red-100 text-red-800',
-  refunded: 'bg-gray-100 text-gray-800',
-};
-
-export default function SalesTab({ eventId }: { eventId: string }) {
+export default function SalesTab({ eventId, onGoAttendees }: { eventId: string; onGoAttendees?: () => void }) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -42,53 +32,11 @@ export default function SalesTab({ eventId }: { eventId: string }) {
   const seriesPassCount = new Set(seriesPassTickets.map((t) => t.order_id)).size;
   const seriesPassRevenue = seriesPassTickets.reduce((sum, t) => sum + (t.price_paid || 0) * (t.quantity || 1), 0);
 
-  // Attendee list for door lists, follow-ups, and sponsors. Tickets don't
-  // store names, so each row uses the name on the order, then the profile.
-  async function exportCsv() {
-    setExporting(true);
-    const orderIds = [...new Set(tickets.map((t) => t.order_id).filter(Boolean))] as string[];
-    const emails = [...new Set(tickets.map((t) => t.attendee_email))];
-    const [{ data: orders }, { data: profiles }, { data: ev }] = await Promise.all([
-      orderIds.length ? supabase.from('orders').select('id, order_number, customer_name').in('id', orderIds) : Promise.resolve({ data: [] }),
-      emails.length ? supabase.from('public_profiles').select('email, full_name').in('email', emails) : Promise.resolve({ data: [] }),
-      supabase.from('events').select('title').eq('id', eventId).maybeSingle(),
-    ]);
-    const orderById = new Map(((orders ?? []) as { id: string; order_number: string | null; customer_name: string | null }[]).map((o) => [o.id, o]));
-    const nameByEmail = new Map(((profiles ?? []) as { email: string; full_name: string | null }[]).map((p) => [p.email, p.full_name]));
-    const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '');
-    const rows: unknown[][] = [
-      ['Name', 'Email', 'Ticket type', 'Section', 'Seat', 'Quantity', 'Price per ticket', 'Total paid', 'Status', 'Checked in', 'Checked in at', 'Registered', 'Order #', 'Event date'],
-      ...tickets.map((t) => {
-        const order = t.order_id ? orderById.get(t.order_id) : undefined;
-        const qty = Number(t.quantity) || 1;
-        const price = Number(t.price_paid) || 0;
-        return [
-          order?.customer_name || nameByEmail.get(t.attendee_email) || '',
-          t.attendee_email,
-          t.ticket_type,
-          t.section_name ?? '',
-          t.seat_assignment ?? '',
-          qty,
-          price.toFixed(2),
-          (price * qty).toFixed(2),
-          t.status,
-          t.checked_in_at ? 'Yes' : 'No',
-          when(t.checked_in_at),
-          when(t.created_at),
-          order?.order_number ?? '',
-          t.occurrence_date ? new Date(t.occurrence_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '',
-        ];
-      }),
-    ];
-    downloadCsv(`${fileSlug(ev?.title ?? 'event')}-attendees-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-    setExporting(false);
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-surface border border-gray-200 p-5">
-          <p className="text-xs uppercase tracking-widest text-muted">Attendees</p>
+          <p className="text-xs uppercase tracking-widest text-muted">Tickets sold</p>
           <p className="mt-1 font-display text-3xl font-extrabold text-marigold">{totalAttendees}</p>
         </div>
         <div className="rounded-xl bg-surface border border-gray-200 p-5">
@@ -105,53 +53,20 @@ export default function SalesTab({ eventId }: { eventId: string }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg font-semibold text-bone">Attendees</h3>
-        {tickets.length > 0 && (
-          <button
-            onClick={exportCsv}
-            disabled={exporting}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-bone hover:border-marigold hover:text-marigold disabled:opacity-50"
-          >
-            {exporting ? 'Preparing…' : 'Download attendee list'}
-          </button>
-        )}
+        <h3 className="font-display text-lg font-semibold text-bone">Recent sales</h3>
+        {onGoAttendees && <button onClick={onGoAttendees} className="text-sm font-medium text-marigold">Everyone & spreadsheet in Attendees ›</button>}
       </div>
-
-      {tickets.length === 0 ? (
-        <p className="text-sm text-muted">No tickets sold yet for this event.</p>
+      {confirmed.filter((t) => (t.price_paid || 0) > 0).length === 0 ? (
+        <p className="text-sm text-muted">No paid tickets yet for this event.</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {tickets.filter((t) => t.status !== 'transferred').map((t) => (
-            <li
-              key={t.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-bone">{t.attendee_email}{(t as { tier?: { name?: string } | null }).tier?.name ? <span className="ml-1.5 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">{(t as { tier?: { name?: string } | null }).tier?.name}</span> : null}</p>
-                <p className="text-xs text-muted">
-                  {t.ticket_type} · Qty {t.quantity}
-                  {t.section_name ? ` · ${t.section_name}` : ''}
-                  {t.seat_assignment ? ` · Seat ${t.seat_assignment}` : ''}
-                  {' · '}
-                  {new Date(t.created_at).toLocaleDateString()}
-                  {(t as { transferred_from?: string | null }).transferred_from ? (() => {
-                    const from = tickets.find((x) => x.id === (t as { transferred_from?: string | null }).transferred_from);
-                    return <span className="ml-1 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">Transferred{from ? ` from ${from.attendee_email}` : ''}</span>;
-                  })() : null}
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-sm font-medium text-bone">
-                  ${(t.price_paid * t.quantity).toFixed(2)}
-                </span>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    STATUS_STYLES[t.status] ?? STATUS_STYLES.pending
-                  }`}
-                >
-                  {t.status}
-                </span>
-              </div>
+          {confirmed.filter((t) => (t.price_paid || 0) > 0).slice(0, 15).map((t) => (
+            <li key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-surface px-4 py-3">
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-bone">{(t as { tier?: { name?: string } | null }).tier?.name || t.ticket_type} · Qty {t.quantity}</span>
+                <span className="block truncate text-xs text-muted">{t.attendee_email} · {new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              </span>
+              <span className="shrink-0 text-sm font-semibold text-bone">${((t.price_paid || 0) * (t.quantity || 1)).toFixed(2)}</span>
             </li>
           ))}
         </ul>

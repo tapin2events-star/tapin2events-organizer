@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AttendeesTab from '../components/tabs/AttendeesTab';
 import FeatureFeedback from '../components/feedback/FeatureFeedback';
 import PromoteTab from '../components/promote/PromoteTab';
 import { NetworkingSwitch } from '../components/business/NetworkingCards';
@@ -29,7 +30,7 @@ import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
-const TABS = ['Overview', 'Business page', 'Tickets', 'Registration', 'Donations', 'Lineup & bookings', 'Promote', 'Ticket Sales', 'Messages', 'Products', 'Team & tasks', 'Vendor applications'] as const;
+const TABS = ['Overview', 'Business page', 'Tickets', 'Registration', 'Attendees', 'Donations', 'Lineup & bookings', 'Promote', 'Sales', 'Messages', 'Products', 'Team & tasks', 'Vendor applications'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -40,7 +41,7 @@ export default function EventDetail() {
   // ?tab=Lineup (etc.) opens that tab, e.g. from the Planning page.
   // Older links (?tab=Lineup, ?tab=Bookings) open the matching view inside "Lineup & bookings".
   const tabParam = new URLSearchParams(window.location.search).get('tab') ?? '';
-  const [tab, setTab] = useState<Tab>(() => (tabParam === 'Lineup' || tabParam === 'Bookings' ? 'Lineup & bookings' : (TABS as readonly string[]).includes(tabParam) ? (tabParam as Tab) : 'Overview'));
+  const [tab, setTab] = useState<Tab>(() => (tabParam === 'Lineup' || tabParam === 'Bookings' ? 'Lineup & bookings' : tabParam === 'Ticket Sales' ? 'Sales' : (TABS as readonly string[]).includes(tabParam) ? (tabParam as Tab) : 'Overview'));
   const { user } = useAuth();
   const navigate = useNavigate();
   // Cancel / delete (organizer only). An event with any tickets, registrations,
@@ -284,14 +285,15 @@ export default function EventDetail() {
       {tab === 'Overview' && <OverviewTab event={event} />}
       {tab === 'Business page' && <BusinessPageTab event={event} onEventChange={setEvent} />}
       {tab === 'Tickets' && <TiersTab event={event} />}
-      {tab === 'Registration' && <RegistrationTab event={event} onEventChange={setEvent} />}
+      {tab === 'Registration' && <RegistrationTab event={event} onEventChange={setEvent} onGoAttendees={() => setTab('Attendees')} />}
+      {tab === 'Attendees' && <AttendeesTab event={event} />}
       {tab === 'Donations' && <DonationsTab event={event} onEventChange={setEvent} />}
       {tab === 'Lineup & bookings' && <LineupWithScouting event={event} isOwner={isOwner} eventId={id!} initialView={tabParam === 'Bookings' ? 'bookings' : undefined} />}
       {tab === 'Promote' && promoteOn && <PromoteTab eventId={id!} />}
-      {tab === 'Ticket Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
+      {tab === 'Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
         <div className="mb-8"><InvoicesSection eventId={id!} ticketPrice={0} sections={(event.seating_sections ?? []).map((s) => ({ name: s.name, price: Number(s.price) || 0, seats: (s.num_tables ?? 0) * (s.seats_per_table ?? 0) }))} /></div>
       )}
-      {tab === 'Ticket Sales' && <SalesTab eventId={id} />}
+      {tab === 'Sales' && <SalesTab eventId={id} onGoAttendees={() => setTab('Attendees')} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (
         <>
