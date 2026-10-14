@@ -76,7 +76,7 @@ export default function Planning() {
     if (saved) navigate({ search: `?for=${encodeURIComponent(saved)}`, hash: location.hash }, { replace: true });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const inScope = (orgId: string | null) => scope === 'all' || (scope === 'me' ? !orgId : orgId === scopeOrg?.id);
-  const [needsOnly, setNeedsOnly] = useState(false);
+  const [needsOnly, setNeedsOnly] = useState(true);
   const [taskFilter, setTaskFilter] = useState<'all' | 'mine' | 'overdue' | 'unassigned'>('all');
   const [taskSheet, setTaskSheet] = useState<null | 'new' | PlanTask>(null);
   const [taskMsg, setTaskMsg] = useState<string | null>(null);
@@ -287,7 +287,10 @@ export default function Planning() {
       {show('events') && (
       <section className="mt-6">
         <div className="flex items-end justify-between gap-3">
-          <h2 className="font-display text-xl font-bold text-bone">Upcoming events</h2>
+          <div>
+            <h2 className="font-display text-xl font-bold text-bone">Event checklist</h2>
+            <p className="text-xs text-muted">What each upcoming event still needs. <Link to="/organizer" className="font-medium text-marigold">All events in Organizer Dashboard ›</Link></p>
+          </div>
           {allUpcoming.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input type="checkbox" checked={needsOnly} onChange={(e) => setNeedsOnly(e.target.checked)} className="h-4 w-4 accent-marigold" />

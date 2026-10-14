@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import FeatureFeedback from '../feedback/FeatureFeedback';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
 import { ListSkeleton } from '../ui/Skeleton';
 import PremiumBadge from './PremiumBadge';
 
 interface Counts { total: number; attendees: number; followers: number; imported: number; sendable: number; unsubscribed: number }
-interface Person { email: string; name: string | null; sources: string[]; can_email: boolean }
+interface Person { email: string; name: string | null; photo: string | null; sources: string[]; can_email: boolean; events: number; spent: number; last_event: string | null; last_date: string | null }
 interface Campaign { id: string; subject: string; body: string; event_id: string | null; event_title: string | null; promo_code: string | null; audience: string; status: 'draft' | 'sending' | 'sent' | 'failed'; mode: string | null; recipients: number; sent: number; error: string | null; created_at: string; sent_at: string | null; clicks: number; tickets: number }
 const AUDIENCES = [{ id: 'all', label: 'Everyone' }, { id: 'attendees', label: 'Past attendees' }, { id: 'followers', label: 'Followers' }, { id: 'imported', label: 'Imported contacts' }] as const;
 const SOURCE: Record<string, string> = { attendee: 'Attended', follower: 'Follows', imported: 'Imported' };
@@ -45,108 +46,134 @@ function contactsFrom(text: string): { email: string; name: string }[] {
   return text.split(/[\s,;]+/).map((s) => s.trim().replace(/^<|>$/g, '')).filter((s) => EMAIL.test(s)).map((email) => ({ email, name: '' }));
 }
 
-// Organization > Newsletter (Preview, Owners/Admins): audience (attendees + followers + imported), import, and emails.
-export default function OrgNewsletterTab({ orgId, orgName }: { orgId: string; orgName: string }) {
+const FILTERS = [{ id: 'all', label: 'Everyone' }, { id: 'attendee', label: 'Attended' }, { id: 'follower', label: 'Follows' }, { id: 'imported', label: 'Imported' }] as const;
+const money = (n: number) => `$${(Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+
+// Organization > Audience (Owners/Admins): everyone connected to the organization: people who attended its
+// events, followers, and imported contacts, with attendance history and a spreadsheet export. With the
+// Newsletters preview on, this is also where you import contacts and email them.
+export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId: string; orgName: string; newsletterOn: boolean }) {
   const [counts, setCounts] = useState<Counts | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [people, setPeople] = useState<Person[] | null>(null);
-  const [showPeople, setShowPeople] = useState(false);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
   const [q, setQ] = useState('');
   const [sheet, setSheet] = useState<null | 'import' | 'compose' | Campaign>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const flash = (ok: boolean, text: string) => { setMsg({ ok, text }); setTimeout(() => setMsg(null), 5000); };
   const load = useCallback(async () => {
-    const [{ data: c }, { data: list }] = await Promise.all([
+    const [{ data: c }, { data: list }, { data: ppl }] = await Promise.all([
       supabase.rpc('org_audience_counts', { p_org_id: orgId }),
-      supabase.rpc('org_campaigns_list', { p_org_id: orgId }),
+      newsletterOn ? supabase.rpc('org_campaigns_list', { p_org_id: orgId }) : Promise.resolve({ data: [] }),
+      supabase.rpc('org_audience_people', { p_org_id: orgId }),
     ]);
     setCounts((c ?? null) as Counts | null);
     setCampaigns(((list ?? []) as Campaign[]).map((x) => ({ ...x, clicks: Number(x.clicks), tickets: Number(x.tickets) })));
-  }, [orgId]);
+    setPeople(((ppl ?? []) as Person[]).map((x) => ({ ...x, events: Number(x.events), spent: Number(x.spent) })));
+  }, [orgId, newsletterOn]);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    if (!showPeople) return;
-    supabase.rpc('org_audience', { p_org_id: orgId, p_filter: 'all', p_query: null }).then(({ data }) => setPeople((data ?? []) as Person[]));
-  }, [showPeople, orgId, counts?.total]);
-  const shownPeople = useMemo(() => (people ?? []).filter((p) => !q.trim() || p.email.includes(q.trim().toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.trim().toLowerCase())), [people, q]);
+  const shown = useMemo(() => (people ?? []).filter((p) => (filter === 'all' || p.sources.includes(filter)) && (!q.trim() || p.email.includes(q.trim().toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.trim().toLowerCase()))), [people, q, filter]);
 
   async function remove(p: Person) {
     if (!window.confirm(`Remove ${p.email} from your imported contacts?`)) return;
     await supabase.rpc('remove_org_contact', { p_org_id: orgId, p_email: p.email });
-    setPeople((list) => (list ?? []).filter((x) => x.email !== p.email || x.sources.length > 1)); load();
+    load();
+  }
+  function exportCsv() {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = ['Name,Email,Connection,Events attended,Total spent,Most recent event,Most recent date,Can be emailed',
+      ...(people ?? []).map((p) => [p.name, p.email, p.sources.map((x) => SOURCE[x] ?? x).join(' + '), p.events, p.spent.toFixed(2), p.last_event, p.last_date ? p.last_date.slice(0, 10) : '', p.can_email ? 'Yes' : 'No'].map(esc).join(','))].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `${orgName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-audience.csv`;
+    a.click(); URL.revokeObjectURL(a.href);
   }
 
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">📧 Newsletter <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span> <PremiumBadge /></p>
-          <p className="text-sm text-muted">Email your audience about upcoming events. Everyone gets an unsubscribe link, and we track clicks and ticket sales from each email.</p>
+          <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">👥 Audience <PremiumBadge /></p>
+          <p className="text-sm text-muted">Everyone connected to {orgName}: people who came to your events, your followers{newsletterOn ? ', and contacts you import' : ''}. Only Owners and Admins see this.</p>
         </div>
-        <button onClick={() => setSheet('compose')} disabled={!counts?.sendable} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">+ New email</button>
+        <div className="flex flex-wrap gap-2">
+          {!!people?.length && <button onClick={exportCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Export CSV</button>}
+          {newsletterOn && <button onClick={() => setSheet('import')} className="rounded-xl bg-[#0F1B3D] px-3 py-2 text-sm font-semibold text-white">Import</button>}
+        </div>
       </div>
       {msg && <p role="status" className={`mt-3 rounded-xl px-3 py-2 text-sm ${msg.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{msg.text}</p>}
 
-      {/* Audience */}
-      <section className="mt-4 rounded-2xl border border-gray-200 bg-surface p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-semibold text-bone">Your audience</p>
-          <div className="flex gap-2">
-            <button onClick={() => setShowPeople(!showPeople)} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">{showPeople ? 'Hide list' : 'See everyone'}</button>
-            <button onClick={() => setSheet('import')} className="rounded-xl bg-[#0F1B3D] px-3 py-2 text-sm font-semibold text-white">Import contacts</button>
-          </div>
+      {!counts ? <ListSkeleton rows={1} className="mt-3" /> : (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+          <div className="rounded-xl border border-gray-200 bg-surface p-2"><p className="text-xl font-extrabold text-bone">{counts.total}</p><p className="text-[11px] text-muted">people</p></div>
+          <div className="rounded-xl border border-gray-200 bg-surface p-2"><p className="text-xl font-extrabold text-bone">{counts.attendees}</p><p className="text-[11px] text-muted">attended</p></div>
+          <div className="rounded-xl border border-gray-200 bg-surface p-2"><p className="text-xl font-extrabold text-bone">{counts.followers}</p><p className="text-[11px] text-muted">follow you</p></div>
+          <div className="rounded-xl border border-gray-200 bg-surface p-2"><p className="text-xl font-extrabold text-bone">{newsletterOn ? counts.sendable : counts.imported}</p><p className="text-[11px] text-muted">{newsletterOn ? 'can be emailed' : 'imported'}</p></div>
         </div>
-        {!counts ? <ListSkeleton rows={1} className="mt-3" /> : (
-          <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
-            <div className="rounded-xl bg-white p-2"><p className="text-xl font-extrabold text-bone">{counts.sendable}</p><p className="text-[11px] text-muted">can be emailed</p></div>
-            <div className="rounded-xl bg-white p-2"><p className="text-xl font-extrabold text-bone">{counts.attendees}</p><p className="text-[11px] text-muted">past attendees</p></div>
-            <div className="rounded-xl bg-white p-2"><p className="text-xl font-extrabold text-bone">{counts.followers}</p><p className="text-[11px] text-muted">followers</p></div>
-            <div className="rounded-xl bg-white p-2"><p className="text-xl font-extrabold text-bone">{counts.imported}</p><p className="text-[11px] text-muted">imported</p></div>
+      )}
+
+      {/* Emails (Newsletters preview) */}
+      {newsletterOn && (
+        <section className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 font-display text-base font-bold text-bone">📧 Emails <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+            <button onClick={() => setSheet('compose')} disabled={!counts?.sendable} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">+ New email</button>
           </div>
-        )}
-        {counts && counts.unsubscribed > 0 && <p className="mt-2 text-xs text-muted">{counts.unsubscribed} unsubscribed (never emailed).</p>}
-        {showPeople && (
-          people === null ? <ListSkeleton rows={3} className="mt-3" /> : (
-            <>
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${people.length} people`} aria-label="Search audience" className="mt-3 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm" />
-              <ul className="mt-2 max-h-80 overflow-y-auto rounded-xl border border-gray-200 bg-white">
-                {shownPeople.slice(0, 300).map((p) => (
-                  <li key={p.email} className="flex items-center justify-between gap-2 border-b border-gray-100 px-3 py-2 text-sm last:border-0">
-                    <span className="min-w-0"><span className="block truncate text-gray-900">{p.name || p.email}</span><span className="block truncate text-xs text-gray-500">{p.name ? `${p.email} · ` : ''}{p.sources.map((s) => SOURCE[s] ?? s).join(', ')}{!p.can_email ? ' · unsubscribed' : ''}</span></span>
-                    {p.sources.includes('imported') && <button onClick={() => remove(p)} className="shrink-0 text-xs text-gray-400 hover:text-red-600">Remove</button>}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )
-        )}
-      </section>
-
-      {/* Emails */}
-      <section className="mt-6">
-        <h3 className="font-display text-lg font-bold text-bone">Emails</h3>
-        {campaigns === null ? <ListSkeleton rows={2} className="mt-3" /> : campaigns.length === 0 ? (
-          <p className="mt-2 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No emails yet. {counts?.sendable ? 'Tap "+ New email" to write your first one.' : 'Import contacts or wait for attendees and followers to build your list.'}</p>
-        ) : (
-          <ul className="mt-3 flex flex-col gap-2">
-            {campaigns.map((c) => (
-              <li key={c.id} className="rounded-2xl border border-gray-200 bg-surface p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-bone">{c.subject}</p>
-                    <p className="text-xs text-muted">{c.status === 'draft' ? 'Draft' : c.status === 'sending' ? `Sending… ${c.sent} of ${c.recipients}` : `Sent ${c.sent_at ? new Date(c.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''} to ${c.sent}`}{c.event_title ? ` · ${c.event_title}` : ''}{c.promo_code ? ` · code ${c.promo_code}` : ''}</p>
-                    {c.error && <p className="mt-1 text-xs text-red-600">Last attempt didn't go through. You can try again.</p>}
+          {campaigns === null ? <ListSkeleton rows={2} className="mt-3" /> : campaigns.length === 0 ? (
+            <p className="mt-2 text-sm text-muted">No emails yet. Every email includes an unsubscribe link, and we track clicks and ticket sales from each one.</p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-2">
+              {campaigns.map((c) => (
+                <li key={c.id} className="rounded-xl border border-gray-200 bg-white p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900">{c.subject}</p>
+                      <p className="text-xs text-gray-500">{c.status === 'draft' ? 'Draft' : c.status === 'sending' ? `Sending… ${c.sent} of ${c.recipients}` : `Sent ${c.sent_at ? new Date(c.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''} to ${c.sent}`}{c.event_title ? ` · ${c.event_title}` : ''}{c.promo_code ? ` · code ${c.promo_code}` : ''}</p>
+                      {c.error && <p className="mt-1 text-xs text-red-600">Last attempt didn't go through. You can try again.</p>}
+                    </div>
+                    {c.status !== 'draft' && c.event_id && <p className="shrink-0 text-right text-sm"><span className="font-bold text-gray-900">{c.tickets} ticket{c.tickets === 1 ? '' : 's'}</span><span className="block text-xs text-gray-500">{c.clicks} click{c.clicks === 1 ? '' : 's'}</span></p>}
                   </div>
-                  {c.status !== 'draft' && c.event_id && <p className="shrink-0 text-right text-sm"><span className="font-bold text-bone">{c.tickets} ticket{c.tickets === 1 ? '' : 's'}</span><span className="block text-xs text-muted">{c.clicks} click{c.clicks === 1 ? '' : 's'}</span></p>}
-                </div>
-                {c.status === 'draft' && <button onClick={() => setSheet(c)} className="mt-2 text-sm font-medium text-marigold">Edit & send ›</button>}
-              </li>
-            ))}
-          </ul>
+                  {c.status === 'draft' && <button onClick={() => setSheet(c)} className="mt-2 text-sm font-medium text-marigold">Edit & send ›</button>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* People */}
+      <section className="mt-6">
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.filter((f) => f.id !== 'imported' || newsletterOn || (counts?.imported ?? 0) > 0).map((f) => (
+            <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${filter === f.id ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>{f.label}</button>
+          ))}
+        </div>
+        {people === null ? <ListSkeleton rows={4} className="mt-3" /> : people.length === 0 ? (
+          <p className="mt-3 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No one yet. People who come to your events or follow {orgName} show up here.</p>
+        ) : (
+          <>
+            {people.length > 5 && <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${people.length} people`} aria-label="Search audience" className="mt-3 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 sm:text-sm" />}
+            <ul className="mt-3 flex flex-col gap-2">
+              {shown.slice(0, 300).map((p) => (
+                <li key={p.email} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-surface p-3">
+                  {p.photo ? <img src={p.photo} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 font-bold text-gray-600">{(p.name || p.email).charAt(0).toUpperCase()}</span>}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-bone">{p.name || p.email}</span>
+                    <span className="block truncate text-xs text-muted">{p.name ? `${p.email} · ` : ''}{p.sources.map((x) => SOURCE[x] ?? x).join(', ')}{p.events ? ` · ${p.events} event${p.events === 1 ? '' : 's'}` : ''}{p.spent > 0 ? ` · ${money(p.spent)}` : ''}{newsletterOn && !p.can_email ? ' · unsubscribed' : ''}</span>
+                    {p.last_event && <span className="block truncate text-xs text-muted">Last: {p.last_event}{p.last_date ? ` (${day(p.last_date)})` : ''}</span>}
+                  </span>
+                  {newsletterOn && p.sources.includes('imported') && <button onClick={() => remove(p)} className="shrink-0 text-xs text-gray-400 hover:text-red-600">Remove</button>}
+                </li>
+              ))}
+            </ul>
+            {shown.length > 300 && <p className="mt-2 text-xs text-muted">Showing 300 of {shown.length}. Export CSV for everyone.</p>}
+            <FeatureFeedback feature="org_attendees" label="your audience list" className="mt-3" />
+          </>
         )}
       </section>
 
-      {sheet === 'import' && <ImportSheet orgId={orgId} orgName={orgName} onClose={() => setSheet(null)} onDone={(n) => { setSheet(null); flash(true, `Imported ${n} contact${n === 1 ? '' : 's'}.`); setPeople(null); load(); }} />}
+      {sheet === 'import' && <ImportSheet orgId={orgId} orgName={orgName} onClose={() => setSheet(null)} onDone={(n) => { setSheet(null); flash(true, `Imported ${n} contact${n === 1 ? '' : 's'}.`); load(); }} />}
       {(sheet === 'compose' || (sheet && typeof sheet === 'object')) && (
         <ComposeSheet orgId={orgId} counts={counts} draft={typeof sheet === 'object' ? sheet : null} onClose={() => { setSheet(null); load(); }}
           onSent={(text) => { setSheet(null); flash(true, text); load(); }} onError={(text) => flash(false, text)} />

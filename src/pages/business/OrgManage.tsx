@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OrgPageSectionsTab from '../../components/business/OrgPageSectionsTab';
-import OrgNewsletterTab from '../../components/business/OrgNewsletterTab';
+import OrgAudienceTab from '../../components/business/OrgAudienceTab';
 import { useFeature } from '../../lib/preview';
-import { OrgAttendees, OrgPromoteTab, OrgSales, useOrgAttendance } from '../../components/business/OrgInsights';
+import { OrgPromoteTab, OrgSales, useOrgAttendance } from '../../components/business/OrgInsights';
 import { ListSkeleton } from '../../components/ui/Skeleton';
 import OrgPayoutsTab from '../../components/business/OrgPayoutsTab';
 import OrgPhotosTab from '../../components/business/OrgPhotosTab';
@@ -17,8 +17,8 @@ import BusinessGate from '../../components/business/BusinessGate';
 import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
-type Tab = 'Profile' | 'Brand kit' | 'Page' | 'Photos' | 'Planning' | 'Team' | 'Events' | 'Promote' | 'Newsletter' | 'Payouts';
-const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Page: '🧩', Photos: '🖼️', Planning: '📋', Team: '👥', Events: '📅', Promote: '📣', Newsletter: '📧', Payouts: '💳' };
+type Tab = 'Profile' | 'Brand kit' | 'Page' | 'Planning' | 'Team' | 'Events' | 'Audience' | 'Promote' | 'Payouts';
+const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Page: '🧩', Planning: '📋', Team: '👥', Events: '📅', Promote: '📣', Audience: '👥', Payouts: '💳' };
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -35,9 +35,9 @@ function OrgManageInner() {
   const newsletterOn = useFeature('newsletters');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
-  const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Photos', 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead && newsletterOn ? ['Newsletter'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
+  const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
   const tabLabel = (t: Tab) => (t === 'Payouts' && insightsOn ? 'Sales & payouts' : t);
-  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Page', 'Photos', 'Team', 'Events', 'Promote', 'Newsletter', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
+  const [tab, setTab] = useState<Tab>(() => { const raw = new URLSearchParams(window.location.search).get('tab'); const t = raw === 'Photos' ? 'Page' : raw === 'Newsletter' ? 'Audience' : raw; return (['Profile', 'Brand kit', 'Page', 'Team', 'Events', 'Audience', 'Promote', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -120,11 +120,10 @@ function OrgManageInner() {
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Team' && <Link to={`/team-chat/${org.id}`} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm"><span><strong className="text-gray-900">💬 Team chat</strong><span className="block text-gray-600">Message everyone on {org.name}'s team, share photos and files</span></span><span className="shrink-0 font-semibold text-indigo-700">Open ›</span></Link>}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
-        {tab === 'Page' && canEditPage && <OrgPageSectionsTab orgId={org.id} slug={org.slug} />}
-        {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} />}
+        {tab === 'Page' && canEditPage && <><OrgPageSectionsTab orgId={org.id} slug={org.slug} /><section className="mt-10 border-t border-gray-200 pt-8"><h3 className="font-display text-lg font-bold text-bone">📸 Photos</h3><p className="mb-3 text-sm text-muted">Up to 24 photos for your page's gallery.</p><OrgPhotosTab orgId={org.id} /></section></>}
+        {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} onAudience={() => setTab('Audience')} />}
         {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}
-        {tab === 'Newsletter' && isLead && newsletterOn && <OrgNewsletterTab orgId={org.id} orgName={org.name} />}
-        {tab === 'Photos' && (role === 'owner' || role === 'admin' || role === 'editor' ? <OrgPhotosTab orgId={org.id} /> : <p className="text-sm text-muted">Owners, Admins and Editors can manage photos.</p>)}
+        {tab === 'Audience' && isLead && insightsOn && <OrgAudienceTab orgId={org.id} orgName={org.name} newsletterOn={newsletterOn} />}
         {tab === 'Payouts' && isLead && insightsOn && <OrgSales orgId={org.id} />}
         {tab === 'Payouts' && (role === 'owner' || role === 'admin') && <OrgPayoutsTab orgId={org.id} orgName={org.name} slug={org.slug} />}
       </div>
@@ -270,7 +269,7 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
   );
 }
 
-function EventsTab({ org, canEdit, insights = false }: { org: Organization; canEdit: boolean; insights?: boolean }) {
+function EventsTab({ org, canEdit, insights = false, onAudience }: { org: Organization; canEdit: boolean; insights?: boolean; onAudience?: () => void }) {
   const attendance = useOrgAttendance(org.id, insights);
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; status: string; is_test: boolean }[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);
@@ -290,7 +289,7 @@ function EventsTab({ org, canEdit, insights = false }: { org: Organization; canE
           ))}
         </ul>
       )}
-      {insights && <OrgAttendees orgId={org.id} orgName={org.name} />}
+      {insights && <Link to={`?tab=Audience`} onClick={(e) => { e.preventDefault(); onAudience?.(); }} className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-surface p-3 text-sm"><span><strong className="text-bone">👥 Everyone who's attended</strong><span className="block text-muted">See your whole audience, attendance history and export in the Audience tab.</span></span><span className="shrink-0 font-semibold text-marigold">Open ›</span></Link>}
     </div>
   );
 }
