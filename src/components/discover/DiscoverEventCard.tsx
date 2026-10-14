@@ -42,12 +42,17 @@ export default function DiscoverEventCard({
   isSaved,
   onToggleSave,
   myTicket = null,
+  linkSuffix = '',
+  promoted = false,
 }: {
   event: TapEvent;
   isSaved: boolean;
   onToggleSave: (eventId: string) => void;
   // Set when the signed-in person already has a ticket for this event.
   myTicket?: { ticketId: string; count: number } | null;
+  // Boosted events: link carries the boost's tracking code, and a "Promoted" label shows.
+  linkSuffix?: string;
+  promoted?: boolean;
 }) {
   const externalUrl = safeTicketUrl(event.external_ticket_url);
   const ticketLabel = event.event_type === 'free' ? 'Registered' : myTicket && myTicket.count > 1 ? `${myTicket.count} tickets` : 'Ticket purchased';
@@ -58,6 +63,7 @@ export default function DiscoverEventCard({
   return (
     <div className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg">
       <div className="relative">
+        {promoted && <span className="absolute left-2 top-2 z-10 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Promoted</span>}
         {event.poster_url ? (
           <img
             src={event.poster_url}
@@ -98,7 +104,7 @@ export default function DiscoverEventCard({
 
       <div className="flex flex-col gap-3 p-5">
         <div>
-          <Link to={`/events/${event.id}`} className="hover:text-marigold">
+          <Link to={`/events/${event.id}${linkSuffix}`} className="hover:text-marigold">
             <h3 className="line-clamp-2 font-display text-lg font-bold text-gray-900">{event.title}</h3>
           </Link>
           {event.description && (
@@ -151,7 +157,7 @@ export default function DiscoverEventCard({
             </a>
           ) : (
             <Link
-              to={`/events/${event.id}`}
+              to={`/events/${event.id}${linkSuffix}`}
               className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
             >
               {event.event_type === 'free' ? 'Register' : 'Get Tickets'}

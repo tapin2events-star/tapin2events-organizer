@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useFeature } from '../lib/preview';
+import PromotedRow, { loadPromoted, type Promoted } from '../components/discover/PromotedRow';
 import FeaturedOrgs from '../components/business/FeaturedOrgs';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -13,6 +15,11 @@ import { EventCardGridSkeleton } from '../components/ui/Skeleton';
 type DiscoverTab = 'all' | 'map' | 'today' | 'saved';
 
 export default function Discover() {
+  // Boost (Preview): promoted events row + promoted first in search results.
+  const promoteOn = useFeature('promote');
+  const [promoted, setPromoted] = useState<Promoted[]>([]);
+  useEffect(() => { if (promoteOn) loadPromoted().then(setPromoted); }, [promoteOn]);
+  const promotedCode = (id: string) => promoted.find((p) => p.event_id === id)?.link_code ?? null;
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -286,6 +293,8 @@ export default function Discover() {
 
         {tab !== 'map' && (search.trim().length >= 2 || (!category && !priceFilter && !dateFilter)) && <FeaturedOrgs query={search} />}
 
+        {promoteOn && tab !== 'map' && !search.trim() && !category && !priceFilter && !dateFilter && <PromotedRow promoted={promoted} events={events} savedIds={savedIds} onToggleSave={toggleSave} />}
+
         {showPicks && picksState !== 'skipped' && user?.id && user.email && (
           <PickedForYou events={events} savedIds={savedIds} userId={user.id} userEmail={user.email} onToggleSave={toggleSave} onReady={() => setPicksState((st) => (st === 'waiting' ? 'ready' : st))} />
         )}
@@ -305,10 +314,12 @@ export default function Discover() {
           </div>
         ) : (
           <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-            {tabFiltered.map((event) => (
+            {(search.trim() && promoted.length ? [...tabFiltered].sort((a, b) => Number(!!promotedCode(b.id)) - Number(!!promotedCode(a.id))) : tabFiltered).map((event) => (
               <DiscoverEventCard
                 key={event.id}
                 event={event}
+                promoted={!!search.trim() && !!promotedCode(event.id)}
+                linkSuffix={promotedCode(event.id) ? `?src=${promotedCode(event.id)}` : ''}
                 isSaved={savedIds.includes(event.id)}
                 onToggleSave={toggleSave}
                 myTicket={myTickets.get(event.id) ?? null}

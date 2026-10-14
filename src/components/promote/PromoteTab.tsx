@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import BoostCard from './BoostCard';
 import { supabase } from '../../lib/supabaseClient';
 import ShareQR from '../ShareQR';
 import Sheet from '../scouting/Sheet';
@@ -35,6 +36,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
   const linkRevenue = links.reduce((n, l) => n + l.revenue, 0);
   return (
     <div>
+      <BoostCard eventId={eventId} />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">📣 Promotion links <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
