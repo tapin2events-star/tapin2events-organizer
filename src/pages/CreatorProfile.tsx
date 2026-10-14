@@ -176,7 +176,14 @@ export default function CreatorProfile() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <BackButton fallback="/feed" fallbackLabel="Feed" />
+      <div className="flex items-center justify-between gap-3">
+        <BackButton fallback="/feed" fallbackLabel="Feed" />
+        {profileQrOn && (
+          <ShareQR path={`/creator/${encodeURIComponent(profile.email)}`} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile"
+            label={isOwnProfile ? 'Share my profile' : 'Share'}
+            className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm" />
+        )}
+      </div>
 
       <div className="mt-4 flex items-center gap-4">
         {profile.profile_photo ? (
@@ -259,10 +266,6 @@ export default function CreatorProfile() {
           <p className="text-xs text-muted">Following</p>
         </button>
 
-        {profileQrOn && (
-          <ShareQR path={`/creator/${encodeURIComponent(profile.email)}`} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile" label={isOwnProfile ? '📱 Share my profile' : 'QR'}
-            className={`${isOwnProfile ? 'ml-auto' : ''} inline-flex items-center gap-1.5 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-bone`} />
-        )}
         {!isOwnProfile && user && !blocked && (
           <button
             onClick={toggleFollow}
