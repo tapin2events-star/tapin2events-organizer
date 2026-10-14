@@ -14,15 +14,15 @@ export default function PeopleIveMet() {
   const { user } = useAuth();
   const [people, setPeople] = useState<Person[] | null>(null);
   const [q, setQ] = useState('');
-  const [card, setCard] = useState({ pro_title: '', pro_company: '', pro_linkedin: '', show_pro_public: false });
+  const [card, setCard] = useState({ pro_title: '', pro_company: '', pro_linkedin: '', pro_intro: '', pro_looking_for: [] as string[], show_pro_public: false });
   const [editing, setEditing] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.rpc('people_ive_met').then(({ data }) => setPeople((data ?? []) as Person[]));
-    if (user) supabase.from('profiles').select('pro_title, pro_company, pro_linkedin, show_pro_public').eq('id', user.id).maybeSingle().then(({ data }) => {
-      const d = data as { pro_title: string | null; pro_company: string | null; pro_linkedin: string | null; show_pro_public: boolean } | null;
-      if (d) setCard({ pro_title: d.pro_title ?? '', pro_company: d.pro_company ?? '', pro_linkedin: d.pro_linkedin ?? '', show_pro_public: !!d.show_pro_public });
+    if (user) supabase.from('profiles').select('pro_title, pro_company, pro_linkedin, pro_intro, pro_looking_for, show_pro_public').eq('id', user.id).maybeSingle().then(({ data }) => {
+      const d = data as { pro_title: string | null; pro_company: string | null; pro_linkedin: string | null; pro_intro: string | null; pro_looking_for: string[] | null; show_pro_public: boolean } | null;
+      if (d) setCard({ pro_title: d.pro_title ?? '', pro_company: d.pro_company ?? '', pro_linkedin: d.pro_linkedin ?? '', pro_intro: d.pro_intro ?? '', pro_looking_for: d.pro_looking_for ?? [], show_pro_public: !!d.show_pro_public });
     });
   }, [user]);
 
@@ -32,7 +32,7 @@ export default function PeopleIveMet() {
     if (li && !/^https?:\/\//i.test(li)) li = `https://${li}`;
     li = li.replace(/^http:\/\//i, 'https://');
     if (li && !/^https:\/\/([a-z]+\.)?linkedin\.com\//i.test(li)) { setMsg("That doesn't look like a LinkedIn link."); return; }
-    const { error } = await supabase.from('profiles').update({ pro_title: next.pro_title.trim() || null, pro_company: next.pro_company.trim() || null, pro_linkedin: li || null, show_pro_public: next.show_pro_public }).eq('id', user.id);
+    const { error } = await supabase.from('profiles').update({ pro_title: next.pro_title.trim() || null, pro_company: next.pro_company.trim() || null, pro_linkedin: li || null, pro_intro: next.pro_intro.trim().slice(0, 280) || null, pro_looking_for: next.pro_looking_for, show_pro_public: next.show_pro_public }).eq('id', user.id);
     setMsg(error ? "Couldn't save." : 'Saved.'); setTimeout(() => setMsg(null), 2000);
     if (!error) { setCard({ ...next, pro_linkedin: li }); setEditing(false); }
   }
@@ -49,7 +49,7 @@ export default function PeopleIveMet() {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-semibold text-bone">Your networking card</p>
-            <p className="text-sm text-muted">{[card.pro_title, card.pro_company].filter(Boolean).join(' · ') || 'Not filled in yet'}{card.pro_linkedin ? ' · LinkedIn added' : ''}</p>
+            <p className="text-sm text-muted">{[card.pro_title, card.pro_company].filter(Boolean).join(' · ') || 'Not filled in yet'}{card.pro_looking_for.length ? ` · Looking for ${card.pro_looking_for.join(', ').toLowerCase()}` : ''}{card.pro_linkedin ? ' · LinkedIn added' : ''}</p>
             <p className="text-xs text-muted">Prefills your card at every event with networking.</p>
           </div>
           {!editing && <button onClick={() => setEditing(true)} className="text-sm font-medium text-marigold">Edit</button>}
@@ -58,6 +58,16 @@ export default function PeopleIveMet() {
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="block min-w-0 text-xs font-medium text-gray-500">Title<input value={card.pro_title} maxLength={100} onChange={(e) => setCard({ ...card, pro_title: e.target.value })} className={field} /></label>
             <label className="block min-w-0 text-xs font-medium text-gray-500">Company<input value={card.pro_company} maxLength={100} onChange={(e) => setCard({ ...card, pro_company: e.target.value })} className={field} /></label>
+            <div className="sm:col-span-2">
+              <p className="text-xs font-medium text-gray-500">I'm looking for</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {['Hiring', 'A new role', 'Partners', 'Clients', 'Mentors', 'Investors', 'Just networking'].map((l) => (
+                  <button key={l} type="button" aria-pressed={card.pro_looking_for.includes(l)} onClick={() => setCard({ ...card, pro_looking_for: card.pro_looking_for.includes(l) ? card.pro_looking_for.filter((x) => x !== l) : [...card.pro_looking_for, l] })}
+                    className={`min-h-[36px] rounded-full px-3 text-sm ${card.pro_looking_for.includes(l) ? 'bg-marigold font-semibold text-white' : 'border border-gray-300 bg-white text-gray-700'}`}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <label className="block min-w-0 text-xs font-medium text-gray-500 sm:col-span-2">Short intro<textarea rows={2} maxLength={280} value={card.pro_intro} onChange={(e) => setCard({ ...card, pro_intro: e.target.value })} className={field} /></label>
             <label className="block min-w-0 text-xs font-medium text-gray-500 sm:col-span-2">LinkedIn<input value={card.pro_linkedin} onChange={(e) => setCard({ ...card, pro_linkedin: e.target.value })} placeholder="linkedin.com/in/yourname" inputMode="url" className={field} /></label>
             <div className="flex gap-2 sm:col-span-2">
               <button onClick={() => saveCard()} className="rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white">Save</button>
@@ -67,8 +77,8 @@ export default function PeopleIveMet() {
         )}
         <label className="mt-3 flex items-start gap-3 border-t border-gray-100 pt-3 text-sm">
           <input type="checkbox" checked={card.show_pro_public} onChange={(e) => saveCard({ ...card, show_pro_public: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-          <span><span className="font-medium text-bone">Show my title, company and LinkedIn on my public profile</span>
-            <span className="block text-xs text-muted">Off by default. Your email is never shown.</span></span>
+          <span><span className="font-medium text-bone">Show my networking card on my public profile</span>
+            <span className="block text-xs text-muted">Anyone who views your profile will see your title, company, what you're looking for, your intro and LinkedIn. Off by default. Your email is never shown.</span></span>
         </label>
         {msg && <p role="status" className="mt-2 text-sm text-green-700">{msg}</p>}
       </section>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import NetCard from '../components/networking/NetCard';
 import { useFeature } from '../lib/preview';
 import GroupBadges from '../components/groups/GroupBadges';
 import BackButton from '../components/BackButton';
@@ -41,7 +42,7 @@ interface TaggedTile {
 
 export default function CreatorProfile() {
   const { email } = useParams<{ email: string }>();
-  const [pro, setPro] = useState<{ title: string | null; company: string | null; linkedin: string | null } | null>(null);
+  const [pro, setPro] = useState<{ title: string | null; company: string | null; linkedin: string | null; looking_for?: string[]; intro?: string | null } | null>(null);
   const networkingOn = useFeature('networking');
   const [shared, setShared] = useState<{ event_id: string; title: string; i_joined: boolean; connected: boolean }[]>([]);
   const [connMsg, setConnMsg] = useState<string | null>(null);
@@ -189,10 +190,9 @@ export default function CreatorProfile() {
             </div>
           ))}
           {connMsg && <p className="mt-1 text-sm text-green-700">{connMsg}</p>}
-          {pro && (pro.title || pro.company || pro.linkedin) && (
+          {pro && (pro.title || pro.company) && (
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-muted">
               {(pro.title || pro.company) && <span>{[pro.title, pro.company].filter(Boolean).join(' · ')}</span>}
-              {pro.linkedin && <a href={pro.linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-marigold">LinkedIn ↗</a>}
             </p>
           )}
           <div className="mt-1 flex gap-2">
@@ -203,6 +203,14 @@ export default function CreatorProfile() {
       </div>
 
       {profile.bio && <p className="mt-3 text-sm text-muted">{profile.bio}</p>}
+      {pro && (pro.title || pro.company || pro.intro || (pro.looking_for ?? []).length > 0 || pro.linkedin) && (
+        <section className="mt-4 max-w-sm">
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">Networking card</p>
+          <NetCard seed={email ?? 'card'} name={profile.full_name} photo={profile.profile_photo} title={pro.title} company={pro.company} lookingFor={pro.looking_for ?? []} intro={pro.intro}>
+            {pro.linkedin && <a href={pro.linkedin} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl border border-gray-300 py-2 text-center text-sm font-semibold text-gray-800">LinkedIn ↗</a>}
+          </NetCard>
+        </section>
+      )}
 
       <GroupBadges email={profile.email} className="mt-3" />
 
