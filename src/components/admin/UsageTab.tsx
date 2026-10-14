@@ -48,6 +48,8 @@ export default function UsageTab() {
         </div>
       </section>
 
+      <NewsletterAdmin />
+
       <section>
         <h2 className="font-display text-xl font-bold text-bone">Business plan reservations <span className="text-base font-normal text-muted">· {d.reservations.length}</span></h2>
         {d.wanted.length > 0 && (
@@ -84,5 +86,41 @@ export default function UsageTab() {
         )}
       </section>
     </div>
+  );
+}
+
+// Organization newsletters: sending mode and Resend contacts (free plan includes 1,000 marketing contacts).
+function NewsletterAdmin() {
+  const [st, setSt] = useState<{ mode: string; daily_cap: string; resend_contacts: number; campaigns_sent: number; emails_sent: number } | null>(null);
+  const load = () => supabase.rpc('newsletter_admin_status').then(({ data }) => setSt((data ?? null) as typeof st));
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st) return null;
+  const used = Number(st.resend_contacts) || 0;
+  const pct = Math.min(100, Math.round((used / 1000) * 100));
+  async function setMode(mode: 'broadcast' | 'direct') {
+    if (!window.confirm(mode === 'direct' ? 'Send organization newsletters one at a time through the everyday-email plan? Use this after upgrading Resend Pro ($20/mo), ideally from a separate newsletter subdomain.' : 'Send organization newsletters through Resend Broadcasts (free up to 1,000 contacts)?')) return;
+    await supabase.rpc('set_newsletter_mode', { p_mode: mode }); load();
+  }
+  return (
+    <section>
+      <h2 className="font-display text-xl font-bold text-bone">Newsletters</h2>
+      <div className="mt-3 rounded-2xl border border-gray-200 bg-surface p-4 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-bone"><strong>{used}</strong> of 1,000 free newsletter contacts used <span className="text-muted">(Resend marketing)</span></p>
+          <p className="text-muted">{st.campaigns_sent} emails sent · {st.emails_sent} deliveries</p>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200"><div className={`h-full ${pct >= 85 ? 'bg-red-500' : pct >= 60 ? 'bg-amber-500' : 'bg-green-500'}`} style={{ width: `${pct}%` }} /></div>
+        {pct >= 85 && <p className="mt-2 text-xs font-semibold text-red-600">Close to the free limit. Upgrade Resend marketing ($40/mo for 5,000) or switch to one-at-a-time sending on Resend Pro ($20/mo).</p>}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-muted">Sending:</span>
+          {(['broadcast', 'direct'] as const).map((m) => (
+            <button key={m} onClick={() => st.mode !== m && setMode(m)} aria-pressed={st.mode === m}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${st.mode === m ? 'bg-[#0F1B3D] text-white' : 'border border-gray-300 bg-white text-gray-700'}`}>
+              {m === 'broadcast' ? 'Newsletter feature (free to 1,000)' : `One at a time (${st.daily_cap}/day cap)`}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }

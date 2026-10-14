@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import OrgNewsletterTab from '../../components/business/OrgNewsletterTab';
 import { useFeature } from '../../lib/preview';
 import { OrgAttendees, OrgPromoteTab, OrgSales, useOrgAttendance } from '../../components/business/OrgInsights';
 import { ListSkeleton } from '../../components/ui/Skeleton';
@@ -14,8 +15,8 @@ import BusinessGate from '../../components/business/BusinessGate';
 import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
-type Tab = 'Profile' | 'Brand kit' | 'Photos' | 'Team' | 'Events' | 'Promote' | 'Payouts';
-const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Photos: '🖼️', Team: '👥', Events: '📅', Promote: '📣', Payouts: '💳' };
+type Tab = 'Profile' | 'Brand kit' | 'Photos' | 'Team' | 'Events' | 'Promote' | 'Newsletter' | 'Payouts';
+const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Photos: '🖼️', Team: '👥', Events: '📅', Promote: '📣', Newsletter: '📧', Payouts: '💳' };
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -28,10 +29,11 @@ function OrgManageInner() {
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
   const insightsOn = useFeature('org_insights');
+  const newsletterOn = useFeature('newsletters');
   const isLead = role === 'owner' || role === 'admin';
-  const tabList = (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
+  const tabList = (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead && newsletterOn ? ['Newsletter'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
   const tabLabel = (t: Tab) => (t === 'Payouts' && insightsOn ? 'Sales & payouts' : t);
-  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', 'Promote', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
+  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', 'Promote', 'Newsletter', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -115,6 +117,7 @@ function OrgManageInner() {
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} />}
         {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}
+        {tab === 'Newsletter' && isLead && newsletterOn && <OrgNewsletterTab orgId={org.id} orgName={org.name} />}
         {tab === 'Photos' && (role === 'owner' || role === 'admin' || role === 'editor' ? <OrgPhotosTab orgId={org.id} /> : <p className="text-sm text-muted">Owners, Admins and Editors can manage photos.</p>)}
         {tab === 'Payouts' && isLead && insightsOn && <OrgSales orgId={org.id} />}
         {tab === 'Payouts' && (role === 'owner' || role === 'admin') && <OrgPayoutsTab orgId={org.id} orgName={org.name} slug={org.slug} />}
