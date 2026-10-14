@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFeature } from '../lib/preview';
-import ShareQR from '../components/ShareQR';
 import ProfileOrgLinks from '../components/business/ProfileOrgLinks';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FollowListModal from '../components/profile/FollowListModal';
@@ -276,9 +275,11 @@ export default function Profile() {
             <p className="text-xs text-muted">Your connections from events, and your networking card</p>
           </Link>
         )}
-        {profileQrOn && user?.email && (
-          <ShareQR path={`/creator/${encodeURIComponent(user.email)}`} title={fullName || 'My TapIN profile'} subtitle="Scan to see my TapIN profile" label="📱 My TapIN QR"
-            className="flex flex-col items-start rounded-xl border border-gray-200 bg-surface2 p-4 text-left font-medium text-bone hover:border-marigold" />
+        {user?.email && (
+          <Link to={`/creator/${encodeURIComponent(user.email)}`} className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
+            <p className="font-medium text-bone">👤 View my public profile</p>
+            <p className="text-xs text-muted">{profileQrOn ? 'See what others see, and share it with your TapIN QR' : 'See what others see'}</p>
+          </Link>
         )}
         {profile.is_resource && (
           <Link to="/resources/dashboard" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">

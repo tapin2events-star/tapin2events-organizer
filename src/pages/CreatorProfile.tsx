@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import Sheet from '../components/scouting/Sheet';
+import ShareQR from '../components/ShareQR';
 import NetCard from '../components/networking/NetCard';
 import { useFeature } from '../lib/preview';
 import GroupBadges from '../components/groups/GroupBadges';
@@ -44,6 +46,11 @@ export default function CreatorProfile() {
   const { email } = useParams<{ email: string }>();
   const [pro, setPro] = useState<{ title: string | null; company: string | null; linkedin: string | null; looking_for?: string[]; intro?: string | null } | null>(null);
   const networkingOn = useFeature('networking');
+  const profileQrOn = useFeature('profile_qr');
+  const [cardOpen, setCardOpen] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const { user: viewer } = useAuth();
+  useEffect(() => { if (email && viewer) supabase.rpc('is_connected_with', { p_email: email }).then(({ data }) => setConnected(data === true)); }, [email, viewer]); // eslint-disable-line react-hooks/exhaustive-deps
   const [shared, setShared] = useState<{ event_id: string; title: string; i_joined: boolean; connected: boolean }[]>([]);
   const [connMsg, setConnMsg] = useState<string | null>(null);
   useEffect(() => { if (networkingOn && email) supabase.rpc('shared_networking_events', { p_email: email }).then(({ data }) => setShared((data ?? []) as typeof shared)); }, [networkingOn, email]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -204,12 +211,27 @@ export default function CreatorProfile() {
 
       {profile.bio && <p className="mt-3 text-sm text-muted">{profile.bio}</p>}
       {pro && (pro.title || pro.company || pro.intro || (pro.looking_for ?? []).length > 0 || pro.linkedin) && (
-        <section className="mt-4 max-w-sm">
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">Networking card</p>
+        <button onClick={() => setCardOpen(true)} className="mt-3 flex w-full max-w-sm items-center gap-3 rounded-2xl border border-gray-200 bg-surface p-3 text-left hover:border-marigold">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 text-sm" aria-hidden="true">🤝</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-bold uppercase tracking-wide text-muted">Networking card</span>
+            <span className="block truncate text-sm font-medium text-bone">{[pro.title, pro.company].filter(Boolean).join(' · ') || (pro.looking_for ?? []).join(', ') || 'View card'}</span>
+          </span>
+          <span className="shrink-0 text-sm font-medium text-marigold">View ›</span>
+        </button>
+      )}
+      {cardOpen && pro && (
+        <Sheet title="Networking card" onClose={() => setCardOpen(false)}>
           <NetCard seed={email ?? 'card'} name={profile.full_name} photo={profile.profile_photo} title={pro.title} company={pro.company} lookingFor={pro.looking_for ?? []} intro={pro.intro ?? null}>
-            {pro.linkedin && <a href={pro.linkedin} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl border border-gray-300 py-2 text-center text-sm font-semibold text-gray-800">LinkedIn ↗</a>}
+            <div className="flex flex-col gap-2">
+              {connected && !isOwnProfile && (
+                <a href={`mailto:${profile.email}`} className="block w-full rounded-xl bg-marigold py-2.5 text-center text-sm font-semibold text-white">✉️ Message {profile.full_name?.split(' ')[0] || ''}</a>
+              )}
+              {pro.linkedin && <a href={pro.linkedin} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl border border-gray-300 py-2.5 text-center text-sm font-semibold text-gray-800">LinkedIn ↗</a>}
+              {connected && !isOwnProfile && <p className="text-center text-xs text-muted">✓ You're connected</p>}
+            </div>
           </NetCard>
-        </section>
+        </Sheet>
       )}
 
       <GroupBadges email={profile.email} className="mt-3" />
@@ -237,6 +259,10 @@ export default function CreatorProfile() {
           <p className="text-xs text-muted">Following</p>
         </button>
 
+        {profileQrOn && (
+          <ShareQR path={`/creator/${encodeURIComponent(profile.email)}`} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile" label={isOwnProfile ? '📱 Share my profile' : 'QR'}
+            className={`${isOwnProfile ? 'ml-auto' : ''} inline-flex items-center gap-1.5 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-bone`} />
+        )}
         {!isOwnProfile && user && !blocked && (
           <button
             onClick={toggleFollow}
