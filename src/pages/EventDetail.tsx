@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import FeatureFeedback from '../components/feedback/FeatureFeedback';
 import PromoteTab from '../components/promote/PromoteTab';
 import { NetworkingSwitch } from '../components/business/NetworkingCards';
 import InvoicesSection from '../components/business/InvoicesSection';
@@ -279,6 +280,7 @@ export default function EventDetail() {
       </div>
 
       {tab === 'Overview' && networkingOn && (isOwner || teamRole === 'admin' || teamRole === 'editor' || !teamRole) && <NetworkingSwitch eventId={event.id} eventTitle={event.title} />}
+      {tab === 'Overview' && (event as { template_id?: string | null }).template_id && isOwner && <FeatureFeedback feature="templates" label="starting from a template" className="mb-4" />}
       {tab === 'Overview' && <OverviewTab event={event} />}
       {tab === 'Business page' && <BusinessPageTab event={event} onEventChange={setEvent} />}
       {tab === 'Tickets' && <TiersTab event={event} />}

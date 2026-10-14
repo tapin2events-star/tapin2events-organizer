@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import FeatureFeedback from '../components/feedback/FeatureFeedback';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -134,6 +135,7 @@ export default function MeetingDetail() {
         </div>
       </section>
 
+      {past && <FeatureFeedback feature="meetings" label="meetings in Planning" className="mt-6" />}
       {/* Action items -> tasks */}
       <section className="mt-6 mb-8">
         <div className="flex items-center justify-between gap-2">

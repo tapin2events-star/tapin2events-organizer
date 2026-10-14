@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import QRCode from 'qrcode';
 import Sheet from './scouting/Sheet';
 
 // A QR code for a TapIN page (event or profile): show it on a phone screen,
 // print it on a flyer, or save/share the image.
-export default function ShareQR({ path, title, subtitle, label = 'QR code', className = '' }: {
-  path: string; title: string; subtitle?: string; label?: string; className?: string;
+export default function ShareQR({ path, title, subtitle, label = 'QR code', className = '', track }: {
+  path: string; title: string; subtitle?: string; label?: string; className?: string; track?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [png, setPng] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function ShareQR({ path, title, subtitle, label = 'QR code', clas
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className || 'inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold'}>
+      <button type="button" onClick={() => { setOpen(true); if (track) supabase.rpc('track_feature', { p_feature: track }); }} className={className || 'inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold'}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 14v.01M14 21h3M21 17v4" /></svg>
         {label}
       </button>

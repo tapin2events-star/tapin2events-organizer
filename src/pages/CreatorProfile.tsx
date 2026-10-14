@@ -180,7 +180,7 @@ export default function CreatorProfile() {
         <BackButton fallback="/feed" fallbackLabel="Feed" />
         {profileQrOn && (
           <ShareQR path={`/creator/${encodeURIComponent(profile.email)}`} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile"
-            label={isOwnProfile ? 'Share my profile' : 'Share'}
+            label={isOwnProfile ? 'Share my profile' : 'Share'} track="profile_qr"
             className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm" />
         )}
       </div>

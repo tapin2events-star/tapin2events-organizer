@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react';
+import BusinessPlanGate from './pages/business/BusinessPlanGate';
 import ActivityRedirect from './components/ActivityRedirect';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -111,6 +112,7 @@ export default function App() {
             <Route path="/organizer/scouting/:id" element={<ProtectedRoute><ScoutingBoard /></ProtectedRoute>} />
             <Route path="/scout/:token" element={<SharedScoutBoard />} />
             <Route path="/business" element={<BusinessHome />} />
+            <Route path="/business/plan" element={<BusinessPlanGate />} />
             <Route path="/business/:slug/manage" element={<ProtectedRoute><OrgManage /></ProtectedRoute>} />
             <Route path="/o/:slug" element={<OrgPublic />} />
             <Route path="/organizations" element={<OrgDirectory />} />

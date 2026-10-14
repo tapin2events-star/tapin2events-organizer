@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useFeature } from '../../lib/preview';
+import FeatureFeedback from '../feedback/FeatureFeedback';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { ListSkeleton } from '../ui/Skeleton';
@@ -134,6 +136,7 @@ export function OrgAttendees({ orgId, orgName }: { orgId: string; orgName: strin
             ))}
           </ul>
           {shown.length > 200 && <p className="mt-2 text-xs text-muted">Showing 200 of {shown.length}. Export CSV for everyone.</p>}
+          <FeatureFeedback feature="org_attendees" label="the attendee list" className="mt-3" />
         </>
       )}
     </section>
@@ -146,6 +149,7 @@ interface Sales { tickets: number; invoices: number; merch: number; donations: n
 const PERIODS = [{ id: 'month', label: 'This month' }, { id: 'year', label: 'This year' }, { id: 'all', label: 'All time' }] as const;
 
 export function OrgSales({ orgId }: { orgId: string }) {
+  const planPageOn = useFeature('business_plan_page');
   const [period, setPeriod] = useState<(typeof PERIODS)[number]['id']>('year');
   const [s, setS] = useState<Sales | null>(null);
   useEffect(() => {
@@ -191,6 +195,8 @@ export function OrgSales({ orgId }: { orgId: string }) {
               </div>
             </div>
           )}
+          <FeatureFeedback feature="org_sales" label="these sales insights" className="mt-3" />
+          {planPageOn && <Link to="/business/plan" className="mt-3 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#C9A227] bg-white p-3 text-sm"><span><strong className="text-gray-900">Business plan, coming soon</strong><span className="block text-gray-600">See what's planned and reserve founding pricing</span></span><span className="shrink-0 font-semibold text-[#C9A227]">Reserve ›</span></Link>}
           <h4 className="mt-4 font-semibold text-bone">By event</h4>
           {s.by_event.length === 0 ? <p className="mt-1 text-sm text-muted">No sales in this period.</p> : (
             <ul className="mt-2 flex flex-col gap-2">

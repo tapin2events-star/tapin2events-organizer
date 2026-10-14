@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import FeatureFeedback from '../feedback/FeatureFeedback';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
@@ -86,6 +87,7 @@ export default function InvoicesSection({ eventId, ticketPrice, sections }: { ev
           ))}
         </ul>
       )}
+      {invoices.length > 0 && <FeatureFeedback feature="invoices" label="pay-by-invoice" className="mt-3" />}
       <p className="mt-2 text-xs text-muted">Payments are checked automatically every 15 minutes.{sections ? ' Seats are held for the group until the invoice is paid, cancelled, or a week past its due date.' : ''}</p>
       {creating && <NewInvoiceSheet eventId={eventId} tiers={tiers} sections={sections} ticketPrice={ticketPrice} onClose={() => setCreating(false)} onDone={(t) => { setCreating(false); flash(t); load(); }} />}
     </section>

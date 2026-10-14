@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import FeatureFeedback from '../components/feedback/FeatureFeedback';
 import NetCard from '../components/networking/NetCard';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import QrScanButtons from '../components/networking/QrScanButtons';
@@ -241,6 +242,7 @@ export default function EventNetwork() {
 
       {connectTo && <ConnectSheet member={connectTo} onSend={(note) => connect(connectTo, note)} onClose={() => setConnectTo(null)} />}
 
+      {view === 'connections' && (contacts?.length ?? 0) > 0 && <FeatureFeedback feature="networking" label="attendee networking" className="mt-4" />}
       {view === 'connections' && (
         contacts === null ? <ListSkeleton rows={3} className="mt-4" /> : contacts.length === 0 ? (
           <p className="mt-4 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No connections yet. When someone accepts your request (or you accept theirs), their contact info shows up here.</p>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import FeatureFeedback from '../feedback/FeatureFeedback';
 import BoostCard from './BoostCard';
 import { supabase } from '../../lib/supabaseClient';
 import ShareQR from '../ShareQR';
@@ -85,6 +86,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
               })}
             </ul>
           )}
+          {links.filter((l) => !l.label.startsWith('🚀')).length > 0 && <FeatureFeedback feature="promotion_links" label="promotion links" className="mt-4" />}
           <p className="mt-3 text-sm text-muted">Not from a link: {stats.other_tickets} ticket{stats.other_tickets === 1 ? '' : 's'} · {money(stats.other_revenue)}</p>
           <p className="mt-1 text-xs text-muted">A ticket counts for a link when the buyer came through it within the last 7 days. Commissions are tracked here; pay promoters directly for now.</p>
         </>

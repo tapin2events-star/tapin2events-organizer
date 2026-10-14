@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import FeatureFeedback from '../feedback/FeatureFeedback';
 import { supabase } from '../../lib/supabaseClient';
 
 interface Boost { id: string; days: number; price: number; fee: number; starts_at: string; ends_at: string; status: string; refund_amount: number | null; impressions: number; visits: number; tickets: number }
@@ -81,6 +82,7 @@ export default function BoostCard({ eventId }: { eventId: string }) {
           <button onClick={buy} disabled={busy} className="mt-3 w-full rounded-xl bg-marigold py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Opening checkout…' : `Boost for ${pkg.days} days`}</button>
         </>
       )}
+      {shown.some((b) => b.status === 'paid' || b.status === 'refunded') && <FeatureFeedback feature="boost" label="Boost" className="mt-4" />}
       {shown.length > 0 && (
         <ul className="mt-4 flex flex-col gap-2">
           {shown.map((b) => {

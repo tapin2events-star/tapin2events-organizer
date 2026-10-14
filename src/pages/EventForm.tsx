@@ -543,7 +543,7 @@ export default function EventForm() {
         const paid = live.filter((p) => p > 0);
         return { event_type: paid.length ? (eventType === 'private' ? 'private' : 'paid') : (eventType === 'private' ? 'private' : 'free'), ticket_price: paid.length ? Math.min(...paid) : 0 };
       })() : {}),
-      ...(businessOn ? { event_kind: eventKind, organization_id: orgId || null } : {}),
+      ...(businessOn ? { event_kind: eventKind, organization_id: orgId || null, ...(!isEdit && template ? { template_id: template.id } : {}) } : {}),
       // While business events are in preview they stay private as test events.
       ...(businessOn && isAdmin && eventKind !== 'community' && FEATURES.business?.status === 'preview' ? { is_test: true } : {}),
     };

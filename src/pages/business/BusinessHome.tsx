@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useFeature } from '../../lib/preview';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +15,7 @@ export default function BusinessHome() {
 }
 
 function BusinessHomeInner() {
+  const planPageOn = useFeature('business_plan_page');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [orgs, setOrgs] = useState<MyOrg[] | null>(null);
@@ -55,7 +57,10 @@ function BusinessHomeInner() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business</p>
               <p className="mt-1 font-display text-2xl font-extrabold">Your organizations</p>
             </div>
-            <button onClick={() => { setCreating(true); setTimeout(() => document.getElementById('create-org')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="rounded-full px-5 py-2.5 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>+ New organization</button>
+            <div className="flex flex-wrap gap-2">
+              {planPageOn && <Link to="/business/plan" className="rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white">Business plan ›</Link>}
+              <button onClick={() => { setCreating(true); setTimeout(() => document.getElementById('create-org')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="rounded-full px-5 py-2.5 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>+ New organization</button>
+            </div>
           </section>
           <div className="px-6 pt-6 sm:px-10">
         {/* Your organizations */}
