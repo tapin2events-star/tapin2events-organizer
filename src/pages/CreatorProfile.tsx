@@ -206,7 +206,7 @@ export default function CreatorProfile() {
       {pro && (pro.title || pro.company || pro.intro || (pro.looking_for ?? []).length > 0 || pro.linkedin) && (
         <section className="mt-4 max-w-sm">
           <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">Networking card</p>
-          <NetCard seed={email ?? 'card'} name={profile.full_name} photo={profile.profile_photo} title={pro.title} company={pro.company} lookingFor={pro.looking_for ?? []} intro={pro.intro}>
+          <NetCard seed={email ?? 'card'} name={profile.full_name} photo={profile.profile_photo} title={pro.title} company={pro.company} lookingFor={pro.looking_for ?? []} intro={pro.intro ?? null}>
             {pro.linkedin && <a href={pro.linkedin} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl border border-gray-300 py-2 text-center text-sm font-semibold text-gray-800">LinkedIn ↗</a>}
           </NetCard>
         </section>
