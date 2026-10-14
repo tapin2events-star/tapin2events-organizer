@@ -39,6 +39,8 @@ export default function PlanningTeam({ query, tasks, events, onChanged, scope = 
   const [assign, setAssign] = useState<Person | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [orgTeams, setOrgTeams] = useState<OrgTeam[]>([]);
+  const [chats, setChats] = useState<{ org_id: string; name: string; logo_url: string | null; color: string | null; unread: number; last_preview: string | null; last_sender: string | null }[]>([]);
+  useEffect(() => { supabase.rpc('my_team_chats').then(({ data }) => setChats((data ?? []) as typeof chats)); }, []);
   useEffect(() => { supabase.rpc('my_org_teams').then(({ data }) => setOrgTeams((data ?? []) as OrgTeam[])); }, []);
 
   const load = useCallback(async () => {
@@ -104,6 +106,25 @@ export default function PlanningTeam({ query, tasks, events, onChanged, scope = 
           </ul>
         )}
       </section>
+      )}
+
+      {/* Team chats */}
+      {chats.filter((c) => scope === 'all' || (scope === 'org' && c.org_id === scopeOrgId)).length > 0 && scope !== 'me' && (
+        <section>
+          <h3 className="font-display text-lg font-bold text-bone">💬 Team chats</h3>
+          <ul className="mt-2 flex flex-col gap-2">
+            {chats.filter((c) => scope === 'all' || c.org_id === scopeOrgId).map((c) => (
+              <li key={c.org_id}><Link to={`/team-chat/${c.org_id}`} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-surface p-3 hover:border-marigold">
+                {c.logo_url ? <img src={c.logo_url} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold text-white" style={{ background: c.color || '#0F1B3D' }}>{c.name.charAt(0)}</span>}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-bone">{c.name} team</span>
+                  <span className="block truncate text-xs text-muted">{c.last_preview ? `${c.last_sender ? `${c.last_sender.split(' ')[0]}: ` : ''}${c.last_preview}` : 'No messages yet. Say hi 👋'}</span>
+                </span>
+                {Number(c.unread) > 0 ? <span className="shrink-0 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white">{c.unread} new</span> : <span className="shrink-0 text-sm text-marigold">Open ›</span>}
+              </Link></li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* Organization teams (follow each organization's events) */}

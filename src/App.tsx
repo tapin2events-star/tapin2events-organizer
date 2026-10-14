@@ -21,6 +21,7 @@ import PromoterLinks from './pages/PromoterLinks';
 import EventNetwork from './pages/EventNetwork';
 import PeopleIveMet from './pages/PeopleIveMet';
 import NetworkHome from './pages/NetworkHome';
+import TeamChat from './pages/TeamChat';
 import Planning from './pages/Planning';
 import MeetingDetail from './pages/MeetingDetail';
 import PollDetail from './pages/PollDetail';
@@ -88,6 +89,7 @@ export default function App() {
             <Route path="/events/:id/network/qr/:token" element={<ProtectedRoute><EventNetwork /></ProtectedRoute>} />
             <Route path="/connections" element={<ProtectedRoute><PeopleIveMet /></ProtectedRoute>} />
             <Route path="/network" element={<ProtectedRoute><NetworkHome /></ProtectedRoute>} />
+            <Route path="/team-chat/:orgId" element={<ProtectedRoute><TeamChat /></ProtectedRoute>} />
             <Route path="/pass/:ticketId" element={<TicketPass />} />
             <Route path="/receipt" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
             <Route path="/activity" element={<MyActivity />} />

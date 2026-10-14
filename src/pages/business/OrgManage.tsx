@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import OrgPageSectionsTab from '../../components/business/OrgPageSectionsTab';
 import OrgNewsletterTab from '../../components/business/OrgNewsletterTab';
 import { useFeature } from '../../lib/preview';
@@ -16,8 +17,8 @@ import BusinessGate from '../../components/business/BusinessGate';
 import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
-type Tab = 'Profile' | 'Brand kit' | 'Page' | 'Photos' | 'Team' | 'Events' | 'Promote' | 'Newsletter' | 'Payouts';
-const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Page: '🧩', Photos: '🖼️', Team: '👥', Events: '📅', Promote: '📣', Newsletter: '📧', Payouts: '💳' };
+type Tab = 'Profile' | 'Brand kit' | 'Page' | 'Photos' | 'Planning' | 'Team' | 'Events' | 'Promote' | 'Newsletter' | 'Payouts';
+const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Page: '🧩', Photos: '🖼️', Planning: '📋', Team: '👥', Events: '📅', Promote: '📣', Newsletter: '📧', Payouts: '💳' };
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -29,11 +30,12 @@ function OrgManageInner() {
   const { user } = useAuth();
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
+  const navigate = useNavigate();
   const insightsOn = useFeature('org_insights');
   const newsletterOn = useFeature('newsletters');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
-  const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Photos', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead && newsletterOn ? ['Newsletter'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
+  const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Photos', 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead && newsletterOn ? ['Newsletter'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
   const tabLabel = (t: Tab) => (t === 'Payouts' && insightsOn ? 'Sales & payouts' : t);
   const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Page', 'Photos', 'Team', 'Events', 'Promote', 'Newsletter', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -92,7 +94,7 @@ function OrgManageInner() {
       {/* Phones: every section visible as a grid of buttons. Larger screens: underline tabs. */}
       <div className="mt-5 grid grid-cols-3 gap-2 sm:hidden" role="tablist" aria-label="Organization settings">
         {tabList.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => (t === 'Planning' ? navigate(`/organizer/planning?for=${org.slug}`) : setTab(t))}
             className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl text-xs font-semibold ${tab === t ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>
             <span className="text-base leading-none" aria-hidden="true">{TAB_ICON[t]}</span>{t === 'Payouts' && insightsOn ? 'Sales' : t}
           </button>
@@ -100,7 +102,7 @@ function OrgManageInner() {
       </div>
       <div className="mt-5 hidden border-b border-gray-200 sm:flex sm:gap-1" role="tablist" aria-label="Organization settings">
         {tabList.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{tabLabel(t)}</button>
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => (t === 'Planning' ? navigate(`/organizer/planning?for=${org.slug}`) : setTab(t))} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{tabLabel(t)}</button>
         ))}
       </div>
       {org.status === 'deleted' && (
@@ -116,6 +118,7 @@ function OrgManageInner() {
         {tab === 'Profile' && <ProfileTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Profile' && role === 'owner' && org.status !== 'deleted' && <DangerZone orgId={org.id} orgName={org.name} />}
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
+        {tab === 'Team' && <Link to={`/team-chat/${org.id}`} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm"><span><strong className="text-gray-900">💬 Team chat</strong><span className="block text-gray-600">Message everyone on {org.name}'s team, share photos and files</span></span><span className="shrink-0 font-semibold text-indigo-700">Open ›</span></Link>}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
         {tab === 'Page' && canEditPage && <OrgPageSectionsTab orgId={org.id} slug={org.slug} />}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} />}
