@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { recordLinkVisit } from '../lib/linkTracking';
 import { NetworkingInvite } from '../components/business/NetworkingCards';
 import { MoreFromOrg, OrgHostedBy } from '../components/business/OrgHostedBy';
 import DonationCard from '../components/business/DonationCard';
@@ -31,6 +32,11 @@ import CommunityPosts from '../components/discover/CommunityPosts';
 import { EventPageSkeleton } from '../components/ui/Skeleton';
 
 export default function PublicEventDetail() {
+  // Promotion links: arriving with ?src=<code> records a visit for that link.
+  useEffect(() => {
+    const src = new URLSearchParams(window.location.search).get('src');
+    if (src) recordLinkVisit(src);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const networkingOn = useFeature('networking');
   const location = useLocation();
   const { id } = useParams<{ id: string }>();

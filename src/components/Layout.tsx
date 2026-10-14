@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { claimLinkVisits } from '../lib/linkTracking';
 import { scrollPageToTop } from '../lib/scroll';
 import { useFeature } from '../lib/preview';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
@@ -38,6 +39,8 @@ const ORGANIZER: Item[] = [
 
 export default function Layout() {
   const { user, isAdmin, signOut } = useAuth();
+  // Visits from promotion links made before signing in get attached to the account.
+  useEffect(() => { if (user) claimLinkVisits(); }, [user]);
   const businessOn = useFeature('business');
   const networkingOn = useFeature('networking');
   const [menuOpen, setMenuOpen] = useState(false);

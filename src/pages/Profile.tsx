@@ -269,6 +269,7 @@ export default function Profile() {
           </Link>
         )}
         <ProfileOrgLinks />
+        <PromoterShortcut />
         {networkingOn && (
           <Link to="/connections" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
             <p className="font-medium text-bone">🤝 People I've met</p>
@@ -471,5 +472,18 @@ export default function Profile() {
         />
       )}
     </div>
+  );
+}
+
+// Shows only for people who've been given promoter links.
+function PromoterShortcut() {
+  const [n, setN] = useState(0);
+  useEffect(() => { supabase.rpc('my_promoter_links').then(({ data }) => setN((data ?? []).length)); }, []);
+  if (!n) return null;
+  return (
+    <Link to="/promoter" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
+      <p className="font-medium text-bone">📣 My promoter links</p>
+      <p className="text-xs text-muted">{n} link{n === 1 ? '' : 's'} · your visits, sales and commission</p>
+    </Link>
   );
 }

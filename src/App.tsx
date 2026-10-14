@@ -15,6 +15,8 @@ import Discover from './pages/Discover';
 import PublicEventDetail from './pages/PublicEventDetail';
 import TicketPass from './pages/TicketPass';
 import Receipt from './pages/Receipt';
+import ShortLink from './pages/ShortLink';
+import PromoterLinks from './pages/PromoterLinks';
 import EventNetwork from './pages/EventNetwork';
 import PeopleIveMet from './pages/PeopleIveMet';
 import NetworkHome from './pages/NetworkHome';
@@ -79,6 +81,8 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Discover />} />
             <Route path="/events/:id" element={<PublicEventDetail />} />
+            <Route path="/p/:code" element={<ShortLink />} />
+            <Route path="/promoter" element={<ProtectedRoute><PromoterLinks /></ProtectedRoute>} />
             <Route path="/events/:id/network" element={<ProtectedRoute><EventNetwork /></ProtectedRoute>} />
             <Route path="/events/:id/network/qr/:token" element={<ProtectedRoute><EventNetwork /></ProtectedRoute>} />
             <Route path="/connections" element={<ProtectedRoute><PeopleIveMet /></ProtectedRoute>} />
