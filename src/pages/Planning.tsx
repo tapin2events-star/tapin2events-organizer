@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import NewBoardSheet from '../components/scouting/NewBoardSheet';
 import MeetingsTab from '../components/planning/MeetingsTab';
 import { meetingWhen, type MeetingRow, type PlanTarget, type PollRow } from '../lib/meetings';
 import PlanningTaskSheet from '../components/planning/PlanningTaskSheet';
@@ -79,6 +80,7 @@ export default function Planning() {
   const [taskFilter, setTaskFilter] = useState<'all' | 'mine' | 'overdue' | 'unassigned'>('all');
   const [taskSheet, setTaskSheet] = useState<null | 'new' | PlanTask>(null);
   const [taskMsg, setTaskMsg] = useState<string | null>(null);
+  const [newBoard, setNewBoard] = useState(false);
   const [events, setEvents] = useState<PlanEvent[] | null>(null);
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
@@ -238,11 +240,14 @@ export default function Planning() {
       <section className="mt-8 mb-6">
         <div className="flex items-end justify-between gap-3">
           <h2 className="font-display text-xl font-bold text-bone">Scouting boards</h2>
-          <Link to="/organizer/scouting" className="text-sm font-medium text-marigold">All boards ›</Link>
+          <span className="flex items-center gap-3">
+            <Link to="/organizer/scouting" className="text-sm font-medium text-marigold">All boards ›</Link>
+            <button onClick={() => setNewBoard(true)} className="rounded-xl bg-marigold px-3 py-2 text-sm font-semibold text-white">+ New board</button>
+          </span>
         </div>
         <p className="text-sm text-muted">Keep a running list of artists you'd love to book. When a show takes shape, open the board and choose <strong>Start an event</strong>.</p>
         {shownBoards.length === 0 && scopedBoards.length > 0 ? <p className="mt-3 text-sm text-muted">No boards match.</p> : scopedBoards.length === 0 ? (
-          <Link to="/organizer/scouting" className="mt-3 block rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm font-medium text-marigold">+ Start a scouting board</Link>
+          <button onClick={() => setNewBoard(true)} className="mt-3 block w-full rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm font-medium text-marigold">+ Start a scouting board</button>
         ) : (
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {shownBoards.map((b) => (
@@ -367,6 +372,7 @@ export default function Planning() {
       </section>
       )}
 
+      {newBoard && <NewBoardSheet orgs={orgs} defaultOrgId={scope === 'org' ? scopeOrg?.id ?? '' : ''} onClose={() => setNewBoard(false)} />}
       {taskSheet && (
         <PlanningTaskSheet
           events={taskSheet === 'new' ? taskEvents : [{ id: taskSheet.event_id, title: taskSheet.event_title, start_date: null }]}
