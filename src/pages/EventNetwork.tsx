@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import NetCard from '../components/networking/NetCard';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import QrScanButtons from '../components/networking/QrScanButtons';
 import Sheet from '../components/scouting/Sheet';
@@ -10,7 +11,7 @@ const LOOKING = ['Hiring', 'A new role', 'Partners', 'Clients', 'Mentors', 'Inve
 interface CardInfo { title: string | null; company: string | null; looking_for: string[]; intro: string | null; linkedin: string | null }
 interface Status { enabled: boolean; can_join: boolean; can_manage: boolean; members: number; requests: number; me: (CardInfo & { qr_token: string }) | null; defaults: CardInfo | null }
 interface Scanned { full_name: string | null; photo: string | null; title: string | null; company: string | null; looking_for: string[]; intro: string | null; is_me: boolean; connected: boolean }
-interface Member { member_key: string; full_name: string | null; photo: string | null; title: string | null; company: string | null; looking_for: string[]; intro: string | null; connection: 'none' | 'sent' | 'received' | 'connected'; connection_id: string | null }
+interface Member { member_key: string; full_name: string | null; photo: string | null; title: string | null; company: string | null; looking_for: string[]; intro: string | null; connection: 'none' | 'sent' | 'received' | 'connected'; connection_id: string | null; match_score: number; match_reason: string | null }
 interface Contact { full_name: string | null; photo: string | null; email: string; title: string | null; company: string | null; linkedin: string | null }
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 const errText = (e: { message?: string } | null, fallback: string) => (e?.message && !/function|permission denied|violates/i.test(e.message) ? e.message : fallback);
@@ -132,24 +133,16 @@ export default function EventNetwork() {
       {(status.can_join || joined) && <div className="mt-4"><QrScanButtons name={myName} /></div>}
       {msg && <p role="status" className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
       {token && scanned !== undefined && (
-        <div className="mt-4 rounded-2xl border-2 border-indigo-300 bg-white p-4">
-          {scanned === null ? <p className="text-sm text-muted">This code isn't valid for this event, or you're not going.</p> : (
-            <>
-              <div className="flex items-start gap-3">
-                <Avatar name={scanned.full_name} photo={scanned.photo} size="h-14 w-14" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-lg font-bold text-gray-900">{scanned.full_name || 'TapIN member'}</p>
-                  <p className="text-sm text-gray-600">{[scanned.title, scanned.company].filter(Boolean).join(' · ')}</p>
-                  {scanned.intro && <p className="mt-1 text-sm text-gray-800">{scanned.intro}</p>}
-                </div>
-              </div>
-              <div className="mt-3">
+        <div className="mt-4">
+          {scanned === null ? <p className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-muted">This code isn't valid for this event, or you're not going.</p> : (
+            <div className="mx-auto max-w-sm">
+              <NetCard seed={token} name={scanned.full_name} photo={scanned.photo} title={scanned.title} company={scanned.company} lookingFor={scanned.looking_for} intro={scanned.intro} highlight>
                 {scanned.is_me ? <p className="text-sm text-muted">That's your own code. Show it to someone so they can scan it.</p>
                   : scanned.connected ? <p className="text-sm font-semibold text-green-700">✓ You're already connected.</p>
                   : joined ? <button onClick={connectScanned} className="w-full rounded-xl bg-marigold py-3 text-sm font-bold text-white">🤝 Connect now</button>
-                  : <p className="text-sm text-gray-700">Create your card below, then connect.</p>}
-              </div>
-            </>
+                  : <p className="text-sm text-gray-700">Join the list below, then you'll be connected.</p>}
+              </NetCard>
+            </div>
           )}
         </div>
       )}
@@ -203,32 +196,45 @@ export default function EventNetwork() {
           {people === null ? <ListSkeleton rows={4} className="mt-4" /> : people.length === 0 ? (
             <p className="mt-4 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{q || looking ? 'No one matches.' : 'No one else has joined yet. Check back closer to the event!'}</p>
           ) : (
-            <ul className="mt-4 flex flex-col gap-2">
-              {people.map((m) => (
-                <li key={m.member_key} className={`rounded-2xl border bg-surface p-3 ${m.connection === 'received' ? 'border-indigo-300' : 'border-gray-200'}`}>
-                  <div className="flex items-start gap-3">
-                    <Avatar name={m.full_name} photo={m.photo} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-bone">{m.full_name || 'TapIN member'}</p>
-                      <p className="truncate text-sm text-muted">{[m.title, m.company].filter(Boolean).join(' · ')}</p>
-                      {m.intro && <p className="mt-1 text-sm text-bone">{m.intro}</p>}
-                      {m.looking_for.length > 0 && <p className="mt-1.5 flex flex-wrap gap-1">{m.looking_for.map((l) => <span key={l} className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-700">{l}</span>)}</p>}
+            <>
+              {joined && !q && !looking && (() => {
+                const suggested = people.filter((m) => m.match_score > 0 && m.connection === 'none').sort((a, b) => b.match_score - a.match_score).slice(0, 6);
+                return suggested.length > 0 && (
+                  <section className="mt-5">
+                    <h2 className="font-display text-base font-bold text-bone">✨ Suggested for you</h2>
+                    <div className="-mx-4 mt-2 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:-mx-0 sm:px-0">
+                      {suggested.map((m) => (
+                        <NetCard key={m.member_key} compact seed={m.member_key} name={m.full_name} photo={m.photo} title={m.title} company={m.company} lookingFor={m.looking_for} intro={m.intro} reason={m.match_reason}>
+                          <button onClick={() => setConnectTo(m)} className="w-full rounded-xl bg-marigold py-2.5 text-sm font-semibold text-white">Connect</button>
+                        </NetCard>
+                      ))}
                     </div>
-                  </div>
-                  {joined && (
-                    <div className="mt-2 flex flex-wrap justify-end gap-2">
-                      {m.connection === 'none' && <button onClick={() => setConnectTo(m)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">Connect</button>}
-                      {m.connection === 'sent' && <span className="rounded-xl bg-gray-100 px-4 py-2 text-sm text-gray-600">Requested</span>}
-                      {m.connection === 'received' && <>
-                        <button onClick={() => respond(m, false)} className="rounded-xl px-3 py-2 text-sm text-gray-500">Decline</button>
-                        <button onClick={() => respond(m, true)} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white">Accept</button>
-                      </>}
-                      {m.connection === 'connected' && <button onClick={() => setView('connections')} className="rounded-xl bg-green-50 px-4 py-2 text-sm font-semibold text-green-800">✓ Connected</button>}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
+                  </section>
+                );
+              })()}
+              <h2 className="mt-5 font-display text-base font-bold text-bone">{q || looking ? 'Results' : 'Everyone'}</h2>
+              <ul className="mt-2 grid gap-3 sm:grid-cols-2">
+                {people.map((m) => (
+                  <li key={m.member_key}>
+                    <NetCard seed={m.member_key} name={m.full_name} photo={m.photo} title={m.title} company={m.company} lookingFor={m.looking_for} intro={m.intro}
+                      reason={joined && m.connection === 'none' ? m.match_reason : null} highlight={m.connection === 'received'}>
+                      {m.connection === 'received' && <p className="mb-2 text-xs font-semibold text-indigo-700">Wants to connect with you</p>}
+                      {joined ? (
+                        <div className="flex gap-2">
+                          {m.connection === 'none' && <button onClick={() => setConnectTo(m)} className="flex-1 rounded-xl bg-marigold py-2.5 text-sm font-semibold text-white">Connect</button>}
+                          {m.connection === 'sent' && <span className="flex-1 rounded-xl bg-gray-100 py-2.5 text-center text-sm text-gray-600">Requested</span>}
+                          {m.connection === 'received' && <>
+                            <button onClick={() => respond(m, false)} className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-600">Decline</button>
+                            <button onClick={() => respond(m, true)} className="flex-1 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white">Accept</button>
+                          </>}
+                          {m.connection === 'connected' && <button onClick={() => setView('connections')} className="flex-1 rounded-xl bg-green-50 py-2.5 text-sm font-semibold text-green-800">✓ Connected</button>}
+                        </div>
+                      ) : null}
+                    </NetCard>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </>
       )}

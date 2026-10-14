@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NetworkingSwitch } from '../components/business/NetworkingCards';
 import InvoicesSection from '../components/business/InvoicesSection';
 import DonationsTab from '../components/business/DonationsTab';
 import RegistrationTab from '../components/business/RegistrationTab';
@@ -57,6 +58,7 @@ export default function EventDetail() {
   const limitedTabs: Record<string, readonly string[]> = { helper: ['Overview', 'Team & tasks'], vendor_manager: ['Overview', 'Vendor applications', 'Team & tasks'] };
   const businessOn = useFeature('business');
   const invoicesOn = useFeature('invoices');
+  const networkingOn = useFeature('networking');
   const visibleTabs = TABS.filter((t) => (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
@@ -274,6 +276,7 @@ export default function EventDetail() {
         ))}
       </div>
 
+      {tab === 'Overview' && networkingOn && (isOwner || teamRole === 'admin' || teamRole === 'editor' || !teamRole) && <NetworkingSwitch eventId={event.id} eventTitle={event.title} />}
       {tab === 'Overview' && <OverviewTab event={event} />}
       {tab === 'Business page' && <BusinessPageTab event={event} onEventChange={setEvent} />}
       {tab === 'Tickets' && <TiersTab event={event} />}
