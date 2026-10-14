@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import OrgPageSectionsTab from '../../components/business/OrgPageSectionsTab';
 import OrgNewsletterTab from '../../components/business/OrgNewsletterTab';
 import { useFeature } from '../../lib/preview';
 import { OrgAttendees, OrgPromoteTab, OrgSales, useOrgAttendance } from '../../components/business/OrgInsights';
@@ -15,8 +16,8 @@ import BusinessGate from '../../components/business/BusinessGate';
 import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
-type Tab = 'Profile' | 'Brand kit' | 'Photos' | 'Team' | 'Events' | 'Promote' | 'Newsletter' | 'Payouts';
-const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Photos: '🖼️', Team: '👥', Events: '📅', Promote: '📣', Newsletter: '📧', Payouts: '💳' };
+type Tab = 'Profile' | 'Brand kit' | 'Page' | 'Photos' | 'Team' | 'Events' | 'Promote' | 'Newsletter' | 'Payouts';
+const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Page: '🧩', Photos: '🖼️', Team: '👥', Events: '📅', Promote: '📣', Newsletter: '📧', Payouts: '💳' };
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -31,9 +32,10 @@ function OrgManageInner() {
   const insightsOn = useFeature('org_insights');
   const newsletterOn = useFeature('newsletters');
   const isLead = role === 'owner' || role === 'admin';
-  const tabList = (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead && newsletterOn ? ['Newsletter'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
+  const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
+  const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Photos', 'Team', 'Events', ...(isLead && insightsOn ? ['Promote'] : []), ...(isLead && newsletterOn ? ['Newsletter'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
   const tabLabel = (t: Tab) => (t === 'Payouts' && insightsOn ? 'Sales & payouts' : t);
-  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Photos', 'Team', 'Events', 'Promote', 'Newsletter', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
+  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.search).get('tab'); return (['Profile', 'Brand kit', 'Page', 'Photos', 'Team', 'Events', 'Promote', 'Newsletter', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -115,6 +117,7 @@ function OrgManageInner() {
         {tab === 'Profile' && role === 'owner' && org.status !== 'deleted' && <DangerZone orgId={org.id} orgName={org.name} />}
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
+        {tab === 'Page' && canEditPage && <OrgPageSectionsTab orgId={org.id} slug={org.slug} />}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} />}
         {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}
         {tab === 'Newsletter' && isLead && newsletterOn && <OrgNewsletterTab orgId={org.id} orgName={org.name} />}

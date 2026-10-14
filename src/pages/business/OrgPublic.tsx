@@ -89,6 +89,7 @@ function OrgPublicInner() {
             ))}
           </div>
         )}
+        <OrgSections orgId={org.id} accent={b.accent} dark={dark} />
         <OrgGallery orgId={org.id} accent={b.accent} dark={dark} />
         <PastEvents orgId={org.id} accent={b.accent} dark={dark} />
       </div>
@@ -156,5 +157,63 @@ function PastEvents({ orgId, accent, dark }: { orgId: string; accent: string; da
         ))}
       </div>
     </section>
+  );
+}
+
+// Our artists, Videos and Shop, chosen in the organization's Page settings.
+function OrgSections({ orgId, accent, dark }: { orgId: string; accent: string; dark: boolean }) {
+  const [s, setS] = useState<{ artists: { id: string; name: string; photo: string | null; categories: string[] | null; city: string | null }[]; videos: { id: string; thumbnail: string | null; caption: string | null; author: string | null }[]; products: { id: string; name: string; price: number; image: string | null; seller: string | null }[] } | null>(null);
+  useEffect(() => { supabase.rpc('org_page_sections', { p_org_id: orgId }).then(({ data }) => setS((data ?? null) as typeof s)); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!s) return null;
+  const card = dark ? '#111827' : '#FFFFFF';
+  const line = dark ? '#1F2937' : '#E5E7EB';
+  return (
+    <>
+      {s.artists.length > 0 && (
+        <section className="pb-10">
+          <h2 className="text-xl font-bold">Our artists</h2>
+          <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+            {s.artists.map((a) => (
+              <Link key={a.id} to={`/resources/${a.id}`} className="w-36 shrink-0 snap-start rounded-2xl border p-3 text-center" style={{ background: card, borderColor: line }}>
+                {a.photo ? <img src={a.photo} alt="" className="mx-auto h-20 w-20 rounded-full object-cover" /> : <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white" style={{ background: accent }}>{a.name.charAt(0)}</span>}
+                <p className="mt-2 truncate text-sm font-semibold">{a.name}</p>
+                <p className="truncate text-xs opacity-70">{(a.categories ?? []).slice(0, 2).join(' · ') || a.city || 'Artist'}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+      {s.videos.length > 0 && (
+        <section className="pb-10">
+          <h2 className="text-xl font-bold">Videos</h2>
+          <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+            {s.videos.map((v) => (
+              <Link key={v.id} to={`/feed?post=${v.id}`} className="relative w-36 shrink-0 snap-start overflow-hidden rounded-2xl" aria-label={v.caption || 'Play video'}>
+                {v.thumbnail ? <img src={v.thumbnail} alt="" className="aspect-[9/16] w-full object-cover" loading="lazy" /> : <span className="flex aspect-[9/16] w-full items-center justify-center bg-gray-800 text-3xl">🎬</span>}
+                <span className="absolute inset-0 flex items-center justify-center"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-lg text-white">▶</span></span>
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-[11px] leading-tight text-white">{v.caption ? v.caption.slice(0, 60) : v.author}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+      {s.products.length > 0 && (
+        <section className="pb-10">
+          <h2 className="text-xl font-bold">Shop</h2>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {s.products.map((p) => (
+              <Link key={p.id} to={`/products/${p.id}`} className="overflow-hidden rounded-2xl border" style={{ background: card, borderColor: line }}>
+                {p.image ? <img src={p.image} alt="" className="aspect-square w-full object-cover" loading="lazy" /> : <span className="flex aspect-square w-full items-center justify-center text-3xl" style={{ background: line }}>🛍️</span>}
+                <div className="p-3">
+                  <p className="truncate text-sm font-semibold">{p.name}</p>
+                  <p className="text-sm font-bold" style={{ color: accent }}>${Number(p.price).toFixed(2).replace(/\.00$/, '')}</p>
+                  {p.seller && <p className="truncate text-xs opacity-70">by {p.seller}</p>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
   );
 }
