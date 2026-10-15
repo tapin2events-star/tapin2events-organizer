@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import PageLoading from './PageLoading';
+import { prefetchCommonPages } from '../lib/prefetch';
 import { claimLinkVisits } from '../lib/linkTracking';
 import { scrollPageToTop } from '../lib/scroll';
 import { useFeature } from '../lib/preview';
@@ -41,6 +43,8 @@ export default function Layout() {
   const { user, isAdmin, signOut } = useAuth();
   // Visits from promotion links made before signing in get attached to the account.
   useEffect(() => { if (user) claimLinkVisits(); }, [user]);
+  // After TapIN opens, quietly load the most-used pages so tapping into them is instant.
+  useEffect(() => { prefetchCommonPages(); }, []);
   const businessOn = useFeature('business');
   const networkingOn = useFeature('networking');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -181,7 +185,7 @@ export default function Layout() {
       </aside>
 
       <main className="min-w-0 flex-1 px-4 py-6 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:px-8 md:py-8 md:pt-8 md:pb-8">
-        <Outlet />
+        <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
         <ScrollToTop />
       </main>
 
