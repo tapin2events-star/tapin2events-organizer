@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
+  volunteers: { name: 'Volunteer shifts', description: 'Volunteers tab on the event dashboard (shifts, spots, sign-ups, waitlist, check-in, export) and a Volunteer card on the event page (sign up, waitlist, cancel, day-before reminder).', status: 'preview' },
   newsletters: { name: 'Newsletters', description: 'Organization newsletters: an audience of past attendees, followers and imported contacts (CSV or pasted), emails with an event card, promo code and tracked link, test sends, per-organization unsubscribe, and clicks/ticket sales per email.', status: 'preview' },
   business_plan_page: { name: 'Business plan page', description: 'The "Business plan, coming soon" page (/business/plan) with planned premium features, free-forever features, and founding-price reservations, linked from TapIN for Business and Sales & payouts.', status: 'live' },
   org_insights: { name: 'Organization insights', description: 'In organization settings: a Promote tab (links, promoters and boosts across events), attendee counts and an All attendees list (CSV) on Events, and sales across events in Sales & payouts.', status: 'live' },
