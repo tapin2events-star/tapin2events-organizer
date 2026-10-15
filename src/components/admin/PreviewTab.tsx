@@ -6,7 +6,11 @@ import { FEATURES, usePreviewMode } from '../../lib/preview';
 
 // Where each preview feature lives (Open › links). eventTab: a tab on one of your events (test events first,
 // preferring one whose title includes "match"); business: only business/nonprofit events; orgTab: organization settings.
-const OPEN: Record<string, { path?: string; eventTab?: string; business?: boolean; match?: string; orgTab?: string }> = {
+const OPEN: Record<string, { path?: string; eventTab?: string; business?: boolean; org?: boolean; match?: string; orgTab?: string }> = {
+  white_label: { eventTab: 'Overview', org: true, match: 'workshop' },
+  promoter_payouts: { eventTab: 'Promote' },
+  featured_perk: { path: '/' },
+  splits: { eventTab: 'Sales' },
   billing: { path: '/business/plan#get-plan' },
   gala: { eventTab: 'Gala', match: 'gala' },
   program_v2: { eventTab: 'Business page', business: true, match: 'workshop' },
@@ -32,17 +36,17 @@ export default function PreviewTab() {
   }, []);
   const previewList = Object.entries(FEATURES).filter(([, f]) => f.status === 'preview');
   // Where to try each feature: a page, a tab on one of your events, or a tab in your organization's settings.
-  const [mine, setMine] = useState<{ events: { id: string; title: string; event_kind: string | null; is_test: boolean }[]; org: { slug: string; name: string } | null } | null>(null);
+  const [mine, setMine] = useState<{ events: { id: string; title: string; event_kind: string | null; is_test: boolean; organization_id: string | null }[]; org: { slug: string; name: string } | null } | null>(null);
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       const email = u.user?.email ?? '';
       const [{ data: ev }, { data: orgs }] = await Promise.all([
-        supabase.from('events').select('id, title, event_kind, is_test').ilike('organizer_email', email).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(40),
+        supabase.from('events').select('id, title, event_kind, is_test, organization_id').ilike('organizer_email', email).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(40),
         supabase.rpc('my_organizations'),
       ]);
       const lead = ((orgs ?? []) as { slug: string; name: string; role: string; status?: string }[]).find((o) => (o.role === 'owner' || o.role === 'admin') && o.status !== 'deleted');
-      setMine({ events: (ev ?? []) as { id: string; title: string; event_kind: string | null; is_test: boolean }[], org: lead ? { slug: lead.slug, name: lead.name } : null });
+      setMine({ events: (ev ?? []) as { id: string; title: string; event_kind: string | null; is_test: boolean; organization_id: string | null }[], org: lead ? { slug: lead.slug, name: lead.name } : null });
     })();
   }, []);
   function openFor(key: string): { to: string; note: string } | null {
@@ -50,7 +54,7 @@ export default function PreviewTab() {
     if (!o || !mine) return null;
     if (o.path) return { to: o.path, note: '' };
     if (o.orgTab) return mine.org ? { to: `/business/${mine.org.slug}/manage?tab=${encodeURIComponent(o.orgTab)}`, note: mine.org.name } : null;
-    const pool = mine.events.filter((e) => !o.business || e.event_kind === 'business' || e.event_kind === 'nonprofit');
+    const pool = mine.events.filter((e) => (!o.business || e.event_kind === 'business' || e.event_kind === 'nonprofit') && (!o.org || !!e.organization_id));
     const pick = pool.find((e) => e.is_test && o.match && e.title.toLowerCase().includes(o.match)) ?? pool.find((e) => e.is_test) ?? pool[0];
     return pick ? { to: `/organizer/events/${pick.id}?tab=${encodeURIComponent(o.eventTab ?? 'Overview')}`, note: pick.title } : null;
   }
@@ -83,7 +87,7 @@ export default function PreviewTab() {
                       {open && <Link to={open.to} onClick={() => { if (!enabled) setEnabled(true); }} className="shrink-0 rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white">Open ›</Link>}
                     </div>
                     {open?.note && <p className="mt-1 text-[11px] text-gray-400">Opens in: {open.note}</p>}
-                    {!open && mine && OPEN[k] && !OPEN[k].path && <p className="mt-1 text-[11px] text-gray-400">{OPEN[k].orgTab ? 'Create an organization to try this.' : OPEN[k].business ? 'Create a business or nonprofit event (or a test one) to try this.' : 'Create an event (or a test one) to try this.'}</p>}
+                    {!open && mine && OPEN[k] && !OPEN[k].path && <p className="mt-1 text-[11px] text-gray-400">{OPEN[k].orgTab ? 'Create an organization to try this.' : OPEN[k].org ? 'Create an event hosted by your organization (or a test one) to try this.' : OPEN[k].business ? 'Create a business or nonprofit event (or a test one) to try this.' : 'Create an event (or a test one) to try this.'}</p>}
                   </li>
                 );
               })}
