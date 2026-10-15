@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MerchAddOns, { type AddOnPick } from '../components/events/MerchAddOns';
 import GalaGuestCard from '../components/events/GalaGuestCard';
 import VolunteerCard from '../components/events/VolunteerCard';
 import { recordLinkVisit } from '../lib/linkTracking';
@@ -34,6 +35,7 @@ import CommunityPosts from '../components/discover/CommunityPosts';
 import { EventPageSkeleton } from '../components/ui/Skeleton';
 
 export default function PublicEventDetail() {
+  const [addOns, setAddOns] = useState<AddOnPick[]>([]);
   const volunteersOn = useFeature('volunteers');
   const galaOn = useFeature('gala');
   // Promotion links: arriving with ?src=<code> records a visit for that link.
@@ -269,6 +271,7 @@ export default function PublicEventDetail() {
     const { data, error } = await supabase.functions.invoke('create-stripe-checkout', {
       body: {
         event_id: id,
+        add_ons: addOns,
         successUrl: `${base}events/${id}?checkout=success`,
         cancelUrl: `${base}events/${id}?checkout=cancelled`,
       },
@@ -276,7 +279,9 @@ export default function PublicEventDetail() {
 
     setRegistering(false);
     if (error || !data?.url) {
-      setRegisterError('Something went wrong starting checkout. Please try again.');
+      let msg = 'Something went wrong starting checkout. Please try again.';
+      try { const j = await (error as { context?: Response })?.context?.json(); if (j?.error && !/stripe|unauthorized/i.test(j.error)) msg = j.error; } catch { /* keep default */ }
+      setRegisterError(msg);
       return;
     }
     window.location.href = data.url;
@@ -735,6 +740,7 @@ export default function PublicEventDetail() {
               <p className="text-sm font-medium text-gray-400">This event is full.</p>
             ) : (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                {!isFree && <div className="w-full sm:max-w-sm"><MerchAddOns eventId={event.id} value={addOns} onChange={setAddOns} accent={biz.org?.brand.accent} /></div>}
                 <button
                   onClick={async () => { if ((await beforeContinue(null)) === 'stop') return; if (isFree) handleRegister(); else handleBuyTicket(); }}
                   disabled={registering || isPreview || hasEnded}

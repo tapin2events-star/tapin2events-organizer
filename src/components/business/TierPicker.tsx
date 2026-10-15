@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import MerchAddOns, { type AddOnPick } from '../events/MerchAddOns';
 import { donationFee } from '../../lib/donations';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -22,6 +23,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   const location = useLocation();
   const [qty, setQty] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [addOns, setAddOns] = useState<AddOnPick[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Promo code
   const [codeOpen, setCodeOpen] = useState(false);
@@ -60,7 +62,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   const giftOk = !!donation && giftValue >= (donation?.min ?? 5);
   const giftFee = giftOk ? donationFee(giftValue, paidCount > 0) : 0;
   const giftCharge = giftOk ? giftValue + (giftCover ? giftFee : 0) : 0;
-  const allFree = chosen.length > 0 && chosen.every((t) => priceOf(t) === 0) && !giftOk;
+  const allFree = (chosen.length > 0 && chosen.every((t) => priceOf(t) === 0) && !giftOk) && addOns.length === 0;
   const anyOnSale = useMemo(() => tiers.some((t) => t.status === 'on_sale'), [tiers]);
 
   function step(t: TierAvail, d: number) {
@@ -89,7 +91,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
     }
     const base = window.location.origin + import.meta.env.BASE_URL;
     const { data, error: err } = await supabase.functions.invoke('create-tier-checkout', {
-      body: { event_id: eventId, items, promo_code: promo?.code ?? null, donation: giftOk ? { amount: Math.round(giftValue * 100) / 100, cover_fees: giftCover } : null, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
+      body: { event_id: eventId, items, promo_code: promo?.code ?? null, donation: giftOk ? { amount: Math.round(giftValue * 100) / 100, cover_fees: giftCover } : null, add_ons: addOns, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
     });
     setBusy(false);
     if (err || !data?.url) {
@@ -189,10 +191,11 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
         )}
         {codeMsg && <p role="alert" className="mt-1 text-sm text-magenta">{codeMsg}</p>}
       </div>
+      {count > 0 && !disabledReason && <MerchAddOns eventId={eventId} value={addOns} onChange={setAddOns} accent={accent} />}
       {error && <p role="alert" className="mt-2 text-sm text-magenta">{error}</p>}
       <button type="button" onClick={go} disabled={busy || count === 0 || !!disabledReason || !anyOnSale}
         className={`mt-3 w-full rounded-xl px-5 py-3 text-sm font-bold disabled:opacity-50 ${btnColor ? '' : 'bg-gradient-to-r from-marigold to-teal text-white'}`} style={btnColor}>
-        {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : `Checkout · ${money(subtotal + fees + giftCharge)}`}
+        {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : (addOns.length ? 'Checkout with merch' : `Checkout · ${money(subtotal + fees + giftCharge)}`)}
       </button>
       {!user && <p className="mt-2 text-center text-xs text-gray-500">Already have an account? <Link to="/login" className="text-marigold">Sign in</Link></p>}
     </div>

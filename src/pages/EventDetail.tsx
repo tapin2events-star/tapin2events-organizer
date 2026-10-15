@@ -311,6 +311,7 @@ export default function EventDetail() {
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (
         <>
+          <p className="mb-4 rounded-xl bg-indigo-50 px-3 py-2 text-sm text-indigo-900">🛍️ Merch with <strong>pickup</strong> turned on also shows as an <strong>Add merch</strong> option at ticket checkout, so buyers can grab it with their tickets and pick it up at the event.</p>
           <ProductManager ownerType="event" ownerId={id} sellerEmail={event.organizer_email} />
           <ProductOrdersPanel ownerType="event" ownerId={id} />
         </>
