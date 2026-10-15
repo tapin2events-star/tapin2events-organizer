@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useMemo, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 
@@ -39,6 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
+  // Screens reload their data when "user" changes, so keep the same object for the same person.
+  const stableUser = useMemo(() => session?.user ?? null, [session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -51,7 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // report a null session before resolving back to the same user. Only
     // an explicit SIGNED_OUT should be treated as a real logout below.
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
-      setSession(newSession);
+      // Never treat a momentary empty session (during a token refresh, or when the app comes back
+      // from the background) as a sign-out: that used to bounce people to the login screen and back,
+      // which looked like a random refresh and wiped what they were typing.
+      if (!newSession && event !== 'SIGNED_OUT') return;
+      setSession((prev) => (prev && newSession && prev.user?.id === newSession.user?.id && event === 'TOKEN_REFRESHED' ? { ...newSession, user: prev.user } : newSession));
       // "Forgot password" sign-ins that come back through the email link (not the
       // typed code) still land on the set-a-new-password form.
       if (event === 'SIGNED_IN' && newSession) {
@@ -139,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, loading, isAdmin, adminChecked, sendCode, verifyCode, signInWithPassword, signOut }}
+      value={{ session, user: stableUser, loading, isAdmin, adminChecked, sendCode, verifyCode, signInWithPassword, signOut }}
     >
       {children}
     </AuthContext.Provider>

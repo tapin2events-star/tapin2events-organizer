@@ -49,3 +49,6 @@ input[type='datetime-local']::-webkit-datetime-edit {
   padding: 0;
   max-width: 100%;
 }
+
+/* No accidental browser pull-to-refresh when scrolling up at the top of a page on phones. */
+html, body { overscroll-behavior-y: none; }

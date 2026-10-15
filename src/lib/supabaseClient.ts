@@ -9,4 +9,7 @@ if (!supabaseUrl || !supabaseKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Stay signed in across visits and refresh sign-in quietly in the background.
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});

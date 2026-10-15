@@ -1,4 +1,6 @@
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
+import lazyWithRetry from './lib/lazyWithRetry';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import BusinessPlanGate from './pages/business/BusinessPlanGate';
 import ActivityRedirect from './components/ActivityRedirect';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -56,17 +58,17 @@ import AdminDashboard from './pages/AdminDashboard';
 
 // Only organizers checking guests in ever need this, and its QR-scanning
 // library is large — code-split it so public visitors never download it.
-const CheckIn = lazy(() => import('./pages/CheckIn'));
+const CheckIn = lazyWithRetry(() => import('./pages/CheckIn'));
 // Feed pulls in hls.js for cross-browser video playback -- a meaningfully
 // large library that visitors who never open the feed shouldn't have to
 // download as part of the app's main bundle.
-const Feed = lazy(() => import('./pages/Feed'));
+const Feed = lazyWithRetry(() => import('./pages/Feed'));
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <Routes>
+        <AppErrorBoundary><Routes>
           <Route path="/login" element={<Login />} />
           <Route
             path="/feed"
@@ -143,7 +145,7 @@ export default function App() {
             />
             <Route path="/organizer/events/:id/edit" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
           </Route>
-        </Routes>
+        </Routes></AppErrorBoundary>
       </BrowserRouter>
     </AuthProvider>
   );
