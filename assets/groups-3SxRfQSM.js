@@ -1,0 +1,1 @@
+import{t as e}from"./supabaseClient-DzMEXVqn.js";var t={owner:`Owner`,admin:`Admin`,member:`Member`};function n(e,t=`Something went wrong. Please try again.`){let n=e?.message??``;return n&&!/violates|permission denied|syntax|function/i.test(n)?n:t}async function r(t){let{data:n}=await e.rpc(`groups_of`,{p_email:t});return n??[]}export{r as n,n as r,t};

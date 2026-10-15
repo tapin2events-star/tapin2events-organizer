@@ -1,0 +1,1 @@
+async function e(e,t=`Something went wrong. Please try again.`){try{let t=await e.context?.json();if(t?.error)return{message:String(t.error),code:t.code}}catch{}return{message:t}}export{e as t};
