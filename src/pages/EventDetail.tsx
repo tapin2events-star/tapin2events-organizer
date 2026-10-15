@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import GalaTab from '../components/tabs/GalaTab';
 import VolunteersTab from '../components/tabs/VolunteersTab';
 import AttendeesTab from '../components/tabs/AttendeesTab';
 import FeatureFeedback from '../components/feedback/FeatureFeedback';
@@ -32,7 +33,7 @@ import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
 // Ordered by how often organizers use them: daily checks first, then running the event, then setup.
-const TABS = ['Overview', 'Sales', 'Attendees', 'Messages', 'Promote', 'Team & tasks', 'Volunteers', 'Lineup & bookings', 'Tickets', 'Registration', 'Products', 'Donations', 'Vendor applications', 'Business page'] as const;
+const TABS = ['Overview', 'Sales', 'Attendees', 'Messages', 'Promote', 'Team & tasks', 'Volunteers', 'Gala', 'Lineup & bookings', 'Tickets', 'Registration', 'Products', 'Donations', 'Vendor applications', 'Business page'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -66,8 +67,9 @@ export default function EventDetail() {
   const networkingOn = useFeature('networking');
   const promoteOn = useFeature('promote');
   const volunteersOn = useFeature('volunteers');
+  const galaOn = useFeature('gala');
   const programOn = useFeature('program_v2');
-  const visibleTabs = TABS.filter((t) => (t !== 'Volunteers' || volunteersOn) && (t !== 'Promote' || promoteOn) && (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
+  const visibleTabs = TABS.filter((t) => (t !== 'Gala' || galaOn) && (t !== 'Volunteers' || volunteersOn) && (t !== 'Promote' || promoteOn) && (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
     (async () => {
@@ -295,6 +297,7 @@ export default function EventDetail() {
       {tab === 'Lineup & bookings' && <LineupWithScouting event={event} isOwner={isOwner} eventId={id!} initialView={tabParam === 'Bookings' ? 'bookings' : undefined} />}
       {tab === 'Promote' && promoteOn && <PromoteTab eventId={id!} />}
       {tab === 'Volunteers' && volunteersOn && <VolunteersTab event={event} />}
+      {tab === 'Gala' && galaOn && <GalaTab event={event} />}
       {tab === 'Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
         <div className="mb-8"><InvoicesSection eventId={id!} ticketPrice={0} sections={(event.seating_sections ?? []).map((s) => ({ name: s.name, price: Number(s.price) || 0, seats: (s.num_tables ?? 0) * (s.seats_per_table ?? 0) }))} /></div>
       )}

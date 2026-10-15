@@ -48,6 +48,7 @@ export default function TicketPass() {
   const { user } = useAuth();
   const invoicesOn = useFeature('invoices');
   const networkingOn = useFeature('networking');
+  const galaOn = useFeature('gala');
   const [net, setNet] = useState<{ enabled: boolean; members: number; me: object | null; requests: number } | null>(null);
   const [cancelledNow, setCancelledNow] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -224,6 +225,7 @@ export default function TicketPass() {
             </button>
           </div>
         )}
+        {galaOn && <GalaInfo eventId={ticket.event_id} />}
         <NetworkingButton on={networkingOn} eventId={ticket.event_id} net={net} setNet={setNet} />
         {invoicesOn && user?.email?.toLowerCase() === ticket.attendee_email.toLowerCase() && Number(ticket.price_paid ?? 0) > 0 && (
           <div className="mt-3 text-center print:hidden">
@@ -264,6 +266,19 @@ function NetworkingButton({ on, eventId, net, setNet }: { on: boolean; eventId: 
       <Link to={`/events/${eventId}/network`} className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
         🤝 Networking · {net.members} {net.members === 1 ? 'person' : 'people'}{net.requests ? ` · ${net.requests} new` : ''}{!net.me ? ' · Join' : ''}
       </Link>
+    </div>
+  );
+}
+
+// Gala (Preview): the guest's table and paddle number.
+function GalaInfo({ eventId }: { eventId: string }) {
+  const [info, setInfo] = useState<{ table: string | null; paddle: number | null } | null>(null);
+  useEffect(() => { supabase.rpc('my_gala_info', { p_event_id: eventId }).then(({ data }) => setInfo((data ?? null) as typeof info)); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!info || (!info.table && !info.paddle)) return null;
+  return (
+    <div className="mt-3 flex justify-center gap-2 print:hidden">
+      {info.table && <span className="rounded-2xl bg-gray-900 px-4 py-2 text-center text-white"><span className="block text-[10px] uppercase tracking-widest opacity-75">Table</span><span className="block text-lg font-extrabold">{info.table}</span></span>}
+      {info.paddle && <span className="rounded-2xl bg-emerald-600 px-4 py-2 text-center text-white"><span className="block text-[10px] uppercase tracking-widest opacity-80">Paddle</span><span className="block text-lg font-extrabold">#{info.paddle}</span></span>}
     </div>
   );
 }

@@ -5,11 +5,11 @@ import Sheet from '../scouting/Sheet';
 import { ListSkeleton } from '../ui/Skeleton';
 import PremiumBadge from './PremiumBadge';
 
-interface Counts { total: number; attendees: number; followers: number; imported: number; volunteers?: number; sendable: number; unsubscribed: number }
+interface Counts { total: number; attendees: number; followers: number; imported: number; volunteers?: number; donors?: number; sendable: number; unsubscribed: number }
 interface Person { email: string; name: string | null; photo: string | null; sources: string[]; can_email: boolean; events: number; spent: number; last_event: string | null; last_date: string | null; shifts?: number }
 interface Campaign { id: string; subject: string; body: string; event_id: string | null; event_title: string | null; promo_code: string | null; audience: string; status: 'draft' | 'sending' | 'sent' | 'failed'; mode: string | null; recipients: number; sent: number; error: string | null; created_at: string; sent_at: string | null; clicks: number; tickets: number }
 const AUDIENCES = [{ id: 'all', label: 'Everyone' }, { id: 'attendees', label: 'Past attendees' }, { id: 'followers', label: 'Followers' }, { id: 'imported', label: 'Imported contacts' }, { id: 'volunteers', label: 'Volunteers' }] as const;
-const SOURCE: Record<string, string> = { attendee: 'Attended', follower: 'Follows', imported: 'Imported', volunteer: 'Volunteered' };
+const SOURCE: Record<string, string> = { attendee: 'Attended', follower: 'Follows', imported: 'Imported', volunteer: 'Volunteered', donor: 'Donated' };
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 const errMsg = async (error: unknown, fallback: string) => {
   try { const j = await (error as { context?: Response })?.context?.json(); if (j?.error) return String(j.error); } catch { /* default */ }
@@ -46,7 +46,7 @@ function contactsFrom(text: string): { email: string; name: string }[] {
   return text.split(/[\s,;]+/).map((s) => s.trim().replace(/^<|>$/g, '')).filter((s) => EMAIL.test(s)).map((email) => ({ email, name: '' }));
 }
 
-const FILTERS = [{ id: 'all', label: 'Everyone' }, { id: 'attendee', label: 'Attended' }, { id: 'follower', label: 'Follows' }, { id: 'volunteer', label: 'Volunteered' }, { id: 'imported', label: 'Imported' }] as const;
+const FILTERS = [{ id: 'all', label: 'Everyone' }, { id: 'attendee', label: 'Attended' }, { id: 'follower', label: 'Follows' }, { id: 'volunteer', label: 'Volunteered' }, { id: 'donor', label: 'Donated' }, { id: 'imported', label: 'Imported' }] as const;
 const money = (n: number) => `$${(Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
 
@@ -145,7 +145,7 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
       {/* People */}
       <section className="mt-6">
         <div className="flex flex-wrap gap-1.5">
-          {FILTERS.filter((f) => (f.id !== 'imported' || newsletterOn || (counts?.imported ?? 0) > 0) && (f.id !== 'volunteer' || (counts?.volunteers ?? 0) > 0)).map((f) => (
+          {FILTERS.filter((f) => (f.id !== 'imported' || newsletterOn || (counts?.imported ?? 0) > 0) && (f.id !== 'volunteer' || (counts?.volunteers ?? 0) > 0) && (f.id !== 'donor' || (counts?.donors ?? 0) > 0)).map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${filter === f.id ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>{f.label}</button>
           ))}
         </div>

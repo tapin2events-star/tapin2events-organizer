@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
+  gala: { name: 'Gala tools', description: 'Gala tab on the event dashboard: tables (add in bulk, seat parties by hand or auto-seat, seating chart download; shows reserved-seating tables for seated events), paddle numbers, paddle raise with running total; guests see table and paddle on their ticket; donors in the organization Audience.', status: 'preview' },
   program_v2: { name: 'Program tab', description: 'The redesigned Business page tab: one Program page with a checklist, visual agenda timeline, quick add (session, workshop, break), duplicate, sample schedules, sign-up rules next to workshops, and a speaker library from the organization\'s People.', status: 'preview' },
   workshops: { name: 'Workshop sign-ups', description: 'Agenda sessions people sign up for: seats, waitlist, ticket-holders-only and overlap rules, per-session lists with check-in, reminders before sessions, sessions shown in Attendees.', status: 'preview' },
   volunteers: { name: 'Volunteer shifts', description: 'Volunteers tab on the event dashboard (shifts, spots, sign-ups, waitlist, check-in, export) and a Volunteer card on the event page (sign up, waitlist, cancel, day-before reminder).', status: 'preview' },
