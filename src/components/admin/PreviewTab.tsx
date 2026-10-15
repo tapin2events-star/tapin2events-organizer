@@ -4,6 +4,24 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { FEATURES, usePreviewMode } from '../../lib/preview';
 
+// Where each preview feature lives (Open › links). eventTab: a tab on one of your events (test events first,
+// preferring one whose title includes "match"); business: only business/nonprofit events; orgTab: organization settings.
+const OPEN: Record<string, { path?: string; eventTab?: string; business?: boolean; match?: string; orgTab?: string }> = {
+  billing: { path: '/business/plan#get-plan' },
+  gala: { eventTab: 'Gala', match: 'gala' },
+  program_v2: { eventTab: 'Business page', business: true, match: 'workshop' },
+  workshops: { eventTab: 'Business page', business: true, match: 'workshop' },
+  volunteers: { eventTab: 'Volunteers', match: 'volunteer' },
+  newsletters: { orgTab: 'Audience' },
+  promote: { eventTab: 'Promote' },
+  networking: { path: '/network' },
+  templates: { path: '/organizer/events/new' },
+  invoices: { eventTab: 'Sales' },
+  org_insights: { orgTab: 'Audience' },
+  profile_qr: { path: '/profile' },
+  business_plan_page: { path: '/business/plan' },
+};
+
 // Admin > Preview: try new features before anyone else, and manage private test events.
 export default function PreviewTab() {
   const { enabled, setEnabled } = usePreviewMode();
@@ -13,6 +31,29 @@ export default function PreviewTab() {
       .then(({ data }) => setTests((data ?? []) as { id: string; title: string; start_date: string | null; status: string }[]));
   }, []);
   const previewList = Object.entries(FEATURES).filter(([, f]) => f.status === 'preview');
+  // Where to try each feature: a page, a tab on one of your events, or a tab in your organization's settings.
+  const [mine, setMine] = useState<{ events: { id: string; title: string; event_kind: string | null; is_test: boolean }[]; org: { slug: string; name: string } | null } | null>(null);
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const email = u.user?.email ?? '';
+      const [{ data: ev }, { data: orgs }] = await Promise.all([
+        supabase.from('events').select('id, title, event_kind, is_test').ilike('organizer_email', email).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(40),
+        supabase.rpc('my_organizations'),
+      ]);
+      const lead = ((orgs ?? []) as { slug: string; name: string; role: string; status?: string }[]).find((o) => (o.role === 'owner' || o.role === 'admin') && o.status !== 'deleted');
+      setMine({ events: (ev ?? []) as { id: string; title: string; event_kind: string | null; is_test: boolean }[], org: lead ? { slug: lead.slug, name: lead.name } : null });
+    })();
+  }, []);
+  function openFor(key: string): { to: string; note: string } | null {
+    const o = OPEN[key];
+    if (!o || !mine) return null;
+    if (o.path) return { to: o.path, note: '' };
+    if (o.orgTab) return mine.org ? { to: `/business/${mine.org.slug}/manage?tab=${encodeURIComponent(o.orgTab)}`, note: mine.org.name } : null;
+    const pool = mine.events.filter((e) => !o.business || e.event_kind === 'business' || e.event_kind === 'nonprofit');
+    const pick = pool.find((e) => e.is_test && o.match && e.title.toLowerCase().includes(o.match)) ?? pool.find((e) => e.is_test) ?? pool[0];
+    return pick ? { to: `/organizer/events/${pick.id}?tab=${encodeURIComponent(o.eventTab ?? 'Overview')}`, note: pick.title } : null;
+  }
 
   return (
     <div className="mt-6 flex max-w-3xl flex-col gap-6">
@@ -33,7 +74,19 @@ export default function PreviewTab() {
             <p className="mt-2 text-sm text-muted">Nothing in preview right now. When a new feature is ready for you to try first, it'll be listed here.</p>
           ) : (
             <ul className="mt-2 flex flex-col gap-2">
-              {previewList.map(([k, f]) => <li key={k} className="rounded-xl border border-gray-200 bg-white p-3"><p className="text-sm font-medium text-gray-900">{f.name}</p><p className="text-xs text-gray-500">{f.description}</p></li>)}
+              {previewList.map(([k, f]) => {
+                const open = openFor(k);
+                return (
+                  <li key={k} className="rounded-xl border border-gray-200 bg-white p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0"><p className="text-sm font-medium text-gray-900">{f.name}</p><p className="text-xs text-gray-500">{f.description}</p></div>
+                      {open && <Link to={open.to} onClick={() => { if (!enabled) setEnabled(true); }} className="shrink-0 rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white">Open ›</Link>}
+                    </div>
+                    {open?.note && <p className="mt-1 text-[11px] text-gray-400">Opens in: {open.note}</p>}
+                    {!open && mine && OPEN[k] && !OPEN[k].path && <p className="mt-1 text-[11px] text-gray-400">{OPEN[k].orgTab ? 'Create an organization to try this.' : OPEN[k].business ? 'Create a business or nonprofit event (or a test one) to try this.' : 'Create an event (or a test one) to try this.'}</p>}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
