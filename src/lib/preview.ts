@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
+  program_v2: { name: 'Program tab', description: 'The redesigned Business page tab: one Program page with a checklist, visual agenda timeline, quick add (session, workshop, break), duplicate, sample schedules, sign-up rules next to workshops, and a speaker library from the organization\'s People.', status: 'preview' },
   workshops: { name: 'Workshop sign-ups', description: 'Agenda sessions people sign up for: seats, waitlist, ticket-holders-only and overlap rules, per-session lists with check-in, reminders before sessions, sessions shown in Attendees.', status: 'preview' },
   volunteers: { name: 'Volunteer shifts', description: 'Volunteers tab on the event dashboard (shifts, spots, sign-ups, waitlist, check-in, export) and a Volunteer card on the event page (sign up, waitlist, cancel, day-before reminder).', status: 'preview' },
   newsletters: { name: 'Newsletters', description: 'Organization newsletters: an audience of past attendees, followers and imported contacts (CSV or pasted), emails with an event card, promo code and tracked link, test sends, per-organization unsubscribe, and clicks/ticket sales per email.', status: 'preview' },

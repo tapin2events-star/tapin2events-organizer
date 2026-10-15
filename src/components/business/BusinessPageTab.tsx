@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ProgramLayout, { type SessionPreset } from './ProgramLayout';
 import { SessionRosterSheet, SessionRulesCard } from './SessionSignups';
 import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../ui/Skeleton';
@@ -23,6 +24,8 @@ const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('
 export default function BusinessPageTab({ event, onEventChange }: { event: TapEvent; onEventChange: (e: TapEvent) => void }) {
   const [section, setSection] = useState<Section>('Agenda');
   const workshopsOn = useFeature('workshops');
+  const programOn = useFeature('program_v2');
+  const [preset, setPreset] = useState<SessionPreset | null>(null);
   const [rules, setRules] = useState({ r: (event as { sessions_require_ticket?: boolean }).sessions_require_ticket ?? true, o: (event as { sessions_allow_overlap?: boolean }).sessions_allow_overlap ?? false });
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [roster, setRoster] = useState<{ id: string; title: string; capacity: number | null } | null>(null);
@@ -57,6 +60,19 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
     } else setLinks([]);
   }, [event.id]);
   useEffect(() => { load(); }, [load]);
+
+  if (programOn) return (
+    <>
+      <ProgramLayout event={event} sessions={sessions} speakers={speakers} sponsors={sponsors} links={links} loaded={sessionsLoaded} counts={counts}
+        workshopsOn={workshopsOn} rules={rules} setRules={setRules} reload={load}
+        onSession={(x, pr) => { setPreset(pr ?? null); setEditSession(x); }} onSpeaker={setEditSpeaker} onSponsor={setEditSponsor} onRoster={setRoster}
+        faqSlot={<FaqVenue event={event} onEventChange={onEventChange} />} />
+      {roster && <SessionRosterSheet eventId={event.id} eventTitle={event.title} session={roster} onClose={() => setRoster(null)} />}
+      {editSession && <SessionSheet signupsOn={workshopsOn} preset={editSession === 'new' ? preset : null} eventId={event.id} session={editSession === 'new' ? null : editSession} speakers={speakers} links={links} defaultStart={event.start_date} onClose={() => { setEditSession(null); setPreset(null); }} onSaved={load} />}
+      {editSpeaker && <SpeakerSheet eventId={event.id} orgId={event.organization_id ?? null} speaker={editSpeaker === 'new' ? null : editSpeaker} onClose={() => setEditSpeaker(null)} onSaved={load} />}
+      {editSponsor && <SponsorSheet eventId={event.id} sponsor={editSponsor === 'new' ? null : editSponsor} onClose={() => setEditSponsor(null)} onSaved={load} />}
+    </>
+  );
 
   return (
     <div className="mt-2">
@@ -146,9 +162,9 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
   );
 }
 
-function SessionSheet({ signupsOn = false, eventId, session, speakers, links, defaultStart, onClose, onSaved }: { signupsOn?: boolean; eventId: string; session: Session | null; speakers: Speaker[]; links: { session_id: string; speaker_id: string }[]; defaultStart: string | null; onClose: () => void; onSaved: () => void }) {
-  const [f, setF] = useState({ title: session?.title ?? '', kind: session?.kind ?? 'session', starts_at: toLocal(session?.starts_at ?? defaultStart), ends_at: toLocal(session?.ends_at ?? null), room: session?.room ?? '', track: session?.track ?? '', capacity: session?.capacity ? String(session.capacity) : '', description: session?.description ?? '' });
-  const [signup, setSignup] = useState<boolean>(!!(session as { signup_required?: boolean } | null)?.signup_required);
+function SessionSheet({ signupsOn = false, preset = null, eventId, session, speakers, links, defaultStart, onClose, onSaved }: { signupsOn?: boolean; preset?: SessionPreset | null; eventId: string; session: Session | null; speakers: Speaker[]; links: { session_id: string; speaker_id: string }[]; defaultStart: string | null; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({ title: session?.title ?? preset?.title ?? '', kind: session?.kind ?? preset?.kind ?? 'session', starts_at: toLocal(session?.starts_at ?? defaultStart), ends_at: toLocal(session?.ends_at ?? null), room: session?.room ?? '', track: session?.track ?? '', capacity: session?.capacity ? String(session.capacity) : '', description: session?.description ?? '' });
+  const [signup, setSignup] = useState<boolean>(session ? !!(session as { signup_required?: boolean }).signup_required : !!preset?.signup);
   const [who, setWho] = useState<string[]>(session ? links.filter((l) => l.session_id === session.id).map((l) => l.speaker_id) : []);
   const [err, setErr] = useState<string | null>(null);
   async function save() {
@@ -199,7 +215,13 @@ function SessionSheet({ signupsOn = false, eventId, session, speakers, links, de
   );
 }
 
-function SpeakerSheet({ eventId, speaker, onClose, onSaved }: { eventId: string; speaker: Speaker | null; onClose: () => void; onSaved: () => void }) {
+function SpeakerSheet({ eventId, orgId = null, speaker, onClose, onSaved }: { eventId: string; orgId?: string | null; speaker: Speaker | null; onClose: () => void; onSaved: () => void }) {
+  const [library, setLibrary] = useState<{ id: string; name: string; title?: string | null; bio?: string | null; link?: string | null; photo: string | null }[]>([]);
+  const [saveToOrg, setSaveToOrg] = useState(false);
+  useEffect(() => {
+    if (!orgId || speaker) return;
+    supabase.rpc('org_page_sections', { p_org_id: orgId }).then(({ data }) => setLibrary(((data as { artists?: typeof library } | null)?.artists ?? []) as typeof library));
+  }, [orgId, speaker]); // eslint-disable-line react-hooks/exhaustive-deps
   const [f, setF] = useState({ name: speaker?.name ?? '', title: speaker?.title ?? '', company: speaker?.company ?? '', bio: speaker?.bio ?? '', link: speaker?.link ?? '', featured: speaker?.featured ?? false, photo_url: speaker?.photo_url ?? null as string | null });
   const [err, setErr] = useState<string | null>(null);
   async function save() {
@@ -207,10 +229,19 @@ function SpeakerSheet({ eventId, speaker, onClose, onSaved }: { eventId: string;
     const row = { event_id: eventId, name: f.name.trim(), title: f.title.trim() || null, company: f.company.trim() || null, bio: f.bio.trim() || null, link: f.link.trim() || null, featured: f.featured, photo_url: f.photo_url };
     const { error } = speaker ? await supabase.from('event_speakers').update(row).eq('id', speaker.id) : await supabase.from('event_speakers').insert(row);
     if (error) return setErr("Couldn't save the speaker.");
+    if (!speaker && saveToOrg && orgId) await supabase.rpc('add_to_org_people', { p_org_id: orgId, p: { name: row.name, title: [row.title, row.company].filter(Boolean).join(', ') || null, bio: row.bio, photo_url: row.photo_url, link: row.link } });
     onSaved(); onClose();
   }
   return (
     <Sheet title={speaker ? 'Edit speaker' : 'Add a speaker'} onClose={onClose} wide>
+      {library.length > 0 && (
+        <label className="mb-3 block text-xs font-medium text-gray-500">Pick from your organization's People
+          <select className={field} value="" onChange={(e) => { const x = library.find((y) => y.id === e.target.value); if (x) setF({ ...f, name: x.name, title: x.title ?? '', bio: x.bio ?? '', link: x.link ?? '', photo_url: x.photo ?? null }); }}>
+            <option value="">Choose someone…</option>
+            {library.map((x) => <option key={x.id} value={x.id}>{x.name}{x.title ? ` · ${x.title}` : ''}</option>)}
+          </select>
+        </label>
+      )}
       <ImagePicker label="Photo" shape="round" value={f.photo_url} onChange={(url) => setF({ ...f, photo_url: url })} />
       <label className="mt-3 block text-xs font-medium text-gray-500">Name<input className={field} value={f.name} maxLength={120} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus /></label>
       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -220,6 +251,7 @@ function SpeakerSheet({ eventId, speaker, onClose, onSaved }: { eventId: string;
       <label className="mt-3 block text-xs font-medium text-gray-500">Bio<textarea rows={4} className={field} value={f.bio} maxLength={2000} onChange={(e) => setF({ ...f, bio: e.target.value })} /></label>
       <label className="mt-3 block text-xs font-medium text-gray-500">Link (LinkedIn or website)<input className={field} value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} inputMode="url" placeholder="https://" /></label>
       <label className="mt-3 flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={f.featured} onChange={(e) => setF({ ...f, featured: e.target.checked })} className="h-4 w-4 accent-marigold" /> Featured speaker (shown first, larger)</label>
+      {!speaker && orgId && <label className="mt-2 flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={saveToOrg} onChange={(e) => setSaveToOrg(e.target.checked)} className="h-4 w-4 accent-marigold" /> Also save to your organization's People (reuse for future events)</label>}
       {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
       <div className="mt-5 flex items-center justify-between">
         {speaker ? <button onClick={async () => { await supabase.from('event_speakers').delete().eq('id', speaker.id); onSaved(); onClose(); }} className="text-sm text-gray-400 hover:text-red-600">Delete</button> : <span />}

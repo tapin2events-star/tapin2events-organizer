@@ -66,6 +66,7 @@ export default function EventDetail() {
   const networkingOn = useFeature('networking');
   const promoteOn = useFeature('promote');
   const volunteersOn = useFeature('volunteers');
+  const programOn = useFeature('program_v2');
   const visibleTabs = TABS.filter((t) => (t !== 'Volunteers' || volunteersOn) && (t !== 'Promote' || promoteOn) && (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
@@ -278,7 +279,7 @@ export default function EventDetail() {
                 : 'text-muted hover:text-bone'
             }`}
           >
-            {t}
+            {t === 'Business page' && programOn ? 'Program' : t}
           </button>
         ))}
       </div>
