@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
+import PromoterPayoutsCard from './PromoterPayouts';
 import PremiumBadge, { PremiumNotice } from '../business/PremiumBadge';
 import FeatureFeedback from '../feedback/FeatureFeedback';
 import BoostCard from './BoostCard';
@@ -17,6 +19,7 @@ const IDEAS = ['Instagram bio', 'Facebook post', 'Flyer', 'Email newsletter', 'T
 // Event > Promote (Preview): tracking links for each place you share the event, optionally for a promoter
 // with a commission; visits, tickets and revenue per link.
 export default function PromoteTab({ eventId }: { eventId: string }) {
+  const payoutsOn = useFeature('promoter_payouts');
   const [stats, setStats] = useState<Stats | null>(null);
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
         </div>
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New link</button>
       </div>
+      {payoutsOn && stats && <PromoterPayoutsCard eventId={eventId} links={stats.links} />}
       {msg && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 
       {stats === null ? <ListSkeleton rows={3} className="mt-4" /> : (

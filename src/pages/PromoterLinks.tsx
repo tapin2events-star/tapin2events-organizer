@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../lib/preview';
+import { MyPromoterPayouts } from '../components/promote/PromoterPayouts';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import BackButton from '../components/BackButton';
@@ -11,6 +13,7 @@ const money = (n: number) => `$${(Number(n) || 0).toFixed(2).replace(/\.00$/, ''
 
 // My promoter links: links organizers gave you, with your visits, ticket sales and commission.
 export default function PromoterLinks() {
+  const payoutsOn = useFeature('promoter_payouts');
   const [rows, setRows] = useState<Row[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   useEffect(() => {
@@ -23,6 +26,7 @@ export default function PromoterLinks() {
       <h1 className="mt-3 font-display text-3xl font-extrabold text-bone">📣 My promoter links</h1>
       <p className="mt-1 text-sm text-muted">Share your links. Tickets bought within 7 days of someone tapping your link count for you.</p>
       {msg && <p role="status" className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
+      {payoutsOn && <MyPromoterPayouts />}
       {rows === null ? <ListSkeleton rows={3} className="mt-4" /> : rows.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">No promoter links yet. When an organizer gives you one, it shows up here.</p>
       ) : (
