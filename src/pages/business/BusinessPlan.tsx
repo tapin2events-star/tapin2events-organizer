@@ -17,12 +17,15 @@ const PREMIUM: { icon: string; name: string; desc: string }[] = [
   { icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature events in Discover' },
   { icon: '🤝', name: 'Attendee networking', desc: 'Cards, suggestions and QR connect at your events' },
   { icon: '💸', name: 'Revenue splits', desc: 'Split ticket sales by percentage with performers and partners, paid out automatically' },
+  { icon: '🙋', name: 'Volunteer shifts', desc: 'Shifts with sign-ups, waitlists, check-in and reminders, plus your volunteers across events' },
+  { icon: '📋', name: 'Workshop sign-ups', desc: 'Limited-seat sessions people sign up for, with waitlists and per-session check-in' },
+  { icon: '🥂', name: 'Gala tools', desc: 'Table seating, paddle numbers and a live paddle-raise total' },
   { icon: '🎬', name: 'Video headers & highlight reel', desc: 'A trailer at the top of event pages and your organization page, plus a past-events reel' },
   { icon: '📝', name: 'Meeting extras', desc: 'Recurring meetings, minutes as PDF, agenda templates' },
   { icon: '⭐', name: 'Featured on Discover', desc: 'Your organization in the Featured row' },
 ];
 const FREE = ['Create events and sell tickets (buyers pay the fees)', 'Organization page with your brand', 'Team roles across all your events', 'Planning hub, tasks, meetings and polls',
-  'Photo gallery (24 photos)', 'Promo codes', 'Donations and support', 'Payouts to your own bank', 'Personal TapIN QR and profile sharing', 'Feed videos (and, coming soon, featuring them on your organization page)'];
+  'Photo gallery (24 photos)', 'Promo codes', 'Donations and support', 'Payouts to your own bank', 'Personal TapIN QR and profile sharing', 'Feed videos, and featuring them on your organization page'];
 const PLANS = [
   { id: 'monthly', label: 'Monthly', price: '$59', per: '/month' },
   { id: 'yearly', label: 'Yearly', price: '$590', per: '/year', note: '2 months free' },

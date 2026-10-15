@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import GalaTab from '../components/tabs/GalaTab';
-import VolunteersTab from '../components/tabs/VolunteersTab';
 import AttendeesTab from '../components/tabs/AttendeesTab';
 import FeatureFeedback from '../components/feedback/FeatureFeedback';
 import PromoteTab from '../components/promote/PromoteTab';
@@ -33,7 +32,7 @@ import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
 // Ordered by how often organizers use them: daily checks first, then running the event, then setup.
-const TABS = ['Overview', 'Sales', 'Attendees', 'Messages', 'Promote', 'Team & tasks', 'Volunteers', 'Gala', 'Lineup & bookings', 'Tickets', 'Registration', 'Products', 'Donations', 'Vendor applications', 'Business page'] as const;
+const TABS = ['Overview', 'Sales', 'Attendees', 'Messages', 'Promote', 'Team & tasks', 'Gala', 'Lineup & bookings', 'Tickets', 'Registration', 'Products', 'Donations', 'Vendor applications', 'Business page'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function EventDetail() {
@@ -44,7 +43,7 @@ export default function EventDetail() {
   // ?tab=Lineup (etc.) opens that tab, e.g. from the Planning page.
   // Older links (?tab=Lineup, ?tab=Bookings) open the matching view inside "Lineup & bookings".
   const tabParam = new URLSearchParams(window.location.search).get('tab') ?? '';
-  const [tab, setTab] = useState<Tab>(() => (tabParam === 'Lineup' || tabParam === 'Bookings' ? 'Lineup & bookings' : tabParam === 'Ticket Sales' ? 'Sales' : (TABS as readonly string[]).includes(tabParam) ? (tabParam as Tab) : 'Overview'));
+  const [tab, setTab] = useState<Tab>(() => (tabParam === 'Lineup' || tabParam === 'Bookings' ? 'Lineup & bookings' : tabParam === 'Ticket Sales' ? 'Sales' : tabParam === 'Volunteers' ? 'Team & tasks' : (TABS as readonly string[]).includes(tabParam) ? (tabParam as Tab) : 'Overview'));
   const { user } = useAuth();
   const navigate = useNavigate();
   // Cancel / delete (organizer only). An event with any tickets, registrations,
@@ -68,6 +67,9 @@ export default function EventDetail() {
   const promoteOn = useFeature('promote');
   const volunteersOn = useFeature('volunteers');
   const galaOn = useFeature('gala');
+  const teamView: 'team' | 'volunteers' = tabParam === 'Volunteers' || new URLSearchParams(window.location.search).get('view') === 'volunteers' ? 'volunteers' : 'team';
+  const [usesGala, setUsesGala] = useState(false);
+  useEffect(() => { if (id) supabase.rpc('event_uses_gala', { p_event_id: id }).then(({ data }) => setUsesGala(data === true)); }, [id]);
   const [hostOrgName, setHostOrgName] = useState<string | null>(null);
   useEffect(() => {
     const orgId = (event as { organization_id?: string | null } | null)?.organization_id;
@@ -75,7 +77,7 @@ export default function EventDetail() {
     supabase.from('organizations').select('name').eq('id', orgId).maybeSingle().then(({ data }) => setHostOrgName((data as { name: string } | null)?.name ?? null));
   }, [(event as { organization_id?: string | null } | null)?.organization_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const programOn = useFeature('program_v2');
-  const visibleTabs = TABS.filter((t) => (t !== 'Gala' || galaOn) && (t !== 'Volunteers' || volunteersOn) && (t !== 'Promote' || promoteOn) && (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
+  const visibleTabs = TABS.filter((t) => (t !== 'Gala' || (galaOn && (event?.event_kind === 'business' || event?.event_kind === 'nonprofit' || usesGala))) && (t !== 'Promote' || promoteOn) && (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
     if (!isOwner || !event) return;
     (async () => {
@@ -302,7 +304,6 @@ export default function EventDetail() {
       {tab === 'Donations' && <DonationsTab event={event} onEventChange={setEvent} />}
       {tab === 'Lineup & bookings' && <LineupWithScouting event={event} isOwner={isOwner} eventId={id!} initialView={tabParam === 'Bookings' ? 'bookings' : undefined} />}
       {tab === 'Promote' && promoteOn && <PromoteTab eventId={id!} />}
-      {tab === 'Volunteers' && volunteersOn && <VolunteersTab event={event} />}
       {tab === 'Gala' && galaOn && <GalaTab event={event} />}
       {tab === 'Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
         <div className="mb-8"><InvoicesSection eventId={id!} ticketPrice={0} sections={(event.seating_sections ?? []).map((s) => ({ name: s.name, price: Number(s.price) || 0, seats: (s.num_tables ?? 0) * (s.seats_per_table ?? 0) }))} /></div>
@@ -316,7 +317,7 @@ export default function EventDetail() {
           <ProductOrdersPanel ownerType="event" ownerId={id} />
         </>
       )}
-      {tab === 'Team & tasks' && <TeamTasksTab eventId={id} eventTitle={event.title} />}
+      {tab === 'Team & tasks' && <TeamTasksTab eventId={id} eventTitle={event.title} event={volunteersOn ? event : undefined} initialView={teamView} />}
       {tab === 'Vendor applications' && <VendorApplicationsTab eventId={id} />}
     </div>
   );
