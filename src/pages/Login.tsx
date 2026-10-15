@@ -12,7 +12,8 @@ export default function Login() {
   // Forgot password: sign in with an email code, then land on the password form.
   const returnTo = resetting ? '/profile#password' : (location.state as { from?: string } | null)?.from || '/organizer';
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
-  const [email, setEmail] = useState('');
+  // Links from invite emails can pre-fill the address (?email=...).
+  const [email, setEmail] = useState(() => { try { const e = new URLSearchParams(window.location.search).get('email') ?? ''; return /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(e) ? e : ''; } catch { return ''; } });
   const [password, setPassword] = useState('');
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);

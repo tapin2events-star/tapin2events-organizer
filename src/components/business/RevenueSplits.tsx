@@ -6,7 +6,7 @@ import PremiumBadge from './PremiumBadge';
 
 interface Row { user_id?: string | null; email?: string | null; percent: number; label: string | null; name?: string | null; photo?: string | null; ready?: boolean; has_account?: boolean; sent?: number; waiting?: number }
 interface Found { id: string; full_name: string; profile_photo: string | null; payouts_ready: boolean }
-interface Overview { can_edit: boolean; rows: Row[]; main_sent: number; main_waiting: number }
+interface Overview { can_edit: boolean; starts_at?: string | null; rows: Row[]; main_sent: number; main_waiting: number }
 const money = (cents: number) => `$${(Number(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const field = 'block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm';
 
@@ -101,6 +101,17 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
           </div>
         </div>
       ) : rows.length > 0 ? (
+        <>
+        {(() => {
+          const days = o.starts_at ? Math.ceil((new Date(o.starts_at).getTime() - Date.now()) / 86400000) : null;
+          const notReady = o.rows.filter((r) => !r.ready);
+          if (days === null || days > 7 || days < 0 || notReady.length === 0) return null;
+          return (
+            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              ⏰ The event is {days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`} and {notReady.map((r) => r.name || r.email).join(', ')} {notReady.length === 1 ? "hasn't" : "haven't"} connected payouts yet. TapIN emails them reminders, but a quick text from you helps. Their shares are held until they connect.
+            </p>
+          );
+        })()}
         <ul className="mt-3 flex flex-col gap-1.5 text-sm">
           {o.rows.map((r, i) => (
             <li key={r.user_id ?? r.email ?? i} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
@@ -111,8 +122,9 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
           ))}
           <li className="flex items-center justify-between gap-2 px-3 py-1 text-xs text-gray-600"><span>{hostName} (main account) · {Math.round((100 - o.rows.reduce((n, r) => n + Number(r.percent), 0)) * 100) / 100}%</span><span>{money(o.main_sent)} sent{o.main_waiting ? ` · ${money(o.main_waiting)} waiting` : ''}</span></li>
         </ul>
+        </>
       ) : <p className="mt-3 text-sm text-muted">No split. Ticket sales go to {hostName}'s payout account.</p>}
-      <p className="mt-3 text-xs text-muted">Splits apply to ticket sales (one-price and ticket-type events) made after the split is saved. Donations and merch go to the main account. Buyers pay the fees on top, so shares are of the full ticket price. Refunds take back each share proportionally. Reserved seating isn't split yet.</p>
+      <p className="mt-3 text-xs text-muted">Everyone you add gets an email (with sign-up steps if they're not on TapIN yet), plus a weekly reminder while money is waiting for them. Splits apply to ticket sales (one-price and ticket-type events) made after the split is saved. Donations and merch go to the main account. Buyers pay the fees on top, so shares are of the full ticket price. Refunds take back each share proportionally. Reserved seating isn't split yet.</p>
     </section>
   );
 }
