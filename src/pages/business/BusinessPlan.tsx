@@ -16,7 +16,7 @@ const PREMIUM: { icon: string; name: string; desc: string }[] = [
   { icon: '📣', name: 'Promotion links', desc: 'Track every link and pay promoters a commission' },
   { icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature events in Discover' },
   { icon: '🤝', name: 'Attendee networking', desc: 'Cards, suggestions and QR connect at your events' },
-  { icon: '💸', name: 'Revenue splits', desc: 'Split event money by percentage with partners' },
+  { icon: '💸', name: 'Revenue splits', desc: 'Split ticket sales by percentage with performers and partners, paid out automatically' },
   { icon: '🎬', name: 'Video headers & highlight reel', desc: 'A trailer at the top of event pages and your organization page, plus a past-events reel' },
   { icon: '📝', name: 'Meeting extras', desc: 'Recurring meetings, minutes as PDF, agenda templates' },
   { icon: '⭐', name: 'Featured on Discover', desc: 'Your organization in the Featured row' },

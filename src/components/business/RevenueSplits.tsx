@@ -10,7 +10,7 @@ interface Overview { can_edit: boolean; rows: Row[]; main_sent: number; main_wai
 const money = (cents: number) => `$${(Number(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const field = 'block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm';
 
-// Event > Sales (Preview, Business plan): divide ticket sales by percentage. Each person connects their own
+// Event > Sales (Business plan; free while billing enforcement is off): divide ticket sales by percentage. Each person connects their own
 // payouts once; TapIN sends their share of every ticket sale automatically. The main payout account gets the rest.
 export default function RevenueSplits({ eventId, hostName }: { eventId: string; hostName: string }) {
   const [o, setO] = useState<Overview | null>(null);
@@ -46,7 +46,7 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
     <section className="rounded-2xl border border-gray-200 bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Revenue splits <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span> <PremiumBadge /></p>
+          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Revenue splits <PremiumBadge /></p>
           <p className="text-sm text-muted">Divide ticket sales with performers or partners. Each person connects their own payouts once, and TapIN sends their share of every sale automatically.</p>
         </div>
         {o.can_edit && !editing && <button onClick={() => setEditing(true)} className="rounded-xl bg-[#0F1B3D] px-3 py-2 text-sm font-semibold text-white">{rows.length ? 'Edit split' : 'Set up a split'}</button>}
@@ -117,7 +117,7 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
   );
 }
 
-// Earnings (Preview): a performer's shares of ticket sales, with the payout setup card if they haven't connected yet.
+// Earnings: a performer's shares of ticket sales, with the payout setup card if they haven't connected yet.
 export function MySplitEarnings() {
   const [rows, setRows] = useState<{ event_id: string; event_title: string; start_date: string | null; percent: number; sent_cents: number; waiting_cents: number }[] | null>(null);
   const [payouts, setPayouts] = useState<{ hasAccount: boolean; ready: boolean } | null>(null);
@@ -133,7 +133,7 @@ export function MySplitEarnings() {
   const waiting = rows.reduce((n, r) => n + Number(r.waiting_cents), 0);
   return (
     <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4">
-      <p className="font-semibold text-bone">💸 Your shares of ticket sales <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+      <p className="font-semibold text-bone">💸 Your shares of ticket sales</p>
       {payouts && !payouts.ready && (
         <div className="mt-3">
           {waiting > 0 && <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{money(waiting)} is waiting for you. Connect your payouts to receive it.</p>}
