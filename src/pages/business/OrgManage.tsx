@@ -31,13 +31,20 @@ function OrgManageInner() {
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
   const navigate = useNavigate();
+  // Remember the open tab in the page address, so coming back (e.g. from "View page") returns to it.
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    const u = new URL(window.location.href);
+    u.searchParams.set('tab', t);
+    window.history.replaceState(window.history.state, '', u.pathname + u.search + u.hash);
+  };
   const insightsOn = useFeature('org_insights');
   const newsletterOn = useFeature('newsletters');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
   const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
   const tabLabel = (t: Tab) => (t === 'Payouts' && insightsOn ? 'Sales & payouts' : t);
-  const [tab, setTab] = useState<Tab>(() => { const raw = new URLSearchParams(window.location.search).get('tab'); const t = raw === 'Photos' ? 'Page' : raw === 'Newsletter' ? 'Audience' : raw; return (['Profile', 'Brand kit', 'Page', 'Team', 'Events', 'Audience', 'Promote', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
+  const [tab, setTabState] = useState<Tab>(() => { const raw = new URLSearchParams(window.location.search).get('tab'); const t = raw === 'Photos' ? 'Page' : raw === 'Newsletter' ? 'Audience' : raw; return (['Profile', 'Brand kit', 'Page', 'Team', 'Events', 'Audience', 'Promote', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {

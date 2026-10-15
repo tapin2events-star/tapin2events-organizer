@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { cachedRole, loadRole } from '../../lib/orgFollows';
 import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../../components/ui/Skeleton';
 import { cachedOrg, primeOrg, type CachedOrg } from '../../lib/orgCache';
@@ -20,7 +21,7 @@ function OrgPublicInner() {
   const [org, setOrg] = useState<Organization | null | undefined>(() => { const c = cachedOrg(slug); return c ? ({ description: null, website: null, contact_email: null, ...c, brand: { ...DEFAULT_BRAND, ...(c.brand ?? {}) } } as unknown as Organization) : undefined; });
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; location_name: string | null; poster_url: string | null; category: string | null }[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);
-  const [canManage, setCanManage] = useState(false);
+  const [canManage, setCanManage] = useState<boolean>(() => { const c = cachedOrg(slug) as { id?: string } | null; const r = c?.id ? cachedRole(c.id) : undefined; return r === 'owner' || r === 'admin'; });
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('organizations').select('*').eq('slug', slug).maybeSingle();
@@ -29,9 +30,9 @@ function OrgPublicInner() {
       if (!o) return;
       primeOrg(o as unknown as CachedOrg);
       loadFont(o.brand.font);
-      const [{ data: ev }, { data: role }] = await Promise.all([
+      const [{ data: ev }, role] = await Promise.all([
         supabase.from('events').select('id, title, start_date, location_name, poster_url, category').eq('organization_id', o.id).neq('status', 'cancelled').gte('start_date', new Date(Date.now() - 86400000).toISOString()).order('start_date'),
-        supabase.rpc('org_role', { p_org: o.id }),
+        loadRole(o.id),
       ]);
       setEvents((ev ?? []) as typeof events); setEventsLoaded(true);
       setCanManage(role === 'owner' || role === 'admin');
