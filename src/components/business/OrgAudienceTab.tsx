@@ -5,11 +5,11 @@ import Sheet from '../scouting/Sheet';
 import { ListSkeleton } from '../ui/Skeleton';
 import PremiumBadge from './PremiumBadge';
 
-interface Counts { total: number; attendees: number; followers: number; imported: number; sendable: number; unsubscribed: number }
-interface Person { email: string; name: string | null; photo: string | null; sources: string[]; can_email: boolean; events: number; spent: number; last_event: string | null; last_date: string | null }
+interface Counts { total: number; attendees: number; followers: number; imported: number; volunteers?: number; sendable: number; unsubscribed: number }
+interface Person { email: string; name: string | null; photo: string | null; sources: string[]; can_email: boolean; events: number; spent: number; last_event: string | null; last_date: string | null; shifts?: number }
 interface Campaign { id: string; subject: string; body: string; event_id: string | null; event_title: string | null; promo_code: string | null; audience: string; status: 'draft' | 'sending' | 'sent' | 'failed'; mode: string | null; recipients: number; sent: number; error: string | null; created_at: string; sent_at: string | null; clicks: number; tickets: number }
-const AUDIENCES = [{ id: 'all', label: 'Everyone' }, { id: 'attendees', label: 'Past attendees' }, { id: 'followers', label: 'Followers' }, { id: 'imported', label: 'Imported contacts' }] as const;
-const SOURCE: Record<string, string> = { attendee: 'Attended', follower: 'Follows', imported: 'Imported' };
+const AUDIENCES = [{ id: 'all', label: 'Everyone' }, { id: 'attendees', label: 'Past attendees' }, { id: 'followers', label: 'Followers' }, { id: 'imported', label: 'Imported contacts' }, { id: 'volunteers', label: 'Volunteers' }] as const;
+const SOURCE: Record<string, string> = { attendee: 'Attended', follower: 'Follows', imported: 'Imported', volunteer: 'Volunteered' };
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
 const errMsg = async (error: unknown, fallback: string) => {
   try { const j = await (error as { context?: Response })?.context?.json(); if (j?.error) return String(j.error); } catch { /* default */ }
@@ -46,7 +46,7 @@ function contactsFrom(text: string): { email: string; name: string }[] {
   return text.split(/[\s,;]+/).map((s) => s.trim().replace(/^<|>$/g, '')).filter((s) => EMAIL.test(s)).map((email) => ({ email, name: '' }));
 }
 
-const FILTERS = [{ id: 'all', label: 'Everyone' }, { id: 'attendee', label: 'Attended' }, { id: 'follower', label: 'Follows' }, { id: 'imported', label: 'Imported' }] as const;
+const FILTERS = [{ id: 'all', label: 'Everyone' }, { id: 'attendee', label: 'Attended' }, { id: 'follower', label: 'Follows' }, { id: 'volunteer', label: 'Volunteered' }, { id: 'imported', label: 'Imported' }] as const;
 const money = (n: number) => `$${(Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
 
@@ -70,7 +70,7 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
     ]);
     setCounts((c ?? null) as Counts | null);
     setCampaigns(((list ?? []) as Campaign[]).map((x) => ({ ...x, clicks: Number(x.clicks), tickets: Number(x.tickets) })));
-    setPeople(((ppl ?? []) as Person[]).map((x) => ({ ...x, events: Number(x.events), spent: Number(x.spent) })));
+    setPeople(((ppl ?? []) as Person[]).map((x) => ({ ...x, events: Number(x.events), spent: Number(x.spent), shifts: Number(x.shifts ?? 0) })));
   }, [orgId, newsletterOn]);
   useEffect(() => { load(); }, [load]);
   const shown = useMemo(() => (people ?? []).filter((p) => (filter === 'all' || p.sources.includes(filter)) && (!q.trim() || p.email.includes(q.trim().toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.trim().toLowerCase()))), [people, q, filter]);
@@ -82,8 +82,8 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
   }
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const csv = ['Name,Email,Connection,Events attended,Total spent,Most recent event,Most recent date,Can be emailed',
-      ...(people ?? []).map((p) => [p.name, p.email, p.sources.map((x) => SOURCE[x] ?? x).join(' + '), p.events, p.spent.toFixed(2), p.last_event, p.last_date ? p.last_date.slice(0, 10) : '', p.can_email ? 'Yes' : 'No'].map(esc).join(','))].join('\n');
+    const csv = ['Name,Email,Connection,Events attended,Total spent,Volunteer shifts,Most recent event,Most recent date,Can be emailed',
+      ...(people ?? []).map((p) => [p.name, p.email, p.sources.map((x) => SOURCE[x] ?? x).join(' + '), p.events, p.spent.toFixed(2), p.shifts ?? 0, p.last_event, p.last_date ? p.last_date.slice(0, 10) : '', p.can_email ? 'Yes' : 'No'].map(esc).join(','))].join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `${orgName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-audience.csv`;
@@ -145,7 +145,7 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
       {/* People */}
       <section className="mt-6">
         <div className="flex flex-wrap gap-1.5">
-          {FILTERS.filter((f) => f.id !== 'imported' || newsletterOn || (counts?.imported ?? 0) > 0).map((f) => (
+          {FILTERS.filter((f) => (f.id !== 'imported' || newsletterOn || (counts?.imported ?? 0) > 0) && (f.id !== 'volunteer' || (counts?.volunteers ?? 0) > 0)).map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${filter === f.id ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>{f.label}</button>
           ))}
         </div>
@@ -160,7 +160,7 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
                   {p.photo ? <img src={p.photo} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 font-bold text-gray-600">{(p.name || p.email).charAt(0).toUpperCase()}</span>}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-bone">{p.name || p.email}</span>
-                    <span className="block truncate text-xs text-muted">{p.name ? `${p.email} · ` : ''}{p.sources.map((x) => SOURCE[x] ?? x).join(', ')}{p.events ? ` · ${p.events} event${p.events === 1 ? '' : 's'}` : ''}{p.spent > 0 ? ` · ${money(p.spent)}` : ''}{newsletterOn && !p.can_email ? ' · unsubscribed' : ''}</span>
+                    <span className="block truncate text-xs text-muted">{p.name ? `${p.email} · ` : ''}{p.sources.map((x) => SOURCE[x] ?? x).join(', ')}{p.events ? ` · ${p.events} event${p.events === 1 ? '' : 's'}` : ''}{p.spent > 0 ? ` · ${money(p.spent)}` : ''}{p.shifts ? ` · ${p.shifts} volunteer shift${p.shifts === 1 ? '' : 's'}` : ''}{newsletterOn && !p.can_email ? ' · unsubscribed' : ''}</span>
                     {p.last_event && <span className="block truncate text-xs text-muted">Last: {p.last_event}{p.last_date ? ` (${day(p.last_date)})` : ''}</span>}
                   </span>
                   {newsletterOn && p.sources.includes('imported') && <button onClick={() => remove(p)} className="shrink-0 text-xs text-gray-400 hover:text-red-600">Remove</button>}
@@ -240,7 +240,7 @@ function ComposeSheet({ orgId, counts, draft, onClose, onSent, onError }: { orgI
     if (!eventId) return;
     supabase.rpc('event_promo_codes', { p_event_id: eventId }).then(({ data }) => setCodes(((data ?? []) as { code: string; active: boolean }[]).filter((c) => c.active !== false).map((c) => c.code)));
   }, [eventId]);
-  const audienceCount = counts ? (audience === 'attendees' ? counts.attendees : audience === 'followers' ? counts.followers : audience === 'imported' ? counts.imported : counts.sendable) : 0;
+  const audienceCount = counts ? (audience === 'attendees' ? counts.attendees : audience === 'followers' ? counts.followers : audience === 'imported' ? counts.imported : audience === 'volunteers' ? counts.volunteers ?? 0 : counts.sendable) : 0;
 
   async function saveDraft() {
     if (!subject.trim()) { setNote('Add a subject.'); return null; }
@@ -297,7 +297,7 @@ function ComposeSheet({ orgId, counts, draft, onClose, onSent, onError }: { orgI
         {AUDIENCES.map((a) => (
           <button key={a.id} type="button" onClick={() => setAudience(a.id)} aria-pressed={audience === a.id}
             className={`min-h-[44px] rounded-xl px-2 text-sm font-semibold ${audience === a.id ? 'bg-[#0F1B3D] text-white' : 'border border-gray-300 bg-white text-gray-800'}`}>
-            {a.label}{counts ? ` (${a.id === 'attendees' ? counts.attendees : a.id === 'followers' ? counts.followers : a.id === 'imported' ? counts.imported : counts.sendable})` : ''}
+            {a.label}{counts ? ` (${a.id === 'attendees' ? counts.attendees : a.id === 'followers' ? counts.followers : a.id === 'imported' ? counts.imported : a.id === 'volunteers' ? counts.volunteers ?? 0 : counts.sendable})` : ''}
           </button>
         ))}
       </div>

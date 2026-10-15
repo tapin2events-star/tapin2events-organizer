@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../../components/ui/Skeleton';
 import { cachedOrg, primeOrg, type CachedOrg } from '../../lib/orgCache';
 import OrgFollowButton from '../../components/business/OrgFollowButton';
@@ -14,6 +15,7 @@ export default function OrgPublic() {
 }
 
 function OrgPublicInner() {
+  const volunteersOn = useFeature('volunteers');
   const { slug = '' } = useParams<{ slug: string }>();
   const [org, setOrg] = useState<Organization | null | undefined>(() => { const c = cachedOrg(slug); return c ? ({ description: null, website: null, contact_email: null, ...c, brand: { ...DEFAULT_BRAND, ...(c.brand ?? {}) } } as unknown as Organization) : undefined; });
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; location_name: string | null; poster_url: string | null; category: string | null }[]>([]);
@@ -90,6 +92,7 @@ function OrgPublicInner() {
           </div>
         )}
         <OrgSections orgId={org.id} accent={b.accent} dark={dark} />
+        {volunteersOn && <OrgVolunteer orgId={org.id} accent={b.accent} dark={dark} />}
         <OrgGallery orgId={org.id} accent={b.accent} dark={dark} />
         <PastEvents orgId={org.id} accent={b.accent} dark={dark} />
       </div>
@@ -235,5 +238,34 @@ function OrgSections({ orgId, accent, dark }: { orgId: string; accent: string; d
         </section>
       )}
     </>
+  );
+}
+
+// Open volunteer shifts across the organization's upcoming events (Preview).
+function OrgVolunteer({ orgId, accent, dark }: { orgId: string; accent: string; dark: boolean }) {
+  const [shifts, setShifts] = useState<{ shift_id: string; event_id: string; event_title: string; role: string; starts_at: string; ends_at: string; spots_left: number }[]>([]);
+  useEffect(() => { supabase.rpc('org_open_shifts', { p_org_id: orgId }).then(({ data }) => setShifts((data ?? []) as typeof shifts)); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const open = shifts.filter((s) => s.spots_left > 0);
+  if (!open.length) return null;
+  const card = dark ? '#111827' : '#FFFFFF';
+  const line = dark ? '#1F2937' : '#E5E7EB';
+  const t = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return (
+    <section className="pb-10">
+      <h2 className="text-xl font-bold">🙋 Volunteer with us</h2>
+      <p className="mt-1 text-sm opacity-75">Help make our events happen. Pick a shift that works for you.</p>
+      <ul className="mt-4 flex flex-col gap-2">
+        {open.slice(0, 8).map((s) => (
+          <li key={s.shift_id}><Link to={`/events/${s.event_id}#volunteer`} className="flex items-center justify-between gap-3 rounded-2xl border p-3" style={{ background: card, borderColor: line }}>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold">{s.role}</span>
+              <span className="block truncate text-xs opacity-70">{s.event_title} · {new Date(s.starts_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}, {t(s.starts_at)}–{t(s.ends_at)}</span>
+            </span>
+            <span className="shrink-0 rounded-full px-3 py-1 text-xs font-bold text-white" style={{ background: accent }}>{s.spots_left} spot{s.spots_left === 1 ? '' : 's'} left</span>
+          </Link></li>
+        ))}
+      </ul>
+      {open.length > 8 && <p className="mt-2 text-xs opacity-70">+ {open.length - 8} more shifts on our event pages</p>}
+    </section>
   );
 }

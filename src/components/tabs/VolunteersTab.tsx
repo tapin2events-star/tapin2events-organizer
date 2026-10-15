@@ -28,6 +28,14 @@ export default function VolunteersTab({ event }: { event: TapEvent }) {
   useEffect(() => { load(); }, [load]);
   const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(null), 2500); };
 
+  const [notified, setNotified] = useState<boolean>(!!(event as { volunteers_notified_at?: string | null }).volunteers_notified_at);
+  async function notifyPast() {
+    if (!window.confirm('Send a notification to everyone who has volunteered at your organization\u2019s other events? You can do this once per event.')) return;
+    const { data, error } = await supabase.rpc('notify_past_volunteers', { p_event_id: event.id });
+    if (error) return flash(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't send.");
+    setNotified(true);
+    flash(Number(data) ? `Sent to ${data} past volunteer${Number(data) === 1 ? '' : 's'}.` : 'No past volunteers to notify yet.');
+  }
   async function checkIn(v: Signup) {
     await supabase.rpc('volunteer_check_in', { p_signup_id: v.signup_id, p_in: !v.checked_in_at });
     setRoster((list) => list.map((x) => (x.signup_id === v.signup_id ? { ...x, checked_in_at: x.checked_in_at ? null : new Date().toISOString() } : x)));
@@ -67,7 +75,10 @@ export default function VolunteersTab({ event }: { event: TapEvent }) {
       {shifts.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted"><strong className="text-bone">{totalFilled} of {totalSpots}</strong> spots filled across {shifts.length} shift{shifts.length === 1 ? '' : 's'}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {event.organization_id && (notified
+              ? <span className="rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-600">✓ Past volunteers notified</span>
+              : <button onClick={notifyPast} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">Notify past volunteers</button>)}
             <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${import.meta.env.BASE_URL}events/${event.id}#volunteer`); flash('Volunteer link copied.'); }} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Copy sign-up link</button>
             {roster.length > 0 && <button onClick={exportCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Export</button>}
           </div>
