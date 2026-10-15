@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import WhiteLabelCard from '../components/business/WhiteLabelCard';
 import GalaTab from '../components/tabs/GalaTab';
 import AttendeesTab from '../components/tabs/AttendeesTab';
 import FeatureFeedback from '../components/feedback/FeatureFeedback';
@@ -67,6 +68,7 @@ export default function EventDetail() {
   const promoteOn = useFeature('promote');
   const volunteersOn = useFeature('volunteers');
   const galaOn = useFeature('gala');
+  const whiteLabelOn = useFeature('white_label');
   const teamView: 'team' | 'volunteers' = tabParam === 'Volunteers' || new URLSearchParams(window.location.search).get('view') === 'volunteers' ? 'volunteers' : 'team';
   const [usesGala, setUsesGala] = useState(false);
   useEffect(() => { if (id) supabase.rpc('event_uses_gala', { p_event_id: id }).then(({ data }) => setUsesGala(data === true)); }, [id]);
@@ -294,6 +296,7 @@ export default function EventDetail() {
         ))}
       </div>
 
+      {tab === 'Overview' && whiteLabelOn && (isOwner || teamRole === 'admin') && <WhiteLabelCard eventId={event.id} />}
       {tab === 'Overview' && networkingOn && (isOwner || teamRole === 'admin' || teamRole === 'editor' || !teamRole) && <NetworkingSwitch eventId={event.id} eventTitle={event.title} />}
       {tab === 'Overview' && (event as { template_id?: string | null }).template_id && isOwner && <FeatureFeedback feature="templates" label="starting from a template" className="mb-4" />}
       {tab === 'Overview' && <OverviewTab event={event} />}

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useEventWhiteLabel } from '../lib/whiteLabel';
+import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
 import { useFeature } from '../lib/preview';
 import TransferTicket, { canTransfer } from '../components/TransferTicket';
 import EventCover from '../components/EventCover';
@@ -45,6 +47,7 @@ export default function TicketPass() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const [data, setData] = useState<PassData | null>(null);
+  const whiteLabel = useEventWhiteLabel((data as { event?: { id?: string } } | null)?.event?.id ?? null);
   const { user } = useAuth();
   const invoicesOn = useFeature('invoices');
   const networkingOn = useFeature('networking');
@@ -111,8 +114,9 @@ export default function TicketPass() {
       <div className="print:hidden">
       </div>
       <div className="mx-auto max-w-md px-4 py-10 print:py-0">
-        <BackButton fallback="/activity" fallbackLabel="My tickets" />
+        {!whiteLabel && <BackButton fallback="/activity" fallbackLabel="My tickets" />}
 
+        {whiteLabel && <WhiteLabelHeader brand={whiteLabel} />}
         <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm print:mt-0 print:shadow-none">
           {cancelledNow && (
             <p role="status" className="bg-green-50 px-4 py-3 text-center text-sm text-green-800">Your registration is cancelled. Thanks for letting the organizer know.</p>

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useEventWhiteLabel } from '../lib/whiteLabel';
+import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
 import MerchAddOns, { type AddOnPick } from '../components/events/MerchAddOns';
 import GalaGuestCard from '../components/events/GalaGuestCard';
 import VolunteerCard from '../components/events/VolunteerCard';
@@ -53,6 +55,7 @@ export default function PublicEventDetail() {
   const [event, setEvent] = useState<TapEvent | null>(null);
   // Business / nonprofit events: organization brand, agenda, speakers, sponsors (TapIN for Business).
   const biz = useBusinessData(event);
+  const whiteLabel = useEventWhiteLabel(event?.id);
   // Ticket tiers (preview): when an event has tiers, the tier picker replaces the single price.
   const [tiers, setTiers] = useState<TierAvail[]>([]);
   useEffect(() => { if (id && businessOn) loadTiers(id).then(setTiers); else setTiers([]); }, [id, businessOn]);
@@ -374,6 +377,7 @@ export default function PublicEventDetail() {
 
   return (
     <div className="min-h-screen bg-ink">
+      {whiteLabel && <WhiteLabelHeader brand={whiteLabel} />}
       {isPreview && (
         <div className="sticky top-0 z-40 border-b border-amber-300 bg-amber-100 px-4 py-2.5 sm:px-6">
           <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

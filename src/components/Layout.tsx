@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import { useWhiteLabel } from '../lib/whiteLabel';
 import PageLoading from './PageLoading';
 import { prefetchCommonPages } from '../lib/prefetch';
 import { claimLinkVisits } from '../lib/linkTracking';
@@ -58,6 +59,7 @@ export default function Layout() {
   }, [user?.id]);
 
   const close = () => setMenuOpen(false);
+  const whiteLabel = useWhiteLabel();
   const displayName = me?.full_name?.trim() || user?.email?.split('@')[0] || 'Guest';
 
   const renderItems = (items: Item[]) => items.map((item) => {
@@ -84,6 +86,15 @@ export default function Layout() {
   });
   const heading = (text: string) => (
     <p className="mb-1 mt-5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">{text}</p>
+  );
+
+  if (whiteLabel) return (
+    <div className="min-h-screen bg-ink text-bone">
+      <main className="mx-auto min-w-0 max-w-4xl px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:px-8">
+        <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
+        <ScrollToTop />
+      </main>
+    </div>
   );
 
   return (
