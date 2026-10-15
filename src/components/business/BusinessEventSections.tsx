@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MySessions, SessionSignupControl, useSessionSignups } from './SessionSignups';
+import { useFeature } from '../../lib/preview';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { DEFAULT_BRAND, SESSION_KINDS, SPONSOR_TIERS, loadFont, type Organization, type Session, type Speaker, type Sponsor } from '../../lib/business';
@@ -63,6 +65,8 @@ export default function BusinessEventSections({ event, data }: { event: TapEvent
     const order = [...SPONSOR_TIERS, ...sponsors.map((s) => s.tier).filter((t) => !SPONSOR_TIERS.includes(t))];
     return order.filter((t, i) => order.indexOf(t) === i && sponsors.some((s) => s.tier === t));
   }, [sponsors]);
+  const workshopsOn = useFeature('workshops');
+  const signups = useSessionSignups(event.id, workshopsOn);
   const faq = event.business_page?.faq ?? [];
   const venue = event.business_page?.venue_notes ?? '';
   const font = { fontFamily: `'${brand.font}', system-ui, sans-serif` };
@@ -72,8 +76,9 @@ export default function BusinessEventSections({ event, data }: { event: TapEvent
   return (
     <div className="mt-10 flex flex-col gap-10" style={font}>
       {days.length > 0 && (
-        <section>
+        <section id="agenda" className="scroll-mt-24">
           <h2 className={heading}>Agenda</h2>
+          {signups.info && <MySessions info={signups.info} accent={brand.accent} titles={Object.fromEntries(sessions.map((x) => [x.id, { title: x.title, time: timeOf(x.starts_at) }]))} />}
           {days.map(([day, list]) => (
             <div key={day} className="mt-4">
               {days.length > 1 && <p className="mb-2 text-sm font-semibold" style={{ color: brand.primary }}>{day}</p>}
@@ -89,6 +94,7 @@ export default function BusinessEventSections({ event, data }: { event: TapEvent
                         <p className="font-semibold text-gray-900">{s.title}</p>
                         {(s.room || s.capacity) && <p className="text-xs text-gray-500">{[s.room, s.capacity ? `${s.capacity} seats` : null].filter(Boolean).join(' · ')}</p>}
                         {s.description && <p className="mt-1 text-sm text-gray-600">{s.description}</p>}
+                        {signups.info && (() => { const seat = signups.info.sessions.find((x) => x.id === s.id); return seat ? <SessionSignupControl seat={seat} info={signups.info} title={s.title} accent={brand.accent} onChanged={signups.reload} /> : null; })()}
                         {who.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-2">
                             {who.map((k) => (

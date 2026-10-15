@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { SessionRosterSheet, SessionRulesCard } from './SessionSignups';
+import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -20,6 +22,10 @@ const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('
 // Event dashboard > Business page: agenda, speakers, sponsors, FAQ and venue notes.
 export default function BusinessPageTab({ event, onEventChange }: { event: TapEvent; onEventChange: (e: TapEvent) => void }) {
   const [section, setSection] = useState<Section>('Agenda');
+  const workshopsOn = useFeature('workshops');
+  const [rules, setRules] = useState({ r: (event as { sessions_require_ticket?: boolean }).sessions_require_ticket ?? true, o: (event as { sessions_allow_overlap?: boolean }).sessions_allow_overlap ?? false });
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [roster, setRoster] = useState<{ id: string; title: string; capacity: number | null } | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
@@ -28,6 +34,14 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
   const [editSession, setEditSession] = useState<Session | 'new' | null>(null);
   const [editSpeaker, setEditSpeaker] = useState<Speaker | 'new' | null>(null);
   const [editSponsor, setEditSponsor] = useState<Sponsor | 'new' | null>(null);
+  useEffect(() => {
+    if (!workshopsOn) return;
+    supabase.rpc('session_roster', { p_event_id: event.id }).then(({ data }) => {
+      const m: Record<string, number> = {};
+      for (const r of (data ?? []) as { session_id: string; status: string }[]) if (r.status === 'confirmed') m[r.session_id] = (m[r.session_id] ?? 0) + 1;
+      setCounts(m);
+    });
+  }, [workshopsOn, event.id, sessions.length, roster]);
 
   const load = useCallback(async () => {
     const [a, b, c] = await Promise.all([
@@ -60,18 +74,22 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
       {section === 'Agenda' && (
         <div className="mt-4">
           <button onClick={() => setEditSession('new')} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">+ Add session</button>
+          {workshopsOn && <SessionRulesCard eventId={event.id} requiresTicket={rules.r} allowOverlap={rules.o} onChange={(r, o) => setRules({ r, o })} />}
           {sessions.length === 0 ? !sessionsLoaded ? <ListSkeleton rows={2} className="mt-3" /> : <p className="mt-4 text-sm text-muted">No sessions yet. Add keynotes, panels, workshops, breaks and networking.</p> : (
             <ul className="mt-4 flex flex-col gap-2">
               {sessions.map((s) => {
                 const who = links.filter((l) => l.session_id === s.id).map((l) => speakers.find((k) => k.id === l.speaker_id)?.name).filter(Boolean);
                 return (
-                  <li key={s.id}><button onClick={() => setEditSession(s)} className="flex w-full items-start gap-3 rounded-xl border border-gray-200 bg-surface p-3 text-left hover:border-[#C9A227]">
+                  <li key={s.id} className="flex flex-col gap-1"><button onClick={() => setEditSession(s)} className="flex w-full items-start gap-3 rounded-xl border border-gray-200 bg-surface p-3 text-left hover:border-[#C9A227]">
                     <span className="w-20 shrink-0 text-xs font-semibold text-muted">{timeOf(s.starts_at) || 'TBA'}{s.ends_at ? `–${timeOf(s.ends_at)}` : ''}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-bone">{s.title}</span>
                       <span className="block text-xs text-muted">{SESSION_KINDS.find((k) => k.key === s.kind)?.label}{s.room ? ` · ${s.room}` : ''}{s.track ? ` · ${s.track}` : ''}{s.capacity ? ` · ${s.capacity} seats` : ''}{who.length ? ` · ${who.join(', ')}` : ''}</span>
                     </span>
-                  </button></li>
+                  </button>
+                  {workshopsOn && (s as { signup_required?: boolean }).signup_required && (
+                    <button onClick={() => setRoster({ id: s.id, title: s.title, capacity: s.capacity ?? null })} className="ml-auto text-xs font-medium text-indigo-700">📋 {counts[s.id] ?? 0}{s.capacity ? ` / ${s.capacity}` : ''} signed up · View list ›</button>
+                  )}</li>
                 );
               })}
             </ul>
@@ -120,21 +138,23 @@ export default function BusinessPageTab({ event, onEventChange }: { event: TapEv
 
       {section === 'FAQ & venue' && <FaqVenue event={event} onEventChange={onEventChange} />}
 
-      {editSession && <SessionSheet eventId={event.id} session={editSession === 'new' ? null : editSession} speakers={speakers} links={links} defaultStart={event.start_date} onClose={() => setEditSession(null)} onSaved={load} />}
+      {roster && <SessionRosterSheet eventId={event.id} eventTitle={event.title} session={roster} onClose={() => setRoster(null)} />}
+      {editSession && <SessionSheet signupsOn={workshopsOn} eventId={event.id} session={editSession === 'new' ? null : editSession} speakers={speakers} links={links} defaultStart={event.start_date} onClose={() => setEditSession(null)} onSaved={load} />}
       {editSpeaker && <SpeakerSheet eventId={event.id} speaker={editSpeaker === 'new' ? null : editSpeaker} onClose={() => setEditSpeaker(null)} onSaved={load} />}
       {editSponsor && <SponsorSheet eventId={event.id} sponsor={editSponsor === 'new' ? null : editSponsor} onClose={() => setEditSponsor(null)} onSaved={load} />}
     </div>
   );
 }
 
-function SessionSheet({ eventId, session, speakers, links, defaultStart, onClose, onSaved }: { eventId: string; session: Session | null; speakers: Speaker[]; links: { session_id: string; speaker_id: string }[]; defaultStart: string | null; onClose: () => void; onSaved: () => void }) {
+function SessionSheet({ signupsOn = false, eventId, session, speakers, links, defaultStart, onClose, onSaved }: { signupsOn?: boolean; eventId: string; session: Session | null; speakers: Speaker[]; links: { session_id: string; speaker_id: string }[]; defaultStart: string | null; onClose: () => void; onSaved: () => void }) {
   const [f, setF] = useState({ title: session?.title ?? '', kind: session?.kind ?? 'session', starts_at: toLocal(session?.starts_at ?? defaultStart), ends_at: toLocal(session?.ends_at ?? null), room: session?.room ?? '', track: session?.track ?? '', capacity: session?.capacity ? String(session.capacity) : '', description: session?.description ?? '' });
+  const [signup, setSignup] = useState<boolean>(!!(session as { signup_required?: boolean } | null)?.signup_required);
   const [who, setWho] = useState<string[]>(session ? links.filter((l) => l.session_id === session.id).map((l) => l.speaker_id) : []);
   const [err, setErr] = useState<string | null>(null);
   async function save() {
     if (!f.title.trim()) return setErr('Give the session a title.');
     if (f.starts_at && f.ends_at && f.ends_at <= f.starts_at) return setErr('The end time must be after the start time.');
-    const row = { event_id: eventId, title: f.title.trim(), kind: f.kind, starts_at: fromLocal(f.starts_at), ends_at: fromLocal(f.ends_at), room: f.room.trim() || null, track: f.track.trim() || null, capacity: f.capacity ? Math.max(1, parseInt(f.capacity, 10) || 0) || null : null, description: f.description.trim() || null };
+    const row = { event_id: eventId, title: f.title.trim(), kind: f.kind, starts_at: fromLocal(f.starts_at), ends_at: fromLocal(f.ends_at), room: f.room.trim() || null, track: f.track.trim() || null, capacity: f.capacity ? Math.max(1, parseInt(f.capacity, 10) || 0) || null : null, description: f.description.trim() || null, ...(signupsOn ? { signup_required: signup } : {}) };
     const res = session ? await supabase.from('event_sessions').update(row).eq('id', session.id).select('id').single() : await supabase.from('event_sessions').insert(row).select('id').single();
     if (res.error || !res.data) return setErr("Couldn't save the session.");
     const sid = res.data.id as string;
@@ -153,6 +173,12 @@ function SessionSheet({ eventId, session, speakers, links, defaultStart, onClose
         <label className="text-xs font-medium text-gray-500">Room<input className={field} value={f.room} maxLength={100} onChange={(e) => setF({ ...f, room: e.target.value })} placeholder="Main hall" /></label>
         <label className="text-xs font-medium text-gray-500">Track<input className={field} value={f.track} maxLength={100} onChange={(e) => setF({ ...f, track: e.target.value })} placeholder="Leadership" /></label>
       </div>
+      {signupsOn && (
+        <label className="mt-3 flex items-start gap-3 rounded-xl bg-indigo-50 p-3 text-sm text-gray-800">
+          <input type="checkbox" checked={signup} onChange={(e) => setSignup(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
+          <span><strong>People sign up for this session</strong><span className="block text-xs text-gray-600">For workshops and limited-seat sessions. Uses the Seats number above (leave it blank for no limit); a waitlist opens when it's full.</span></span>
+        </label>
+      )}
       <label className="mt-3 block text-xs font-medium text-gray-500">Description<textarea rows={3} className={field} value={f.description} maxLength={3000} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
       {speakers.length > 0 && (
         <div className="mt-3 text-xs font-medium text-gray-500">Speakers

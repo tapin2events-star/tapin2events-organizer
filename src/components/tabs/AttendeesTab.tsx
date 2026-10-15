@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFeature } from '../../lib/preview';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { ListSkeleton } from '../ui/Skeleton';
@@ -21,6 +22,24 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
   const [open, setOpen] = useState<string | null>(null);
   const [deciding, setDeciding] = useState<{ r: Registrant; approve: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Workshop sign-ups (Preview): which sessions each person saved.
+  const workshopsOn = useFeature('workshops');
+  const [sessionsBy, setSessionsBy] = useState<Map<string, string[]>>(new Map());
+  useEffect(() => {
+    if (!workshopsOn) return;
+    Promise.all([
+      supabase.rpc('session_roster', { p_event_id: event.id }),
+      supabase.from('event_sessions').select('id, title').eq('event_id', event.id),
+    ]).then(([{ data: r }, { data: ss }]) => {
+      const title = new Map(((ss ?? []) as { id: string; title: string }[]).map((x) => [x.id, x.title]));
+      const m = new Map<string, string[]>();
+      for (const x of (r ?? []) as { email: string; session_id: string; status: string }[]) {
+        if (x.status !== 'confirmed') continue;
+        m.set(x.email, [...(m.get(x.email) ?? []), title.get(x.session_id) ?? 'Session']);
+      }
+      setSessionsBy(m);
+    });
+  }, [workshopsOn, event.id]);
 
   const load = useCallback(async () => {
     const [{ data: t }, { data: r }, qs] = await Promise.all([
@@ -74,9 +93,9 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
     const { data: orders } = orderIds.length ? await supabase.from('orders').select('id, order_number, customer_name').in('id', orderIds) : { data: [] };
     const byId = new Map(((orders ?? []) as { id: string; order_number: string | null; customer_name: string | null }[]).map((o) => [o.id, o]));
     const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '');
-    const rows: unknown[][] = [['Name', 'Email', 'Ticket type', 'Section', 'Seat', 'Quantity', 'Price per ticket', 'Total paid', 'Status', 'Checked in', 'Checked in at', 'Registered', 'Order #', 'Request', ...questions.map((x) => x.label)]];
+    const rows: unknown[][] = [['Name', 'Email', 'Ticket type', 'Section', 'Seat', 'Quantity', 'Price per ticket', 'Total paid', 'Status', 'Checked in', 'Checked in at', 'Registered', 'Order #', 'Request', ...questions.map((x) => x.label), ...(workshopsOn ? ['Sessions'] : [])]];
     for (const p of people) {
-      const ans = questions.map((x) => answerText(p.answers[x.id]));
+      const ans = [...questions.map((x) => answerText(p.answers[x.id])), ...(workshopsOn ? [(sessionsBy.get(p.email) ?? []).join('; ')] : [])];
       if (!p.tickets.length) { rows.push([p.name ?? '', p.email, '', '', '', 0, '', '', '', 'No', '', '', '', p.request?.request_status ?? '', ...ans]); continue; }
       for (const t of p.tickets) {
         const o = t.order_id ? byId.get(t.order_id) : undefined;
@@ -135,7 +154,8 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
         {people.length === 0 ? <p className="mt-2 text-sm text-muted">No one yet. Tickets and registrations show up here.</p> : (
           <ul className="mt-3 flex flex-col gap-2">
             {shown.map((p) => {
-              const hasAnswers = questions.some((x) => p.answers?.[x.id] != null);
+              const mySessions = sessionsBy.get(p.email) ?? [];
+              const hasAnswers = questions.some((x) => p.answers?.[x.id] != null) || mySessions.length > 0;
               const expanded = open === p.email;
               const types = [...new Set(p.tickets.map((t) => t.tier?.name || (t.section_name ? `${t.section_name}${t.seat_assignment ? ` · ${t.seat_assignment}` : ''}` : t.ticket_type)))];
               const transferred = p.tickets.find((t) => t.transferred_from);
@@ -154,6 +174,7 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
                   </button>
                   {expanded && (
                     <div className="border-t border-gray-100 px-4 py-3 text-sm">
+                      {mySessions.length > 0 && <p className="mb-2 text-xs text-bone"><span className="text-muted">Sessions:</span> {mySessions.join(' · ')}</p>}
                       {hasAnswers && (
                         <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
                           {questions.filter((x) => p.answers?.[x.id] != null).map((x) => <div key={x.id} className="min-w-0"><dt className="text-xs text-muted">{x.label}</dt><dd className="break-words text-bone">{answerText(p.answers[x.id])}</dd></div>)}
