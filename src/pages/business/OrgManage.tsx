@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { OrgPlanStatus } from '../../components/business/PlanCheckout';
 import { useNavigate } from 'react-router-dom';
 import OrgPageSectionsTab from '../../components/business/OrgPageSectionsTab';
 import OrgAudienceTab from '../../components/business/OrgAudienceTab';
@@ -40,6 +41,7 @@ function OrgManageInner() {
   };
   const insightsOn = useFeature('org_insights');
   const newsletterOn = useFeature('newsletters');
+  const billingOn = useFeature('billing');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
   const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
@@ -131,6 +133,7 @@ function OrgManageInner() {
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} onAudience={() => setTab('Audience')} />}
         {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}
         {tab === 'Audience' && isLead && insightsOn && <OrgAudienceTab orgId={org.id} orgName={org.name} newsletterOn={newsletterOn} />}
+        {tab === 'Payouts' && isLead && billingOn && <OrgPlanStatus orgId={org.id} />}
         {tab === 'Payouts' && isLead && insightsOn && <OrgSales orgId={org.id} />}
         {tab === 'Payouts' && (role === 'owner' || role === 'admin') && <OrgPayoutsTab orgId={org.id} orgName={org.name} slug={org.slug} />}
       </div>

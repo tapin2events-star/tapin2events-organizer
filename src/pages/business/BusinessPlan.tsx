@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import PlanCheckout from '../../components/business/PlanCheckout';
+import { useFeature } from '../../lib/preview';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -29,6 +31,7 @@ const PLANS = [
 
 // "Business plan, coming soon" (Preview): what's planned, what stays free, and a founding-price reservation.
 export default function BusinessPlan() {
+  const billingOn = useFeature('billing');
   const { user } = useAuth();
   const [spots, setSpots] = useState<number | null>(null);
   const [orgs, setOrgs] = useState<MyOrg[]>([]);
@@ -116,6 +119,8 @@ export default function BusinessPlan() {
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {FREE.map((f) => <li key={f} className="flex items-start gap-2 text-sm text-bone"><span className="text-green-600">✓</span>{f}</li>)}
         </ul>
+
+        {billingOn && user && <PlanCheckout />}
 
         <section id="reserve" className="mt-10 max-w-xl scroll-mt-24 rounded-2xl border-2 p-5" style={{ borderColor: GOLD }}>
           <h2 className="font-display text-2xl font-bold text-bone">Reserve founding pricing</h2>

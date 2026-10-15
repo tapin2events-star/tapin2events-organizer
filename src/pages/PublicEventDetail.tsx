@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import GalaGuestCard from '../components/events/GalaGuestCard';
 import VolunteerCard from '../components/events/VolunteerCard';
 import { recordLinkVisit } from '../lib/linkTracking';
 import { NetworkingInvite } from '../components/business/NetworkingCards';
@@ -34,6 +35,7 @@ import { EventPageSkeleton } from '../components/ui/Skeleton';
 
 export default function PublicEventDetail() {
   const volunteersOn = useFeature('volunteers');
+  const galaOn = useFeature('gala');
   // Promotion links: arriving with ?src=<code> records a visit for that link.
   useEffect(() => {
     const src = new URLSearchParams(window.location.search).get('src');
@@ -842,6 +844,7 @@ export default function PublicEventDetail() {
         )}
 
         {networkingOn && id && <NetworkingInvite eventId={id} />}
+        {galaOn && <GalaGuestCard eventId={event.id} />}
         {volunteersOn && <VolunteerCard eventId={event.id} />}
         {donationsOn && <DonationCard event={event} recipient={biz.org?.name ?? organizerName ?? event.title} accent={biz.org?.brand.accent} />}
         {businessOn && biz.isBiz && <BusinessEventSections event={event} data={biz} />}

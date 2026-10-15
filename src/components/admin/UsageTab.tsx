@@ -48,6 +48,7 @@ export default function UsageTab() {
         </div>
       </section>
 
+      <BillingAdmin />
       <NewsletterAdmin />
 
       <section>
@@ -120,6 +121,36 @@ function NewsletterAdmin() {
             </button>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+// Business plan billing: who's subscribed, and the enforcement switch (off = premium features free for everyone).
+function BillingAdmin() {
+  const [b, setB] = useState<{ enforcement: string; subscriptions: { org: string; interval: string | null; status: string | null; renews_at: string | null; founding: boolean; cancelling: boolean }[]; event_purchases: number } | null>(null);
+  const load = () => supabase.rpc('billing_admin_status').then(({ data }) => setB((data ?? null) as typeof b));
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!b) return null;
+  const on = b.enforcement === 'on';
+  async function toggle() {
+    if (!on && !window.confirm('Turn ON enforcement? Organizations without the Business plan will be asked for a plan to use premium features. Give organizations notice first. You can turn it back off anytime.')) return;
+    await supabase.rpc('set_billing_enforcement', { p_on: !on }); load();
+  }
+  return (
+    <section>
+      <h2 className="font-display text-xl font-bold text-bone">Business plan billing <span className="rounded-full bg-indigo-100 px-2 py-0.5 align-middle text-[10px] font-bold uppercase text-indigo-700">Preview</span></h2>
+      <div className="mt-3 rounded-2xl border border-gray-200 bg-surface p-4 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-bone"><strong>{b.subscriptions.filter((x) => ['active', 'trialing', 'past_due'].includes(x.status ?? '')).length}</strong> active subscriptions · <strong>{b.event_purchases}</strong> single-event purchases</p>
+          <button onClick={toggle} className={`rounded-full px-3 py-1.5 text-xs font-bold ${on ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}`}>Enforcement: {on ? 'ON' : 'OFF'}</button>
+        </div>
+        <p className="mt-1 text-xs text-muted">{on ? 'Premium features require a plan.' : 'Premium features are free for everyone ("free for now"). Plans can still be purchased.'}</p>
+        {b.subscriptions.length > 0 && (
+          <ul className="mt-3 flex flex-col gap-1">
+            {b.subscriptions.map((x, i) => <li key={i} className="flex justify-between gap-2"><span className="truncate text-bone">{x.org}{x.founding ? ' · founding' : ''}</span><span className="shrink-0 text-muted">{x.interval ?? ''} · {x.status ?? '—'}{x.cancelling ? ' · cancelling' : ''}{x.renews_at ? ` · ${new Date(x.renews_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}</span></li>)}
+          </ul>
+        )}
       </div>
     </section>
   );
