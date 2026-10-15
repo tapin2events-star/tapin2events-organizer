@@ -88,19 +88,10 @@ export default function Layout() {
     <p className="mb-1 mt-5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">{text}</p>
   );
 
-  if (whiteLabel) return (
-    <div className="min-h-screen bg-ink text-bone">
-      <main className="mx-auto min-w-0 max-w-4xl px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:px-8">
-        <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
-        <ScrollToTop />
-      </main>
-    </div>
-  );
-
   return (
     <div className="flex min-h-screen bg-ink text-bone">
       {/* Mobile top bar: only visible below md */}
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 md:hidden" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))', ...(whiteLabel ? { display: 'none' } : {}) }}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('a, button')) scrollPageToTop(); }}>
         <Link to="/" className="font-display text-xl font-extrabold tracking-tight text-gray-900">
           <span className="bg-gradient-to-r from-marigold to-teal bg-clip-text text-transparent">TapIN</span>
@@ -124,7 +115,7 @@ export default function Layout() {
         className={`fixed inset-y-0 left-0 z-[1002] flex w-72 shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-surface px-4 pb-4 transition-transform duration-200 md:static md:z-auto md:w-64 md:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))' }}
+        style={{ paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))', ...(whiteLabel ? { display: 'none' } : {}) }}
       >
         <div className="mb-4 flex items-center justify-between px-1">
           <Link to="/" onClick={close} className="font-display text-2xl font-extrabold tracking-tight">
@@ -195,12 +186,15 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 py-6 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:px-8 md:py-8 md:pt-8 md:pb-8">
+      {/* White-labeled pages keep this same frame (so the page never reloads) with TapIN's menu, top bar and tabs hidden. */}
+      <main className={whiteLabel
+        ? 'mx-auto min-w-0 max-w-4xl flex-1 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:px-8'
+        : 'min-w-0 flex-1 px-4 py-6 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:px-8 md:py-8 md:pt-8 md:pb-8'}>
         <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
         <ScrollToTop />
       </main>
 
-      <BottomTabBar />
+      {!whiteLabel && <BottomTabBar />}
     </div>
   );
 }
