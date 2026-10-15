@@ -139,7 +139,7 @@ function BillingAdmin() {
   }
   return (
     <section>
-      <h2 className="font-display text-xl font-bold text-bone">Business plan billing <span className="rounded-full bg-indigo-100 px-2 py-0.5 align-middle text-[10px] font-bold uppercase text-indigo-700">Preview</span></h2>
+      <h2 className="font-display text-xl font-bold text-bone">Business plan billing</h2>
       <div className="mt-3 rounded-2xl border border-gray-200 bg-surface p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-bone"><strong>{b.subscriptions.filter((x) => ['active', 'trialing', 'past_due'].includes(x.status ?? '')).length}</strong> active subscriptions · <strong>{b.event_purchases}</strong> single-event purchases</p>

@@ -66,7 +66,7 @@ export default function VolunteersTab({ event }: { event: TapEvent }) {
     <div>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">🙋 Volunteers <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span> <PremiumBadge /></p>
+          <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">🙋 Volunteers <PremiumBadge /></p>
           <p className="text-sm text-muted">Create shifts and people sign up from your event page. When a shift is full, others can join a waitlist and move up automatically.</p>
         </div>
         <button onClick={() => setEditing('new')} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ Add shift</button>

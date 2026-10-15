@@ -81,7 +81,7 @@ export function SessionRulesCard({ eventId, requiresTicket, allowOverlap, onChan
   async function save(r: boolean, o: boolean) { onChange(r, o); await supabase.rpc('set_session_rules', { p_event_id: eventId, p_requires_ticket: r, p_allow_overlap: o }); }
   return (
     <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 text-sm">
-      <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">📋 Session sign-ups <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span> <PremiumBadge /></p>
+      <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">📋 Session sign-ups <PremiumBadge /></p>
       <p className="mt-1 text-muted">Turn on "People sign up for this session" on any workshop or limited-seat session. Attendees save seats from your agenda; full sessions get a waitlist.</p>
       <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={requiresTicket} onChange={(e) => save(e.target.checked, allowOverlap)} className="mt-0.5 h-4 w-4 accent-marigold" /><span>Only ticket holders can sign up for sessions</span></label>
       <label className="mt-2 flex items-start gap-2"><input type="checkbox" checked={allowOverlap} onChange={(e) => save(requiresTicket, e.target.checked)} className="mt-0.5 h-4 w-4 accent-marigold" /><span>Allow signing up for sessions at the same time</span></label>

@@ -40,7 +40,7 @@ export default function PlanCheckout() {
   const events = st.events.filter((e) => !e.has_plan);
   return (
     <section id="get-plan" className="mt-10 max-w-2xl scroll-mt-24 rounded-2xl border-2 border-[#0F1B3D] p-5">
-      <p className="flex flex-wrap items-center gap-2 font-display text-2xl font-bold text-bone">Get the Business plan <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+      <p className="flex flex-wrap items-center gap-2 font-display text-2xl font-bold text-bone">Get the Business plan</p>
       <p className="mt-1 text-sm text-muted">Secure checkout with Stripe. Cancel anytime from Manage billing.{st.enforcement !== 'on' ? ' Features stay free for everyone during early access either way.' : ''}</p>
       {msg && <p role="status" className={`mt-3 rounded-xl px-3 py-2 text-sm ${msg.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{msg.text}</p>}
 
@@ -106,7 +106,7 @@ export function OrgPlanStatus({ orgId }: { orgId: string }) {
     <div className={`mb-6 rounded-2xl border p-4 ${isActive(o) ? 'border-green-200 bg-green-50' : 'border-[#C9A227]/50 bg-[#C9A227]/10'}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">{isActive(o) ? '✓ Business plan' : '⭐ Free during early access'} <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">{isActive(o) ? '✓ Business plan' : '⭐ Free during early access'}</p>
           <p className="text-sm text-muted">{isActive(o) ? `${o.interval === 'year' ? 'Yearly' : 'Monthly'} · ${o.cancel_at_period_end ? `ends ${day(o.renews_at)}` : `renews ${day(o.renews_at)}`}` : `Premium features are free for now.${o.founding_number ? ' Founding pricing: 40% off for life.' : ''}`}</p>
         </div>
         {isActive(o)
