@@ -15,16 +15,22 @@ export function useBusinessData(event: TapEvent | null) {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [links, setLinks] = useState<{ session_id: string; speaker_id: string }[]>([]);
   const isBiz = !!event && !!event.event_kind && event.event_kind !== 'community';
+  // The hosting organization loads for ANY event that belongs to one (community groups host events too);
+  // the agenda, speakers and sponsors only apply to business and nonprofit events.
+  useEffect(() => {
+    if (!event?.organization_id) { setOrg(null); return; }
+    supabase.from('organizations').select('*').eq('id', event.organization_id).maybeSingle().then(({ data }) => {
+      if (data) { const og = { ...data, brand: { ...DEFAULT_BRAND, ...(data.brand ?? {}) } } as Organization; setOrg(og); if (isBiz) loadFont(og.brand.font); }
+    });
+  }, [event?.organization_id, isBiz]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!event || !isBiz) return;
     (async () => {
-      const [o, a, b, c] = await Promise.all([
-        event.organization_id ? supabase.from('organizations').select('*').eq('id', event.organization_id).maybeSingle() : Promise.resolve({ data: null }),
+      const [a, b, c] = await Promise.all([
         supabase.from('event_sessions').select('*').eq('event_id', event.id).order('starts_at', { ascending: true, nullsFirst: false }).order('sort_order'),
         supabase.from('event_speakers').select('*').eq('event_id', event.id).order('featured', { ascending: false }).order('sort_order').order('created_at'),
         supabase.from('event_sponsors').select('*').eq('event_id', event.id).order('sort_order').order('created_at'),
       ]);
-      if (o.data) { const og = { ...o.data, brand: { ...DEFAULT_BRAND, ...(o.data.brand ?? {}) } } as Organization; setOrg(og); loadFont(og.brand.font); }
       const ss = (a.data ?? []) as Session[];
       setSessions(ss); setSpeakers((b.data ?? []) as Speaker[]); setSponsors((c.data ?? []) as Sponsor[]);
       if (ss.length) {
