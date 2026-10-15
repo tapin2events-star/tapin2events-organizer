@@ -146,6 +146,7 @@ function BillingAdmin() {
           <button onClick={toggle} className={`rounded-full px-3 py-1.5 text-xs font-bold ${on ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}`}>Enforcement: {on ? 'ON' : 'OFF'}</button>
         </div>
         <p className="mt-1 text-xs text-muted">{on ? 'Premium features require a plan.' : 'Premium features are free for everyone ("free for now"). Plans can still be purchased.'}</p>
+        <StripeKeyField />
         {b.subscriptions.length > 0 && (
           <ul className="mt-3 flex flex-col gap-1">
             {b.subscriptions.map((x, i) => <li key={i} className="flex justify-between gap-2"><span className="truncate text-bone">{x.org}{x.founding ? ' · founding' : ''}</span><span className="shrink-0 text-muted">{x.interval ?? ''} · {x.status ?? '—'}{x.cancelling ? ' · cancelling' : ''}{x.renews_at ? ` · ${new Date(x.renews_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}</span></li>)}
@@ -153,5 +154,30 @@ function BillingAdmin() {
         )}
       </div>
     </section>
+  );
+}
+
+// Stripe's publishable key (public by design) for embedded checkout on white-labeled events.
+function StripeKeyField() {
+  const [current, setCurrent] = useState<string | null | undefined>(undefined);
+  const [val, setVal] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => { supabase.rpc('stripe_publishable_key').then(({ data }) => setCurrent((data as string | null) ?? null)); }, []);
+  async function save() {
+    const { error } = await supabase.rpc('set_stripe_publishable_key', { p_key: val.trim() });
+    if (error) return setMsg(error.message);
+    setCurrent(val.trim()); setVal(''); setMsg('Saved. White-labeled events now use embedded checkout.');
+  }
+  if (current === undefined) return null;
+  return (
+    <div className="mt-4 border-t border-gray-200 pt-3">
+      <p className="text-sm font-medium text-bone">Stripe publishable key <span className="font-normal text-muted">(for embedded checkout on white-labeled events)</span></p>
+      {current ? <p className="mt-1 text-xs text-green-700">✓ Set ({current.slice(0, 8)}…{current.slice(-4)})</p> : <p className="mt-1 text-xs text-muted">Not set yet. In Stripe: Developers → API keys → Publishable key (starts with pk_live_). It's safe to share; it can only start a checkout.</p>}
+      <div className="mt-2 flex gap-2">
+        <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="pk_live_…" aria-label="Stripe publishable key" className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" />
+        <button onClick={save} disabled={!val.trim()} className="rounded-xl bg-[#0F1B3D] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{current ? 'Replace' : 'Save'}</button>
+      </div>
+      {msg && <p className="mt-1 text-xs text-muted">{msg}</p>}
+    </div>
   );
 }

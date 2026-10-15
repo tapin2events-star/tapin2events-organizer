@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import EmbeddedCheckoutSheet from '../events/EmbeddedCheckoutSheet';
+import { publishableKey } from '../../lib/embeddedCheckout';
+import { useWhiteLabel } from '../../lib/whiteLabel';
 import MerchAddOns, { type AddOnPick } from '../events/MerchAddOns';
 import { donationFee } from '../../lib/donations';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -24,6 +27,8 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   const [qty, setQty] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [addOns, setAddOns] = useState<AddOnPick[]>([]);
+  const whiteLabel = useWhiteLabel();
+  const [embedSecret, setEmbedSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Promo code
   const [codeOpen, setCodeOpen] = useState(false);
@@ -90,10 +95,12 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
       return;
     }
     const base = window.location.origin + import.meta.env.BASE_URL;
+    const embed = !!whiteLabel && !!(await publishableKey());
     const { data, error: err } = await supabase.functions.invoke('create-tier-checkout', {
-      body: { event_id: eventId, items, promo_code: promo?.code ?? null, donation: giftOk ? { amount: Math.round(giftValue * 100) / 100, cover_fees: giftCover } : null, add_ons: addOns, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
+      body: { event_id: eventId, items, embedded: embed, promo_code: promo?.code ?? null, donation: giftOk ? { amount: Math.round(giftValue * 100) / 100, cover_fees: giftCover } : null, add_ons: addOns, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
     });
     setBusy(false);
+    if (!err && data?.client_secret) { setEmbedSecret(data.client_secret as string); return; }
     if (err || !data?.url) {
       let msg = "Couldn't start checkout. Please try again.";
       try { const j = await (err as { context?: Response })?.context?.json(); if (j?.error) msg = j.error; } catch { /* keep default */ }
@@ -198,6 +205,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
         {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : (addOns.length ? 'Checkout with merch' : `Checkout · ${money(subtotal + fees + giftCharge)}`)}
       </button>
       {!user && <p className="mt-2 text-center text-xs text-gray-500">Already have an account? <Link to="/login" className="text-marigold">Sign in</Link></p>}
-    </div>
+    {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
+      </div>
   );
 }

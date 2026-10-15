@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import EmbeddedCheckoutSheet from '../components/events/EmbeddedCheckoutSheet';
+import { publishableKey } from '../lib/embeddedCheckout';
 import { useEventWhiteLabel } from '../lib/whiteLabel';
 import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
 import MerchAddOns, { type AddOnPick } from '../components/events/MerchAddOns';
@@ -56,6 +58,7 @@ export default function PublicEventDetail() {
   // Business / nonprofit events: organization brand, agenda, speakers, sponsors (TapIN for Business).
   const biz = useBusinessData(event);
   const whiteLabel = useEventWhiteLabel(event?.id);
+  const [embedSecret, setEmbedSecret] = useState<string | null>(null);
   // Ticket tiers (preview): when an event has tiers, the tier picker replaces the single price.
   const [tiers, setTiers] = useState<TierAvail[]>([]);
   useEffect(() => { if (id && businessOn) loadTiers(id).then(setTiers); else setTiers([]); }, [id, businessOn]);
@@ -271,16 +274,19 @@ export default function PublicEventDetail() {
     setRegisterError(null);
 
     const base = window.location.origin + import.meta.env.BASE_URL;
+    const embed = !!whiteLabel && !!(await publishableKey());
     const { data, error } = await supabase.functions.invoke('create-stripe-checkout', {
       body: {
         event_id: id,
         add_ons: addOns,
+        embedded: embed,
         successUrl: `${base}events/${id}?checkout=success`,
         cancelUrl: `${base}events/${id}?checkout=cancelled`,
       },
     });
 
     setRegistering(false);
+    if (!error && data?.client_secret) { setEmbedSecret(data.client_secret as string); return; }
     if (error || !data?.url) {
       let msg = 'Something went wrong starting checkout. Please try again.';
       try { const j = await (error as { context?: Response })?.context?.json(); if (j?.error && !/stripe|unauthorized/i.test(j.error)) msg = j.error; } catch { /* keep default */ }
@@ -378,6 +384,7 @@ export default function PublicEventDetail() {
   return (
     <div className="min-h-screen bg-ink">
       {whiteLabel && <WhiteLabelHeader brand={whiteLabel} />}
+      {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? event?.title ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
       {isPreview && (
         <div className="sticky top-0 z-40 border-b border-amber-300 bg-amber-100 px-4 py-2.5 sm:px-6">
           <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
