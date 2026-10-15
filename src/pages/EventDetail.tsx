@@ -68,6 +68,12 @@ export default function EventDetail() {
   const promoteOn = useFeature('promote');
   const volunteersOn = useFeature('volunteers');
   const galaOn = useFeature('gala');
+  const [hostOrgName, setHostOrgName] = useState<string | null>(null);
+  useEffect(() => {
+    const orgId = (event as { organization_id?: string | null } | null)?.organization_id;
+    if (!orgId) { setHostOrgName(null); return; }
+    supabase.from('organizations').select('name').eq('id', orgId).maybeSingle().then(({ data }) => setHostOrgName((data as { name: string } | null)?.name ?? null));
+  }, [(event as { organization_id?: string | null } | null)?.organization_id]); // eslint-disable-line react-hooks/exhaustive-deps
   const programOn = useFeature('program_v2');
   const visibleTabs = TABS.filter((t) => (t !== 'Gala' || galaOn) && (t !== 'Volunteers' || volunteersOn) && (t !== 'Promote' || promoteOn) && (t !== 'Donations' || (businessOn && (event?.event_kind ?? 'community') !== 'business')) && (t !== 'Registration' || businessOn) && (t !== 'Tickets' || (businessOn && !event?.is_seating_enabled)) && (t !== 'Business page' || (businessOn && !!event && event.event_kind !== undefined && event.event_kind !== 'community')) && (!teamRole || !limitedTabs[teamRole] || limitedTabs[teamRole].includes(t)));
   useEffect(() => {
@@ -301,7 +307,7 @@ export default function EventDetail() {
       {tab === 'Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
         <div className="mb-8"><InvoicesSection eventId={id!} ticketPrice={0} sections={(event.seating_sections ?? []).map((s) => ({ name: s.name, price: Number(s.price) || 0, seats: (s.num_tables ?? 0) * (s.seats_per_table ?? 0) }))} /></div>
       )}
-      {tab === 'Sales' && <SalesTab eventId={id} onGoAttendees={() => setTab('Attendees')} />}
+      {tab === 'Sales' && <SalesTab eventId={id} onGoAttendees={() => setTab('Attendees')} hostName={hostOrgName ?? 'You'} />}
       {tab === 'Messages' && <MessagesTab eventId={id} />}
       {tab === 'Products' && (
         <>

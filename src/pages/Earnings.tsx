@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MySplitEarnings } from '../components/business/RevenueSplits';
+import { useFeature } from '../lib/preview';
 import BackButton from '../components/BackButton';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +19,7 @@ function Stat({ label, value, sub, big = false }: { label: string; value: string
 }
 
 export default function Earnings() {
+  const splitsOn = useFeature('splits');
   const { user } = useAuth();
   const [data, setData] = useState<EarningsData | null>(null);
   const [range, setRange] = useState<Range>('all');
@@ -79,6 +82,7 @@ export default function Earnings() {
           Download CSV
         </button>
       </div>
+      {splitsOn && <MySplitEarnings />}
 
       <div className="mt-4 flex flex-wrap gap-1.5">
         {(Object.keys(RANGE_LABELS) as Range[]).map((r) => (

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
+import RevenueSplits from '../business/RevenueSplits';
+import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import type { Ticket } from '../../lib/types';
 
-export default function SalesTab({ eventId, onGoAttendees }: { eventId: string; onGoAttendees?: () => void }) {
+export default function SalesTab({ eventId, onGoAttendees, hostName = 'You' }: { eventId: string; onGoAttendees?: () => void; hostName?: string }) {
+  const splitsOn = useFeature('splits');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +37,7 @@ export default function SalesTab({ eventId, onGoAttendees }: { eventId: string; 
 
   return (
     <div className="flex flex-col gap-6">
+      {splitsOn && <RevenueSplits eventId={eventId} hostName={hostName} />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-surface border border-gray-200 p-5">
           <p className="text-xs uppercase tracking-widest text-muted">Tickets sold</p>
