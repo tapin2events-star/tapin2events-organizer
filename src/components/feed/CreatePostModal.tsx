@@ -68,9 +68,15 @@ export default function CreatePostModal({ onClose, onPosted, initialEvent = null
     return () => clearTimeout(timeout);
   }, [eventSearch, selectedEvent]);
 
+  // Clear the tagged event only when someone switches who they're posting as, not when the window first opens
+  // (so an event passed in, like from an event's "Share a clip", stays tagged).
+  const prevPosterType = useRef(posterType);
   useEffect(() => {
-    setSelectedEvent(null);
-    setEventSearch('');
+    if (prevPosterType.current !== posterType) {
+      prevPosterType.current = posterType;
+      setSelectedEvent(null);
+      setEventSearch('');
+    }
     if (posterType === 'organizer' && user?.email) {
       supabase
         .from('events')
