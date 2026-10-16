@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import PremiumBadge from '../business/PremiumBadge';
 import { supabase } from '../../lib/supabaseClient';
 import PayoutsCard from '../PayoutsCard';
 
 interface Overview { on: boolean; can_edit: boolean; promoters: { link_id: string; ready: boolean; has_account: boolean; sent: number; waiting: number }[] }
 const money = (cents: number) => `$${(Number(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Event > Promote (Preview): pay promoters their commission automatically on every ticket sold through their link.
+// Event > Promote (Business plan): pay promoters their commission automatically on every ticket sold through their link.
 export default function PromoterPayoutsCard({ eventId, links, onLinksChanged }: { eventId: string; onLinksChanged?: () => void; links: { id: string; label: string; promoter_name: string | null; promoter_email: string | null; commission_pct: number | null }[] }) {
   const [o, setO] = useState<Overview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -44,7 +45,7 @@ export default function PromoterPayoutsCard({ eventId, links, onLinksChanged }: 
       </div>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Pay promoters automatically <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Pay promoters automatically <PremiumBadge /></p>
           <p className="text-sm text-muted">{o.on
             ? 'Each ticket sold through a promoter\u2019s link sends them their commission of the ticket price. The rest goes to your payout account.'
             : 'Turn on to send promoters their commission automatically on every ticket sold through their link, instead of paying them yourself.'}</p>
@@ -71,7 +72,7 @@ export default function PromoterPayoutsCard({ eventId, links, onLinksChanged }: 
   );
 }
 
-// My promoter links (Preview): automatic payouts received, and the payout setup card if needed.
+// My promoter links: automatic payouts received, and the payout setup card if needed.
 export function MyPromoterPayouts() {
   const [rows, setRows] = useState<{ link_id: string; event_title: string; auto_pay: boolean; sent_cents: number; waiting_cents: number }[] | null>(null);
   const [payouts, setPayouts] = useState<{ hasAccount: boolean; ready: boolean } | null>(null);
@@ -99,7 +100,7 @@ export function MyPromoterPayouts() {
   );
 }
 
-// Organization settings > Promote (Preview): automatic promoter payouts across the organization's events.
+// Organization settings > Promote (Business plan): automatic promoter payouts across the organization's events.
 export function OrgPromoterPayouts({ orgId }: { orgId: string }) {
   type Data = { default_on: boolean; events: { id: string; title: string; start_date: string | null; on: boolean; promoters: number; paid: number; waiting: number }[]; promoters: { name: string; photo: string | null; ready: boolean; events: number; paid: number; waiting: number }[] };
   const [d, setD] = useState<Data | null>(null);
@@ -120,7 +121,7 @@ export function OrgPromoterPayouts({ orgId }: { orgId: string }) {
   );
   return (
     <section className="mt-8 rounded-2xl border border-gray-200 bg-surface p-4">
-      <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">💸 Automatic promoter payouts <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+      <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">💸 Automatic promoter payouts <PremiumBadge /></p>
       <p className="text-sm text-muted">Promoters (and performers with promo links) get their commission automatically on every ticket sold through their link.</p>
       {err && <p role="alert" className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
       <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5">
