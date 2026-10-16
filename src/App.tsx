@@ -40,6 +40,7 @@ const OrganizerVendorApplicationsPage = lazyWithRetry(() => import('./pages/Orga
 const OrganizerBookings = lazyWithRetry(() => import('./pages/OrganizerBookings'));
 const ResourceDiscovery = lazyWithRetry(() => import('./pages/ResourceDiscovery'));
 const ResourceProfile = lazyWithRetry(() => import('./pages/ResourceProfile'));
+const Welcome = lazyWithRetry(() => import('./pages/Welcome'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -82,6 +83,8 @@ export default function App() {
           {/* One shared sidebar shell for the entire app now — public pages
               and organizer pages alike. Auth is enforced per-route below via
               ProtectedRoute, not by which shell wraps them. */}
+          <Route path="/welcome" element={<Welcome />} />
+
           <Route element={<Layout />}>
             <Route path="/" element={<Discover />} />
             <Route path="/events/:id" element={<PublicEventDetail />} />

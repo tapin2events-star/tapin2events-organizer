@@ -201,6 +201,7 @@ export default function Profile() {
         <div>
           <h1 className="font-display text-2xl font-extrabold text-bone">{profile.full_name || profile.email}</h1>
           <p className="text-sm text-muted">{profile.email}</p>
+          <Link to="/welcome" className="mt-1 inline-block text-xs font-medium text-marigold">Update what you use TapIN for ›</Link>
           <div className="mt-2 flex gap-2">
             {profile.is_organizer && (
               <span className="flex items-center gap-1 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-marigold">

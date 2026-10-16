@@ -1,11 +1,12 @@
 import { Suspense, useEffect, useState } from 'react';
+import { effectiveRoles, reloadSetup, useSetup } from '../lib/setup';
 import { useWhiteLabel } from '../lib/whiteLabel';
 import PageLoading from './PageLoading';
 import { prefetchCommonPages } from '../lib/prefetch';
 import { claimLinkVisits } from '../lib/linkTracking';
 import { scrollPageToTop } from '../lib/scroll';
 import { useFeature } from '../lib/preview';
-import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import NavIcon from './NavIcon';
 import { useNavBadges, type NavBadges } from '../lib/useNavBadges';
@@ -60,6 +61,19 @@ export default function Layout() {
 
   const close = () => setMenuOpen(false);
   const whiteLabel = useWhiteLabel();
+  // First sign-in: send people who haven't set up yet to the welcome flow (only from the home screen, so links to
+  // events, tickets or checkout are never interrupted).
+  const setup = useSetup();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (user && setup && !setup.onboarded && location.pathname === '/') navigate('/welcome', { replace: true });
+  }, [user, setup, location.pathname, navigate]);
+  // Role-based menu: show the tools that match what someone does; everything else behind "Show all tools".
+  const roles = effectiveRoles(setup);
+  const showAll = !setup || setup.show_all_tools || setup.is_admin || isAdmin;
+  const isCreator = showAll || roles.has('artist') || roles.has('services');
+  const isOrganizer = showAll || roles.has('organizer') || roles.has('organization');
+  const toggleAll = async () => { await supabase.rpc('set_setup_pref', { p_show_all_tools: !setup?.show_all_tools }); reloadSetup(); };
   const displayName = me?.full_name?.trim() || user?.email?.split('@')[0] || 'Guest';
 
   const renderItems = (items: Item[]) => items.map((item) => {
@@ -148,16 +162,22 @@ export default function Layout() {
         {user && (
           <>
             {heading('My stuff')}
-            <nav className="flex flex-col gap-0.5" aria-label="My stuff">{renderItems(networkingOn ? [...MY_STUFF, { to: '/network', label: 'Networking', icon: 'groups', end: true }] : MY_STUFF)}</nav>
+            <nav className="flex flex-col gap-0.5" aria-label="My stuff">{renderItems([...MY_STUFF.filter((i) => isCreator || (i.to !== '/resources/dashboard' && i.to !== '/groups')), ...(networkingOn ? [{ to: '/network', label: 'Networking', icon: 'groups', end: true }] : [])])}</nav>
           </>
         )}
 
-        {heading('Organizer')}
-        <Link to="/organizer/new" onClick={close}
+        {(isOrganizer || !user) && heading('Organizer')}
+        {(isOrganizer || !user) && <Link to="/organizer/new" onClick={close}
           className="mb-1 flex items-center justify-center gap-2 rounded-xl bg-marigold px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-marigold/90">
           <NavIcon name="plus" className="h-4 w-4" /> Create event
-        </Link>
-        <nav className="flex flex-col gap-0.5" aria-label="Organizer">{renderItems(businessOn ? [ORGANIZER[0], { to: '/business', label: 'TapIN for Business', icon: 'bookings' }, ...ORGANIZER.slice(1)] : ORGANIZER)}</nav>
+        </Link>}
+        {isOrganizer && <nav className="flex flex-col gap-0.5" aria-label="Organizer">{renderItems(businessOn ? [ORGANIZER[0], { to: '/business', label: 'TapIN for Business', icon: 'bookings' }, ...ORGANIZER.slice(1)] : ORGANIZER)}</nav>}
+        {user && setup && !setup.is_admin && !isAdmin && (
+          <div className="mt-4 rounded-xl border border-dashed border-gray-300 px-3 py-2.5 text-xs text-gray-500">
+            {!isOrganizer && <Link to="/welcome" onClick={close} className="block font-medium text-marigold">Organize events or sell your art? Set it up ›</Link>}
+            <button onClick={toggleAll} className={`${!isOrganizer ? 'mt-1.5 ' : ''}block text-gray-500 underline`}>{setup.show_all_tools ? 'Show only my tools' : 'Show all tools'}</button>
+          </div>
+        )}
 
         {isAdmin && (
           <>

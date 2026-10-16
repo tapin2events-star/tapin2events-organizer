@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import GettingStarted from '../components/GettingStarted';
 import { useFeature } from '../lib/preview';
 import PromotedRow, { loadPromoted, type Promoted } from '../components/discover/PromotedRow';
 import FeaturedOrgs from '../components/business/FeaturedOrgs';
@@ -291,6 +292,7 @@ export default function Discover() {
           ))}
         </div>
 
+        {tab !== 'map' && !search.trim() && <GettingStarted />}
         {tab !== 'map' && (search.trim().length >= 2 || (!category && !priceFilter && !dateFilter)) && <FeaturedOrgs query={search} />}
 
         {promoteOn && tab !== 'map' && !search.trim() && !category && !priceFilter && !dateFilter && <PromotedRow promoted={promoted} events={events} savedIds={savedIds} onToggleSave={toggleSave} />}
