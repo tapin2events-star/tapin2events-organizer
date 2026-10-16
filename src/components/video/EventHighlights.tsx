@@ -23,9 +23,12 @@ export default function EventHighlights({ eventId, eventTitle, ended, started = 
     <section className="mt-6" aria-labelledby="event-highlights">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h2 id="event-highlights" className="font-display text-xl font-bold text-bone">🎞️ Highlights</h2>
-        {canShare && (user
-          ? <button onClick={() => setSharing(true)} className="rounded-xl bg-marigold px-3 py-2 text-sm font-semibold text-white">Share a clip</button>
-          : <Link to="/login" className="text-sm font-medium text-marigold">Sign in to share a clip ›</Link>)}
+        <span className="flex items-center gap-3">
+          {items.length > 0 && <Link to={`/feed?event=${eventId}`} className="text-sm font-medium text-marigold">See all &rarr;</Link>}
+          {canShare && (user
+            ? <button onClick={() => setSharing(true)} className="rounded-xl bg-marigold px-3 py-2 text-sm font-semibold text-white">Share a clip</button>
+            : <Link to="/login" className="text-sm font-medium text-marigold">Sign in to share a clip ›</Link>)}
+        </span>
       </div>
       {posted && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">Thanks! Your clip is processing and will appear here in a few minutes.</p>}
       {items.length ? (

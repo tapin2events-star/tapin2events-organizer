@@ -882,7 +882,7 @@ export default function PublicEventDetail() {
         )}
         <EventProgram eventId={event.id} />
 
-        <CommunityPosts eventId={event.id} />
+        {!videoHeadersOn && <CommunityPosts eventId={event.id} />}
 
         {/* Logistics: everything about actually getting there. */}
         {!event.is_online && (
