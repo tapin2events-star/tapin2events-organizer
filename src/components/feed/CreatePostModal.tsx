@@ -11,7 +11,7 @@ interface EventOption {
   title: string;
 }
 
-export default function CreatePostModal({ onClose, onPosted }: { onClose: () => void; onPosted: () => void }) {
+export default function CreatePostModal({ onClose, onPosted, initialEvent = null }: { onClose: () => void; onPosted: () => void; initialEvent?: { id: string; title: string } | null }) {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +26,7 @@ export default function CreatePostModal({ onClose, onPosted }: { onClose: () => 
   const [taggedPeople, setTaggedPeople] = useState<TaggedPerson[]>([]);
   const [eventSearch, setEventSearch] = useState('');
   const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(() => (initialEvent ? ({ ...initialEvent } as EventOption) : null));
   const [myEvents, setMyEvents] = useState<EventOption[]>([]);
   // Groups this person belongs to, so the video can also show on a group's page.
   const [myGroups, setMyGroups] = useState<{ group_id: string; name: string }[]>([]);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import EventHighlights from '../components/video/EventHighlights';
 import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing } from '../components/video/HeaderVideo';
 import EmbeddedCheckoutSheet from '../components/events/EmbeddedCheckoutSheet';
 import { publishableKey } from '../lib/embeddedCheckout';
@@ -61,6 +62,7 @@ export default function PublicEventDetail() {
   const whiteLabel = useEventWhiteLabel(event?.id);
   const headerVideo = useHeaderVideo(event?.id);
   const headerProcessing = useHeaderVideoProcessing(event?.id);
+  const videoHeadersOn = useFeature('video_headers');
   const [embedSecret, setEmbedSecret] = useState<string | null>(null);
   // Ticket tiers (preview): when an event has tiers, the tier picker replaces the single price.
   const [tiers, setTiers] = useState<TierAvail[]>([]);
@@ -867,6 +869,7 @@ export default function PublicEventDetail() {
         )}
 
         {networkingOn && id && <NetworkingInvite eventId={id} />}
+        {videoHeadersOn && <EventHighlights eventId={event.id} eventTitle={event.title} ended={hasEnded} />}
         {galaOn && <GalaGuestCard eventId={event.id} />}
         {volunteersOn && <VolunteerCard eventId={event.id} />}
         {donationsOn && <DonationCard event={event} recipient={biz.org?.name ?? organizerName ?? event.title} accent={biz.org?.brand.accent} />}
