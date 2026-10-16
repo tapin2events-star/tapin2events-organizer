@@ -151,7 +151,8 @@ export default function ProgramLayout(p: {
                     return (
                       <li key={s.id} className="relative">
                         <span className="absolute -left-[23px] top-4 h-3 w-3 rounded-full border-2 border-white" style={{ background: color }} aria-hidden="true" />
-                        <div className={`flex items-stretch gap-3 rounded-xl border ${isBreak ? 'border-dashed border-gray-200 bg-gray-50' : 'border-gray-200 bg-surface'}`}>
+                        <div className={`overflow-hidden rounded-xl border ${isBreak ? 'border-dashed border-gray-200 bg-gray-50' : 'border-gray-200 bg-surface'}`}>
+                        <div className="flex items-stretch gap-3">
                           <button onClick={() => p.onSession(s)} className="flex min-w-0 flex-1 items-start gap-3 p-3 text-left">
                             <span className="w-16 shrink-0 text-xs font-semibold text-bone">{timeOf(s.starts_at) || 'TBA'}{s.ends_at && <span className="block font-normal text-muted">{timeOf(s.ends_at)}</span>}</span>
                             <span className="min-w-0 flex-1">
@@ -161,11 +162,17 @@ export default function ProgramLayout(p: {
                             </span>
                           </button>
                           <div className="flex shrink-0 flex-col items-end justify-between gap-1 p-2">
-                            {signup ? (
-                              <button onClick={() => p.onRoster({ id: s.id, title: s.title, capacity: s.capacity ?? null })} className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">📋 {p.counts[s.id] ?? 0}{s.capacity ? `/${s.capacity}` : ''}</button>
-                            ) : s.capacity ? <span className="text-[11px] text-muted">{s.capacity} seats</span> : <span />}
+                            {!signup && s.capacity ? <span className="text-[11px] text-muted">{s.capacity} seats</span> : <span />}
                             <button onClick={() => duplicate(s)} disabled={busy === s.id} className="text-[11px] font-medium text-gray-400 hover:text-gray-700">{busy === s.id ? '…' : 'Duplicate'}</button>
                           </div>
+                        </div>
+                        {signup && (
+                          <button onClick={() => p.onRoster({ id: s.id, title: s.title, capacity: s.capacity ?? null })}
+                            className="flex w-full items-center justify-between gap-2 border-t border-emerald-100 bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-800 hover:bg-emerald-100">
+                            <span>📋 {p.counts[s.id] ?? 0}{s.capacity ? ` / ${s.capacity}` : ''} signed up</span>
+                            <span>View list & waitlist ›</span>
+                          </button>
+                        )}
                         </div>
                       </li>
                     );
