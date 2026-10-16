@@ -56,8 +56,8 @@ export const GUIDES: Guide[] = [
     steps: ['In organization settings > Page, feature your artists or speakers, videos, shop items and photos.', 'Your upcoming events show automatically.', 'Share your page link so people can follow you.'] },
   { id: 'audience', area: 'organization', title: 'Your audience', keywords: 'audience attendees followers volunteers donors export',
     steps: ['Organization settings > Audience shows everyone connected to you: attendees, followers, volunteers and donors.', 'Filter, search and export a spreadsheet.'] },
-  { id: 'business-plan', area: 'organization', title: 'The Business plan', keywords: 'business plan premium price free founding',
-    steps: ['Features marked \u2b50 Business plan are free during early access.', 'When paid plans begin, organizations can choose monthly or yearly; individual organizers can unlock a single event.', 'Founding organizations get 40% off for life.'], link: { to: '/business/plan', label: 'See the Business plan' } },
+  { id: 'business-plan', area: 'organization', title: 'Plans and packs', keywords: 'business plan essentials packs agency premium price free founding',
+    steps: ['Features marked \u2b50 are free during early access.', 'When paid plans begin: Essentials ($19/mo) with optional packs (Performers, Conference, Fundraising, Community), Business ($59/mo) with everything, or Agency ($149/mo) for up to 5 client organizations. One event can be unlocked for $199.', 'The first 20 founding organizations get 40% off Business or Agency for life, and Essentials price locked for life.'], link: { to: '/business/plan', label: 'See plans' } },
 
   // Payments
   { id: 'payouts', area: 'payments', title: 'Connect payouts and get paid', keywords: 'payouts stripe bank paid money',
