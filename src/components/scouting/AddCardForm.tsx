@@ -41,7 +41,7 @@ export default function AddCardForm({ boardId, shows, takenResourceIds, defaultS
     <div className="flex flex-col gap-3">
       {!outside ? (
         <>
-          <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search artists, resources, or groups" autoFocus aria-label="Search TapIN" />
+          <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search artists, vendors, or groups" autoFocus aria-label="Search TapIN" />
           {results.length > 0 && (
             <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
               {results.map((r) => {

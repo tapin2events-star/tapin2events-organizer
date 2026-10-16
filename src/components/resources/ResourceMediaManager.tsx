@@ -283,7 +283,7 @@ export default function ResourceMediaManager({ resourceId }: { resourceId: strin
           <Link to="/feed" className="shrink-0 text-sm font-medium text-marigold">Post a video &rarr;</Link>
         </div>
         <p className="text-sm text-gray-500">
-          Videos switched on here appear on your resource profile, with a Book button on the video in the feed. When you post, choosing <span className="font-medium text-gray-900">Resource</span> under "Posting as" switches it on automatically.
+          Videos switched on here appear on your artist & services profile, with a Book button on the video in the feed. When you post, choosing <span className="font-medium text-gray-900">Resource</span> under "Posting as" switches it on automatically.
         </p>
         {videos.length === 0 ? (
           <p className="mt-3 rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">You haven't posted any videos yet.</p>

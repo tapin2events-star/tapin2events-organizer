@@ -411,7 +411,7 @@ export default function Dashboard() {
           )}
           {bookingFilter === 'booked' && (
             <p className="mt-2 text-sm text-muted">
-              You haven't booked any resources for your events yet. Browse <Link to="/resources" className="font-medium text-marigold">Resources</Link> to find artists and vendors.
+              You haven't booked any resources for your events yet. Browse <Link to="/resources" className="font-medium text-marigold">Artists & vendors</Link> to find artists and vendors.
             </p>
           )}
           {seriesPassFilter === 'has_series_passes' && (

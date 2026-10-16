@@ -98,7 +98,7 @@ export default function ResourceDashboard() {
     if (!user.email) return;
     (async () => {
       const { data: res, error: resError } = await supabase.from('resources').select('*').eq('email', user.email).maybeSingle();
-      if (resError) console.error('Failed to load resource profile:', resError);
+      if (resError) console.error('Failed to load artist & services profile:', resError);
       setResource((res as Resource) ?? null);
       supabase.from('profiles').select('stripe_account_id, stripe_charges_enabled').eq('id', user.id).maybeSingle().then(({ data }) => {
         setPayouts({ hasAccount: !!data?.stripe_account_id, chargesEnabled: !!data?.stripe_charges_enabled });
@@ -237,8 +237,8 @@ export default function ResourceDashboard() {
   if (!resource) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-lg font-semibold text-gray-700">You don't have a resource profile yet.</p>
-        <Link to="/resources/new" className="mt-3 inline-block text-marigold hover:underline">Create your resource profile &rarr;</Link>
+        <p className="text-lg font-semibold text-gray-700">You don't have a artist & services profile yet.</p>
+        <Link to="/resources/new" className="mt-3 inline-block text-marigold hover:underline">Create your artist & services profile &rarr;</Link>
       </div>
     );
   }
@@ -249,7 +249,7 @@ export default function ResourceDashboard() {
         <div className="mb-3"><BackButton fallback="/profile" fallbackLabel="Profile" /></div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="font-display text-3xl font-extrabold text-gray-900">Resource Dashboard</h1>
+            <h1 className="font-display text-3xl font-extrabold text-gray-900">Artist & vendor dashboard</h1>
             <p className="mt-1 text-gray-500">Booking requests for {resource.display_name}</p>
           </div>
           <Link to="/resources/new" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">

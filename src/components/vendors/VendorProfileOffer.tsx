@@ -62,7 +62,7 @@ export default function VendorProfileOffer({ businessName, description, force = 
   if (state === 'done') return (
     <div className="mt-4 rounded-2xl border border-green-200 bg-white p-4 text-left">
       <p className="font-semibold text-gray-900">🎉 Your vendor profile is live!</p>
-      <p className="mt-1 text-sm text-gray-600">Organizers can now find you in Artists &amp; Resources. Add photos, rates and links anytime to stand out.</p>
+      <p className="mt-1 text-sm text-gray-600">Organizers can now find you in Artists &amp; vendors. Add photos, rates and links anytime to stand out.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {createdId && <Link to={`/resources/${createdId}`} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">View my profile</Link>}
         <Link to="/resources/signup" className="rounded-xl bg-marigold px-3 py-2 text-sm font-semibold text-white">Add photos &amp; details</Link>

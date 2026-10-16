@@ -369,7 +369,7 @@ export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { eve
         )}
 
         {rows.length === 0 && editingPerson === null ? (
-          <p className="mt-3 text-sm text-muted">No one yet. Add performers, speakers, or vendors{isOwner ? ", including resources you've booked" : ''}.</p>
+          <p className="mt-3 text-sm text-muted">No one yet. Add performers, speakers, or vendors{isOwner ? ", including artists you've booked" : ''}.</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {rows.map((r, i) => {

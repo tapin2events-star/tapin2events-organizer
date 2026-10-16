@@ -53,8 +53,8 @@ export default function MyProducts() {
           key: `resource:${resource.id}`,
           type: 'resource',
           id: resource.id,
-          title: resource.display_name?.trim() || 'My resource profile',
-          subtitle: 'Resource profile',
+          title: resource.display_name?.trim() || 'My artist & services profile',
+          subtitle: 'Artist & services profile',
           sellerEmail: resource.email,
           productCount: counts.get(`resource:${resource.id}`) ?? 0,
           upcoming: true,
@@ -114,11 +114,11 @@ export default function MyProducts() {
       <div className="mt-6 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-14 text-center">
         <p className="font-display text-lg font-semibold text-gray-900">Start selling on TapIN</p>
         <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
-          Products are sold through an event you organize or through your resource profile. Set up either one, and you can add products here.
+          Products are sold through an event you organize or through your artist & services profile. Set up either one, and you can add products here.
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <Link to="/organizer/new" className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white">Create an event</Link>
-          <Link to="/resources/new" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-900">Set up a resource profile</Link>
+          <Link to="/resources/new" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-900">Set up a artist & services profile</Link>
         </div>
       </div>
     );
@@ -130,7 +130,7 @@ export default function MyProducts() {
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-gray-900">{o.title}</p>
           <p className="text-xs text-gray-500">
-            {o.type === 'resource' ? 'Resource profile' : `Event · ${o.subtitle}`}
+            {o.type === 'resource' ? 'Artist & services profile' : `Event · ${o.subtitle}`}
             {' · '}
             {o.productCount} product{o.productCount === 1 ? '' : 's'}
           </p>

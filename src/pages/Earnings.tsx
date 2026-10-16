@@ -167,7 +167,7 @@ export default function Earnings() {
       {shopOrders.length > 0 && (
         <section id="shop" className="mt-8 scroll-mt-20">
           <h2 className="font-display text-xl font-bold text-bone">From your shop</h2>
-          <p className="text-sm text-muted">Products sold from your artist or resource profile (including shipping).</p>
+          <p className="text-sm text-muted">Products sold from your artist or artist & services profile (including shipping).</p>
           <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat big label={`Shop sales · ${RANGE_LABELS[range].toLowerCase()}`} value={money(shop)} sub={`${shopOrders.length} order${shopOrders.length === 1 ? '' : 's'}`} />
           </div>
@@ -291,7 +291,7 @@ export default function Earnings() {
         )}
       </div>
       <p className="mt-4 text-xs text-muted">
-        Earnings show what you keep from tickets and products (including shipping), vendor fees, donations and support (after refunds and any fees deducted), bookings, shop sales from your artist or resource profile, and tips. Buyer service fees aren't included. Stripe sends payouts to your bank on its own schedule.
+        Earnings show what you keep from tickets and products (including shipping), vendor fees, donations and support (after refunds and any fees deducted), bookings, shop sales from your artist or artist & services profile, and tips. Buyer service fees aren't included. Stripe sends payouts to your bank on its own schedule.
       </p>
     </div>
   );

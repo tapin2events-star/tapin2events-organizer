@@ -179,7 +179,7 @@ export default function GroupManage() {
             {query.includes('@') && results.length === 0 && query.trim().length > 5 && (
               <button onClick={() => invite(query.trim())} className="mt-2 rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white">Invite {query.trim()}</button>
             )}
-            <p className="mt-2 text-xs text-muted">Anyone with a TapIN account can join, including managers and crew without a resource profile. They choose whether to accept.</p>
+            <p className="mt-2 text-xs text-muted">Anyone with a TapIN account can join, including managers and crew without a artist & services profile. They choose whether to accept.</p>
           </div>
         )}
 
@@ -219,7 +219,7 @@ export default function GroupManage() {
           <h2 className="font-display text-lg font-semibold text-bone">Your membership</h2>
           <label className="mt-3 flex items-start gap-3 text-sm text-gray-700">
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-marigold" checked={me.show_on_group} onChange={(e) => updateMember(me, { p_show: e.target.checked }, e.target.checked ? 'You\u2019re shown on the group page.' : 'You\u2019re hidden from the group page.')} />
-            <span>Show me on the group's page<span className="block text-xs text-muted">Links to your resource profile (or your TapIN profile), and shows "Member of {group.display_name}" on your profile.</span></span>
+            <span>Show me on the group's page<span className="block text-xs text-muted">Links to your artist & services profile (or your TapIN profile), and shows "Member of {group.display_name}" on your profile.</span></span>
           </label>
           <div className="mt-3 flex flex-wrap gap-2">
             <button className={btn} onClick={() => setTitleFor(me)}>Edit my title</button>

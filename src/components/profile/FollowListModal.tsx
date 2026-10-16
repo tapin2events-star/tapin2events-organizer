@@ -155,7 +155,7 @@ export default function FollowListModal({ email, direction, isPrivate, isOwnList
                         <div className="flex gap-1.5">
                           {entry.is_organizer && <span className="text-xs text-marigold">Organizer</span>}
                           {entry.is_organizer && entry.is_resource && <span className="text-xs text-muted">·</span>}
-                          {entry.is_resource && <span className="text-xs text-purple">Resource</span>}
+                          {entry.is_resource && <span className="text-xs text-purple">Artist</span>}
                         </div>
                       </div>
                     </Link>

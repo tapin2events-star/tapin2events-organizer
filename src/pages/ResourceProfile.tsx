@@ -148,7 +148,7 @@ export default function ResourceProfile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-5xl px-4 py-10">
-        <BackButton fallback="/resources" fallbackLabel="Artists & Resources" />
+        <BackButton fallback="/resources" fallbackLabel="Artists & vendors" />
 
         {(resource.cover_image || resource.profile_image) ? (
           <img src={resource.cover_image || resource.profile_image!} alt="" className="mt-4 aspect-[21/9] w-full rounded-2xl object-cover" />

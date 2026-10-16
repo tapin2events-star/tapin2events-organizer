@@ -156,7 +156,7 @@ export default function EditPostModal({ postId, onClose, onSaved }: { postId: st
                   </button>
                 ))}
               </div>
-              {posterType === 'resource' && <p className="mt-1 text-xs text-muted">Shows on your resource profile, with a Book button on the video.</p>}
+              {posterType === 'resource' && <p className="mt-1 text-xs text-muted">Shows on your artist & services profile, with a Book button on the video.</p>}
             </div>
 
             <div>

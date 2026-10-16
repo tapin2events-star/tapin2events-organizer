@@ -143,7 +143,7 @@ export default function ResourceSignup() {
       <div className="mx-auto max-w-2xl px-4 py-10">
         <div className="mb-3"><BackButton fallback="/profile" fallbackLabel="Profile" /></div>
         <h1 className="font-display text-3xl font-extrabold text-gray-900">
-          {existing ? 'Edit your resource profile' : 'Become a Resource'}
+          {existing ? 'Edit your artist & services profile' : 'Join as an artist or vendor'}
         </h1>
         <p className="mt-1 text-gray-500">
           {existing ? 'Update the details organizers see about you.' : 'List your services so organizers can discover and reach you.'}
@@ -202,7 +202,7 @@ export default function ResourceSignup() {
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-sm font-medium text-gray-900">Photos, music & video</p>
               <p className="mt-0.5 text-sm text-gray-600">
-                Add photo albums and music or video players to your profile from the Media tab in your Resource Dashboard.
+                Add photo albums and music or video players to your profile from the Media tab in your Artist & vendor dashboard.
               </p>
               <Link to="/resources/dashboard?tab=media" className="mt-2 inline-block text-sm font-semibold text-marigold">Manage media &rarr;</Link>
             </div>

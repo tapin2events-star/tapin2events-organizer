@@ -165,7 +165,7 @@ export default function DiscoverMap({ events }: { events: TapEvent[] }) {
     <div className="mt-6">
       <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-indigo-50 to-teal-50 p-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-marigold">TapIN Map</p>
-        <p className="mt-1 font-display text-xl font-bold text-gray-900">Explore events, artists, and resources near you</p>
+        <p className="mt-1 font-display text-xl font-bold text-gray-900">Explore events, artists, and vendors near you</p>
         <p className="mt-1 text-sm text-gray-500">
           {mapFilter === 'events'
             ? `Showing ${visibleEvents.length} event${visibleEvents.length === 1 ? '' : 's'}`

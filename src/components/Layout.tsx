@@ -24,13 +24,13 @@ type Item = { to: string; label: string; icon: string; end?: boolean; badge?: ke
 const EXPLORE: Item[] = [
   { to: '/', label: 'Discover', icon: 'discover', end: true, desktopOnly: true },
   { to: '/feed', label: 'Feed', icon: 'feed', desktopOnly: true },
-  { to: '/resources', label: 'Artists & Resources', icon: 'resources', end: true },
+  { to: '/resources', label: 'Artists & vendors', icon: 'resources', end: true },
   { to: '/organizations', label: 'Organizations', icon: 'bookings', end: true },
   { to: '/products', label: 'Shop', icon: 'shop' },
 ];
 const MY_STUFF: Item[] = [
   { to: '/activity', label: 'My Activity', icon: 'activity', end: true, desktopOnly: true },
-  { to: '/resources/dashboard', label: 'Resource Dashboard', icon: 'resourceDash', end: true, badge: 'resourceRequests' },
+  { to: '/resources/dashboard', label: 'Artist & vendor dashboard', icon: 'resourceDash', end: true, badge: 'resourceRequests' },
   { to: '/groups', label: 'Artist groups', icon: 'groups', badge: 'groupInvites' },
 ];
 const ORGANIZER: Item[] = [

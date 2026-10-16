@@ -112,7 +112,7 @@ export default function ResourceDiscovery() {
             to="/resources/new"
             className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
           >
-            Become a Resource
+            Join as an artist or vendor
           </Link>
         </div>
 

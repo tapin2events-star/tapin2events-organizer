@@ -32,6 +32,20 @@ import ProductManager from '../components/products/ProductManager';
 import ProductOrdersPanel from '../components/products/ProductOrdersPanel';
 import { OrganizerEventSkeleton } from '../components/ui/Skeleton';
 
+// One-line descriptions for tabs under "More".
+const TAB_HINTS: Record<string, string> = {
+  'Team & tasks': 'Co-organizers, helpers, tasks and volunteer shifts',
+  'Gala': 'Table seating, paddle numbers and the paddle raise',
+  'Lineup & bookings': 'Performers, run of show and booking requests',
+  'Tickets': 'Ticket types, prices and promo codes',
+  'Registration': 'Approval and questions for attendees',
+  'Products': 'Merch and items for sale (and add-ons at checkout)',
+  'Donations': 'Donations and your fundraising goal',
+  'Vendor applications': 'Vendors who applied to sell at your event',
+  'Business page': 'Agenda, speakers, sponsors and FAQ',
+  'Messages': 'Updates to everyone with a ticket',
+  'Promote': 'Promotion links, promoters and Boost',
+};
 // Ordered by how often organizers use them: daily checks first, then running the event, then setup.
 const TABS = ['Overview', 'Sales', 'Attendees', 'Messages', 'Promote', 'Team & tasks', 'Gala', 'Lineup & bookings', 'Tickets', 'Registration', 'Products', 'Donations', 'Vendor applications', 'Business page'] as const;
 type Tab = (typeof TABS)[number];
@@ -68,6 +82,7 @@ export default function EventDetail() {
   const promoteOn = useFeature('promote');
   const volunteersOn = useFeature('volunteers');
   const galaOn = useFeature('gala');
+  const [moreOpen, setMoreOpen] = useState(false);
   const whiteLabelOn = useFeature('white_label');
   const teamView: 'team' | 'volunteers' = tabParam === 'Volunteers' || new URLSearchParams(window.location.search).get('view') === 'volunteers' ? 'volunteers' : 'team';
   const [usesGala, setUsesGala] = useState(false);
@@ -280,21 +295,45 @@ export default function EventDetail() {
         );
       })()}
 
-      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-300">
-        {visibleTabs.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition ${
-              tab === t
-                ? 'border-b-2 border-marigold text-marigold'
-                : 'text-muted hover:text-bone'
-            }`}
-          >
-            {t === 'Business page' && programOn ? 'Program' : t}
-          </button>
-        ))}
-      </div>
+      {(() => {
+        // Essentials always in the row; the rest under "More" (plus whichever tab is open). Small tab sets show everything.
+        const isBizKind = event.event_kind === 'business' || event.event_kind === 'nonprofit';
+        const primary = new Set<string>(['Overview', 'Sales', 'Attendees', 'Tickets', 'Promote', 'Messages', isBizKind ? 'Business page' : 'Lineup & bookings']);
+        const all = visibleTabs;
+        const rowTabs = all.length <= 7 ? all : all.filter((t) => primary.has(t) || t === tab);
+        const moreTabs = all.filter((t) => !rowTabs.includes(t));
+        const label = (t: string) => (t === 'Business page' && programOn ? 'Program' : t);
+        return (
+          <>
+            <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-300">
+              {rowTabs.map((t) => (
+                <button key={t} onClick={() => setTab(t)}
+                  className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition ${tab === t ? 'border-b-2 border-marigold text-marigold' : 'text-muted hover:text-bone'}`}>
+                  {label(t)}
+                </button>
+              ))}
+              {moreTabs.length > 0 && (
+                <button onClick={() => setMoreOpen(true)} aria-haspopup="dialog" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium text-muted hover:text-bone">More ▾</button>
+              )}
+            </div>
+            {moreOpen && (
+              <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setMoreOpen(false)} role="dialog" aria-label="More event tools">
+                <div className="w-full max-w-md rounded-t-3xl bg-white p-4 sm:rounded-3xl" onClick={(e) => e.stopPropagation()} style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+                  <div className="flex items-center justify-between"><p className="font-display text-lg font-bold text-gray-900">More tools</p><button onClick={() => setMoreOpen(false)} aria-label="Close" className="rounded-lg px-2 text-2xl leading-none text-gray-500">×</button></div>
+                  <ul className="mt-2 divide-y divide-gray-100">
+                    {moreTabs.map((t) => (
+                      <li key={t}><button onClick={() => { setTab(t); setMoreOpen(false); }} className="flex w-full items-center justify-between gap-3 py-3 text-left">
+                        <span><span className="block text-sm font-semibold text-gray-900">{label(t)}</span><span className="block text-xs text-gray-500">{TAB_HINTS[t] ?? ''}</span></span>
+                        <span className="text-gray-400" aria-hidden="true">›</span>
+                      </button></li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {tab === 'Overview' && whiteLabelOn && (isOwner || teamRole === 'admin') && <WhiteLabelCard eventId={event.id} />}
       {tab === 'Overview' && networkingOn && (isOwner || teamRole === 'admin' || teamRole === 'editor' || !teamRole) && <NetworkingSwitch eventId={event.id} eventTitle={event.title} />}
