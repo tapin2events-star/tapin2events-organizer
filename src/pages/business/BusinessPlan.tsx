@@ -114,7 +114,7 @@ export default function BusinessPlan() {
           <div className="mt-10 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border-2 p-5" style={{ borderColor: GOLD }}>
               <p className="font-display text-2xl font-extrabold text-bone">⭐ Business · ${PLAN_PRICES.business.month}/month</p>
-              <p className="mt-1 text-sm text-muted">Essentials + <strong>every pack</strong> + Featured on Discover, for one organization. The best deal once you'd want three or more packs.</p>
+              <p className="mt-1 text-sm text-muted">Essentials + <strong>every pack</strong> + Featured on Discover + monthly Boost credit, for one organization. The best deal once you'd want three or more packs.</p>
               <p className="mt-2 text-xs font-semibold" style={{ color: '#8A6D12' }}>Founding: ${(PLAN_PRICES.business.month * 0.6).toFixed(2)}/month for life</p>
             </div>
             <div className="rounded-2xl border-2 border-[#0F1B3D] p-5">

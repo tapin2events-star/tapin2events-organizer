@@ -13,10 +13,9 @@ export const ESSENTIALS: Feature[] = [
   { key: 'meetings', icon: '📝', name: 'Meeting extras', desc: 'Recurring meetings, minutes, agenda templates' },
 ];
 export const PACKS: { id: PackId; icon: string; name: string; price: { month: number; year: number }; for: string; features: Feature[] }[] = [
-  { id: 'performers', icon: '🎤', name: 'Performers & Promotion', price: { month: 10, year: 100 }, for: 'Shows, concerts and open mics', features: [
+  { id: 'performers', icon: '🎤', name: 'Performers & Promotion', price: { month: 5, year: 50 }, for: 'Shows, concerts and open mics', features: [
     { key: 'promoter_payouts', icon: '📣', name: 'Automatic promoter payouts', desc: 'Commission sent on every ticket sold through a promo link' },
     { key: 'video_headers', icon: '🎬', name: 'Video headers & highlight reels', desc: 'Trailers on your pages and past-event highlights' },
-    { key: 'boost_credit', icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature events in Discover' },
   ] },
   { id: 'conference', icon: '🎓', name: 'Conference', price: { month: 15, year: 150 }, for: 'Conferences, summits and workshops', features: [
     { key: 'program', icon: '🗓️', name: 'Program extras', desc: 'Visual agenda, speakers, sponsors' },
@@ -32,7 +31,10 @@ export const PACKS: { id: PackId; icon: string; name: string; price: { month: nu
     { key: 'newsletters', icon: '✉️', name: 'Newsletters', desc: 'Email your audience about new events' },
   ] },
 ];
-export const BUSINESS_EXTRAS: Feature[] = [{ key: 'featured', icon: '⭐', name: 'Featured on Discover', desc: 'Your organization in the Featured row' }];
+export const BUSINESS_EXTRAS: Feature[] = [
+  { key: 'featured', icon: '⭐', name: 'Featured on Discover', desc: 'Your organization in the Featured row' },
+  { key: 'boost_credit', icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature your events in Discover' },
+];
 
 export function planTotal(plan: PlanId | 'artist', interval: 'month' | 'year', packs: PackId[], extraClients: number, founding: boolean) {
   let total = plan === 'artist' ? ARTIST_PLAN[interval] : PLAN_PRICES[plan][interval];
