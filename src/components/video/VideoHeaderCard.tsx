@@ -72,7 +72,7 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
         <div className="flex min-w-0 items-center gap-3">
           {current?.poster ? <img src={current.poster} alt="" className="h-14 w-24 shrink-0 rounded-lg object-cover" /> : <span className="flex h-14 w-24 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-2xl">🎬</span>}
           <div className="min-w-0">
-            <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">🎬 Video header <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span> <PremiumBadge /></p>
+            <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">🎬 Video header <PremiumBadge /></p>
             <p className="text-sm text-muted">{current?.status === 'processing' ? 'Your video is processing. It\u2019ll appear as the header in a few minutes.' : current ? `A muted, looping trailer plays at the top of ${what}.${current.feed_visible ? '' : ' (Header only, not in the Feed.)'}` : `Play a short trailer at the top of ${what}, in place of the image.`}</p>
           </div>
         </div>

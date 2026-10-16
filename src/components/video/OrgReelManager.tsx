@@ -35,7 +35,7 @@ export default function OrgReelManager({ orgId }: { orgId: string }) {
     <section className="mt-10 border-t border-gray-200 pt-8">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">🎞️ Highlights reel <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></h3>
+          <h3 className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">🎞️ Highlights reel</h3>
           <p className="text-sm text-muted">Clips from your past events fill in automatically. Pin favorites to show them first, or hide any clip.</p>
         </div>
         <button onClick={() => setAdding(true)} className="rounded-xl bg-[#0F1B3D] px-3 py-2 text-sm font-semibold text-white">+ Add a video</button>
