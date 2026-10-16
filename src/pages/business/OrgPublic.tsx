@@ -61,7 +61,7 @@ function OrgPublicInner() {
     <div className="-mx-4 -mt-4 min-h-screen sm:-mx-6" style={{ fontFamily: `'${b.font}', system-ui, sans-serif`, background: dark ? '#0B1020' : '#fff', color: dark ? '#E5E7EB' : '#111827' }}>
       <div className="relative h-44 w-full sm:h-60" style={{ background: org.cover_url ? undefined : `linear-gradient(135deg, ${b.primary}, ${b.accent})` }}>
         {orgVideoProcessing && <ProcessingLabel />}
-        {orgVideo ? <HeaderVideo src={orgVideo.src} poster={orgVideo.poster ?? org.cover_url ?? null} /> : org.cover_url && <img src={org.cover_url} alt="" className="h-full w-full object-cover" />}
+        {orgVideo ? <HeaderVideo src={orgVideo.src} poster={orgVideo.poster ?? org.cover_url ?? null} postId={orgVideo.id} /> : org.cover_url && <img src={org.cover_url} alt="" className="h-full w-full object-cover" />}
       </div>
       <div className="mx-auto max-w-4xl px-6">
         <div className="relative z-10 -mt-12 flex items-end justify-between gap-3 sm:-mt-14">

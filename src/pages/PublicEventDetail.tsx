@@ -422,13 +422,13 @@ export default function PublicEventDetail() {
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900 sm:aspect-[21/9]">
         {headerProcessing && <ProcessingLabel />}
         {headerVideo ? (
-          <HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? event.poster_url ?? null} />
+          <HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? event.poster_url ?? null} postId={headerVideo.id} />
         ) : event.poster_url ? (
           <img src={event.poster_url} alt="" className="h-full w-full object-cover" />
         ) : (
           <EventCover category={event.category} size="lg" className="h-full w-full" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         {event.poster_url && event.poster_credit && (
           <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2 py-0.5 text-[10px] text-white/90 sm:right-6 sm:top-6">{event.poster_credit}</span>
         )}
