@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ArtistPlanCard from '../../components/business/ArtistPlanCard';
-import { AGENCY_EXTRA, BUSINESS_EXTRAS, ESSENTIALS, PACKS, PLAN_PRICES, type Feature } from '../../lib/plans';
+import { AGENCY_EXTRA, ARTIST_PLAN, BUSINESS_EXTRAS, ESSENTIALS, PACKS, PLAN_PRICES, type Feature } from '../../lib/plans';
+import { effectiveRoles, useSetup } from '../../lib/setup';
 import PlanCheckout from '../../components/business/PlanCheckout';
 import { useFeature } from '../../lib/preview';
 import { Link } from 'react-router-dom';
@@ -23,6 +24,10 @@ const PLANS = [
 
 // "Business plan, coming soon" (Preview): what's planned, what stays free, and a founding-price reservation.
 export default function BusinessPlan() {
+  // People who told us they're an artist (and don't organize) see the Artist plan first.
+  const setup = useSetup();
+  const myRoles = effectiveRoles(setup);
+  const artistFirst = (myRoles.has('artist') || myRoles.has('services')) && !myRoles.has('organizer') && !myRoles.has('organization');
   const billingOn = useFeature('billing');
   const { user } = useAuth();
   const [spots, setSpots] = useState<number | null>(null);
@@ -59,13 +64,14 @@ export default function BusinessPlan() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>TapIN for Business</p>
         <h1 className="mt-3 max-w-2xl font-display text-3xl font-extrabold leading-tight sm:text-5xl">Plans that fit how you run events</h1>
         <p className="mt-3 max-w-xl text-white/85">Start with the essentials and add only the packs you need, or get everything. The core of TapIN stays free forever.</p>
-        <div className="mt-5 grid max-w-3xl gap-2 sm:grid-cols-3">
+        <div className="mt-5 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4">
           {([
             { id: 'essentials', name: '🌱 Essentials', price: PLAN_PRICES.essentials.month, note: 'Core tools + packs from $10' },
             { id: 'business', name: '⭐ Business', price: PLAN_PRICES.business.month, note: 'Everything, for one organization', top: true },
             { id: 'agency', name: '🏢 Agency', price: PLAN_PRICES.agency.month, note: 'Everything, for up to 5 clients' },
+            { id: 'artist', name: '🎤 Artist', price: ARTIST_PLAN.month, note: 'For individual artists & performers', artist: true },
           ] as const).map((p) => (
-            <a key={p.id} href="#plans" className={`rounded-2xl p-3 ${'top' in p ? 'bg-white text-[#0F1B3D]' : 'bg-white/10'}`}>
+            <a key={p.id} href={'artist' in p ? '#artist-plan' : '#plans'} className={`rounded-2xl p-3 ${'top' in p ? 'bg-white text-[#0F1B3D]' : 'artist' in p ? 'bg-purple-500/30 ring-1 ring-purple-300/60' : 'bg-white/10'}`}>
               <p className="text-sm font-bold">{p.name}{'top' in p && <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#0F1B3D]" style={{ background: GOLD }}>MOST POPULAR</span>}</p>
               <p className="mt-0.5 text-2xl font-extrabold">${p.price}<span className={`text-xs font-normal ${'top' in p ? 'text-gray-500' : 'text-white/70'}`}>/month</span></p>
               <p className={`text-[11px] ${'top' in p ? 'text-gray-600' : 'text-white/75'}`}>{p.note}</p>
@@ -83,6 +89,7 @@ export default function BusinessPlan() {
           <p className="font-semibold">⭐ Free during early access, paid after launch</p>
           <p className="mt-1">Features marked <strong>Business plan</strong> in the app are free to use right now. When the Business plan launches, they'll require a paid plan, so you'll need a plan to keep using them. Founding members keep 40% off for life.</p>
         </div>
+        {artistFirst && <div className="-mt-6 mb-10"><ArtistPlanCard /></div>}
         <div id="plans" className="scroll-mt-24">
           <h2 className="font-display text-2xl font-bold text-bone">🌱 Essentials · ${PLAN_PRICES.essentials.month}/month</h2>
           <p className="mt-1 text-sm text-muted">The tools most organizers use, ready to grow with packs.</p>
@@ -117,7 +124,7 @@ export default function BusinessPlan() {
             </div>
           </div>
         </div>
-          <ArtistPlanCard />
+          {!artistFirst && <ArtistPlanCard />}
 
         <section className="mt-8 overflow-hidden rounded-2xl text-white" style={{ background: `linear-gradient(135deg, #111827 0%, ${NAVY} 100%)` }}>
           <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
