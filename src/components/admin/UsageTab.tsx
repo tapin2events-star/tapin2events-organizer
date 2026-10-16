@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PremiumUsagePanel from './PremiumUsagePanel';
 import { supabase } from '../../lib/supabaseClient';
 import { ListSkeleton } from '../ui/Skeleton';
 
@@ -49,6 +50,8 @@ export default function UsageTab() {
       </section>
 
       <BillingAdmin />
+
+      <PremiumUsagePanel />
       <NewsletterAdmin />
 
       <section>
