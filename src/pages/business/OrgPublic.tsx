@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import HeaderVideo, { useHeaderVideo } from '../../components/video/HeaderVideo';
 import { cachedRole, loadRole } from '../../lib/orgFollows';
 import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../../components/ui/Skeleton';
@@ -17,10 +18,12 @@ export default function OrgPublic() {
 
 function OrgPublicInner() {
   const volunteersOn = useFeature('volunteers');
+  const videoHeadersOn = useFeature('video_headers');
   const { slug = '' } = useParams<{ slug: string }>();
   const [org, setOrg] = useState<Organization | null | undefined>(() => { const c = cachedOrg(slug); return c ? ({ description: null, website: null, contact_email: null, ...c, brand: { ...DEFAULT_BRAND, ...(c.brand ?? {}) } } as unknown as Organization) : undefined; });
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; location_name: string | null; poster_url: string | null; category: string | null }[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);
+  const orgVideo = useHeaderVideo(null, org?.id ?? null);
   const [canManage, setCanManage] = useState<boolean>(() => { const c = cachedOrg(slug) as { id?: string } | null; const r = c?.id ? cachedRole(c.id) : undefined; return r === 'owner' || r === 'admin'; });
   useEffect(() => {
     (async () => {
@@ -56,7 +59,7 @@ function OrgPublicInner() {
   return (
     <div className="-mx-4 -mt-4 min-h-screen sm:-mx-6" style={{ fontFamily: `'${b.font}', system-ui, sans-serif`, background: dark ? '#0B1020' : '#fff', color: dark ? '#E5E7EB' : '#111827' }}>
       <div className="relative h-44 w-full sm:h-60" style={{ background: org.cover_url ? undefined : `linear-gradient(135deg, ${b.primary}, ${b.accent})` }}>
-        {org.cover_url && <img src={org.cover_url} alt="" className="h-full w-full object-cover" />}
+        {orgVideo ? <HeaderVideo src={orgVideo.src} poster={orgVideo.poster ?? org.cover_url ?? null} /> : org.cover_url && <img src={org.cover_url} alt="" className="h-full w-full object-cover" />}
       </div>
       <div className="mx-auto max-w-4xl px-6">
         <div className="relative z-10 -mt-12 flex items-end justify-between gap-3 sm:-mt-14">
@@ -94,6 +97,7 @@ function OrgPublicInner() {
         )}
         <OrgSections orgId={org.id} accent={b.accent} dark={dark} />
         {volunteersOn && <OrgVolunteer orgId={org.id} accent={b.accent} dark={dark} />}
+        {videoHeadersOn && <OrgHighlights orgId={org.id} />}
         <OrgGallery orgId={org.id} accent={b.accent} dark={dark} />
         <PastEvents orgId={org.id} accent={b.accent} dark={dark} />
       </div>
@@ -267,6 +271,27 @@ function OrgVolunteer({ orgId, accent, dark }: { orgId: string; accent: string; 
         ))}
       </ul>
       {open.length > 8 && <p className="mt-2 text-xs opacity-70">+ {open.length - 8} more shifts on our event pages</p>}
+    </section>
+  );
+}
+
+// Highlights from past events (Preview): videos posted to the organization's past events.
+function OrgHighlights({ orgId }: { orgId: string }) {
+  const [items, setItems] = useState<{ id: string; thumbnail: string | null; caption: string | null; event_title: string }[]>([]);
+  useEffect(() => { supabase.rpc('org_highlight_reel', { p_org_id: orgId }).then(({ data }) => setItems((data ?? []) as typeof items)); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!items.length) return null;
+  return (
+    <section className="pb-10">
+      <h2 className="text-xl font-bold">🎞️ Highlights from past events</h2>
+      <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+        {items.map((v) => (
+          <Link key={v.id} to={`/feed?post=${v.id}`} className="relative w-36 shrink-0 snap-start overflow-hidden rounded-2xl" aria-label={v.caption || `Video from ${v.event_title}`}>
+            {v.thumbnail ? <img src={v.thumbnail} alt="" className="aspect-[9/14] w-full object-cover" /> : <span className="flex aspect-[9/14] w-full items-center justify-center bg-gray-800 text-2xl">🎬</span>}
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-6 text-xs font-medium text-white">{v.event_title}</span>
+            <span className="absolute left-2 top-2 rounded-full bg-black/50 px-1.5 text-xs text-white">▶</span>
+          </Link>
+        ))}
+      </div>
     </section>
   );
 }

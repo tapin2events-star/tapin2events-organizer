@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import VideoHeaderCard from '../../components/video/VideoHeaderCard';
 import { OrgPromoterPayouts } from '../../components/promote/PromoterPayouts';
 import { OrgPlanStatus } from '../../components/business/PlanCheckout';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +45,7 @@ function OrgManageInner() {
   const newsletterOn = useFeature('newsletters');
   const billingOn = useFeature('billing');
   const promoterPayoutsOn = useFeature('promoter_payouts');
+  const videoHeadersOn = useFeature('video_headers');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
   const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
@@ -131,6 +133,7 @@ function OrgManageInner() {
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Team' && <Link to={`/team-chat/${org.id}`} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm"><span><strong className="text-gray-900">💬 Team chat</strong><span className="block text-gray-600">Message everyone on {org.name}'s team, share photos and files</span></span><span className="shrink-0 font-semibold text-indigo-700">Open ›</span></Link>}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
+        {tab === 'Page' && canEditPage && videoHeadersOn && <VideoHeaderCard orgId={org.id} what="your organization page" />}
         {tab === 'Page' && canEditPage && <><OrgPageSectionsTab orgId={org.id} slug={org.slug} /><section className="mt-10 border-t border-gray-200 pt-8"><h3 className="font-display text-lg font-bold text-bone">📸 Photos</h3><p className="mb-3 text-sm text-muted">Up to 24 photos for your page's gallery.</p><OrgPhotosTab orgId={org.id} /></section></>}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} onAudience={() => setTab('Audience')} />}
         {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}

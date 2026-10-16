@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import HeaderVideo, { useHeaderVideo } from '../components/video/HeaderVideo';
 import EmbeddedCheckoutSheet from '../components/events/EmbeddedCheckoutSheet';
 import { publishableKey } from '../lib/embeddedCheckout';
 import { useEventWhiteLabel } from '../lib/whiteLabel';
@@ -58,6 +59,7 @@ export default function PublicEventDetail() {
   // Business / nonprofit events: organization brand, agenda, speakers, sponsors (TapIN for Business).
   const biz = useBusinessData(event);
   const whiteLabel = useEventWhiteLabel(event?.id);
+  const headerVideo = useHeaderVideo(event?.id);
   const [embedSecret, setEmbedSecret] = useState<string | null>(null);
   // Ticket tiers (preview): when an event has tiers, the tier picker replaces the single price.
   const [tiers, setTiers] = useState<TierAvail[]>([]);
@@ -415,7 +417,9 @@ export default function PublicEventDetail() {
           instead of a separate text block below a plain picture frame. */}
       {businessOn && biz.isBiz && <OrgStrip org={biz.org} kind={event.event_kind} />}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900 sm:aspect-[21/9]">
-        {event.poster_url ? (
+        {headerVideo ? (
+          <HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? event.poster_url ?? null} />
+        ) : event.poster_url ? (
           <img src={event.poster_url} alt="" className="h-full w-full object-cover" />
         ) : (
           <EventCover category={event.category} size="lg" className="h-full w-full" />

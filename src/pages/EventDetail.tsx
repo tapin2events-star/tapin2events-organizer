@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import VideoHeaderCard from '../components/video/VideoHeaderCard';
 import WhiteLabelCard from '../components/business/WhiteLabelCard';
 import GalaTab from '../components/tabs/GalaTab';
 import AttendeesTab from '../components/tabs/AttendeesTab';
@@ -84,6 +85,7 @@ export default function EventDetail() {
   const galaOn = useFeature('gala');
   const [moreOpen, setMoreOpen] = useState(false);
   const whiteLabelOn = useFeature('white_label');
+  const videoHeadersOn = useFeature('video_headers');
   const teamView: 'team' | 'volunteers' = tabParam === 'Volunteers' || new URLSearchParams(window.location.search).get('view') === 'volunteers' ? 'volunteers' : 'team';
   const [usesGala, setUsesGala] = useState(false);
   useEffect(() => { if (id) supabase.rpc('event_uses_gala', { p_event_id: id }).then(({ data }) => setUsesGala(data === true)); }, [id]);
@@ -336,6 +338,7 @@ export default function EventDetail() {
       })()}
 
       {tab === 'Overview' && whiteLabelOn && (isOwner || teamRole === 'admin') && <WhiteLabelCard eventId={event.id} />}
+      {tab === 'Overview' && videoHeadersOn && (isOwner || teamRole === 'admin' || teamRole === 'editor') && <VideoHeaderCard eventId={event.id} what="your event page" />}
       {tab === 'Overview' && networkingOn && (isOwner || teamRole === 'admin' || teamRole === 'editor' || !teamRole) && <NetworkingSwitch eventId={event.id} eventTitle={event.title} />}
       {tab === 'Overview' && (event as { template_id?: string | null }).template_id && isOwner && <FeatureFeedback feature="templates" label="starting from a template" className="mb-4" />}
       {tab === 'Overview' && <OverviewTab event={event} />}

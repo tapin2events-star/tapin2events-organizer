@@ -8,6 +8,7 @@ import { FEATURES, usePreviewMode } from '../../lib/preview';
 // preferring one whose title includes "match"); business: only business/nonprofit events; orgTab: organization settings.
 const OPEN: Record<string, { path?: string; eventTab?: string; business?: boolean; org?: boolean; match?: string; orgTab?: string }> = {
   white_label: { eventTab: 'Overview', org: true, match: 'workshop' },
+  video_headers: { eventTab: 'Overview' },
   promoter_payouts: { eventTab: 'Promote' },
   featured_perk: { path: '/' },
   splits: { eventTab: 'Sales' },
