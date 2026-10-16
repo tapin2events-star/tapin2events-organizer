@@ -105,7 +105,7 @@ export default function CreatorProfile() {
           .from('posts')
           .select('id, thumbnail_url, caption')
           .eq('author_email', decodedEmail)
-          .eq('status', 'active')
+          .eq('status', 'active').eq('feed_visible', true)
           .order('created_at', { ascending: false }),
         user?.email
           ? supabase.from('follows').select('follower_email').eq('follower_email', user.email).eq('following_email', decodedEmail).maybeSingle()

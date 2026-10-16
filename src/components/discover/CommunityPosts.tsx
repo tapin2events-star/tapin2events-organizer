@@ -19,7 +19,7 @@ export default function CommunityPosts({ eventId }: { eventId: string }) {
         .from('posts')
         .select('id, thumbnail_url, caption')
         .eq('event_id', eventId)
-        .eq('status', 'active')
+        .eq('status', 'active').eq('feed_visible', true)
         .order('created_at', { ascending: false })
         .limit(9);
       setPosts(data ?? []);

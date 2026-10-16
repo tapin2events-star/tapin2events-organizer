@@ -19,7 +19,9 @@ export default function HeaderVideo({ src, poster }: { src: string; poster: stri
   const [muted, setMuted] = useState(true);
   return (
     <>
-      <HlsVideo src={src} poster={poster ?? undefined} shouldLoad shouldPlay muted={muted} loop playsInline autoPlay className="h-full w-full object-cover" aria-label="Video" />
+      {/* Blurred backdrop fills the sides, so vertical (phone) videos are shown whole instead of cropped. */}
+      {poster && <img src={poster} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-75" />}
+      <HlsVideo src={src} poster={poster ?? undefined} shouldLoad shouldPlay muted={muted} loop playsInline autoPlay className="relative h-full w-full object-contain" aria-label="Video" />
       <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMuted(!muted); }} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
         className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-base text-white backdrop-blur">{muted ? '🔇' : '🔊'}</button>
     </>

@@ -31,8 +31,8 @@ export default function ResourceMediaSection({ resourceId, resourceEmail, groupI
       // not ones posted as an organizer or with no role chosen.
       // Groups: videos members chose to show on the group's page.
       groupId
-        ? supabase.from('posts').select('id, thumbnail_url, caption').eq('group_id', groupId).eq('status', 'active').order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1)
-        : supabase.from('posts').select('id, thumbnail_url, caption').eq('author_email', resourceEmail).eq('poster_type', 'resource').eq('status', 'active').order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1),
+        ? supabase.from('posts').select('id, thumbnail_url, caption').eq('group_id', groupId).eq('status', 'active').eq('feed_visible', true).order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1)
+        : supabase.from('posts').select('id, thumbnail_url, caption').eq('author_email', resourceEmail).eq('poster_type', 'resource').eq('status', 'active').eq('feed_visible', true).order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1),
     ]).then(([{ data: m }, { data: a }, { data: p }]) => {
       setItems((m ?? []) as ResourceMedia[]);
       setAlbums((a ?? []) as ResourceAlbum[]);

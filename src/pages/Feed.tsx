@@ -162,7 +162,7 @@ export default function Feed() {
     const followed = (myFollows ?? []).map((f) => f.following_email);
     setFollowingEmails(new Set(followed));
 
-    let query = supabase.from('posts').select('*').eq('status', 'active').order('created_at', { ascending: false });
+    let query = supabase.from('posts').select('*').eq('status', 'active').eq('feed_visible', true).order('created_at', { ascending: false });
     if (eventFilterId) {
       query = query.eq('event_id', eventFilterId);
     } else if (feedMode === 'following') {
