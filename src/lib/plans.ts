@@ -34,11 +34,11 @@ export const PACKS: { id: PackId; icon: string; name: string; price: { month: nu
 ];
 export const BUSINESS_EXTRAS: Feature[] = [{ key: 'featured', icon: '⭐', name: 'Featured on Discover', desc: 'Your organization in the Featured row' }];
 
-export function planTotal(plan: PlanId, interval: 'month' | 'year', packs: PackId[], extraClients: number, founding: boolean) {
-  let total = PLAN_PRICES[plan][interval];
-  if (plan === 'essentials') total += packs.reduce((n, p) => n + (PACKS.find((x) => x.id === p)?.price[interval] ?? 0), 0);
+export function planTotal(plan: PlanId | 'artist', interval: 'month' | 'year', packs: PackId[], extraClients: number, founding: boolean) {
+  let total = plan === 'artist' ? ARTIST_PLAN[interval] : PLAN_PRICES[plan][interval];
+  if (plan === 'essentials' || plan === 'artist') total += packs.filter((p) => plan !== 'artist' || p !== 'performers').reduce((n, p) => n + (PACKS.find((x) => x.id === p)?.price[interval] ?? 0), 0);
   if (plan === 'agency') total += extraClients * AGENCY_EXTRA[interval];
-  const discounted = founding && FOUNDING_PLANS.includes(plan) ? Math.round(total * 0.6 * 100) / 100 : total;
+  const discounted = founding && plan !== 'artist' && FOUNDING_PLANS.includes(plan) ? Math.round(total * 0.6 * 100) / 100 : total;
   return { full: total, due: discounted };
 }
 export const money = (n: number) => `$${n % 1 ? n.toFixed(2) : n.toLocaleString('en-US')}`;

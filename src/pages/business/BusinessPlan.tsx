@@ -149,7 +149,7 @@ export default function BusinessPlan() {
           {FREE.map((f) => <li key={f} className="flex items-start gap-2 text-sm text-bone"><span className="text-green-600">✓</span>{f}</li>)}
         </ul>
 
-        {billingOn && user && <PlanCheckout />}
+        {billingOn && user && <PlanCheckout preferArtist={artistFirst} />}
 
         <section id="reserve" className="mt-10 max-w-xl scroll-mt-24 rounded-2xl border-2 p-5" style={{ borderColor: GOLD }}>
           <h2 className="font-display text-2xl font-bold text-bone">Reserve founding pricing</h2>

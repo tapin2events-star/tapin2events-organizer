@@ -76,6 +76,7 @@ export default function ArtistPlanCard({ compact = false }: { compact?: boolean 
             {(['month', 'year'] as const).map((i) => <button key={i} role="radio" aria-checked={interval === i} onClick={() => setInterval(i)} className={`rounded-lg px-3 py-1.5 ${interval === i ? 'bg-purple-700 text-white' : 'text-gray-600'}`}>{i === 'month' ? 'Monthly' : 'Yearly · 2 months free'}</button>)}
           </div>
           <button onClick={() => go({ action: 'artist_checkout', interval })} disabled={busy} className="rounded-xl bg-purple-700 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Opening checkout…' : `Get the Artist plan · ${money(ARTIST_PLAN[interval])}${per}`}</button>
+          <a href="#get-plan" className="text-sm font-medium text-purple-700">Add packs ›</a>
           {p && !p.has_profile && <Link to="/resources/new" className="text-sm font-medium text-purple-700">Create your artist profile first ›</Link>}
         </div>
       )}
