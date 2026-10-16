@@ -9,7 +9,7 @@ import { uploadVideoFile } from '../../lib/videoUpload';
 interface Cand { id: string; thumbnail: string | null; caption: string | null; author: string | null }
 
 // Organizer side (Preview): choose a Feed video as the header for an event or organization page.
-export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: string; orgId?: string; what: string }) {
+export default function VideoHeaderCard({ eventId, orgId, resourceId, what }: { eventId?: string; orgId?: string; resourceId?: string; what: string }) {
   const { user } = useAuth();
   const [current, setCurrent] = useState<{ id: string; poster: string | null; status: string; feed_visible: boolean } | null | undefined>(undefined);
   const [file, setFile] = useState<File | null>(null);
@@ -21,9 +21,9 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
   const [cands, setCands] = useState<Cand[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(async () => {
-    const { data } = await supabase.rpc('header_video_status', { p_event_id: eventId ?? null, p_org_id: orgId ?? null });
+    const { data } = await supabase.rpc('header_video_status', { p_event_id: eventId ?? null, p_org_id: orgId ?? null, p_resource_id: resourceId ?? null });
     setCurrent((data ?? null) as typeof current);
-  }, [eventId, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [eventId, orgId, resourceId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
   // While the chosen video is processing, check every 15 seconds and celebrate when it's live.
   const [justLive, setJustLive] = useState(false);
@@ -31,7 +31,7 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
   useEffect(() => {
     if (!processing) return;
     const t = setInterval(async () => {
-      const { data } = await supabase.rpc('header_video_status', { p_event_id: eventId ?? null, p_org_id: orgId ?? null });
+      const { data } = await supabase.rpc('header_video_status', { p_event_id: eventId ?? null, p_org_id: orgId ?? null, p_resource_id: resourceId ?? null });
       const next = (data ?? null) as typeof current;
       if (next?.status === 'active') { setJustLive(true); setTimeout(() => setJustLive(false), 8000); }
       setCurrent(next);
@@ -40,11 +40,11 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
   }, [processing, eventId, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!open) return;
-    supabase.rpc('video_header_candidates', { p_event_id: eventId ?? null, p_org_id: orgId ?? null }).then(({ data }) => setCands((data ?? []) as Cand[]));
+    supabase.rpc('video_header_candidates', { p_event_id: eventId ?? null, p_org_id: orgId ?? null, p_resource_id: resourceId ?? null }).then(({ data }) => setCands((data ?? []) as Cand[]));
   }, [open, eventId, orgId]);
   async function choose(postId: string | null) {
     setErr(null);
-    const { error } = await supabase.rpc('set_header_video', { p_event_id: eventId ?? null, p_org_id: orgId ?? null, p_post_id: postId });
+    const { error } = await supabase.rpc('set_header_video', { p_event_id: eventId ?? null, p_org_id: orgId ?? null, p_post_id: postId, p_resource_id: resourceId ?? null });
     if (error) return setErr(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't change the video.");
     setOpen(false); load();
   }

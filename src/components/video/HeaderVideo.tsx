@@ -6,13 +6,13 @@ import { useFeature } from '../../lib/preview';
 
 // Video header (Preview, Business plan): a muted, looping trailer at the top of an event or organization page,
 // shown in place of the poster/cover once it's chosen. Returns null when there's no header video.
-export function useHeaderVideo(eventId?: string | null, orgId?: string | null) {
+export function useHeaderVideo(eventId?: string | null, orgId?: string | null, resourceId?: string | null) {
   const on = useFeature('video_headers');
   const [v, setV] = useState<{ id: string; src: string; poster: string | null } | null>(null);
   useEffect(() => {
-    if (!on || (!eventId && !orgId)) { setV(null); return; }
-    supabase.rpc('header_video', { p_event_id: eventId ?? null, p_org_id: orgId ?? null }).then(({ data }) => setV((data ?? null) as typeof v));
-  }, [on, eventId, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!on || (!eventId && !orgId && !resourceId)) { setV(null); return; }
+    supabase.rpc('header_video', { p_event_id: eventId ?? null, p_org_id: orgId ?? null, p_resource_id: resourceId ?? null }).then(({ data }) => setV((data ?? null) as typeof v));
+  }, [on, eventId, orgId, resourceId]); // eslint-disable-line react-hooks/exhaustive-deps
   return v;
 }
 

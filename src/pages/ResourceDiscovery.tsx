@@ -25,6 +25,7 @@ function milesBetween(a: { lat: number; lng: number }, b: { lat: number; lng: nu
 const selectClass = 'rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base text-gray-900 outline-none focus-visible:border-marigold';
 
 export default function ResourceDiscovery() {
+  const [featured, setFeatured] = useState<Set<string>>(new Set());
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
   const [resources, setResources] = useState<Resource[]>([]);
@@ -60,6 +61,8 @@ export default function ResourceDiscovery() {
         .eq('status', 'active')
         .order('average_rating', { ascending: false });
       setResources((data ?? []) as Resource[]);
+      const { data: f } = await supabase.rpc('featured_artist_ids');
+      setFeatured(new Set(((f ?? []) as string[]).map(String)));
       setLoading(false);
     })();
   }, []);
@@ -90,12 +93,14 @@ export default function ResourceDiscovery() {
       });
     const priceOf = (r: Resource) => (r.pricing_type === 'contact_quote' ? Infinity : Number(r.base_rate ?? 0));
     return [...list].sort((a, b) => {
+      const fa = featured.has(a.id) ? 1 : 0; const fb = featured.has(b.id) ? 1 : 0;
+      if (fa !== fb && sort !== 'price' && sort !== 'distance') return fb - fa;
       if (sort === 'price') return priceOf(a) - priceOf(b);
       if (sort === 'distance') return (distanceOf(a) ?? Infinity) - (distanceOf(b) ?? Infinity);
       if (sort === 'newest') return String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''));
       return Number(b.average_rating ?? 0) - Number(a.average_rating ?? 0) || (b.review_count ?? 0) - (a.review_count ?? 0);
     });
-  }, [resources, search, category, maxPrice, radius, minRating, sort, here, kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resources, search, category, maxPrice, radius, minRating, sort, here, kind, featured]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtersOn = !!(category || maxPrice || radius || minRating || search || kind);
 
@@ -206,8 +211,9 @@ export default function ResourceDiscovery() {
               <Link
                 key={r.id}
                 to={`/resources/${r.id}${forEvent ? `?for_event=${forEvent}` : ''}`}
-                className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
+                className={`relative overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-lg ${featured.has(r.id) ? 'border-[#C9A227]' : 'border-gray-200'}`}
               >
+                {featured.has(r.id) && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#C9A227] px-2 py-0.5 text-[10px] font-bold text-[#0F1B3D]">⭐ FEATURED</span>}
                 {r.profile_image ? (
                   <img src={r.profile_image} alt="" className="h-40 w-full object-cover" />
                 ) : (

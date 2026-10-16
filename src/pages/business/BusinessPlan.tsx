@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ArtistPlanCard from '../../components/business/ArtistPlanCard';
 import { AGENCY_EXTRA, BUSINESS_EXTRAS, ESSENTIALS, PACKS, PLAN_PRICES, type Feature } from '../../lib/plans';
 import PlanCheckout from '../../components/business/PlanCheckout';
 import { useFeature } from '../../lib/preview';
@@ -71,7 +72,7 @@ export default function BusinessPlan() {
             </a>
           ))}
         </div>
-        <p className="mt-3 text-sm text-white/75">Yearly billing: 2 months free. Organizing on your own? Unlock every premium feature for one event for $199.</p>
+        <p className="mt-3 text-sm text-white/75">Yearly billing: 2 months free. Artist or performer? The <a href="#artist-plan" className="underline">Artist plan</a> is $10/month. Organizing on your own? Unlock every premium feature for one event for $199.</p>
         <div className="mt-4 max-w-3xl rounded-2xl border border-white/15 bg-white/5 p-4 text-sm">
           🎉 <strong style={{ color: GOLD }}>Founding organizations: 40% off Business or Agency for life</strong>, and Essentials price locked for life{spots !== null ? <> · <strong>{spots} of 20 spots left</strong></> : null}.
         </div>
@@ -116,6 +117,7 @@ export default function BusinessPlan() {
             </div>
           </div>
         </div>
+          <ArtistPlanCard />
 
         <section className="mt-8 overflow-hidden rounded-2xl text-white" style={{ background: `linear-gradient(135deg, #111827 0%, ${NAVY} 100%)` }}>
           <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">

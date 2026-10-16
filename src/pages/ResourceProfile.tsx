@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import HeaderVideo, { useHeaderVideo } from '../components/video/HeaderVideo';
 import ShareQR from '../components/ShareQR';
 import SaveToBoard from '../components/scouting/SaveToBoard';
 import UpcomingAppearances from '../components/resources/UpcomingAppearances';
@@ -30,6 +31,12 @@ export default function ResourceProfile() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
+  const headerVideo = useHeaderVideo(null, null, resource?.id ?? null);
+  const [isFeatured, setIsFeatured] = useState(false);
+  useEffect(() => {
+    if (!resource?.id) return;
+    supabase.rpc('featured_artist_ids').then(({ data }) => setIsFeatured(((data ?? []) as string[]).map(String).includes(resource.id)));
+  }, [resource?.id]);
   const [groupRole, setGroupRole] = useState<string | null>(null);
   const isGroup = resource?.kind === 'group';
   useEffect(() => {
@@ -150,7 +157,9 @@ export default function ResourceProfile() {
       <div className="mx-auto max-w-5xl px-4 py-10">
         <BackButton fallback="/resources" fallbackLabel="Artists & vendors" />
 
-        {(resource.cover_image || resource.profile_image) ? (
+        {headerVideo ? (
+          <div className="relative mt-4 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-900"><HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? resource.cover_image ?? resource.profile_image ?? null} postId={headerVideo.id} /></div>
+        ) : (resource.cover_image || resource.profile_image) ? (
           <img src={resource.cover_image || resource.profile_image!} alt="" className="mt-4 aspect-[21/9] w-full rounded-2xl object-cover" />
         ) : (
           <div className="mt-4 flex aspect-[21/9] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-teal-100">
@@ -165,6 +174,7 @@ export default function ResourceProfile() {
                 <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl font-bold text-gray-900">
                   {isGroup && resource.cover_image && resource.profile_image && <img src={resource.profile_image} alt="" className="h-10 w-10 rounded-full object-cover" />}
                   {resource.display_name}
+                  {isFeatured && <span className="rounded-full bg-[#C9A227] px-2.5 py-0.5 font-sans text-xs font-bold text-[#0F1B3D]">⭐ Featured Artist</span>}
                   {isGroup && <span className="rounded-full bg-purple-100 px-2.5 py-0.5 font-sans text-xs font-semibold text-purple-800">Group</span>}
                 </h1>
                 <p className="mt-1 text-sm text-gray-500">

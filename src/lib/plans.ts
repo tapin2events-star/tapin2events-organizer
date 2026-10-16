@@ -27,7 +27,7 @@ export const PACKS: { id: PackId; icon: string; name: string; price: { month: nu
     { key: 'gala', icon: '🥂', name: 'Gala tools', desc: 'Table seating, paddle numbers, live paddle raise' },
     { key: 'donors', icon: '💛', name: 'Donor features', desc: 'Donors across events in your audience' },
   ] },
-  { id: 'community', icon: '🙋', name: 'Community', price: { month: 10, year: 100 }, for: 'Community groups and nonprofits', features: [
+  { id: 'community', icon: '🙋', name: 'Community', price: { month: 5, year: 50 }, for: 'Community groups and nonprofits', features: [
     { key: 'volunteers', icon: '🙋', name: 'Volunteer shifts', desc: 'Sign-ups, waitlists, check-in and reminders' },
     { key: 'newsletters', icon: '✉️', name: 'Newsletters', desc: 'Email your audience about new events' },
   ] },
@@ -42,3 +42,13 @@ export function planTotal(plan: PlanId, interval: 'month' | 'year', packs: PackI
   return { full: total, due: discounted };
 }
 export const money = (n: number) => `$${n % 1 ? n.toFixed(2) : n.toLocaleString('en-US')}`;
+
+// Artist plan (for individuals, not organizations).
+export const ARTIST_PLAN = { month: 10, year: 100 };
+export const ARTIST_FEATURES: Feature[] = [
+  { key: 'artist_video', icon: '🎬', name: 'Video header on your artist profile', desc: 'A trailer at the top of your profile' },
+  { key: 'featured_artist', icon: '⭐', name: 'Featured Artist', desc: 'Shown first in Artists & vendors, with a Featured badge' },
+  { key: 'promoter_payouts', icon: '📣', name: 'Automatic promoter payouts', desc: 'On shows you host: commission sent on every ticket sold through a promo link' },
+  { key: 'video_headers', icon: '🎞️', name: 'Event video headers & highlight reels', desc: 'Trailers and highlights on events you host' },
+  { key: 'boost_credit', icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature your shows in Discover' },
+];

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import VideoHeaderCard from '../components/video/VideoHeaderCard';
+import ArtistPlanCard from '../components/business/ArtistPlanCard';
 import ResourceEarningsOverview from '../components/resources/ResourceEarningsOverview';
 import AnnounceLineupsToggle from '../components/resources/AnnounceLineupsToggle';
 import BackButton from '../components/BackButton';
@@ -276,7 +278,7 @@ export default function ResourceDashboard() {
           ))}
         </div>
 
-        {tab === 'Overview' && <ResourceEarningsOverview resourceId={resource.id} />}
+        {tab === 'Overview' && <><ArtistPlanCard compact /><VideoHeaderCard resourceId={resource.id} what="your artist profile" /><ResourceEarningsOverview resourceId={resource.id} /></>}
 
         {tab === 'Bookings' && (
           <>
