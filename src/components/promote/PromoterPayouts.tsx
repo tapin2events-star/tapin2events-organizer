@@ -29,15 +29,18 @@ export default function PromoterPayoutsCard({ eventId, links, onLinksChanged }: 
     const { data, error } = await supabase.rpc('create_performer_links', { p_event_id: eventId, p_commission: Number(perfPct) || 0 });
     setBusy(false);
     if (error) return setMsg({ ok: false, text: error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't create the links." });
-    const n = Number(data);
-    setMsg({ ok: n > 0, text: n > 0 ? `Created ${n} promo link${n === 1 ? '' : 's'} for your performers.${o!.on ? ' Each one gets an email with their link.' : ''}` : 'Every booked performer already has a link (or the lineup has no booked TapIN artists yet).' });
+    const res = (data ?? {}) as { created?: number; skipped?: string[] };
+    const n = Number(res.created ?? 0);
+    const skipped = (res.skipped ?? []).filter(Boolean);
+    const skipNote = skipped.length ? ` Skipped (not connected to TapIN): ${skipped.join(', ')}. Connect them in the lineup, or add them with + New link.` : '';
+    setMsg({ ok: n > 0, text: (n > 0 ? `Created ${n} promo link${n === 1 ? '' : 's'} for your performers.${o!.on ? ' Each one gets an email with their link.' : ''}` : 'Everyone performing already has a link.') + skipNote });
     onLinksChanged?.(); load();
   }
   return (
     <section className="mt-4 rounded-2xl border border-gray-200 bg-surface p-4">
       <div className="mb-4 rounded-xl border border-gray-200 bg-white p-3">
         <p className="text-sm font-semibold text-gray-900">🎤 Promo links for your performers</p>
-        <p className="text-xs text-gray-500">One tap gives every artist booked in your lineup their own link, so you can see (and reward) the tickets they sell. Commission is separate from their booking fee.</p>
+        <p className="text-xs text-gray-500">One tap gives everyone performing their own link: artists booked on TapIN, lineup entries connected to TapIN, and people in your revenue split. See (and reward) the tickets they sell. Commission is separate from their booking fee.</p>
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <label className="block w-28 text-xs font-medium text-gray-500">Commission %<input value={perfPct} inputMode="decimal" onChange={(e) => setPerfPct(e.target.value.replace(/[^0-9.]/g, ''))} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm" /></label>
           <button onClick={performerLinks} disabled={busy} className="rounded-xl bg-[#0F1B3D] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Give each performer a promo link</button>

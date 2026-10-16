@@ -13,7 +13,8 @@ import {
 } from '../../lib/program';
 import type { TapEvent } from '../../lib/types';
 
-interface LineupRow { id: string; booking_id: string | null; name: string | null; image_url: string | null; link_url: string | null; role: string | null; bio: string | null; sort_order: number }
+interface LineupRow { id: string; booking_id: string | null; user_id?: string | null; name: string | null; image_url: string | null; link_url: string | null; role: string | null; bio: string | null; sort_order: number }
+interface Found { id: string; full_name: string; profile_photo: string | null; payouts_ready: boolean }
 interface BookingOption { id: string; resource_name: string; resource_image: string | null }
 
 const input = 'mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
@@ -43,6 +44,16 @@ function PersonForm({ initial, booked, onSave, onCancel }: {
   const [bio, setBio] = useState(initial.bio ?? '');
   const [link, setLink] = useState(initial.link_url ?? '');
   const [image, setImage] = useState<string | null>(initial.image_url ?? null);
+  // Optional: connect a hand-added person to their TapIN account (so they can get a promo link and paid).
+  const [userId, setUserId] = useState<string | null>(initial.user_id ?? null);
+  const [connectedName, setConnectedName] = useState<string | null>(initial.user_id ? (initial.name ?? 'TapIN account') : null);
+  const [q, setQ] = useState('');
+  const [found, setFound] = useState<Found[]>([]);
+  useEffect(() => {
+    if (booked || q.trim().length < 2) { setFound([]); return; }
+    const t = setTimeout(() => { supabase.rpc('search_people_for_splits', { p_query: q.trim() }).then(({ data }) => setFound((data ?? []) as Found[])); }, 250);
+    return () => clearTimeout(t);
+  }, [q, booked]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +65,7 @@ function PersonForm({ initial, booked, onSave, onCancel }: {
     setBusy(true);
     const err = await onSave(booked
       ? { role: role.trim() || null, bio: bio.trim() || null }
-      : { name: name.trim(), role: role.trim() || null, bio: bio.trim() || null, link_url: url, image_url: image });
+      : { name: name.trim(), role: role.trim() || null, bio: bio.trim() || null, link_url: url, image_url: image, user_id: userId });
     setBusy(false);
     if (err) setError(err);
   }
@@ -65,6 +76,29 @@ function PersonForm({ initial, booked, onSave, onCancel }: {
         <>
           <label className="text-sm font-medium text-gray-700">Name<input className={input} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} placeholder="Performer, speaker, or group" /></label>
           <ImageUpload currentUrl={image} onUploaded={setImage} pathPrefix="lineup" label="Photo (optional)" />
+          <div className="text-sm font-medium text-gray-700">On TapIN? <span className="font-normal text-gray-400">(optional: lets them get a promo link and be paid)</span>
+            {userId ? (
+              <div className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+                <span className="text-sm text-gray-900">✓ Connected to {connectedName}</span>
+                <button type="button" onClick={() => { setUserId(null); setConnectedName(null); }} className="text-xs text-gray-500">Remove</button>
+              </div>
+            ) : (
+              <>
+                <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find them on TapIN by name" aria-label="Find them on TapIN" />
+                {found.length > 0 && (
+                  <ul className="mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                    {found.map((f) => (
+                      <li key={f.id} className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-0">
+                        {f.profile_photo ? <img src={f.profile_photo} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{f.full_name.charAt(0)}</span>}
+                        <span className="min-w-0 flex-1 truncate text-sm text-gray-900">{f.full_name}</span>
+                        <button type="button" onClick={() => { setUserId(f.id); setConnectedName(f.full_name); setQ(''); if (!name.trim()) setName(f.full_name); if (!image && f.profile_photo) setImage(f.profile_photo); }} className="rounded-md bg-marigold px-2.5 py-1 text-xs font-semibold text-white">Connect</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
         </>
       )}
       <label className="text-sm font-medium text-gray-700">Role <span className="font-normal text-gray-400">(optional)</span>
@@ -347,9 +381,9 @@ export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { eve
                 <li key={r.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
                   <Avatar name={p.name} url={p.image_url} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-gray-900">{p.name}{r.booking_id && <span className="ml-2 rounded-full bg-teal/15 px-2 py-0.5 text-[11px] font-medium text-teal">Booked on TapIN</span>}</p>
+                    <p className="truncate font-medium text-gray-900">{p.name}{r.booking_id ? <span className="ml-2 rounded-full bg-teal/15 px-2 py-0.5 text-[11px] font-medium text-teal">Booked on TapIN</span> : r.user_id ? <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">On TapIN</span> : null}</p>
                     <p className="truncate text-sm text-marigold">{r.role || <span className="text-gray-400">No role yet</span>}</p>
-                    {promoOn && r.booking_id && promo.get(r.id) && (promo.get(r.id)!.code
+                    {promoOn && (r.booking_id || r.user_id) && promo.get(r.id) && (promo.get(r.id)!.code
                       ? <button onClick={onGoPromote} className="mt-0.5 text-xs font-medium text-indigo-700">📣 Promo link · {promo.get(r.id)!.tickets} ticket{promo.get(r.id)!.tickets === 1 ? '' : 's'} sold ›</button>
                       : promo.get(r.id)!.can_link && <button onClick={onGoPromote} className="mt-0.5 text-xs font-medium text-gray-500">📣 Give promo link ›</button>)}
                   </div>
