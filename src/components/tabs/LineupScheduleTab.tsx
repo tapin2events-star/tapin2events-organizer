@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -164,7 +165,16 @@ function ItemForm({ initial, defaultDate, lineup, onSave, onCancel }: {
   );
 }
 
-export default function LineupScheduleTab({ event, isOwner }: { event: TapEvent; isOwner: boolean }) {
+export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { event: TapEvent; isOwner: boolean; onGoPromote?: () => void }) {
+  // Promo links for booked performers (Preview, with automatic promoter payouts).
+  const promoOn = useFeature('promoter_payouts');
+  const [promo, setPromo] = useState<Map<string, { code: string | null; tickets: number; can_link: boolean }>>(new Map());
+  useEffect(() => {
+    if (!promoOn) return;
+    supabase.rpc('lineup_promo_status', { p_event_id: event.id }).then(({ data }) => {
+      setPromo(new Map(((data ?? []) as { lineup_id: string; code: string | null; tickets: number; can_link: boolean }[]).map((x) => [x.lineup_id, { code: x.code, tickets: Number(x.tickets), can_link: x.can_link }])));
+    });
+  }, [promoOn, event.id]);
   const [rows, setRows] = useState<LineupRow[]>([]);
   const [display, setDisplay] = useState<Map<string, LineupEntry>>(new Map());
   const [items, setItems] = useState<ScheduleItem[]>([]);
@@ -339,6 +349,9 @@ export default function LineupScheduleTab({ event, isOwner }: { event: TapEvent;
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-gray-900">{p.name}{r.booking_id && <span className="ml-2 rounded-full bg-teal/15 px-2 py-0.5 text-[11px] font-medium text-teal">Booked on TapIN</span>}</p>
                     <p className="truncate text-sm text-marigold">{r.role || <span className="text-gray-400">No role yet</span>}</p>
+                    {promoOn && r.booking_id && promo.get(r.id) && (promo.get(r.id)!.code
+                      ? <button onClick={onGoPromote} className="mt-0.5 text-xs font-medium text-indigo-700">📣 Promo link · {promo.get(r.id)!.tickets} ticket{promo.get(r.id)!.tickets === 1 ? '' : 's'} sold ›</button>
+                      : promo.get(r.id)!.can_link && <button onClick={onGoPromote} className="mt-0.5 text-xs font-medium text-gray-500">📣 Give promo link ›</button>)}
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${p.name} up`} className={btn}>↑</button>

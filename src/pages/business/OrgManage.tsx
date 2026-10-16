@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { OrgPromoterPayouts } from '../../components/promote/PromoterPayouts';
 import { OrgPlanStatus } from '../../components/business/PlanCheckout';
 import { useNavigate } from 'react-router-dom';
 import OrgPageSectionsTab from '../../components/business/OrgPageSectionsTab';
@@ -42,6 +43,7 @@ function OrgManageInner() {
   const insightsOn = useFeature('org_insights');
   const newsletterOn = useFeature('newsletters');
   const billingOn = useFeature('billing');
+  const promoterPayoutsOn = useFeature('promoter_payouts');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
   const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
@@ -132,6 +134,7 @@ function OrgManageInner() {
         {tab === 'Page' && canEditPage && <><OrgPageSectionsTab orgId={org.id} slug={org.slug} /><section className="mt-10 border-t border-gray-200 pt-8"><h3 className="font-display text-lg font-bold text-bone">📸 Photos</h3><p className="mb-3 text-sm text-muted">Up to 24 photos for your page's gallery.</p><OrgPhotosTab orgId={org.id} /></section></>}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} onAudience={() => setTab('Audience')} />}
         {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}
+        {tab === 'Promote' && isLead && promoterPayoutsOn && <OrgPromoterPayouts orgId={org.id} />}
         {tab === 'Audience' && isLead && insightsOn && <OrgAudienceTab orgId={org.id} orgName={org.name} newsletterOn={newsletterOn} />}
         {tab === 'Payouts' && isLead && billingOn && <OrgPlanStatus orgId={org.id} />}
         {tab === 'Payouts' && isLead && insightsOn && <OrgSales orgId={org.id} />}

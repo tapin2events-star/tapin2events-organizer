@@ -305,7 +305,7 @@ export default function EventDetail() {
       {tab === 'Registration' && <RegistrationTab event={event} onEventChange={setEvent} onGoAttendees={() => setTab('Attendees')} />}
       {tab === 'Attendees' && <AttendeesTab event={event} />}
       {tab === 'Donations' && <DonationsTab event={event} onEventChange={setEvent} />}
-      {tab === 'Lineup & bookings' && <LineupWithScouting event={event} isOwner={isOwner} eventId={id!} initialView={tabParam === 'Bookings' ? 'bookings' : undefined} />}
+      {tab === 'Lineup & bookings' && <LineupWithScouting event={event} isOwner={isOwner} eventId={id!} initialView={tabParam === 'Bookings' ? 'bookings' : undefined} onGoPromote={() => setTab('Promote')} />}
       {tab === 'Promote' && promoteOn && <PromoteTab eventId={id!} />}
       {tab === 'Gala' && galaOn && <GalaTab event={event} />}
       {tab === 'Sales' && invoicesOn && event.is_seating_enabled && (event.seating_sections ?? []).some((s) => Number(s.price) > 0) && (
@@ -329,7 +329,7 @@ export default function EventDetail() {
 // Lineup tab: the schedule, with Scouting one tap away.
 // Lineup & bookings: Scouting -> Bookings -> Lineup & schedule (the order the work happens).
 // Bookings belong to whoever made them, so only the event's owner sees that view.
-function LineupWithScouting({ event, isOwner, eventId, initialView }: { event: TapEvent; isOwner: boolean; eventId: string; initialView?: 'bookings' }) {
+function LineupWithScouting({ event, isOwner, eventId, initialView, onGoPromote }: { event: TapEvent; isOwner: boolean; eventId: string; initialView?: 'bookings'; onGoPromote?: () => void }) {
   type View = 'scouting' | 'bookings' | 'schedule';
   const views: View[] = isOwner ? ['scouting', 'bookings', 'schedule'] : ['scouting', 'schedule'];
   const [view, setView] = useState<View>(() => {
@@ -348,7 +348,7 @@ function LineupWithScouting({ event, isOwner, eventId, initialView }: { event: T
           </button>
         ))}
       </div>
-      {view === 'schedule' ? <LineupScheduleTab event={event} isOwner={isOwner} /> : view === 'bookings' && isOwner ? <BookingsManager eventId={eventId} /> : <ScoutingTab event={event} />}
+      {view === 'schedule' ? <LineupScheduleTab event={event} isOwner={isOwner} onGoPromote={onGoPromote} /> : view === 'bookings' && isOwner ? <BookingsManager eventId={eventId} /> : <ScoutingTab event={event} />}
     </div>
   );
 }

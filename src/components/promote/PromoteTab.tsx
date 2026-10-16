@@ -50,7 +50,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
         </div>
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New link</button>
       </div>
-      {payoutsOn && stats && <PromoterPayoutsCard eventId={eventId} links={stats.links} />}
+      {payoutsOn && stats && <PromoterPayoutsCard eventId={eventId} links={stats.links} onLinksChanged={load} />}
       {msg && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 
       {stats === null ? <ListSkeleton rows={3} className="mt-4" /> : (
@@ -105,32 +105,70 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
 function NewLinkSheet({ eventId, onClose, onDone }: { eventId: string; onClose: () => void; onDone: (code: string) => void }) {
   const [label, setLabel] = useState('');
   const [promoter, setPromoter] = useState(false);
+  const [person, setPerson] = useState<{ id: string; full_name: string; profile_photo: string | null; payouts_ready: boolean } | null>(null);
+  const [q, setQ] = useState('');
+  const [found, setFound] = useState<{ id: string; full_name: string; profile_photo: string | null; payouts_ready: boolean }[]>([]);
+  const [byEmail, setByEmail] = useState(false);
   const [email, setEmail] = useState('');
   const [pct, setPct] = useState('10');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!promoter || q.trim().length < 2) { setFound([]); return; }
+    const t = setTimeout(() => { supabase.rpc('search_people_for_splits', { p_query: q.trim() }).then(({ data }) => setFound((data ?? []) as typeof found)); }, 250);
+    return () => clearTimeout(t);
+  }, [q, promoter]); // eslint-disable-line react-hooks/exhaustive-deps
   async function create() {
-    if (!label.trim()) return setErr('Name the link so you know where it was shared.');
+    const name = label.trim() || (promoter && person ? person.full_name : '');
+    if (!name) return setErr('Name the link so you know where it was shared.');
+    if (promoter && !person && !email.trim()) return setErr('Find the promoter on TapIN, or add them by email.');
     setBusy(true); setErr(null);
-    const { data, error } = await supabase.rpc('create_event_link', { p_event_id: eventId, p_label: label.trim(), p_promoter_email: promoter ? email.trim() : null, p_commission: promoter && pct ? Number(pct) : null });
+    const { data, error } = promoter
+      ? await supabase.rpc('create_promoter_link', { p_event_id: eventId, p_label: name, p_user_id: person?.id ?? null, p_email: person ? null : email.trim(), p_commission: pct ? Number(pct) : null, p_resource_id: null })
+      : await supabase.rpc('create_event_link', { p_event_id: eventId, p_label: name, p_promoter_email: null, p_commission: null });
     setBusy(false);
     if (error || !data) return setErr(error?.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't create the link.");
     onDone((data as { code: string }).code);
   }
   return (
     <Sheet title="New promotion link" onClose={onClose}>
-      <label className="block text-xs font-medium text-gray-500">Where will you share it?<input value={label} maxLength={80} onChange={(e) => setLabel(e.target.value)} placeholder="Instagram bio" className={field} autoFocus /></label>
-      <div className="mt-2 flex flex-wrap gap-1.5">{IDEAS.map((i) => <button key={i} type="button" onClick={() => setLabel(i)} className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700">{i}</button>)}</div>
-      <label className="mt-4 flex items-start gap-3 text-sm text-gray-800">
+      <label className="flex items-start gap-3 text-sm text-gray-800">
         <input type="checkbox" checked={promoter} onChange={(e) => setPromoter(e.target.checked)} className="mt-0.5 h-5 w-5 accent-marigold" />
         <span><strong>This link is for a promoter</strong><span className="block text-xs text-gray-500">They'll see their own visits, sales and commission on TapIN.</span></span>
       </label>
       {promoter && (
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <label className="col-span-2 block min-w-0 text-xs font-medium text-gray-500">Promoter's email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="promoter@email.com" className={field} /></label>
-          <label className="block min-w-0 text-xs font-medium text-gray-500">Commission %<input value={pct} inputMode="decimal" onChange={(e) => setPct(e.target.value.replace(/[^0-9.]/g, ''))} className={field} /></label>
+        <div className="mt-3">
+          {person ? (
+            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+              {person.profile_photo ? <img src={person.profile_photo} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{person.full_name.charAt(0)}</span>}
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-gray-900">{person.full_name}</span><span className={`block text-[11px] ${person.payouts_ready ? 'text-green-700' : 'text-gray-500'}`}>{person.payouts_ready ? '✓ Payouts connected' : 'Payouts not connected yet'}</span></span>
+              <button onClick={() => setPerson(null)} className="text-xs text-gray-400">Change</button>
+            </div>
+          ) : byEmail ? (
+            <label className="block text-xs font-medium text-gray-500">Promoter's email (not on TapIN yet)<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="promoter@email.com" className={field} autoFocus /></label>
+          ) : (
+            <>
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people on TapIN by name" aria-label="Search people on TapIN" className={field} autoFocus />
+              {found.length > 0 && (
+                <ul className="mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                  {found.map((f) => (
+                    <li key={f.id} className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-0">
+                      {f.profile_photo ? <img src={f.profile_photo} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{f.full_name.charAt(0)}</span>}
+                      <span className="min-w-0 flex-1 truncate text-sm text-gray-900">{f.full_name}</span>
+                      <button onClick={() => { setPerson(f); setQ(''); }} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white">Add</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {q.trim().length >= 2 && found.length === 0 && <p className="mt-1 text-xs text-gray-500">No one on TapIN by that name.</p>}
+            </>
+          )}
+          {!person && <button type="button" onClick={() => setByEmail(!byEmail)} className="mt-2 text-xs font-medium text-marigold">{byEmail ? 'Search people on TapIN instead' : 'Not on TapIN? Add by email'}</button>}
+          <label className="mt-3 block w-32 text-xs font-medium text-gray-500">Commission %<input value={pct} inputMode="decimal" onChange={(e) => setPct(e.target.value.replace(/[^0-9.]/g, ''))} className={field} /></label>
         </div>
       )}
+      <label className="mt-4 block text-xs font-medium text-gray-500">{promoter ? 'Link name (optional)' : 'Where will you share it?'}<input value={label} maxLength={80} onChange={(e) => setLabel(e.target.value)} placeholder={promoter ? (person?.full_name ?? 'Promoter name') : 'Instagram bio'} className={field} /></label>
+      {!promoter && <div className="mt-2 flex flex-wrap gap-1.5">{IDEAS.map((i) => <button key={i} type="button" onClick={() => setLabel(i)} className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700">{i}</button>)}</div>}
       {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
       <button onClick={create} disabled={busy} className="mt-4 w-full rounded-xl bg-marigold py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create link'}</button>
     </Sheet>
