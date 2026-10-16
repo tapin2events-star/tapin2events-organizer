@@ -55,7 +55,7 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
       const assetId = await uploadVideoFile(file, { onProgress: setProgress, onNote: setNote });
       const { data: post, error } = await supabase.from('posts').insert({
         author_email: user.email, caption: caption.trim() || null, video_url: null, status: 'processing',
-        processing_started_at: new Date().toISOString(), gumlet_asset_id: assetId, event_id: eventId ?? null, feed_visible: toFeed,
+        processing_started_at: new Date().toISOString(), gumlet_asset_id: assetId, event_id: eventId ?? null, org_id: eventId ? null : orgId ?? null, feed_visible: toFeed,
       }).select('id').single();
       if (error || !post) throw new Error('Your video uploaded, but saving it failed. Please try again.');
       await choose(post.id);
@@ -110,7 +110,7 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
                     <input value={caption} onChange={(e) => setCaption(e.target.value)} maxLength={150} placeholder="Caption (optional)" aria-label="Caption" className="mt-2 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm" />
                     <label className="mt-2 flex items-start gap-2 text-sm text-gray-700">
                       <input type="checkbox" checked={toFeed} onChange={(e) => setToFeed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-marigold" />
-                      <span>Also share to the Feed<span className="block text-xs text-gray-500">{toFeed ? 'More people see it, tagged to ' + (eventId ? 'this event' : 'you') + '.' : 'Used only as the header and kept out of the Feed.'}</span></span>
+                      <span>Also share to the Feed<span className="block text-xs text-gray-500">{toFeed ? 'More people see it, with a link to ' + (eventId ? 'this event' : 'your organization') + '.' : 'Used only as the header and kept out of the Feed.'}</span></span>
                     </label>
                     <button onClick={uploadAndUse} className="mt-3 w-full rounded-xl bg-marigold py-2.5 text-sm font-semibold text-white">Upload and use as header</button>
                   </>

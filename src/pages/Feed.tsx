@@ -38,6 +38,9 @@ interface Post {
   comment_count: number;
   liked_by_me: boolean;
   event_id: string | null;
+  org_id?: string | null;
+  org_name?: string | null;
+  org_slug?: string | null;
   // Creators the author tagged in this post.
   tagged: TaggedPerson[];
 }
@@ -202,6 +205,9 @@ export default function Feed() {
     // passes Supabase's 1,000-rows-per-request cap.
     const resourceEmails = [...new Set(rows.filter((p) => p.poster_type === 'resource').map((p) => p.author_email))];
     const taggedEventIds = [...new Set(rows.map((p) => p.event_id).filter((id): id is string => !!id))];
+    const taggedOrgIds = [...new Set(rows.map((p) => (p as { org_id?: string | null }).org_id).filter((id): id is string => !!id))];
+    const { data: taggedOrgs } = taggedOrgIds.length ? await supabase.from('organizations').select('id, name, slug').in('id', taggedOrgIds) : { data: [] };
+    const orgById = new Map(((taggedOrgs ?? []) as { id: string; name: string; slug: string }[]).map((o) => [o.id, o]));
     const [{ data: profiles }, { data: likes }, { data: commentCounts }, { data: myLikes }, { data: resourceRows }, { data: taggedEvents }, tagsByPost] = await Promise.all([
       authorEmails.length ? supabase.from('public_profiles').select('email, full_name, profile_photo, can_receive_tips').in('email', authorEmails) : Promise.resolve({ data: [] }),
       postIds.length ? supabase.from('post_likes').select('post_id').in('post_id', postIds) : Promise.resolve({ data: [] }),
@@ -242,6 +248,8 @@ export default function Feed() {
         resource_name: p.poster_type === 'resource' ? resourceByEmail.get(p.author_email)?.display_name?.trim() || null : null,
         event_title: p.event_id ? eventById.get(p.event_id)?.title ?? null : null,
         event_date: p.event_id ? eventById.get(p.event_id)?.start_date ?? null : null,
+        org_name: (p as { org_id?: string | null }).org_id ? orgById.get((p as { org_id: string }).org_id)?.name ?? null : null,
+        org_slug: (p as { org_id?: string | null }).org_id ? orgById.get((p as { org_id: string }).org_id)?.slug ?? null : null,
         like_count: likeCountByPost.get(p.id) ?? 0,
         comment_count: commentCountByPost.get(p.id) ?? 0,
         liked_by_me: myLikedSet.has(p.id),
@@ -714,7 +722,7 @@ export default function Feed() {
                   ))}
                 </div>
               )}
-              {(post.resource_id || (post.event_id && post.event_title)) ? (
+              {(post.resource_id || (post.event_id && post.event_title) || (post.org_slug && post.org_name)) ? (
                 <div className="mt-2 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-2">
                   {post.resource_id && (
                     <Link
@@ -723,6 +731,11 @@ export default function Feed() {
                     >
                       <span aria-hidden>⭐</span>
                       <span className="truncate">Book {post.resource_name || post.author_name}</span>
+                    </Link>
+                  )}
+                  {!post.event_id && post.org_slug && post.org_name && (
+                    <Link to={`/o/${post.org_slug}`} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/30">
+                      <span aria-hidden>🏢</span><span className="truncate">{post.org_name}</span>
                     </Link>
                   )}
                   {post.event_id && post.event_title && (

@@ -869,7 +869,7 @@ export default function PublicEventDetail() {
         )}
 
         {networkingOn && id && <NetworkingInvite eventId={id} />}
-        {videoHeadersOn && <EventHighlights eventId={event.id} eventTitle={event.title} ended={hasEnded} />}
+        {videoHeadersOn && <EventHighlights eventId={event.id} eventTitle={event.title} ended={hasEnded} started={!!event.start_date && new Date(event.start_date).getTime() <= Date.now()} />}
         {galaOn && <GalaGuestCard eventId={event.id} />}
         {volunteersOn && <VolunteerCard eventId={event.id} />}
         {donationsOn && <DonationCard event={event} recipient={biz.org?.name ?? organizerName ?? event.title} accent={biz.org?.brand.accent} />}

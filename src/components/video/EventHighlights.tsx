@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import CreatePostModal from '../feed/CreatePostModal';
 
 // Past event pages (Preview): a "Highlights" reel of videos people posted to the event, and a prompt to share one.
-export default function EventHighlights({ eventId, eventTitle, ended }: { eventId: string; eventTitle: string; ended: boolean }) {
+export default function EventHighlights({ eventId, eventTitle, ended, started = false }: { eventId: string; eventTitle: string; ended: boolean; started?: boolean }) {
+  const canShare = ended || started;
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState<{ id: string; thumbnail: string | null; caption: string | null; author: string | null }[] | null>(null);
@@ -17,12 +18,12 @@ export default function EventHighlights({ eventId, eventTitle, ended }: { eventI
     if (params.get('share') === '1' && user) { setSharing(true); params.delete('share'); setParams(params, { replace: true }); }
   }, [params, user, setParams]);
   if (items === null) return null;
-  if (!ended && !items.length) return null;
+  if (!canShare && !items.length) return null;
   return (
     <section className="mt-6" aria-labelledby="event-highlights">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h2 id="event-highlights" className="font-display text-xl font-bold text-bone">🎞️ Highlights</h2>
-        {ended && (user
+        {canShare && (user
           ? <button onClick={() => setSharing(true)} className="rounded-xl bg-marigold px-3 py-2 text-sm font-semibold text-white">Share a clip</button>
           : <Link to="/login" className="text-sm font-medium text-marigold">Sign in to share a clip ›</Link>)}
       </div>
@@ -38,7 +39,7 @@ export default function EventHighlights({ eventId, eventTitle, ended }: { eventI
           ))}
         </div>
       ) : (
-        <p className="mt-2 rounded-2xl border border-dashed border-gray-300 p-5 text-center text-sm text-muted">Were you there? Be the first to share a clip from {eventTitle}.</p>
+        <p className="mt-2 rounded-2xl border border-dashed border-gray-300 p-5 text-center text-sm text-muted">{ended ? 'Were you there?' : 'Happening now!'} Be the first to share a clip from {eventTitle}.</p>
       )}
       {sharing && <CreatePostModal initialEvent={{ id: eventId, title: eventTitle }} onClose={() => setSharing(false)} onPosted={() => { setSharing(false); setPosted(true); }} />}
     </section>
