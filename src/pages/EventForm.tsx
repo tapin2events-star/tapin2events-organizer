@@ -129,6 +129,8 @@ export default function EventForm() {
   const [ticketPrice, setTicketPrice] = useState('0');
   const [externalTicketUrl, setExternalTicketUrl] = useState('');
   const [maxCapacity, setMaxCapacity] = useState('');
+  const [maxPerOrder, setMaxPerOrder] = useState('');
+  const [askGuestNames, setAskGuestNames] = useState(false);
   const [features, setFeatures] = useState<EventFeature[]>([]);
   const [vendorApplicationsEnabled, setVendorApplicationsEnabled] = useState(false);
   const [vendorFeeTiers, setVendorFeeTiers] = useState<{ tier_name: string; fee: number }[]>([]);
@@ -333,6 +335,8 @@ export default function EventForm() {
       setLocationAddress(data.location_address ?? '');
       setTicketPrice(String(data.ticket_price ?? 0));
       setMaxCapacity(data.max_capacity ? String(data.max_capacity) : '');
+      setMaxPerOrder(data.max_per_order ? String(data.max_per_order) : '');
+      setAskGuestNames(!!data.ask_guest_names);
       setFeatures(Array.isArray(data.features) ? data.features : []);
       setVendorApplicationsEnabled(!!data.vendor_applications_enabled);
       setVendorFeeTiers(Array.isArray(data.vendor_fees) ? data.vendor_fees : []);
@@ -520,6 +524,8 @@ export default function EventForm() {
       ticket_price: eventType === 'free' ? 0 : Number(ticketPrice) || 0,
       external_ticket_url: normalizeLink('website', externalTicketUrl),
       max_capacity: maxCapacity ? Number(maxCapacity) : null,
+      max_per_order: sellMode === 'single' && maxPerOrder ? Math.max(1, Math.min(50, Math.floor(Number(maxPerOrder)))) : null,
+      ask_guest_names: sellMode === 'single' ? askGuestNames : false,
       features,
       vendor_applications_enabled: vendorApplicationsEnabled,
       vendor_fee: vendorFeeTiers[0]?.fee ?? 0,
@@ -955,7 +961,18 @@ export default function EventForm() {
                   <input type="number" min="0" value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} className={inputClass} />
                 </Field>
               )}
+              {sellMode === 'single' && (
+                <Field label="Max tickets per order">
+                  <input type="number" min="1" max="50" value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} placeholder={eventType === 'free' ? '4 (default)' : '10 (default)'} className={inputClass} />
+                </Field>
+              )}
             </div>
+            {sellMode === 'single' && (
+              <label className="mt-3 flex items-start gap-3 text-sm text-gray-800">
+                <input type="checkbox" checked={askGuestNames} onChange={(e) => setAskGuestNames(e.target.checked)} className="mt-0.5 h-5 w-5 accent-marigold" />
+                <span><strong>Ask for each guest's name</strong><span className="block text-xs text-gray-500">When someone gets more than one ticket, they add a name for each (helpful for name badges or guest lists). Events that require approval always allow one ticket per person.</span></span>
+              </label>
+            )}
 
             {sellMode === 'tiers' && (
               <div className="-mx-1 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-3 sm:mx-0 sm:p-4">

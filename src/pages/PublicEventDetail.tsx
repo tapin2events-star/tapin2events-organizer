@@ -42,6 +42,12 @@ import { EventPageSkeleton } from '../components/ui/Skeleton';
 
 export default function PublicEventDetail() {
   const [addOns, setAddOns] = useState<AddOnPick[]>([]);
+  // More than one ticket per order (single-price and free events).
+  const [qty, setQty] = useState(1);
+  const [guestNames, setGuestNames] = useState<string[]>([]);
+  const [ticketLimit, setTicketLimit] = useState(1);
+  const [myCount, setMyCount] = useState(0);
+  const [buyMore, setBuyMore] = useState(false);
   const volunteersOn = useFeature('volunteers');
   const galaOn = useFeature('gala');
   // Promotion links: arriving with ?src=<code> records a visit for that link.
@@ -175,7 +181,11 @@ export default function PublicEventDetail() {
           .limit(1)
           .maybeSingle();
         setMyTicket((existing as Ticket) ?? null);
+        const { data: mine } = await supabase.from('tickets').select('quantity').eq('event_id', id).eq('attendee_email', user.email).in('status', ['confirmed', 'used']);
+        setMyCount(((mine ?? []) as { quantity: number | null }[]).reduce((n, t) => n + Math.max(1, t.quantity || 1), 0));
       }
+      const { data: lim } = await supabase.rpc('event_ticket_limit', { p_event_id: id });
+      setTicketLimit(Number(lim) || 1);
     })();
   }, [id, event, user?.email, checkoutStatus]);
 
@@ -220,50 +230,19 @@ export default function PublicEventDetail() {
     setRegistering(true);
     setRegisterError(null);
 
-    const { data: profile } = await supabase.from('profiles').select('full_name').eq('email', user.email).single();
-
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        order_number: `TAPIN-${Date.now()}`,
-        event_id: id,
-        customer_email: user.email,
-        customer_name: profile?.full_name ?? user.email,
-        items: [{ type: 'ticket', item_id: id, item_name: event.title, quantity: 1, unit_price: 0, total_price: 0 }],
-        subtotal: 0,
-        platform_fee: 0,
-        total_amount: 0,
-        payment_status: 'paid',
-      })
-      .select()
-      .single();
-
-    if (orderError || !order) {
-      setRegisterError('Something went wrong. Please try again.');
+    const { data: ids, error: regError } = await supabase.rpc('register_free_tickets', { p_event_id: id, p_qty: qty, p_guest_names: event.ask_guest_names ? guestNames.slice(0, qty) : null });
+    if (regError || !Array.isArray(ids) || !ids.length) {
       setRegistering(false);
+      setRegisterError(regError?.message && !/function|permission|jwt/i.test(regError.message) ? regError.message : 'Something went wrong. Please try again.');
       return;
     }
-
-    const { data: ticket, error: ticketError } = await supabase
-      .from('tickets')
-      .insert({
-        event_id: id,
-        attendee_email: user.email,
-        order_id: order.id,
-        ticket_type: 'general',
-        price_paid: 0,
-        quantity: 1,
-        status: 'confirmed',
-      })
-      .select()
-      .single();
-
+    const { data: ticket } = await supabase.from('tickets').select('*').eq('id', ids[0]).maybeSingle();
     setRegistering(false);
-    if (ticketError || !ticket) {
-      setRegisterError('Something went wrong. Please try again.');
-      return;
-    }
+    if (!ticket) { setRegisterError('Something went wrong. Please try again.'); return; }
     setMyTicket(ticket as Ticket);
+    setMyCount((n) => n + ids.length);
+    setConfirmedCount((n) => n + ids.length);
+    setBuyMore(false); setQty(1); setGuestNames([]);
 
     // Best-effort: the registration itself has already succeeded regardless
     // of whether this email actually goes out, so failures here are swallowed.
@@ -285,6 +264,8 @@ export default function PublicEventDetail() {
         event_id: id,
         add_ons: addOns,
         embedded: embed,
+        quantity: qty,
+        guest_names: event.ask_guest_names ? guestNames.slice(0, qty) : [],
         successUrl: `${base}events/${id}?checkout=success`,
         cancelUrl: `${base}events/${id}?checkout=cancelled`,
       },
@@ -368,7 +349,7 @@ export default function PublicEventDetail() {
   if (loading) return <EventPageSkeleton />;
   if (!event) return <div className="p-10 text-center text-magenta">Event not found.</div>;
 
-  const isFull = !!event.max_capacity && confirmedCount >= event.max_capacity && !myTicket;
+  const isFull = !!event.max_capacity && confirmedCount >= event.max_capacity && (!myTicket || buyMore);
   const isFree = event.event_type === 'free';
   // Drafts are only visible to their organizer and team (enforced by the
   // database), so viewing one is a preview: ticket buttons are switched off.
@@ -735,12 +716,15 @@ export default function PublicEventDetail() {
               <p className="text-sm text-gray-400">{isFree ? 'Free to attend' : 'Ticket price'}</p>
               <p className="font-display text-2xl font-extrabold text-white">{isFree ? 'Free' : `$${event.ticket_price}`}</p>
             </div>
-            {myTicket ? (
+            {myTicket && !buyMore ? (
               <div className="flex flex-col gap-1 sm:items-end">
-                <p className="text-sm font-medium text-mint">✓ You're registered</p>
-                <Link to={`/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
-                  View your ticket &amp; QR code
+                <p className="text-sm font-medium text-mint">✓ {myCount > 1 ? `You have ${myCount} tickets` : "You're registered"}</p>
+                <Link to={myCount > 1 ? '/activity' : `/pass/${myTicket.id}`} className="text-sm font-medium text-white underline underline-offset-2">
+                  {myCount > 1 ? 'View your tickets & QR codes' : <>View your ticket &amp; QR code</>}
                 </Link>
+                {!approvalNeeded && !hasEnded && (isFree ? myCount < ticketLimit : true) && !(event.max_capacity && confirmedCount >= event.max_capacity) && (
+                  <button onClick={() => { setBuyMore(true); setQty(1); }} className="text-sm font-medium text-white/80 underline underline-offset-2">Get more tickets</button>
+                )}
                 {canCancelRegistration(myTicket, event.start_date) && (
                   <CancelRegistration ticketId={myTicket.id} eventTitle={event.title} variant="light" className="mt-1"
                     onCancelled={() => { setMyTicket(null); setConfirmedCount((n) => Math.max(n - (myTicket.quantity || 1), 0)); }} />
@@ -759,13 +743,40 @@ export default function PublicEventDetail() {
               <p className="text-sm font-medium text-gray-400">This event is full.</p>
             ) : (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                {(() => {
+                  const spots = event.max_capacity ? Math.max(0, event.max_capacity - confirmedCount) : Infinity;
+                  const maxQty = Math.max(1, Math.min(isFree ? ticketLimit - myCount : ticketLimit, spots));
+                  if (approvalNeeded || maxQty <= 1) return null;
+                  return (
+                    <div className="flex w-full flex-col gap-2 sm:max-w-sm">
+                      <div className="flex items-center justify-between gap-3 rounded-xl bg-white/10 px-3 py-2">
+                        <span className="text-sm text-white">Tickets</span>
+                        <span className="flex items-center gap-2">
+                          <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} aria-label="Fewer tickets" className="h-9 w-9 rounded-lg bg-white/15 text-lg font-bold text-white disabled:opacity-30">−</button>
+                          <span className="w-6 text-center text-lg font-bold text-white" aria-live="polite">{qty}</span>
+                          <button type="button" onClick={() => setQty(Math.min(maxQty, qty + 1))} disabled={qty >= maxQty} aria-label="More tickets" className="h-9 w-9 rounded-lg bg-white/15 text-lg font-bold text-white disabled:opacity-30">+</button>
+                        </span>
+                      </div>
+                      {qty >= maxQty && <p className="text-right text-xs text-gray-400">{spots <= maxQty && spots !== Infinity ? `Only ${spots} left` : `Up to ${maxQty} per order`}</p>}
+                      {event.ask_guest_names && qty > 1 && (
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-xs text-gray-400">Guest names (for each ticket)</p>
+                          {Array.from({ length: qty - 1 }).map((_, i) => (
+                            <input key={i} value={guestNames[i + 1] ?? ''} onChange={(e) => { const g = [...guestNames]; g[i + 1] = e.target.value; setGuestNames(g); }} maxLength={40}
+                              placeholder={`Ticket ${i + 2}: guest's name`} aria-label={`Ticket ${i + 2} guest name`} className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-base text-white placeholder:text-gray-400 sm:text-sm" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {!isFree && <div className="w-full sm:max-w-sm"><MerchAddOns eventId={event.id} value={addOns} onChange={setAddOns} accent={biz.org?.brand.accent} /></div>}
                 <button
                   onClick={async () => { if ((await beforeContinue(null)) === 'stop') return; if (isFree) handleRegister(); else handleBuyTicket(); }}
                   disabled={registering || isPreview || hasEnded}
                   className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : approvalNeeded ? (myRequest?.status === 'pending' ? 'Request sent' : 'Request to join') : isFree ? 'Register — Free' : `Buy Ticket — $${event.ticket_price}`}
+                  {isPreview ? 'Available once published' : hasEnded ? 'Event has ended' : registering ? 'Please wait…' : approvalNeeded ? (myRequest?.status === 'pending' ? 'Request sent' : 'Request to join') : isFree ? (qty > 1 ? `Register ${qty} tickets — Free` : 'Register — Free') : qty > 1 ? `Buy ${qty} tickets — $${(Number(event.ticket_price) * qty).toFixed(2).replace(/\.00$/, '')}` : `Buy Ticket — $${event.ticket_price}`}
                 </button>
                 {registerError && <p className="text-sm text-magenta">{registerError}</p>}
               </div>

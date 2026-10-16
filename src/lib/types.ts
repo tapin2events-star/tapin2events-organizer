@@ -26,6 +26,8 @@ export interface TapEvent {
   poster_url: string | null;
   ticket_price: number;
   max_capacity: number | null;
+  max_per_order?: number | null;
+  ask_guest_names?: boolean;
   // Tickets sold on another site: TapIN links out instead of selling them.
   external_ticket_url?: string | null;
   // Where an imported event came from (prevents importing it twice).
