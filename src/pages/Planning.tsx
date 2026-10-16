@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BackButton from '../components/BackButton';
 import NewBoardSheet from '../components/scouting/NewBoardSheet';
 import MeetingsTab from '../components/planning/MeetingsTab';
 import { meetingWhen, type MeetingRow, type PlanTarget, type PollRow } from '../lib/meetings';
@@ -152,6 +153,7 @@ export default function Planning() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      <div className="mb-3"><BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" /></div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-bone">Planning</h1>
