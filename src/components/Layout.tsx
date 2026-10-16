@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import HelpButton from './HelpPanel';
 import { effectiveRoles, reloadSetup, useSetup } from '../lib/setup';
 import { useWhiteLabel } from '../lib/whiteLabel';
 import PageLoading from './PageLoading';
@@ -111,6 +112,7 @@ export default function Layout() {
           <span className="bg-gradient-to-r from-marigold to-teal bg-clip-text text-transparent">TapIN</span>
         </Link>
         <div className="flex items-center gap-1">
+          <HelpButton />
           <NotificationBell />
           <button onClick={() => setMenuOpen(true)} aria-label="Open menu" className="relative rounded-lg p-2 text-muted hover:bg-gray-100">
             <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
@@ -135,7 +137,7 @@ export default function Layout() {
           <Link to="/" onClick={close} className="font-display text-2xl font-extrabold tracking-tight">
             <span className="bg-gradient-to-r from-marigold to-teal bg-clip-text text-transparent">TapIN</span>
           </Link>
-          <div className="hidden md:block"><NotificationBell /></div>
+          <div className="hidden items-center md:flex"><HelpButton /><NotificationBell /></div>
           <button onClick={close} aria-label="Close menu" className="rounded-lg p-2 text-muted hover:bg-gray-100 md:hidden">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l12 12M16 4L4 16" strokeLinecap="round" /></svg>
           </button>
