@@ -31,7 +31,7 @@ function OrgPublicInner() {
       primeOrg(o as unknown as CachedOrg);
       loadFont(o.brand.font);
       const [{ data: ev }, role] = await Promise.all([
-        supabase.from('events').select('id, title, start_date, location_name, poster_url, category').eq('organization_id', o.id).neq('status', 'cancelled').gte('start_date', new Date(Date.now() - 86400000).toISOString()).order('start_date'),
+        supabase.from('events').select('id, title, start_date, location_name, poster_url, category').eq('organization_id', o.id).eq('status', 'published').eq('is_test', false).gte('start_date', new Date(Date.now() - 86400000).toISOString()).order('start_date'),
         loadRole(o.id),
       ]);
       setEvents((ev ?? []) as typeof events); setEventsLoaded(true);
@@ -141,7 +141,7 @@ function OrgGallery({ orgId }: { orgId: string; accent?: string; dark?: boolean 
 function PastEvents({ orgId, accent, dark }: { orgId: string; accent: string; dark: boolean }) {
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; poster_url: string | null; category: string | null }[]>([]);
   useEffect(() => {
-    supabase.from('events').select('id, title, start_date, poster_url, category').eq('organization_id', orgId).in('status', ['published', 'completed'])
+    supabase.from('events').select('id, title, start_date, poster_url, category').eq('organization_id', orgId).in('status', ['published', 'completed']).eq('is_test', false)
       .eq('is_test', false).is('parent_event_id', null).lt('start_date', new Date().toISOString()).order('start_date', { ascending: false }).limit(6)
       .then(({ data }) => setEvents((data ?? []) as typeof events));
   }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
