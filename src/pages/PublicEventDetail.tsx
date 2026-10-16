@@ -430,12 +430,12 @@ export default function PublicEventDetail() {
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         {event.poster_url && event.poster_credit && (
-          <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2 py-0.5 text-[10px] text-white/90 sm:right-6 sm:top-6">{event.poster_credit}</span>
+          <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-black/45 px-2 py-0.5 text-[10px] text-white/90 sm:right-6 sm:top-6">{event.poster_credit}</span>
         )}
 
         <BackButton variant="overlay" fallback="/" fallbackLabel="Back to Discover" className="absolute left-4 top-4 sm:left-6 sm:top-6" />
 
-        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 sm:p-8 [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
           <div className="mx-auto max-w-4xl">
             {event.category && (
               <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
