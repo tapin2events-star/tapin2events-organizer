@@ -34,12 +34,12 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
   const sections = [...here, ...ORDER.filter((a) => !here.includes(a))];
   return (
     <div className="fixed inset-0 z-[1300] flex justify-end bg-black/40" onClick={onClose} role="dialog" aria-label="Help">
-      <div className="flex h-full w-full max-w-md flex-col bg-white shadow-xl" onClick={(e) => e.stopPropagation()} style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex h-full w-full max-w-md flex-col bg-white shadow-xl" onClick={(e) => e.stopPropagation()} style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-4 py-3">
           {guide ? <button onClick={() => setGuide(null)} className="text-sm font-medium text-marigold">‹ All guides</button> : <p className="font-display text-lg font-bold text-gray-900">Help & guides</p>}
           <button onClick={onClose} aria-label="Close help" className="rounded-lg px-2 py-1 text-2xl leading-none text-gray-500 hover:bg-gray-100">×</button>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
           {guide ? (
             <article>
               <p className="text-xs font-semibold uppercase tracking-wide text-marigold">{AREA_LABEL[guide.area]}</p>
@@ -66,12 +66,12 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
                   </section>
                 );
               })}
-              <div className="mt-8 flex flex-col gap-2 border-t border-gray-200 pt-4 text-sm">
-                <Link to="/welcome" onClick={onClose} className="font-medium text-marigold">Replay the welcome setup ›</Link>
-                <a href="mailto:support@tapin2events.com" className="font-medium text-marigold">Contact support ›</a>
-              </div>
             </>
           )}
+        </div>
+        <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-gray-200 bg-white px-4 pt-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+          <Link to="/welcome" onClick={onClose} className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white px-2 text-center text-sm font-semibold text-gray-800 active:bg-gray-50">👋 Replay welcome setup</Link>
+          <a href="mailto:support@tapin2events.com" className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl bg-marigold px-2 text-center text-sm font-semibold text-white active:opacity-90">✉️ Contact support</a>
         </div>
       </div>
     </div>
