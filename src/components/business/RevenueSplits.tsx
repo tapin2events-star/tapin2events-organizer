@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import PayoutsCard from '../PayoutsCard';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import PremiumBadge from './PremiumBadge';
 
 interface Row { user_id?: string | null; email?: string | null; percent: number; label: string | null; name?: string | null; photo?: string | null; ready?: boolean; has_account?: boolean; sent?: number; waiting?: number }
 interface Found { id: string; full_name: string; profile_photo: string | null; payouts_ready: boolean }
@@ -46,7 +45,7 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
     <section className="rounded-2xl border border-gray-200 bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Revenue splits <PremiumBadge /></p>
+          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Revenue splits <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-800">Free</span></p>
           <p className="text-sm text-muted">Divide ticket sales with performers or partners. Each person connects their own payouts once, and TapIN sends their share of every sale automatically.</p>
         </div>
         {o.can_edit && !editing && <button onClick={() => setEditing(true)} className="rounded-xl bg-[#0F1B3D] px-3 py-2 text-sm font-semibold text-white">{rows.length ? 'Edit split' : 'Set up a split'}</button>}

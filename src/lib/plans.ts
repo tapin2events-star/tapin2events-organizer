@@ -1,7 +1,7 @@
 // TapIN plans & packs (matches the business-plan billing function and plan_feature_pack in the database).
 export type PlanId = 'essentials' | 'business' | 'agency';
 export type PackId = 'performers' | 'conference' | 'fundraising' | 'community';
-export const PLAN_PRICES: Record<PlanId, { month: number; year: number }> = { essentials: { month: 19, year: 190 }, business: { month: 59, year: 590 }, agency: { month: 149, year: 1490 } };
+export const PLAN_PRICES: Record<PlanId, { month: number; year: number }> = { essentials: { month: 15, year: 150 }, business: { month: 49, year: 490 }, agency: { month: 149, year: 1490 } };
 export const AGENCY_EXTRA = { month: 25, year: 250 };
 export const FOUNDING_PLANS: PlanId[] = ['business', 'agency'];
 export interface Feature { key: string; icon: string; name: string; desc: string }
@@ -13,8 +13,7 @@ export const ESSENTIALS: Feature[] = [
   { key: 'meetings', icon: '📝', name: 'Meeting extras', desc: 'Recurring meetings, minutes, agenda templates' },
 ];
 export const PACKS: { id: PackId; icon: string; name: string; price: { month: number; year: number }; for: string; features: Feature[] }[] = [
-  { id: 'performers', icon: '🎤', name: 'Performers & Promotion', price: { month: 15, year: 150 }, for: 'Shows, concerts and open mics', features: [
-    { key: 'revenue_splits', icon: '💸', name: 'Revenue splits', desc: 'Split ticket sales with performers, paid automatically' },
+  { id: 'performers', icon: '🎤', name: 'Performers & Promotion', price: { month: 10, year: 100 }, for: 'Shows, concerts and open mics', features: [
     { key: 'promoter_payouts', icon: '📣', name: 'Automatic promoter payouts', desc: 'Commission sent on every ticket sold through a promo link' },
     { key: 'video_headers', icon: '🎬', name: 'Video headers & highlight reels', desc: 'Trailers on your pages and past-event highlights' },
     { key: 'boost_credit', icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature events in Discover' },

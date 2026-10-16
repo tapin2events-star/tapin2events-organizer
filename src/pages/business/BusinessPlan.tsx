@@ -11,11 +11,11 @@ const NAVY = '#0F1B3D';
 const GOLD = '#C9A227';
 // Planned premium features (also the "what matters most to you?" options on the reservation).
 const PREMIUM: { icon: string; name: string; desc: string }[] = [...ESSENTIALS, ...PACKS.flatMap((p) => p.features), ...BUSINESS_EXTRAS];
-const FREE = ['Create events and sell tickets (buyers pay the fees)', 'Organization page with your brand', 'Team roles across all your events', 'Planning hub, tasks, meetings and polls',
+const FREE = ['Create events and sell tickets (buyers pay the fees)', 'Revenue splits: pay performers and partners automatically from ticket sales', 'Organization page with your brand', 'Team roles across all your events', 'Planning hub, tasks, meetings and polls',
   'Photo gallery (24 photos)', 'Promo codes', 'Donations and support', 'Payouts to your own bank', 'Personal TapIN QR and profile sharing', 'Feed videos, and featuring them on your organization page'];
 const PLANS = [
-  { id: 'essentials', label: 'Essentials', price: '$19' },
-  { id: 'business', label: 'Business', price: '$59' },
+  { id: 'essentials', label: 'Essentials', price: '$15' },
+  { id: 'business', label: 'Business', price: '$49' },
   { id: 'agency', label: 'Agency', price: '$149' },
   { id: 'per_event', label: 'One event', price: '$199' },
 ] as const;
@@ -106,7 +106,7 @@ export default function BusinessPlan() {
           <div className="mt-10 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border-2 p-5" style={{ borderColor: GOLD }}>
               <p className="font-display text-2xl font-extrabold text-bone">⭐ Business · ${PLAN_PRICES.business.month}/month</p>
-              <p className="mt-1 text-sm text-muted">Essentials + <strong>every pack</strong> + Featured on Discover, for one organization. The best deal once you'd want two or more packs.</p>
+              <p className="mt-1 text-sm text-muted">Essentials + <strong>every pack</strong> + Featured on Discover, for one organization. The best deal once you'd want three or more packs.</p>
               <p className="mt-2 text-xs font-semibold" style={{ color: '#8A6D12' }}>Founding: ${(PLAN_PRICES.business.month * 0.6).toFixed(2)}/month for life</p>
             </div>
             <div className="rounded-2xl border-2 border-[#0F1B3D] p-5">
