@@ -25,6 +25,19 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
     setCurrent((data ?? null) as typeof current);
   }, [eventId, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
+  // While the chosen video is processing, check every 15 seconds and celebrate when it's live.
+  const [justLive, setJustLive] = useState(false);
+  const processing = current?.status === 'processing';
+  useEffect(() => {
+    if (!processing) return;
+    const t = setInterval(async () => {
+      const { data } = await supabase.rpc('header_video_status', { p_event_id: eventId ?? null, p_org_id: orgId ?? null });
+      const next = (data ?? null) as typeof current;
+      if (next?.status === 'active') { setJustLive(true); setTimeout(() => setJustLive(false), 8000); }
+      setCurrent(next);
+    }, 15000);
+    return () => clearInterval(t);
+  }, [processing, eventId, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!open) return;
     supabase.rpc('video_header_candidates', { p_event_id: eventId ?? null, p_org_id: orgId ?? null }).then(({ data }) => setCands((data ?? []) as Cand[]));
@@ -68,6 +81,14 @@ export default function VideoHeaderCard({ eventId, orgId, what }: { eventId?: st
           {current && <button onClick={() => choose(null)} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700">Remove</button>}
         </div>
       </div>
+      {processing && (
+        <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-900" role="status">
+          <p className="flex items-center gap-2 font-semibold"><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-amber-700" aria-hidden="true" /> Processing your video… usually 2–5 minutes</p>
+          <p className="mt-0.5 text-xs text-amber-800">Your upload worked. You can leave this page; it'll show up as the header automatically, and you'll get a notification.</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-amber-200"><div className="h-full w-1/3 animate-pulse rounded-full bg-amber-500" /></div>
+        </div>
+      )}
+      {justLive && <p role="status" className="mt-3 rounded-xl bg-green-50 px-3 py-2.5 text-sm font-semibold text-green-800">✓ Your header video is live!</p>}
       {err && <p role="alert" className="mt-2 text-sm text-red-600">{err}</p>}
       {open && (
         <Sheet title="Choose a video" onClose={() => setOpen(false)}>

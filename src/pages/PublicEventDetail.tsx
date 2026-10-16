@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import HeaderVideo, { useHeaderVideo } from '../components/video/HeaderVideo';
+import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing } from '../components/video/HeaderVideo';
 import EmbeddedCheckoutSheet from '../components/events/EmbeddedCheckoutSheet';
 import { publishableKey } from '../lib/embeddedCheckout';
 import { useEventWhiteLabel } from '../lib/whiteLabel';
@@ -60,6 +60,7 @@ export default function PublicEventDetail() {
   const biz = useBusinessData(event);
   const whiteLabel = useEventWhiteLabel(event?.id);
   const headerVideo = useHeaderVideo(event?.id);
+  const headerProcessing = useHeaderVideoProcessing(event?.id);
   const [embedSecret, setEmbedSecret] = useState<string | null>(null);
   // Ticket tiers (preview): when an event has tiers, the tier picker replaces the single price.
   const [tiers, setTiers] = useState<TierAvail[]>([]);
@@ -417,6 +418,7 @@ export default function PublicEventDetail() {
           instead of a separate text block below a plain picture frame. */}
       {businessOn && biz.isBiz && <OrgStrip org={biz.org} kind={event.event_kind} />}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gray-900 sm:aspect-[21/9]">
+        {headerProcessing && <ProcessingLabel />}
         {headerVideo ? (
           <HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? event.poster_url ?? null} />
         ) : event.poster_url ? (

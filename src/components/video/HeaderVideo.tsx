@@ -27,3 +27,22 @@ export default function HeaderVideo({ src, poster }: { src: string; poster: stri
     </>
   );
 }
+
+// For the event's or organization's team only: is a newly chosen header video still processing?
+export function useHeaderVideoProcessing(eventId?: string | null, orgId?: string | null) {
+  const on = useFeature('video_headers');
+  const [processing, setProcessing] = useState(false);
+  useEffect(() => {
+    if (!on || (!eventId && !orgId)) { setProcessing(false); return; }
+    supabase.rpc('header_video_status', { p_event_id: eventId ?? null, p_org_id: orgId ?? null }).then(({ data }) => setProcessing((data as { status?: string } | null)?.status === 'processing'));
+  }, [on, eventId, orgId]);
+  return processing;
+}
+
+export function ProcessingLabel() {
+  return (
+    <span className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur" role="status">
+      <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" /> Your header video is processing
+    </span>
+  );
+}

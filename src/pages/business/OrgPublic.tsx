@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import HeaderVideo, { useHeaderVideo } from '../../components/video/HeaderVideo';
+import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing } from '../../components/video/HeaderVideo';
 import { cachedRole, loadRole } from '../../lib/orgFollows';
 import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../../components/ui/Skeleton';
@@ -24,6 +24,7 @@ function OrgPublicInner() {
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; location_name: string | null; poster_url: string | null; category: string | null }[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const orgVideo = useHeaderVideo(null, org?.id ?? null);
+  const orgVideoProcessing = useHeaderVideoProcessing(null, org?.id ?? null);
   const [canManage, setCanManage] = useState<boolean>(() => { const c = cachedOrg(slug) as { id?: string } | null; const r = c?.id ? cachedRole(c.id) : undefined; return r === 'owner' || r === 'admin'; });
   useEffect(() => {
     (async () => {
@@ -59,6 +60,7 @@ function OrgPublicInner() {
   return (
     <div className="-mx-4 -mt-4 min-h-screen sm:-mx-6" style={{ fontFamily: `'${b.font}', system-ui, sans-serif`, background: dark ? '#0B1020' : '#fff', color: dark ? '#E5E7EB' : '#111827' }}>
       <div className="relative h-44 w-full sm:h-60" style={{ background: org.cover_url ? undefined : `linear-gradient(135deg, ${b.primary}, ${b.accent})` }}>
+        {orgVideoProcessing && <ProcessingLabel />}
         {orgVideo ? <HeaderVideo src={orgVideo.src} poster={orgVideo.poster ?? org.cover_url ?? null} /> : org.cover_url && <img src={org.cover_url} alt="" className="h-full w-full object-cover" />}
       </div>
       <div className="mx-auto max-w-4xl px-6">
