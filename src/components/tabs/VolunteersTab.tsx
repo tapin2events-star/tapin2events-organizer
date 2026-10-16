@@ -7,7 +7,7 @@ import { downloadCsv, fileSlug } from '../../lib/csv';
 import type { TapEvent } from '../../lib/types';
 
 interface Shift { id: string; role: string; description: string | null; starts_at: string; ends_at: string; spots: number; filled: number; waitlist: number }
-interface Signup { signup_id: string; shift_id: string; email: string; full_name: string | null; photo: string | null; phone: string | null; note: string | null; status: 'confirmed' | 'waitlist'; checked_in_at: string | null }
+interface Signup { signup_id: string; shift_id: string; email: string; full_name: string | null; photo: string | null; phone: string | null; note: string | null; status: 'confirmed' | 'waitlist'; checked_in_at: string | null; created_at?: string }
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const field = 'mt-1 block h-12 w-full min-w-0 appearance-none rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900';
@@ -24,10 +24,30 @@ export default function VolunteersTab({ event }: { event: TapEvent }) {
       supabase.rpc('volunteer_roster', { p_event_id: event.id }),
     ]);
     setShifts(((s ?? []) as Shift[]).map((x) => ({ ...x, filled: Number(x.filled), waitlist: Number(x.waitlist) })));
-    setRoster((r ?? []) as Signup[]);
+    setRoster(((r ?? []) as Signup[]).sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? ''))));
   }, [event.id]);
   useEffect(() => { load(); }, [load]);
-  const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(null), 2500); };
+  const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(null), 4000); };
+  const nm = (v: Signup) => v.full_name || v.email;
+  async function waitAct(v: Signup, action: 'let_in' | 'remove' | 'up' | 'down') {
+    if (action === 'remove' && !window.confirm(`Take ${nm(v)} off the waitlist? They'll get a notification.`)) return;
+    const { error } = await supabase.rpc('volunteer_waitlist_action', { p_signup_id: v.signup_id, p_action: action });
+    if (error) flash(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't do that.");
+    else if (action === 'let_in') flash(`${nm(v)} is in. They'll get a notification.`);
+    load();
+  }
+  async function addSpots(s: Shift, n: number) {
+    const { data, error } = await supabase.rpc('volunteer_add_spots', { p_shift_id: s.id, p_add: n });
+    if (error) return flash(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't add spots.");
+    flash(`Added ${n} spot${n === 1 ? '' : 's'}${Number(data) ? `, and let in ${data} from the waitlist` : ''}.`);
+    load();
+  }
+  async function addPerson(s: Shift, userId: string, who: string, waitlist: boolean) {
+    const { error } = await supabase.rpc('volunteer_add_person', { p_shift_id: s.id, p_user_id: userId, p_waitlist: waitlist });
+    if (error) return flash(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't add them.");
+    flash(waitlist ? `${who} is on the waitlist.` : `${who} is signed up.`);
+    load();
+  }
 
   const [notified, setNotified] = useState<boolean>(!!(event as { volunteers_notified_at?: string | null }).volunteers_notified_at);
   async function notifyPast() {
@@ -122,7 +142,24 @@ export default function VolunteersTab({ event }: { event: TapEvent }) {
                     ))}
                   </ul>
                 )}
-                {waiting.length > 0 && <p className="mt-2 text-xs text-muted">Waitlist: {waiting.map((v) => v.full_name || v.email).join(', ')}</p>}
+                {waiting.length > 0 && (
+                  <>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-amber-700">Waitlist (in order)</p>
+                    <ul className="mt-1.5 flex flex-col gap-1.5">
+                      {waiting.map((v, i) => (
+                        <li key={v.signup_id} className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                          <span className="w-5 shrink-0 text-center text-xs font-bold text-amber-700">{i + 1}</span>
+                          <span className="min-w-0 flex-1 truncate font-medium text-gray-900">{nm(v)}</span>
+                          <button onClick={() => waitAct(v, 'up')} disabled={i === 0} aria-label={`Move ${nm(v)} up`} className="px-1 text-gray-500 disabled:opacity-30">↑</button>
+                          <button onClick={() => waitAct(v, 'down')} disabled={i === waiting.length - 1} aria-label={`Move ${nm(v)} down`} className="px-1 text-gray-500 disabled:opacity-30">↓</button>
+                          <button onClick={() => waitAct(v, 'let_in')} className="rounded-lg bg-[#0F1B3D] px-2.5 py-1 text-xs font-semibold text-white">Let in</button>
+                          <button onClick={() => waitAct(v, 'remove')} aria-label={`Remove ${nm(v)} from the waitlist`} className="px-1 text-xs text-gray-400 hover:text-red-600">✕</button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <ShiftTools onAddSpots={(n) => addSpots(s, n)} onAddPerson={(id, who, w) => addPerson(s, id, who, w)} hasWaitlist={waiting.length > 0} />
                 {people.length === 0 && <p className="mt-2 text-xs text-muted">No one yet.</p>}
                 <div className="mt-3 flex gap-4 text-sm">
                   <button onClick={() => setEditing(s)} className="font-medium text-marigold">Edit</button>
@@ -180,5 +217,42 @@ function ShiftSheet({ event, shift, onClose, onSaved }: { event: TapEvent; shift
       {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
       <button onClick={save} disabled={busy} className="mt-4 w-full rounded-xl bg-marigold py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save shift'}</button>
     </Sheet>
+  );
+}
+
+// Per shift: add spots (lets people in from the top of the waitlist) and add someone directly.
+function ShiftTools({ onAddSpots, onAddPerson, hasWaitlist }: { onAddSpots: (n: number) => void; onAddPerson: (userId: string, name: string, waitlist: boolean) => void; hasWaitlist: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [n, setN] = useState('1');
+  const [q, setQ] = useState('');
+  const [found, setFound] = useState<{ id: string; full_name: string; profile_photo: string | null }[]>([]);
+  useEffect(() => {
+    if (q.trim().length < 2) { setFound([]); return; }
+    const t = setTimeout(() => { supabase.rpc('search_people_for_splits', { p_query: q.trim() }).then(({ data }) => setFound((data ?? []) as typeof found)); }, 250);
+    return () => clearTimeout(t);
+  }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!open) return <button onClick={() => setOpen(true)} className="mt-2 text-xs font-medium text-marigold">+ Add spots or someone</button>;
+  return (
+    <div className="mt-3 rounded-xl bg-gray-50 p-3">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="block text-xs font-medium text-gray-500">Add spots<input value={n} inputMode="numeric" onChange={(e) => setN(e.target.value.replace(/\D/g, ''))} className="mt-1 block w-16 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-base text-gray-900 sm:text-sm" /></label>
+        <button onClick={() => { const k = Math.floor(Number(n)); if (k > 0) onAddSpots(k); }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800">+ Add spots</button>
+        {hasWaitlist && <span className="text-xs text-gray-500">People are let in from the top of the waitlist.</span>}
+        <button onClick={() => setOpen(false)} className="ml-auto text-xs text-gray-400">Close</button>
+      </div>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Add someone: search people on TapIN" aria-label="Search people to add" className="mt-3 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm" />
+      {found.length > 0 && (
+        <ul className="mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
+          {found.map((f) => (
+            <li key={f.id} className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-0">
+              {f.profile_photo ? <img src={f.profile_photo} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{f.full_name.charAt(0)}</span>}
+              <span className="min-w-0 flex-1 truncate text-sm text-gray-900">{f.full_name}</span>
+              <button onClick={() => { onAddPerson(f.id, f.full_name, false); setQ(''); }} className="rounded-lg bg-marigold px-2.5 py-1 text-xs font-semibold text-white">Sign up</button>
+              <button onClick={() => { onAddPerson(f.id, f.full_name, true); setQ(''); }} className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs text-gray-700">Waitlist</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
