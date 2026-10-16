@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import YourProfile from '../components/profile/YourProfile';
 import { useFeature } from '../lib/preview';
-import ProfileOrgLinks from '../components/business/ProfileOrgLinks';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import FollowListModal from '../components/profile/FollowListModal';
 import PayoutsCard from '../components/PayoutsCard';
@@ -49,14 +49,13 @@ type SettingsTab = 'basic' | 'prefs' | 'notifs';
 
 export default function Profile() {
   const networkingOn = useFeature('networking');
-  const profileQrOn = useFeature('profile_qr');
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [savedEvents, setSavedEvents] = useState<TapEvent[]>([]);
-  const [myResourceId, setMyResourceId] = useState<string | null>(null);
+  const [, setMyResourceId] = useState<string | null>(null);
   const [interestsSaved, setInterestsSaved] = useState(false);
   const [vendorAppCounts, setVendorAppCounts] = useState({ needsPayment: 0, pending: 0 });
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
@@ -210,7 +209,7 @@ export default function Profile() {
             )}
             {profile.is_resource && (
               <span className="flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple">
-                ⭐ Resource
+                🎤 Artist & services
               </span>
             )}
           </div>
@@ -234,73 +233,9 @@ export default function Profile() {
 
       {profile.bio && <p className="mt-4 text-sm text-muted">{profile.bio}</p>}
 
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Link to="/activity" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-          <p className="font-medium text-bone">My Activity</p>
-          <p className="text-xs text-muted">Tickets and registrations</p>
-        </Link>
-        <Link to="/saved" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-medium text-bone">Saved Events</p>
-            {savedEvents.length > 0 && (
-              <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-marigold">{savedEvents.length}</span>
-            )}
-          </div>
-          <p className="text-xs text-muted">Events you've bookmarked</p>
-        </Link>
-        <Link to="/vendor-applications" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-medium text-bone">My Vendor Applications</p>
-            {vendorAppCounts.needsPayment > 0 ? (
-              <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">{vendorAppCounts.needsPayment} needs payment</span>
-            ) : vendorAppCounts.pending > 0 ? (
-              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-muted">{vendorAppCounts.pending} pending</span>
-            ) : null}
-          </div>
-          <p className="text-xs text-muted">Events you've applied to vend at</p>
-        </Link>
-        <Link to="/products?tab=orders" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-          <p className="font-medium text-bone">My Orders</p>
-          <p className="text-xs text-muted">Products you've purchased</p>
-        </Link>
-        {profile.is_organizer && (
-          <Link to="/organizer" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-            <p className="font-medium text-bone">Organizer Dashboard</p>
-            <p className="text-xs text-muted">Events you organize</p>
-          </Link>
-        )}
-        <ProfileOrgLinks />
-        <PromoterShortcut />
-        {networkingOn && (
-          <Link to="/connections" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-            <p className="font-medium text-bone">🤝 People I've met</p>
-            <p className="text-xs text-muted">Your connections from events, and your networking card</p>
-          </Link>
-        )}
-        {user?.email && (
-          <Link to={`/creator/${encodeURIComponent(user.email)}`} className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-            <p className="font-medium text-bone">👤 View my public profile</p>
-            <p className="text-xs text-muted">{profileQrOn ? 'See what others see, and share it with your TapIN QR' : 'See what others see'}</p>
-          </Link>
-        )}
-        {profile.is_resource && (
-          <Link to="/resources/dashboard" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-            <p className="font-medium text-bone">Resource Dashboard</p>
-            <p className="text-xs text-muted">Your bookings and listing</p>
-          </Link>
-        )}
-        <Link to="/groups" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-          <p className="font-medium text-bone">Artist groups</p>
-          <p className="text-xs text-muted">Bands, crews, and collectives you're in</p>
-        </Link>
-        {profile.is_resource && myResourceId && (
-          <Link to={`/resources/${myResourceId}`} className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-            <p className="font-medium text-bone">View My Resource Page</p>
-            <p className="text-xs text-muted">What others see when they find you</p>
-          </Link>
-        )}
-      </div>
+      {user?.id && user.email && <YourProfile userId={user.id} email={user.email} savedCount={savedEvents.length} vendorAppCounts={vendorAppCounts} networkingOn={networkingOn} />}
 
+      <h2 className="mt-10 font-display text-xl font-extrabold text-bone">Settings</h2>
       <div id="password" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Password</h2>
         <PasswordSection email={user?.email ?? ''} />
@@ -477,14 +412,3 @@ export default function Profile() {
 }
 
 // Shows only for people who've been given promoter links.
-function PromoterShortcut() {
-  const [n, setN] = useState(0);
-  useEffect(() => { supabase.rpc('my_promoter_links').then(({ data }) => setN((data ?? []).length)); }, []);
-  if (!n) return null;
-  return (
-    <Link to="/promoter" className="rounded-xl border border-gray-200 bg-surface2 p-4 hover:border-marigold">
-      <p className="font-medium text-bone">📣 My promoter links</p>
-      <p className="text-xs text-muted">{n} link{n === 1 ? '' : 's'} · your visits, sales and commission</p>
-    </Link>
-  );
-}

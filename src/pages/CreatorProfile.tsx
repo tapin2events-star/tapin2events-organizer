@@ -211,7 +211,7 @@ export default function CreatorProfile() {
           )}
           <div className="mt-1 flex gap-2">
             {profile.is_organizer && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-marigold">💼 Organizer</span>}
-            {profile.is_resource && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple">⭐ Resource</span>}
+            {profile.is_resource && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple">🎤 Artist & services</span>}
           </div>
         </div>
       </div>
@@ -248,7 +248,7 @@ export default function CreatorProfile() {
           to={`/resources/${resourceId}`}
           className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple hover:border-purple-300"
         >
-          ⭐ View resource profile &rarr;
+          🎤 See their artist profile, bookings & shop &rarr;
         </Link>
       )}
 
