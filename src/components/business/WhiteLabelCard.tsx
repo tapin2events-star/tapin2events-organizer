@@ -14,7 +14,15 @@ export default function WhiteLabelCard({ eventId }: { eventId: string }) {
   }, [eventId]);
   useEffect(() => {
     (async () => {
-      if (new URLSearchParams(window.location.search).get('white_label') === 'done') {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get('white_label') === 'cancelled') {
+        // Came back from Stripe without paying: cancel that checkout so the button resets.
+        await supabase.functions.invoke('business-plan', { body: { action: 'cancel_pending', event_id: eventId, kind: 'white_label' } }).catch(() => {});
+        q.delete('white_label');
+        const u = new URL(window.location.href); u.search = q.toString();
+        window.history.replaceState(window.history.state, '', u.pathname + u.search + u.hash);
+      }
+      if (q.get('white_label') === 'done') {
         await supabase.functions.invoke('business-plan', { body: { action: 'sync_event', event_id: eventId } }).catch(() => {});
         setMsg({ ok: true, text: '🎉 This event is white-labeled. Attendees now see only your brand.' });
       }
@@ -54,7 +62,8 @@ export default function WhiteLabelCard({ eventId }: { eventId: string }) {
         <p className="mt-3 text-sm text-amber-800">White-label uses an organization's brand kit, so the event needs to be hosted by an organization first (Edit event → hosting organization).</p>
       ) : !st.on && (
         <div className="mt-3 flex flex-wrap gap-2">
-          <button onClick={buy} disabled={busy || st.pending} className="rounded-xl bg-[#0F1B3D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{st.pending ? 'Payment processing…' : busy ? 'Opening checkout…' : `White-label this event · $${st.price}`}</button>
+          {st.pending && <p className="w-full text-xs text-amber-800">A checkout was started in the last 30 minutes. If you already paid, this updates in a moment.</p>}
+          <button onClick={buy} disabled={busy} className="rounded-xl bg-[#0F1B3D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Opening checkout…' : st.pending ? "Didn't finish? Start over" : `White-label this event · $${st.price}`}</button>
           {st.is_admin && <button onClick={() => adminToggle(true)} disabled={busy} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700">Turn on (admin test, no charge)</button>}
         </div>
       )}
