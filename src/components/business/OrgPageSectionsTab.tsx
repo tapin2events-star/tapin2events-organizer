@@ -73,9 +73,9 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
       {msg && <p role="status" className="-mt-4 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 
       {/* People (artists, speakers, team...) */}
-      <section>
-        <h3 className="font-display text-lg font-bold text-bone">🎤 People section</h3>
-        <p className="text-sm text-muted">Artists, speakers, your team, partners: whoever you want to feature. Add TapIN profiles, or anyone by hand.</p>
+      <section id="featured-people" className="scroll-mt-24">
+        <h3 className="font-display text-lg font-bold text-bone">🎤 Featured people <span className="text-sm font-normal text-muted">(shown on your page)</span></h3>
+        <p className="text-sm text-muted">Artists, speakers, your team, partners: whoever you want to feature publicly. Add TapIN profiles, or anyone by hand. To feature team members quickly, use the Team tab. Featuring someone doesn't give them access to manage your organization.</p>
         <p className="mt-3 text-xs font-medium text-gray-500">Heading</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {HEADINGS.map((h) => (

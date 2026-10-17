@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import TeamPeopleShortcut from '../../components/business/TeamPeopleShortcut';
 import OrgReelManager from '../../components/video/OrgReelManager';
 import VideoHeaderCard from '../../components/video/VideoHeaderCard';
 import { OrgPromoterPayouts } from '../../components/promote/PromoterPayouts';
@@ -133,6 +134,7 @@ function OrgManageInner() {
         {tab === 'Profile' && role === 'owner' && org.status !== 'deleted' && <DangerZone orgId={org.id} orgName={org.name} />}
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Team' && <Link to={`/team-chat/${org.id}`} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm"><span><strong className="text-gray-900">💬 Team chat</strong><span className="block text-gray-600">Message everyone on {org.name}'s team, share photos and files</span></span><span className="shrink-0 font-semibold text-indigo-700">Open ›</span></Link>}
+        {tab === 'Team' && canEditPage && <TeamPeopleShortcut orgId={org.id} onManage={() => { setTab('Page'); setTimeout(() => document.getElementById('featured-people')?.scrollIntoView({ behavior: 'smooth' }), 300); }} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
         {tab === 'Page' && canEditPage && videoHeadersOn && <VideoHeaderCard orgId={org.id} what="your organization page" />}
         {tab === 'Page' && canEditPage && <><OrgPageSectionsTab orgId={org.id} slug={org.slug} /><section className="mt-10 border-t border-gray-200 pt-8"><h3 className="font-display text-lg font-bold text-bone">📸 Photos</h3><p className="mb-3 text-sm text-muted">Up to 24 photos for your page's gallery.</p><OrgPhotosTab orgId={org.id} /></section>{videoHeadersOn && <OrgReelManager orgId={org.id} />}</>}
