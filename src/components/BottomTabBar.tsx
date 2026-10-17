@@ -70,6 +70,7 @@ export default function BottomTabBar() {
         <NavLink
           key={tab.to}
           to={tab.to}
+          data-tour={`nav-${tab.label.toLowerCase()}`}
           end={tab.end}
           onClick={(e) => { if (onTab(tab.to, tab.end)) { e.preventDefault(); scrollPageToTop(); } }}
           className={({ isActive }) =>
@@ -103,6 +104,7 @@ export default function BottomTabBar() {
         <NavLink
           key={tab.to}
           to={tab.to}
+          data-tour={`nav-${tab.label.toLowerCase()}`}
           end={tab.end}
           onClick={(e) => { if (onTab(tab.to, tab.end)) { e.preventDefault(); scrollPageToTop(); } }}
           className={({ isActive }) =>

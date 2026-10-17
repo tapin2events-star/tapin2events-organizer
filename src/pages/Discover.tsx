@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useDisplayPrefs } from '../lib/display';
 import GettingStarted from '../components/GettingStarted';
 import { useFeature } from '../lib/preview';
 import PromotedRow, { loadPromoted, type Promoted } from '../components/discover/PromotedRow';
@@ -16,6 +17,7 @@ import { EventCardGridSkeleton } from '../components/ui/Skeleton';
 type DiscoverTab = 'all' | 'map' | 'today' | 'saved';
 
 export default function Discover() {
+  const { simple } = useDisplayPrefs();
   // Boost (Preview): promoted events row + promoted first in search results.
   const promoteOn = useFeature('promote');
   const [promoted, setPromoted] = useState<Promoted[]>([]);
@@ -209,6 +211,7 @@ export default function Discover() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search events, venues, or descriptions"
+            data-tour="discover-search"
             className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-gray-900 outline-none placeholder:text-gray-400 focus-visible:border-marigold"
           />
           <button
@@ -293,7 +296,7 @@ export default function Discover() {
         </div>
 
         {tab !== 'map' && !search.trim() && <GettingStarted />}
-        {tab !== 'map' && (search.trim().length >= 2 || (!category && !priceFilter && !dateFilter)) && <FeaturedOrgs query={search} />}
+        {tab !== 'map' && !simple && (search.trim().length >= 2 || (!category && !priceFilter && !dateFilter)) && <FeaturedOrgs query={search} />}
 
         {promoteOn && tab !== 'map' && !search.trim() && !category && !priceFilter && !dateFilter && <PromotedRow promoted={promoted} events={events} savedIds={savedIds} onToggleSave={toggleSave} />}
 

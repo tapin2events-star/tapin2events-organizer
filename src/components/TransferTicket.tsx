@@ -35,7 +35,7 @@ export default function TransferTicket({ ticketId, eventTitle, isSeriesPass = fa
   const field = 'mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-base text-gray-900';
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className || 'text-sm font-medium text-marigold hover:underline'}>
+      <button type="button" data-tour="ticket-transfer" onClick={() => setOpen(true)} className={className || 'text-sm font-medium text-marigold hover:underline'}>
         {isSeriesPass ? 'Transfer pass' : 'Transfer ticket'}
       </button>
       {open && (

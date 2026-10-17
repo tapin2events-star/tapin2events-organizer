@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import DisplaySettings from '../components/profile/DisplaySettings';
 import YourProfile from '../components/profile/YourProfile';
 import { useFeature } from '../lib/preview';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -236,6 +237,7 @@ export default function Profile() {
       {user?.id && user.email && <YourProfile userId={user.id} email={user.email} savedCount={savedEvents.length} vendorAppCounts={vendorAppCounts} networkingOn={networkingOn} />}
 
       <h2 className="mt-10 font-display text-xl font-extrabold text-bone">Settings</h2>
+      <DisplaySettings />
       <div id="password" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Password</h2>
         <PasswordSection email={user?.email ?? ''} />
@@ -243,7 +245,7 @@ export default function Profile() {
 
       <div id="payouts" className="mt-8">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Payouts</h2>
-        <PayoutsCard hasAccount={!!profile.stripe_account_id} chargesEnabled={!!profile.stripe_charges_enabled} variant="creator" />
+        <div data-tour="payouts"><PayoutsCard hasAccount={!!profile.stripe_account_id} chargesEnabled={!!profile.stripe_charges_enabled} variant="creator" /></div>
       </div>
 
       <div id="notifications" className="mt-10 scroll-mt-20">

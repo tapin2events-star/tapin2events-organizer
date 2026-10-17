@@ -309,13 +309,13 @@ export default function EventDetail() {
           <>
             <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-300">
               {rowTabs.map((t) => (
-                <button key={t} onClick={() => setTab(t)}
+                <button key={t} data-tour={`tab-${t}`} onClick={() => setTab(t)}
                   className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition ${tab === t ? 'border-b-2 border-marigold text-marigold' : 'text-muted hover:text-bone'}`}>
                   {label(t)}
                 </button>
               ))}
               {moreTabs.length > 0 && (
-                <button onClick={() => setMoreOpen(true)} aria-haspopup="dialog" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium text-muted hover:text-bone">More ▾</button>
+                <button data-tour="tab-more" onClick={() => setMoreOpen(true)} aria-haspopup="dialog" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium text-muted hover:text-bone">More ▾</button>
               )}
             </div>
             {moreOpen && (

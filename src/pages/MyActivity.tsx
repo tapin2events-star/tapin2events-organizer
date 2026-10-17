@@ -384,7 +384,7 @@ export default function MyActivity() {
                           {(t.section_name || t.seat_assignment) && ` \u00b7 ${seatText(t.section_name, t.seat_assignment)}`}
                         </p>
                       </div>
-                      <Link to={`/pass/${t.id}`} className="mt-3 inline-block text-sm font-medium text-marigold hover:underline">
+                      <Link data-tour="ticket-link" to={`/pass/${t.id}`} className="mt-3 inline-block text-sm font-medium text-marigold hover:underline">
                         View full ticket &rarr;
                       </Link>
                       {netEvents[t.event_id] && (

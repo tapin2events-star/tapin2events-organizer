@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GUIDES, areasFor, type Guide, type HelpArea } from '../lib/helpGuides';
+import { GUIDES, GUIDE_TOURS, areasFor, type Guide, type HelpArea } from '../lib/helpGuides';
+import { useTour } from './TourGuide';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 const AREA_LABEL: Record<HelpArea, string> = { start: 'Getting started', attendee: 'Going to events', artist: 'Artists & services', organizer: 'Organizing events', organization: 'Organizations', payments: 'Payments' };
@@ -23,6 +24,7 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
   const location = useLocation();
   const [q, setQ] = useState('');
   const [guide, setGuide] = useState<Guide | null>(null);
+  const { start } = useTour();
   useEscapeKey(onClose, true);
   useEffect(() => { document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = ''; }; }, []);
   const here = areasFor(location.pathname);
@@ -49,10 +51,14 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
                   <li key={i} className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-marigold">{i + 1}</span><span className="pt-0.5 text-[15px] leading-relaxed text-gray-800">{s}</span></li>
                 ))}
               </ol>
-              {guide.link && <Link to={guide.link.to} onClick={onClose} className="mt-6 inline-block rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-white">{guide.link.label} ›</Link>}
+              <div className="mt-6 flex flex-wrap gap-2">
+                {GUIDE_TOURS[guide.id] && <button onClick={() => { onClose(); start(GUIDE_TOURS[guide.id]); }} className="rounded-xl bg-marigold px-4 py-3 text-base font-semibold text-white">👆 Show me</button>}
+                {guide.link && <Link to={guide.link.to} onClick={onClose} className="rounded-xl border border-gray-300 px-4 py-3 text-base font-semibold text-gray-800">{guide.link.label} ›</Link>}
+              </div>
             </article>
           ) : (
             <>
+              <Link to="/tutorials" onClick={onClose} className="mb-3 flex items-center justify-between rounded-2xl bg-indigo-50 px-4 py-3 text-base font-semibold text-marigold"><span>📚 Step-by-step tutorials</span><span aria-hidden="true">›</span></Link>
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search help (tickets, payouts, splits…)" aria-label="Search help" className="block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900" />
               {results ? (
                 results.length ? <GuideList guides={results} onPick={setGuide} /> : <p className="mt-4 text-sm text-gray-500">No guides match that. Try another word, or contact support below.</p>

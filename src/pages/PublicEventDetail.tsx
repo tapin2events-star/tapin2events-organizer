@@ -711,7 +711,7 @@ export default function PublicEventDetail() {
               }} />
           </>
         ) : (
-          <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div data-tour="get-tickets" className="mt-6 flex flex-col gap-4 rounded-2xl bg-gray-900 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <p className="text-sm text-gray-400">{isFree ? 'Free to attend' : 'Ticket price'}</p>
               <p className="font-display text-2xl font-extrabold text-white">{isFree ? 'Free' : `$${event.ticket_price}`}</p>

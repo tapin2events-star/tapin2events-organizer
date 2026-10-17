@@ -10,6 +10,7 @@ export interface SetupState {
   roles: Role[]; onboarded: boolean; checklist_dismissed: boolean; show_all_tools: boolean; is_admin: boolean;
   has_events: boolean; has_published_event: boolean; has_resource: boolean; has_org: boolean; payouts_ready: boolean;
   follows_orgs: number; saved_events: number; has_ticket: boolean; has_networking_card: boolean;
+  tours_done?: string[]; text_size?: 'normal' | 'large' | 'xlarge'; simple_mode?: boolean;
 }
 let state: SetupState | null = null;
 let forUser: string | null = null;

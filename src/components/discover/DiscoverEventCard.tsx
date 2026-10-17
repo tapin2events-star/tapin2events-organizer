@@ -157,6 +157,7 @@ export default function DiscoverEventCard({
             </a>
           ) : (
             <Link
+              data-tour="event-card"
               to={`/events/${event.id}${linkSuffix}`}
               className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
             >

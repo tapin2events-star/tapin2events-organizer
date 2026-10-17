@@ -54,8 +54,8 @@ export default function YourProfile({ userId, email, savedCount, vendorAppCounts
             ) : <p className="mt-1 text-sm text-muted">Get booked, sell merch and get paid as an artist, performer or service provider.</p>}
             <div className="mt-3 flex flex-wrap gap-2 text-sm">
               {p.resources.length
-                ? <Link to="/resources/dashboard" className="rounded-xl bg-[#0F1B3D] px-3 py-2 font-semibold text-white">Bookings & edit</Link>
-                : <Link to="/resources/new" className="rounded-xl bg-marigold px-3 py-2 font-semibold text-white">Turn on</Link>}
+                ? <Link data-tour="artist-edit" to="/resources/dashboard" className="rounded-xl bg-[#0F1B3D] px-3 py-2 font-semibold text-white">Bookings & edit</Link>
+                : <Link data-tour="artist-turn-on" to="/resources/new" className="rounded-xl bg-marigold px-3 py-2 font-semibold text-white">Turn on</Link>}
               {p.groups > 0 && <Link to="/groups" className="rounded-xl border border-gray-300 bg-white px-3 py-2 font-medium text-gray-700">Artist groups ({p.groups})</Link>}
             </div>
           </div>

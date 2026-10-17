@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { TourProvider } from './components/TourGuide';
 import lazyWithRetry from './lib/lazyWithRetry';
 import AppErrorBoundary from './components/AppErrorBoundary';
 const BusinessPlanGate = lazyWithRetry(() => import('./pages/business/BusinessPlanGate'));
@@ -41,6 +42,7 @@ const OrganizerBookings = lazyWithRetry(() => import('./pages/OrganizerBookings'
 const ResourceDiscovery = lazyWithRetry(() => import('./pages/ResourceDiscovery'));
 const ResourceProfile = lazyWithRetry(() => import('./pages/ResourceProfile'));
 const Welcome = lazyWithRetry(() => import('./pages/Welcome'));
+const Tutorials = lazyWithRetry(() => import('./pages/Tutorials'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -69,7 +71,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <AppErrorBoundary><Routes>
+        <AppErrorBoundary><TourProvider><Routes>
           <Route path="/login" element={<Login />} />
           <Route
             path="/feed"
@@ -109,6 +111,7 @@ export default function App() {
             <Route path="/vendor-applications" element={<MyVendorApplicationsPage />} />
             <Route path="/resources" element={<ResourceDiscovery />} />
             <Route path="/resources/new" element={<ResourceSignup />} />
+            <Route path="/tutorials" element={<Tutorials />} />
             <Route path="/resources/dashboard" element={<ResourceDashboard />} />
             <Route path="/resources/:id" element={<ResourceProfile />} />
             <Route path="/groups" element={<ProtectedRoute><MyGroups /></ProtectedRoute>} />
@@ -148,7 +151,7 @@ export default function App() {
             />
             <Route path="/organizer/events/:id/edit" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
           </Route>
-        </Routes></AppErrorBoundary>
+        </Routes></TourProvider></AppErrorBoundary>
       </BrowserRouter>
     </AuthProvider>
   );

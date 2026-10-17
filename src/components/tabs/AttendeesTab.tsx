@@ -146,7 +146,7 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-lg font-bold text-bone">Attendees <span className="text-sm font-normal text-muted">({people.length})</span></h3>
           <div className="flex gap-2">
-            <Link to={`/organizer/events/${event.id}/checkin`} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Check-in</Link>
+            <Link data-tour="checkin" to={`/organizer/events/${event.id}/checkin`} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Check-in</Link>
             {people.length > 0 && <button onClick={exportCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Download spreadsheet</button>}
           </div>
         </div>

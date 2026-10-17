@@ -153,7 +153,7 @@ export default function ResourceSignup() {
           <p className="text-xs font-semibold uppercase tracking-wider text-marigold">Basics</p>
           <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
             Display name
-            <input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={fieldClass} placeholder="Your name or business name" />
+            <input required data-tour="artist-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={fieldClass} placeholder="Your name or business name" />
           </label>
 
           <div>
@@ -255,6 +255,7 @@ export default function ResourceSignup() {
           {error && <p className="text-sm text-magenta">{error}</p>}
 
           <button
+            data-tour="artist-save"
             type="submit"
             disabled={saving}
             className="mt-2 rounded-lg bg-marigold px-4 py-2.5 text-sm font-semibold text-ink hover:bg-marigold/90 disabled:opacity-50"

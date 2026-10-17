@@ -80,6 +80,7 @@ export default function TicketStubCard({ event, series }: { event: TapEvent; ser
 
         <div className="pt-1">
           <Link
+            data-tour="dashboard-event"
             to={`/organizer/events/${event.id}`}
             className="inline-flex items-center justify-center w-full h-10 rounded-xl text-sm font-medium bg-marigold text-white hover:bg-marigold/90 transition"
           >

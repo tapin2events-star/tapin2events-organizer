@@ -265,6 +265,7 @@ export default function ResourceDashboard() {
           {TABS.map((t) => (
             <button
               key={t}
+              data-tour={`rtab-${t}`}
               onClick={() => setTab(t)}
               className={`px-4 py-2 text-sm font-medium transition ${
                 tab === t ? 'border-b-2 border-marigold text-marigold' : 'text-gray-500 hover:text-gray-900'

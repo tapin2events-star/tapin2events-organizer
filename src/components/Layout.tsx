@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import { useDisplayPrefs } from '../lib/display';
 import HelpButton from './HelpPanel';
 import { effectiveRoles, reloadSetup, useSetup } from '../lib/setup';
 import { useWhiteLabel } from '../lib/whiteLabel';
@@ -21,12 +22,15 @@ type Item = { to: string; label: string; icon: string; end?: boolean; badge?: ke
 
 // Discover, Feed, Activity and Profile live in the bottom tab bar on phones,
 // so the phone menu only shows them on desktop (where there's no tab bar).
+// Simple mode: just the essentials.
+const SIMPLE_MENU = new Set(['/', '/activity', '/tutorials', '/resources/dashboard', '/organizer', '/business', '/admin']);
 const EXPLORE: Item[] = [
   { to: '/', label: 'Discover', icon: 'discover', end: true, desktopOnly: true },
   { to: '/feed', label: 'Feed', icon: 'feed', desktopOnly: true },
   { to: '/resources', label: 'Artists & vendors', icon: 'resources', end: true },
   { to: '/organizations', label: 'Organizations', icon: 'bookings', end: true },
   { to: '/products', label: 'Shop', icon: 'shop' },
+  { to: '/tutorials', label: 'Tutorials', icon: 'tutorials' },
 ];
 const MY_STUFF: Item[] = [
   { to: '/activity', label: 'My Activity', icon: 'activity', end: true, desktopOnly: true },
@@ -65,6 +69,7 @@ export default function Layout() {
   // First sign-in: send people who haven't set up yet to the welcome flow (only from the home screen, so links to
   // events, tickets or checkout are never interrupted).
   const setup = useSetup();
+  const { simple } = useDisplayPrefs();
   const navigate = useNavigate();
   useEffect(() => {
     if (user && setup && !setup.onboarded && location.pathname === '/') navigate('/welcome', { replace: true });
@@ -77,12 +82,13 @@ export default function Layout() {
   const toggleAll = async () => { await supabase.rpc('set_setup_pref', { p_show_all_tools: !setup?.show_all_tools }); reloadSetup(); };
   const displayName = me?.full_name?.trim() || user?.email?.split('@')[0] || 'Guest';
 
-  const renderItems = (items: Item[]) => items.map((item) => {
+  const renderItems = (items: Item[]) => items.filter((item) => !simple || SIMPLE_MENU.has(item.to)).map((item) => {
     const count = item.badge ? badges[item.badge] : 0;
     return (
       <NavLink
         key={item.to}
         to={item.to}
+        data-tour={`menu-${item.to.replace(/^\//, '') || 'home'}`}
         end={item.end}
         onClick={close}
         className={({ isActive }) =>
@@ -174,7 +180,10 @@ export default function Layout() {
           <NavIcon name="plus" className="h-4 w-4" /> Create event
         </Link>}
         {isOrganizer && <nav className="flex flex-col gap-0.5" aria-label="Organizer">{renderItems(businessOn ? [ORGANIZER[0], { to: '/business', label: 'TapIN for Business', icon: 'bookings' }, ...ORGANIZER.slice(1)] : ORGANIZER)}</nav>}
-        {user && setup && !setup.is_admin && !isAdmin && (
+        {user && simple && (
+          <div className="mt-4 rounded-xl border border-dashed border-gray-300 px-3 py-2.5 text-xs text-gray-500">Simple mode is on. <Link to="/profile#display" onClick={close} className="font-medium text-marigold">Change</Link></div>
+        )}
+        {user && !simple && setup && !setup.is_admin && !isAdmin && (
           <div className="mt-4 rounded-xl border border-dashed border-gray-300 px-3 py-2.5 text-xs text-gray-500">
             {!isOrganizer && <Link to="/welcome" onClick={close} className="block font-medium text-marigold">Organize events or sell your art? Set it up ›</Link>}
             <button onClick={toggleAll} className={`${!isOrganizer ? 'mt-1.5 ' : ''}block text-gray-500 underline`}>{setup.show_all_tools ? 'Show only my tools' : 'Show all tools'}</button>

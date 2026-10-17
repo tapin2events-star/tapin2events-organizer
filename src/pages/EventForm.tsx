@@ -851,6 +851,7 @@ export default function EventForm() {
             <Field label="Title">
               <input
                 value={title}
+                data-tour="event-title"
                 onChange={(e) => setTitle(e.target.value)}
                 className={inputClass}
                 placeholder="Juneteenth Block Party"
@@ -1183,7 +1184,7 @@ export default function EventForm() {
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Starts">
-                <input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} />
+                <input type="datetime-local" data-tour="event-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} />
               </Field>
               <Field label="Ends">
                 <input type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputClass} />
@@ -1464,7 +1465,7 @@ export default function EventForm() {
             </button>
           )}
           {!isLastStep && (
-            <button type="button" onClick={() => setStep(step + 1)} className="rounded-lg bg-marigold px-5 py-2.5 font-semibold text-ink hover:bg-marigold/90">
+            <button type="button" data-tour="event-next" onClick={() => setStep(step + 1)} className="rounded-lg bg-marigold px-5 py-2.5 font-semibold text-ink hover:bg-marigold/90">
               Next
             </button>
           )}
@@ -1482,7 +1483,7 @@ export default function EventForm() {
             </fieldset>
           )}
           {isLastStep && (
-            <button type="submit" disabled={saving} className="rounded-lg bg-marigold px-5 py-2.5 font-semibold text-ink hover:bg-marigold/90 disabled:opacity-50">
+            <button type="submit" data-tour="event-save" disabled={saving} className="rounded-lg bg-marigold px-5 py-2.5 font-semibold text-ink hover:bg-marigold/90 disabled:opacity-50">
               {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create event'}
             </button>
           )}

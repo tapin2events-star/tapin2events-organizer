@@ -1,6 +1,6 @@
 // In-app help: short, plain-language guides. "areas" decide which guides show first on each screen.
 export type HelpArea = 'start' | 'attendee' | 'artist' | 'organizer' | 'organization' | 'payments';
-export interface Guide { id: string; title: string; area: HelpArea; steps: string[]; link?: { to: string; label: string }; keywords?: string }
+export interface Guide { id: string; title: string; area: HelpArea; steps: string[]; link?: { to: string; label: string }; keywords?: string; tour?: string }
 
 export const GUIDES: Guide[] = [
   // Getting started
@@ -75,3 +75,10 @@ export function areasFor(path: string): HelpArea[] {
   if (path.startsWith('/events/') || path.startsWith('/activity') || path.startsWith('/network') || path.startsWith('/connections')) return ['attendee', 'start'];
   return ['start', 'attendee'];
 }
+
+// Guides that have a "Show me" walkthrough.
+export const GUIDE_TOURS: Record<string, string> = {
+  'find-events': 'events-get', 'your-profile': 'artist-profile', 'artist-profile': 'artist-profile', 'get-booked': 'artist-paid',
+  'payouts': 'artist-paid', 'create-event': 'organizer-create', 'attendees': 'organizer-manage', 'promoters': 'organizer-manage',
+  'organization': 'org-setup', 'org-team': 'org-manage', 'org-page': 'org-manage', 'audience': 'org-manage',
+};

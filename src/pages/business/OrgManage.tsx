@@ -108,7 +108,7 @@ function OrgManageInner() {
       {/* Phones: every section visible as a grid of buttons. Larger screens: underline tabs. */}
       <div className="mt-5 grid grid-cols-3 gap-2 sm:hidden" role="tablist" aria-label="Organization settings">
         {tabList.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => (t === 'Planning' ? navigate(`/organizer/planning?for=${org.slug}`) : setTab(t))}
+          <button key={t} data-tour={`otab-${t}`} role="tab" aria-selected={tab === t} onClick={() => (t === 'Planning' ? navigate(`/organizer/planning?for=${org.slug}`) : setTab(t))}
             className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl text-xs font-semibold ${tab === t ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>
             <span className="text-base leading-none" aria-hidden="true">{TAB_ICON[t]}</span>{t === 'Payouts' && insightsOn ? 'Sales' : t}
           </button>
@@ -116,7 +116,7 @@ function OrgManageInner() {
       </div>
       <div className="mt-5 hidden border-b border-gray-200 sm:flex sm:gap-1" role="tablist" aria-label="Organization settings">
         {tabList.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => (t === 'Planning' ? navigate(`/organizer/planning?for=${org.slug}`) : setTab(t))} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{tabLabel(t)}</button>
+          <button key={t} data-tour={`otab-${t}`} role="tab" aria-selected={tab === t} onClick={() => (t === 'Planning' ? navigate(`/organizer/planning?for=${org.slug}`) : setTab(t))} className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? 'border-[#C9A227] text-bone' : 'border-transparent text-muted'}`}>{tabLabel(t)}</button>
         ))}
       </div>
       {org.status === 'deleted' && (
