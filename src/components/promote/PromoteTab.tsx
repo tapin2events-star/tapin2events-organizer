@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import WebsiteEmbedCard from './WebsiteEmbedCard';
 import { useFeature } from '../../lib/preview';
 import PromoterPayoutsCard from './PromoterPayouts';
 import PremiumBadge, { PremiumNotice } from '../business/PremiumBadge';
@@ -51,6 +52,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New link</button>
       </div>
       {payoutsOn && stats && <PromoterPayoutsCard eventId={eventId} links={stats.links} onLinksChanged={load} />}
+      <WebsiteEmbedCard eventId={eventId} />
       {msg && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 
       {stats === null ? <ListSkeleton rows={3} className="mt-4" /> : (

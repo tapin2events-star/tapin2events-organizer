@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import WebsiteEmbedCard from '../../components/promote/WebsiteEmbedCard';
 import TeamPeopleShortcut from '../../components/business/TeamPeopleShortcut';
 import OrgReelManager from '../../components/video/OrgReelManager';
 import VideoHeaderCard from '../../components/video/VideoHeaderCard';
@@ -141,6 +142,7 @@ function OrgManageInner() {
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} onAudience={() => setTab('Audience')} />}
         {tab === 'Promote' && isLead && insightsOn && <OrgPromoteTab orgId={org.id} />}
         {tab === 'Promote' && isLead && promoterPayoutsOn && <OrgPromoterPayouts orgId={org.id} />}
+        {tab === 'Promote' && canEditPage && <WebsiteEmbedCard orgSlug={org.slug} />}
         {tab === 'Audience' && isLead && insightsOn && <OrgAudienceTab orgId={org.id} orgName={org.name} newsletterOn={newsletterOn} />}
         {tab === 'Payouts' && isLead && billingOn && <OrgPlanStatus orgId={org.id} />}
         {tab === 'Payouts' && isLead && insightsOn && <OrgSales orgId={org.id} />}

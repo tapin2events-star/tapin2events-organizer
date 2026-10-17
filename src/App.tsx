@@ -43,6 +43,7 @@ const ResourceDiscovery = lazyWithRetry(() => import('./pages/ResourceDiscovery'
 const ResourceProfile = lazyWithRetry(() => import('./pages/ResourceProfile'));
 const Welcome = lazyWithRetry(() => import('./pages/Welcome'));
 const Tutorials = lazyWithRetry(() => import('./pages/Tutorials'));
+const Embed = lazyWithRetry(() => import('./pages/Embed'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -86,6 +87,8 @@ export default function App() {
               and organizer pages alike. Auth is enforced per-route below via
               ProtectedRoute, not by which shell wraps them. */}
           <Route path="/welcome" element={<Welcome />} />
+          <Route path="/embed/org/:slug" element={<Embed />} />
+          <Route path="/embed/event/:id" element={<Embed />} />
 
           <Route element={<Layout />}>
             <Route path="/" element={<Discover />} />
