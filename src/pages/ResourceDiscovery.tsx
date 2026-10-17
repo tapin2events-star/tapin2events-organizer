@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import BackButton from '../components/BackButton';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -25,6 +26,16 @@ function milesBetween(a: { lat: number; lng: number }, b: { lat: number; lng: nu
 const selectClass = 'rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base text-gray-900 outline-none focus-visible:border-marigold';
 
 export default function ResourceDiscovery() {
+  // People who already have an artist & services profile see a link to it instead of "Join".
+  const { user } = useAuth();
+  const [myProfile, setMyProfile] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.email) { setMyProfile(null); return; }
+    supabase.from('resources').select('id, kind').ilike('email', user.email).order('created_at').then(({ data }) => {
+      const mine = ((data ?? []) as { id: string; kind: string | null }[]).find((r) => r.kind !== 'group');
+      setMyProfile(mine?.id ?? null);
+    });
+  }, [user?.email]);
   const [featured, setFeatured] = useState<Set<string>>(new Set());
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
@@ -110,15 +121,24 @@ export default function ResourceDiscovery() {
         <div className="mb-3"><BackButton fallback="/" fallbackLabel="Discover" /></div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-4xl font-extrabold text-gray-900">Artists &amp; Resources</h1>
+            <h1 className="font-display text-4xl font-extrabold text-gray-900">Artists &amp; vendors</h1>
             <p className="mt-1 text-lg text-gray-500">Find vendors, artists, and service providers for your next event</p>
           </div>
-          <Link
-            to="/resources/new"
-            className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            Join as an artist or vendor
-          </Link>
+          {myProfile ? (
+            <div className="flex flex-col items-start gap-1 sm:items-end">
+              <Link to={`/resources/${myProfile}`} className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
+                View my artist &amp; services profile
+              </Link>
+              <Link to="/resources/dashboard" className="text-sm font-medium text-marigold">Bookings &amp; edit ›</Link>
+            </div>
+          ) : (
+            <Link
+              to="/resources/new"
+              className="rounded-lg bg-gradient-to-r from-marigold to-teal px-4 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            >
+              Join as an artist or vendor
+            </Link>
+          )}
         </div>
 
         {forEvent && (
