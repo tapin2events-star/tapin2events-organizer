@@ -10,7 +10,7 @@ import ShareQR from '../ShareQR';
 import Sheet from '../scouting/Sheet';
 import { ListSkeleton } from '../ui/Skeleton';
 
-interface LinkRow { id: string; code: string; label: string; promoter_email: string | null; promoter_name: string | null; commission_pct: number | null; active: boolean; visits: number; visitors: number; tickets: number; revenue: number }
+interface LinkRow { id: string; code: string; label: string; promoter_email: string | null; promoter_name: string | null; commission_pct: number | null; active: boolean; visits: number; visitors: number; tickets: number; revenue: number; archived?: boolean; used?: boolean }
 interface Stats { links: LinkRow[]; other_tickets: number; other_revenue: number }
 const money = (n: number) => `$${(Number(n) || 0).toFixed(2).replace(/\.00$/, '')}`;
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
@@ -36,10 +36,28 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
     await supabase.rpc('update_event_link', { p_link_id: l.id, p_label: l.label, p_active: !l.active });
     load();
   }
+  // Paused links: delete if never used; otherwise archive (hidden and off, history kept).
+  async function remove(l: LinkRow) {
+    const ok = l.used
+      ? window.confirm(`Archive "${l.label}"? It has visits or sales, so it's kept in Archived links with its history (sales and commission records stay). It stops tracking right away.`)
+      : window.confirm(`Delete "${l.label}"? It was never used, so nothing is lost.`);
+    if (!ok) return;
+    const { data, error } = await supabase.rpc('remove_event_link', { p_link_id: l.id });
+    if (error) return flash(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't remove the link.");
+    flash(data === 'archived' ? 'Link archived. Find it under Archived links.' : 'Link deleted.');
+    load();
+  }
+  async function restore(l: LinkRow) {
+    await supabase.rpc('restore_event_link', { p_link_id: l.id });
+    flash('Link restored (paused). Tap Resume to turn it back on.');
+    load();
+  }
 
-  const links = stats?.links ?? [];
-  const linkTickets = links.reduce((n, l) => n + l.tickets, 0);
-  const linkRevenue = links.reduce((n, l) => n + l.revenue, 0);
+  const allLinks = stats?.links ?? [];
+  const links = allLinks.filter((l) => !l.archived);
+  const archivedLinks = allLinks.filter((l) => l.archived);
+  const linkTickets = allLinks.reduce((n, l) => n + l.tickets, 0);
+  const linkRevenue = allLinks.reduce((n, l) => n + l.revenue, 0);
   return (
     <div>
       <BoostCard eventId={eventId} />
@@ -51,7 +69,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
         </div>
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New link</button>
       </div>
-      {payoutsOn && stats && <PromoterPayoutsCard eventId={eventId} links={stats.links} onLinksChanged={load} />}
+      {payoutsOn && stats && <PromoterPayoutsCard eventId={eventId} links={links} onLinksChanged={load} />}
       {msg && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 
       {stats === null ? <ListSkeleton rows={3} className="mt-4" /> : (
@@ -87,11 +105,26 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
                       <button onClick={() => copy(l.code)} className="font-medium text-marigold">Copy link</button>
                       <ShareQR path={`/p/${l.code}`} title={l.label} subtitle="Scan for tickets" label="QR" className="font-medium text-marigold" />
                       <button onClick={() => toggle(l)} className="text-gray-500">{l.active ? 'Pause' : 'Resume'}</button>
+                      {!l.active && <button onClick={() => remove(l)} className="text-gray-500 hover:text-red-600">{l.used ? 'Archive' : 'Delete'}</button>}
                     </div>
                   </li>
                 );
               })}
             </ul>
+          )}
+          {archivedLinks.length > 0 && (
+            <details className="mt-4 rounded-2xl border border-gray-200 bg-surface p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-bone">Archived links ({archivedLinks.length})</summary>
+              <p className="mt-1 text-xs text-muted">Turned off and hidden, with their sales and commission history kept. Their sales still count in your totals.</p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {archivedLinks.map((l) => (
+                  <li key={l.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm">
+                    <span className="min-w-0"><span className="block truncate font-medium text-gray-800">{l.label}</span><span className="block truncate text-xs text-gray-500">{l.promoter_email ? `Promoter: ${l.promoter_name || l.promoter_email} · ` : ''}{l.tickets} ticket{l.tickets === 1 ? '' : 's'} · {money(l.revenue)}</span></span>
+                    <button onClick={() => restore(l)} className="shrink-0 text-xs font-medium text-marigold">Restore</button>
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
           {links.filter((l) => !l.label.startsWith('🚀')).length > 0 && <FeatureFeedback feature="promotion_links" label="promotion links" className="mt-4" />}
           <p className="mt-3 text-sm text-muted">Not from a link: {stats.other_tickets} ticket{stats.other_tickets === 1 ? '' : 's'} · {money(stats.other_revenue)}</p>
