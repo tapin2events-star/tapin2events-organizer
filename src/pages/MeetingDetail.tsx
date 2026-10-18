@@ -11,7 +11,7 @@ import { downloadIcs, googleCalendarUrl, meetingWhen } from '../lib/meetings';
 interface Detail {
   id: string; title: string; starts_at: string; ends_at: string | null; location: string | null; video_url: string | null; agenda: string | null; notes: string | null;
   status: 'scheduled' | 'cancelled'; created_by: string; creator_name: string | null; event_id: string | null; event_title: string | null;
-  organization_id: string | null; org_name: string | null; org_slug: string | null; can_manage: boolean; my_rsvp: 'pending' | 'going' | 'maybe' | 'no' | null;
+  organization_id: string | null; org_name: string | null; org_slug: string | null; can_manage: boolean; series_id?: string | null; series_index?: number | null; series_count?: number | null; my_rsvp: 'pending' | 'going' | 'maybe' | 'no' | null;
   invitees: { email: string; rsvp: string; full_name: string | null; photo: string | null }[] | null;
   action_items: { id: string; title: string; status: string; assigned_to: string | null; due_date: string | null; event_id: string }[] | null;
 }
@@ -58,6 +58,12 @@ export default function MeetingDetail() {
     setSaved(error ? "Couldn't save." : 'Saved.'); setTimeout(() => setSaved(null), 2000);
   }
   async function cancel() {
+    if (m!.series_id) {
+      const all = window.confirm('This meeting repeats. Press OK to cancel this meeting and all future ones in the series, or Cancel to choose just this one.');
+      if (all) { await supabase.rpc('cancel_meeting_series', { p_meeting_id: m!.id }); return load(); }
+      if (!window.confirm('Cancel just this meeting? Everyone invited will be told.')) return;
+      await supabase.rpc('cancel_meeting', { p_meeting_id: m!.id }); return load();
+    }
     if (!window.confirm('Cancel this meeting? Everyone invited will be told.')) return;
     await supabase.rpc('cancel_meeting', { p_meeting_id: m!.id }); load();
   }
@@ -75,6 +81,8 @@ export default function MeetingDetail() {
         <p className="mt-2 text-sm text-bone">🗓️ <strong>{meetingWhen(m.starts_at, true)}</strong>{m.ends_at ? ` – ${new Date(m.ends_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00 ', ' ')}` : ''}</p>
         {m.location && <p className="mt-1 text-sm text-bone">📍 {m.location}</p>}
         <p className="mt-1 text-xs text-muted">Set up by {m.creator_name || m.created_by}</p>
+        {m.series_id && <p className="mt-2 inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-marigold">🔁 Repeating meeting · {m.series_index ?? 1} of {m.series_count ?? '…'}</p>}
+        <div className="mt-3"><Link to={`/meetings/${m.id}/minutes`} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800">📄 Download minutes (PDF)</Link></div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           {m.video_url && m.status === 'scheduled' && <a href={m.video_url} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">💻 Join the call</a>}

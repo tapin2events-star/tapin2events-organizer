@@ -44,6 +44,7 @@ const ResourceProfile = lazyWithRetry(() => import('./pages/ResourceProfile'));
 const Welcome = lazyWithRetry(() => import('./pages/Welcome'));
 const Tutorials = lazyWithRetry(() => import('./pages/Tutorials'));
 const Embed = lazyWithRetry(() => import('./pages/Embed'));
+const MeetingMinutes = lazyWithRetry(() => import('./pages/MeetingMinutes'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -89,6 +90,7 @@ export default function App() {
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/embed/org/:slug" element={<Embed />} />
           <Route path="/embed/event/:id" element={<Embed />} />
+          <Route path="/meetings/:id/minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
 
           <Route element={<Layout />}>
             <Route path="/" element={<Discover />} />

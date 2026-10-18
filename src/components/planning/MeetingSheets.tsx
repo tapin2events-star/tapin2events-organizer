@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AGENDA_TEMPLATES } from '../../lib/meetingTemplates';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -86,6 +87,27 @@ export function MeetingSheet({ targets, defaultTarget = '', initial, onClose, on
   const [location, setLocation] = useState(initial?.location ?? '');
   const [videoUrl, setVideoUrl] = useState(initial?.video_url ?? '');
   const [agenda, setAgenda] = useState(initial?.agenda ?? '');
+  // Meeting extras: repeat, and agenda templates (built-in + saved).
+  const [repeat, setRepeat] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
+  const [repeatCount, setRepeatCount] = useState(8);
+  const [saved, setSaved] = useState<{ id: string; name: string; agenda: string; org_name: string | null }[]>([]);
+  const [tplMsg, setTplMsg] = useState<string | null>(null);
+  useEffect(() => { supabase.rpc('my_agenda_templates').then(({ data }) => setSaved((data ?? []) as typeof saved)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  function applyTemplate(v: string) {
+    if (!v) return;
+    const t = v.startsWith('b:') ? AGENDA_TEMPLATES[Number(v.slice(2))] : saved.find((x) => x.id === v.slice(2));
+    if (t && (!agenda.trim() || window.confirm('Replace the current agenda with this template?'))) setAgenda(t.agenda);
+  }
+  async function saveTemplate() {
+    if (!agenda.trim()) return setTplMsg('Write an agenda first.');
+    const name = window.prompt('Name this agenda template', title.trim() || 'My agenda');
+    if (!name?.trim()) return;
+    const [kind, tid] = target.split(':');
+    const { error } = await supabase.rpc('save_agenda_template', { p_name: name.trim(), p_agenda: agenda, p_org_id: kind === 'org' ? tid : null });
+    if (error) return setTplMsg(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't save the template.");
+    setTplMsg(`Saved "${name.trim()}" to your agenda templates.`);
+    supabase.rpc('my_agenda_templates').then(({ data }) => setSaved((data ?? []) as typeof saved));
+  }
   const [target, setTarget] = useState(initial ? (initial.event_id ? `event:${initial.event_id}` : initial.organization_id ? `org:${initial.organization_id}` : '') : defaultTarget);
   const [invitees, setInvitees] = useState<string[]>(initial?.invitees ?? []);
   const [busy, setBusy] = useState(false);
@@ -103,6 +125,7 @@ export function MeetingSheet({ targets, defaultTarget = '', initial, onClose, on
     } });
     setBusy(false);
     if (error || !data) return setErr(error?.message && !/function|permission denied/i.test(error.message) ? error.message : "Couldn't save the meeting.");
+    if (!editing && repeat !== 'none') await supabase.rpc('repeat_meeting', { p_meeting_id: data as string, p_every: repeat, p_count: repeatCount });
     onSaved(data as string);
   }
   return (
@@ -113,6 +136,19 @@ export function MeetingSheet({ targets, defaultTarget = '', initial, onClose, on
         <label className="block min-w-0 text-xs font-medium text-gray-500">Time<input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={dt} /></label>
       </div>
       {date && <p className="mt-1 text-xs text-gray-500">{pretty(date, time)}</p>}
+      {!editing && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="block text-xs font-medium text-gray-500">Repeats
+            <select value={repeat} onChange={(e) => setRepeat(e.target.value as typeof repeat)} className={field}>
+              <option value="none">Doesn't repeat</option><option value="weekly">Every week</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Every month</option>
+            </select>
+          </label>
+          {repeat !== 'none' && <label className="block text-xs font-medium text-gray-500">How many meetings
+            <select value={repeatCount} onChange={(e) => setRepeatCount(Number(e.target.value))} className={field}>{[4, 6, 8, 12, 26].map((n) => <option key={n} value={n}>{n}</option>)}</select>
+          </label>}
+        </div>
+      )}
+      {!editing && repeat !== 'none' && <p className="mt-1 text-xs text-gray-500">Everyone is invited once; the whole series shows up on their TapIN calendar, with reminders before each meeting.</p>}
       <label className="mt-3 block text-xs font-medium text-gray-500">How long
         <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} className={field}>{DURATIONS.map(([m, l]) => <option key={m} value={m}>{l}</option>)}</select>
       </label>
@@ -120,7 +156,17 @@ export function MeetingSheet({ targets, defaultTarget = '', initial, onClose, on
       <label className="mt-3 block text-xs font-medium text-gray-500">Place (optional)<input value={location} maxLength={300} onChange={(e) => setLocation(e.target.value)} placeholder="Coffee shop, studio, office…" className={field} /></label>
       {!editing && <TargetAndPeople targets={targets} target={target} setTarget={setTarget} invitees={invitees} setInvitees={setInvitees} />}
       {editing && <p className="mt-3 text-xs text-gray-500">Changing the time asks everyone to RSVP again. Invite more people from the meeting page.</p>}
-      <label className="mt-3 block text-xs font-medium text-gray-500">Agenda (optional)<textarea rows={3} maxLength={5000} value={agenda} onChange={(e) => setAgenda(e.target.value)} placeholder="What we'll cover" className={field} /></label>
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <span className="text-xs font-medium text-gray-500">Agenda (optional)</span>
+        <select value="" onChange={(e) => applyTemplate(e.target.value)} aria-label="Use an agenda template" className="max-w-[60%] rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700">
+          <option value="">📋 Use a template…</option>
+          <optgroup label="Ready-made">{AGENDA_TEMPLATES.map((t, i) => <option key={t.name} value={`b:${i}`}>{t.name}</option>)}</optgroup>
+          {saved.length > 0 && <optgroup label="Saved">{saved.map((t) => <option key={t.id} value={`s:${t.id}`}>{t.name}{t.org_name ? ` (${t.org_name})` : ''}</option>)}</optgroup>}
+        </select>
+      </div>
+      <textarea rows={5} maxLength={5000} value={agenda} onChange={(e) => setAgenda(e.target.value)} placeholder="What we'll cover" aria-label="Agenda" className={field} />
+      <button type="button" onClick={saveTemplate} className="mt-1 text-xs font-medium text-marigold">Save this agenda as a template</button>
+      {tplMsg && <p className="mt-1 text-xs text-gray-600">{tplMsg}</p>}
       {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
       <button onClick={save} disabled={busy} className="mt-4 w-full rounded-xl bg-marigold py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Saving…' : editing ? 'Save changes' : 'Schedule & invite'}</button>
     </Sheet>
