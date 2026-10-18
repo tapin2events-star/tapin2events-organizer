@@ -53,3 +53,18 @@ export const ARTIST_FEATURES: Feature[] = [
   { key: 'featured_artist', icon: '⭐', name: 'Featured Artist', desc: 'Shown first in Artists & vendors, with a Featured badge' },
   { key: 'boost_credit', icon: '🚀', name: '$10 monthly Boost credit', desc: 'Toward boosting your shows in Discover\u2019s Promoted row' },
 ];
+
+// Which plan or pack each premium feature belongs to (matches plan_feature_pack in the database), for badges and prompts.
+export function packFor(feature?: string): { label: string; detail: string } {
+  const pack = (id: PackId) => { const p = PACKS.find((x) => x.id === id)!; return { label: `${p.name} pack`, detail: `the ${p.name} pack (+${money(p.price.month)}/month with Essentials or the Artist plan, and included in Business)` }; };
+  switch (feature) {
+    case 'templates': case 'insights': case 'promotion_links': case 'invoices': case 'meetings': case 'embed_polish':
+      return { label: 'Essentials', detail: `Essentials (${money(PLAN_PRICES.essentials.month)}/month, and included in Business)` };
+    case 'promoter_payouts': case 'video_headers': return pack('performers');
+    case 'program': case 'workshops': case 'networking': return pack('conference');
+    case 'gala': case 'donors': return pack('fundraising');
+    case 'volunteers': case 'newsletters': return pack('community');
+    case 'artist_video': case 'featured_artist': return { label: 'Artist plan', detail: `the Artist plan (${money(ARTIST_PLAN.month)}/month)` };
+    default: return { label: 'Business plan', detail: `the Business plan (${money(PLAN_PRICES.business.month)}/month)` };
+  }
+}

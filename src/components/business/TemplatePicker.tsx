@@ -8,9 +8,9 @@ export default function TemplatePicker({ selected, onPick }: { selected: string 
     <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-3 sm:p-4">
       <div className="flex flex-wrap items-center gap-2">
         <p className="font-semibold text-bone">✨ Start from a template</p>
-        <PremiumBadge />
+        <PremiumBadge feature="templates" />
       </div>
-      <PremiumNotice feature="Starting from a template" />
+      <PremiumNotice feature="Starting from a template" featureKey="templates" />
       <p className="mt-1 text-sm text-muted">Pick one to fill in the description, tickets, registration questions and agenda. You can change everything.</p>
       <div className="-mx-3 mt-3 flex snap-x gap-2 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
         {EVENT_TEMPLATES.map((t) => (

@@ -94,7 +94,7 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
     <div>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">👥 Audience <PremiumBadge /></p>
+          <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">👥 Audience <PremiumBadge feature="insights" /></p>
           <p className="text-sm text-muted">Everyone connected to {orgName}: people who came to your events, your followers{newsletterOn ? ', and contacts you import' : ''}. Only Owners and Admins see this.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -117,7 +117,7 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
       {newsletterOn && (
         <section className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="flex items-center gap-2 font-display text-base font-bold text-bone">📧 Emails <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+            <p className="flex items-center gap-2 font-display text-base font-bold text-bone">📧 Emails <PremiumBadge feature="newsletters" /></p>
             <button onClick={() => setSheet('compose')} disabled={!counts?.sendable} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">+ New email</button>
           </div>
           {campaigns === null ? <ListSkeleton rows={2} className="mt-3" /> : campaigns.length === 0 ? (

@@ -48,7 +48,7 @@ export default function PromoterPayoutsCard({ eventId, links, onLinksChanged }: 
       </div>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Pay promoters automatically <PremiumBadge /></p>
+          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">💸 Pay promoters automatically <PremiumBadge feature="promoter_payouts" /></p>
           <p className="text-sm text-muted">{o.on
             ? 'Each ticket sold through a promoter\u2019s link sends them their commission of the ticket price. The rest goes to your payout account.'
             : 'Turn on to send promoters their commission automatically on every ticket sold through their link, instead of paying them yourself.'}</p>
@@ -124,7 +124,7 @@ export function OrgPromoterPayouts({ orgId }: { orgId: string }) {
   );
   return (
     <section className="mt-8 rounded-2xl border border-gray-200 bg-surface p-4">
-      <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">💸 Automatic promoter payouts <PremiumBadge /></p>
+      <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">💸 Automatic promoter payouts <PremiumBadge feature="promoter_payouts" /></p>
       <p className="text-sm text-muted">Promoters (and performers with promo links) get their commission automatically on every ticket sold through their link.</p>
       {err && <p role="alert" className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
       <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5">

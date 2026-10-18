@@ -116,7 +116,7 @@ export default function ProgramLayout(p: {
         {p.workshopsOn && signupSessions.length > 0 && (
           <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm">
             <button onClick={() => setShowRules(!showRules)} className="flex w-full flex-wrap items-center justify-between gap-2 text-left">
-              <span className="flex flex-wrap items-center gap-2 text-emerald-900">📋 Sign-up rules: {p.rules.r ? 'ticket holders only' : 'anyone signed in'} · {p.rules.o ? 'overlaps allowed' : 'no overlapping sessions'} <PremiumBadge note={false} /></span>
+              <span className="flex flex-wrap items-center gap-2 text-emerald-900">📋 Sign-up rules: {p.rules.r ? 'ticket holders only' : 'anyone signed in'} · {p.rules.o ? 'overlaps allowed' : 'no overlapping sessions'} <PremiumBadge feature="program" note={false} /></span>
               <span className="text-xs font-semibold text-emerald-800">{showRules ? 'Done' : 'Change'}</span>
             </button>
             {showRules && <SessionRulesCard eventId={event.id} requiresTicket={p.rules.r} allowOverlap={p.rules.o} onChange={(r, o) => p.setRules({ r, o })} />}

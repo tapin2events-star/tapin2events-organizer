@@ -34,8 +34,8 @@ export default function WebsiteEmbedCard({ orgSlug, eventId, title }: { orgSlug?
         <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="radiogroup" aria-label="Background">{(['light', 'dark'] as const).map((t) => <button key={t} role="radio" aria-checked={theme === t} onClick={() => setTheme(t)} className={seg(theme === t)}>{t === 'light' ? 'Light site' : 'Dark site'}</button>)}</div>
       </div>
       <div className="mt-3 flex flex-col gap-2 text-sm text-gray-700">
-        <label className="flex items-center gap-2"><input type="checkbox" checked={brand} onChange={(e) => setBrand(e.target.checked)} className="h-4 w-4 accent-marigold" /> Use my brand colors and font <PremiumBadge /></label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={!badge} onChange={(e) => setBadge(!e.target.checked)} className="h-4 w-4 accent-marigold" /> Hide "Tickets by TapIN" <PremiumBadge /></label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={brand} onChange={(e) => setBrand(e.target.checked)} className="h-4 w-4 accent-marigold" /> Use my brand colors and font <PremiumBadge feature="embed_polish" /></label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={!badge} onChange={(e) => setBadge(!e.target.checked)} className="h-4 w-4 accent-marigold" /> Hide "Tickets by TapIN" <PremiumBadge feature="embed_polish" /></label>
       </div>
       <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">Preview</p>
       <div className={`mt-1.5 max-h-[420px] overflow-auto rounded-xl border border-gray-200 p-2 ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>

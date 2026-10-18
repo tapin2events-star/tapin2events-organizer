@@ -63,8 +63,8 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
       <BoostCard eventId={eventId} />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">📣 Promotion links <PremiumBadge /></p>
-          <PremiumNotice feature="Promotion links" />
+          <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">📣 Promotion links <PremiumBadge feature="promotion_links" /></p>
+          <PremiumNotice feature="Promotion links" featureKey="promotion_links" />
           <p className="mt-1 text-sm text-muted">Make a link for each place you share this event (or each promoter) and see which ones sell tickets.</p>
         </div>
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New link</button>

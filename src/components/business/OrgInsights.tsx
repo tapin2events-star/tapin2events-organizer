@@ -24,7 +24,7 @@ export function OrgPromoteTab({ orgId }: { orgId: string }) {
   const upcoming = s.events.filter((e) => e.upcoming);
   return (
     <div>
-      <PremiumNotice feature="The organization Promote tab" />
+      <PremiumNotice feature="The organization Promote tab" featureKey="insights" />
       <p className="mt-2 text-sm text-muted">How your events are being promoted: tracking links, promoters and boosts, all in one place.</p>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat value={Number(s.visits)} label="link visits" />
@@ -117,9 +117,9 @@ export function OrgAttendees({ orgId, orgName }: { orgId: string; orgName: strin
     <section className="mt-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-display text-lg font-bold text-bone">👥 All attendees <PremiumBadge /></h3>
+          <h3 className="font-display text-lg font-bold text-bone">👥 All attendees <PremiumBadge feature="insights" /></h3>
           <p className="text-sm text-muted">Everyone with a ticket to {orgName}'s events. Only Owners and Admins see this.</p>
-          <PremiumNotice feature="The attendee list and export" />
+          <PremiumNotice feature="The attendee list and export" featureKey="insights" />
         </div>
         {!!rows?.length && <button onClick={exportCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Export CSV</button>}
       </div>
@@ -166,7 +166,7 @@ export function OrgSales({ orgId }: { orgId: string }) {
   return (
     <section className="mb-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-display text-lg font-bold text-bone">📈 Sales <PremiumBadge /></h3>
+        <h3 className="font-display text-lg font-bold text-bone">📈 Sales <PremiumBadge feature="insights" /></h3>
         <div className="flex gap-1.5">{PERIODS.map((p) => <button key={p.id} onClick={() => setPeriod(p.id)} aria-pressed={period === p.id} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${period === p.id ? 'bg-[#0F1B3D] text-white' : 'border border-gray-200 bg-white text-gray-700'}`}>{p.label}</button>)}</div>
       </div>
       {!s ? <ListSkeleton rows={3} className="mt-3" /> : (

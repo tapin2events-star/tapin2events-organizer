@@ -33,7 +33,7 @@ export default function GalaTab({ event }: { event: TapEvent }) {
   const unseated = o.parties.filter((p) => !p.table_id && !p.seated_section);
   return (
     <div>
-      <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">🥂 Gala <PremiumBadge /></p>
+      <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-bone">🥂 Gala <PremiumBadge feature="gala" /></p>
       <p className="text-sm text-muted">Seat your guests, give out paddle numbers, and run the paddle raise. Guests see their table and paddle number on their ticket.</p>
       {msg && <p role="status" className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 

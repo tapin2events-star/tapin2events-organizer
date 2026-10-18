@@ -58,8 +58,8 @@ export default function InvoicesSection({ eventId, ticketPrice, sections }: { ev
     <section className={sections ? '' : 'mt-10'}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">🧾 Invoices <PremiumBadge /></p>
-          <PremiumNotice feature="Pay-by-invoice" />
+          <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">🧾 Invoices <PremiumBadge feature="invoices" /></p>
+          <PremiumNotice feature="Pay-by-invoice" featureKey="invoices" />
           <p className="mt-1 text-sm text-muted">Bill a company or group for tickets. They pay online by the due date, then the tickets are issued to their contact.</p>
         </div>
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New invoice</button>
