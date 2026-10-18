@@ -13,7 +13,7 @@ export default function FeatureLock({ orgId, eventId, feature, title, children }
   if (ok !== false) return <>{children}</>;
   const pack = packFor(feature);
   const packId = (['templates', 'insights', 'promotion_links', 'invoices', 'meetings', 'embed_polish'].includes(feature) ? 'essentials'
-    : ['promoter_payouts', 'video_headers'].includes(feature) ? 'performers' : ['program', 'workshops', 'networking'].includes(feature) ? 'conference'
+    : ['promoter_payouts', 'video_headers', 'local_partners'].includes(feature) ? 'performers' : ['program', 'workshops', 'networking'].includes(feature) ? 'conference'
     : ['gala', 'donors'].includes(feature) ? 'fundraising' : ['volunteers', 'newsletters'].includes(feature) ? 'community' : 'business') as PlanNeeded['pack'];
   return (
     <section className="mt-4 rounded-2xl border border-dashed border-[#C9A227]/60 bg-[#C9A227]/5 p-5 text-center">

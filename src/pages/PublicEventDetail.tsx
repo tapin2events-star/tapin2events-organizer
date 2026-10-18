@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import EventPerks from '../components/nearby/EventPerks';
+import AroundTheVenue from '../components/nearby/AroundTheVenue';
 import EventHighlights from '../components/video/EventHighlights';
 import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing } from '../components/video/HeaderVideo';
 import EmbeddedCheckoutSheet from '../components/events/EmbeddedCheckoutSheet';
@@ -67,6 +69,7 @@ export default function PublicEventDetail() {
   // Business / nonprofit events: organization brand, agenda, speakers, sponsors (TapIN for Business).
   const biz = useBusinessData(event);
   const whiteLabel = useEventWhiteLabel(event?.id);
+  const nearbyOn = useFeature('nearby');
   useBrandedTab(whiteLabel, event?.title);
   const [brandedSignIn, setBrandedSignIn] = useState(false);
   const headerVideo = useHeaderVideo(event?.id);
@@ -858,6 +861,7 @@ export default function PublicEventDetail() {
           <p className="mt-2 text-xs text-gray-500">Service and processing fees are non-refundable. If the organizer cancels, you'll be refunded the ticket price. <Link to="/refund-policy" className="underline hover:text-gray-700">Refund policy</Link></p>
         )}
 
+        {nearbyOn && <EventPerks eventId={event.id} />}
         {/* What to expect: description and features together, since both
             answer the same question ("what is this actually like?"). */}
         {(event.description || (event.features && event.features.length > 0)) && (
@@ -885,6 +889,7 @@ export default function PublicEventDetail() {
         )}
 
         {networkingOn && id && <NetworkingInvite eventId={id} />}
+        {nearbyOn && <AroundTheVenue eventId={event.id} />}
         {videoHeadersOn && <EventHighlights eventId={event.id} eventTitle={event.title} ended={hasEnded} started={!!event.start_date && new Date(event.start_date).getTime() <= Date.now()} />}
         {galaOn && <GalaGuestCard eventId={event.id} />}
         {volunteersOn && <VolunteerCard eventId={event.id} />}

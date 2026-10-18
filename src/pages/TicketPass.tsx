@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TicketPerks from '../components/nearby/TicketPerks';
 import { useBrandedTab, useEventWhiteLabel } from '../lib/whiteLabel';
 import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
 import { useFeature } from '../lib/preview';
@@ -44,6 +45,7 @@ interface PassData {
 
 export default function TicketPass() {
   const { ticketId } = useParams<{ ticketId: string }>();
+  const nearbyOn = useFeature('nearby');
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const [data, setData] = useState<PassData | null>(null);
@@ -243,6 +245,7 @@ export default function TicketPass() {
               className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold" />
           </div>
         )}
+        {!isCancelled && nearbyOn && <div className="print:hidden"><TicketPerks ticketId={ticket.id} /></div>}
         {!isCancelled && user?.email === ticket.attendee_email && canCancelRegistration(ticket, event.start_date) && (
           <div className="mt-5 text-center print:hidden">
             <CancelRegistration ticketId={ticket.id} eventTitle={event.title}

@@ -60,7 +60,7 @@ export function packFor(feature?: string): { label: string; detail: string } {
   switch (feature) {
     case 'templates': case 'insights': case 'promotion_links': case 'invoices': case 'meetings': case 'embed_polish':
       return { label: 'Essentials', detail: `Essentials (${money(PLAN_PRICES.essentials.month)}/month, and included in Business)` };
-    case 'promoter_payouts': case 'video_headers': return pack('performers');
+    case 'promoter_payouts': case 'video_headers': case 'local_partners': return pack('performers');
     case 'program': case 'workshops': case 'networking': return pack('conference');
     case 'gala': case 'donors': return pack('fundraising');
     case 'volunteers': case 'newsletters': return pack('community');

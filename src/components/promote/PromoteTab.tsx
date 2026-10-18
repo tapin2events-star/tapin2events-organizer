@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import LocalPartnersCard from '../nearby/LocalPartnersCard';
 import WebsiteEmbedCard from './WebsiteEmbedCard';
 import { useFeature } from '../../lib/preview';
 import PromoterPayoutsCard from './PromoterPayouts';
@@ -20,6 +21,7 @@ const IDEAS = ['Instagram bio', 'Facebook post', 'Flyer', 'Email newsletter', 'T
 // Event > Promote (Preview): tracking links for each place you share the event, optionally for a promoter
 // with a commission; visits, tickets and revenue per link.
 export default function PromoteTab({ eventId }: { eventId: string }) {
+  const nearbyOn = useFeature('nearby');
   const payoutsOn = useFeature('promoter_payouts');
   const [stats, setStats] = useState<Stats | null>(null);
   const [creating, setCreating] = useState(false);
@@ -132,6 +134,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
         </>
       )}
       {creating && <NewLinkSheet eventId={eventId} onClose={() => setCreating(false)} onDone={(code) => { setCreating(false); navigator.clipboard?.writeText(shortUrl(code)); flash('Link created and copied.'); load(); }} />}
+      {nearbyOn && <LocalPartnersCard eventId={eventId} />}
       <div className="mt-10"><WebsiteEmbedCard eventId={eventId} /></div>
     </div>
   );
