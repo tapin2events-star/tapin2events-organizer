@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TestViewers from './TestViewers';
 import { ListSkeleton } from '../ui/Skeleton';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -62,6 +63,7 @@ export default function PreviewTab() {
 
   return (
     <div className="mt-6 flex max-w-3xl flex-col gap-6">
+      <TestViewers />
       <section className="rounded-2xl border border-gray-200 bg-surface p-5">
         <div className="flex items-start justify-between gap-4">
           <div>

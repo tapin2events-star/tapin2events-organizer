@@ -438,7 +438,7 @@ export default function PublicEventDetail() {
       <div className="mx-auto max-w-4xl px-4 pb-16 sm:px-6">
         {event.is_test && (
           <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-            <strong>Test event.</strong> Only TapIN admins can see it. It won't appear on Discover, organization pages, website embeds, newsletters or follower emails. Payments here are real.
+            <strong>Test event.</strong> Only TapIN admins and test viewers can see it. It won't appear on Discover, organization pages, website embeds, newsletters or follower emails. Payments here are real.
           </div>
         )}
         {checkoutStatus === 'success' && (
