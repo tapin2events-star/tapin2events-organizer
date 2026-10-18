@@ -1,15 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
+import PremiumBadge from '../business/PremiumBadge';
 import { supabase } from '../../lib/supabaseClient';
 
 // Event page: "Make a night of it" — places near the venue (OpenStreetMap), organizer picks first.
-interface Place { id: string; name: string; category: 'eat' | 'drink' | 'coffee' | 'parking' | 'stay'; kind: string | null; distance_m: number | null; hours: string | null; website: string | null; phone: string | null; address: string | null; lat: number; lng: number; pinned: boolean; hidden: boolean }
+interface Place { id: string; name: string; category: 'eat' | 'drink' | 'coffee' | 'parking' | 'stay'; kind: string | null; distance_m: number | null; hours: string | null; website: string | null; phone: string | null; address: string | null; lat: number; lng: number; pinned: boolean; hidden: boolean; source?: string; rating?: number | null; rating_count?: number | null; price_level?: string | null }
 const CATS: { id: Place['category']; label: string; icon: string }[] = [
   { id: 'eat', label: 'Eat', icon: '🍽️' }, { id: 'drink', label: 'Drink', icon: '🍸' }, { id: 'coffee', label: 'Coffee', icon: '☕' }, { id: 'parking', label: 'Parking', icon: '🅿️' }, { id: 'stay', label: 'Stay', icon: '🛏️' },
 ];
+// Google hours come as one line per weekday ("Monday: 11 AM – 9 PM | Tuesday: ..."); show today's.
+const todayHours = (p: Place) => {
+  if (!p.hours) return null;
+  if (p.source !== 'google') return p.hours;
+  const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const line = p.hours.split(' | ').find((l) => l.startsWith(day));
+  return line ? `Today: ${line.slice(day.length + 1).trim()}` : null;
+};
 const walk = (m: number | null) => (m == null ? '' : m < 120 ? 'Steps away' : `${Math.max(1, Math.round(m / 80))} min walk`);
 
 export default function AroundTheVenue({ eventId }: { eventId: string }) {
-  const [d, setD] = useState<{ enabled: boolean; fetched: boolean; can_manage: boolean; places: Place[] } | null>(null);
+  const [d, setD] = useState<{ enabled: boolean; fetched: boolean; can_manage: boolean; enhanced?: boolean; places: Place[] } | null>(null);
   const [cat, setCat] = useState<Place['category'] | null>(null);
   const load = useCallback(async () => {
     const { data } = await supabase.rpc('event_nearby', { p_event_id: eventId });
@@ -38,6 +47,9 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
         <h2 className="font-display text-xl font-bold text-gray-900">Make a night of it</h2>
         {d.can_manage && <button onClick={toggleSection} className="text-xs font-medium text-gray-500">{d.enabled ? 'Hide this section' : 'Show this section'}</button>}
       </div>
+      <div>
+        {d.can_manage && d.enhanced && <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">✨ Enhanced places (ratings, hours and price) <PremiumBadge feature="nearby_plus" /></p>}
+      </div>
       {d.can_manage && <p className="mt-1 text-xs text-gray-500">Only you see these controls. Pin up to 3 favorites, or hide places you don't recommend.{!d.enabled && ' This section is hidden from attendees.'}</p>}
       {!places.length ? <p className="mt-2 text-sm text-gray-500">{d.fetched ? 'No nearby places found yet.' : 'Finding places nearby…'}</p> : (
         <>
@@ -53,8 +65,9 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-gray-900">{p.name}{p.pinned && <span className="ml-2 rounded-full bg-[#C9A227] px-2 py-0.5 align-middle text-[10px] font-bold text-[#0F1B3D]">OUR PICK</span>}</p>
+                    {(p.rating != null || p.price_level) && <p className="text-sm text-gray-700">{p.rating != null && <><span className="text-amber-500" aria-hidden="true">★</span> {p.rating.toFixed(1)}{p.rating_count ? <span className="text-gray-400"> ({p.rating_count.toLocaleString()})</span> : null}</>}{p.rating != null && p.price_level ? ' · ' : ''}{p.price_level}</p>}
                     <p className="truncate text-sm text-gray-500">{[p.kind, walk(p.distance_m), p.address].filter(Boolean).join(' · ')}</p>
-                    {p.hours && <p className="truncate text-xs text-gray-400">Hours: {p.hours}</p>}
+                    {todayHours(p) && <p className="truncate text-xs text-gray-400">{p.source === 'google' ? todayHours(p) : `Hours: ${todayHours(p)}`}</p>}
                   </div>
                   <a href={`https://maps.google.com/?daddr=${p.lat},${p.lng}`} target="_blank" rel="noopener" className="shrink-0 rounded-xl border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-800">Directions</a>
                 </div>
@@ -68,7 +81,11 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[11px] text-gray-400">Places from © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline">OpenStreetMap</a> contributors. Check hours before you go.</p>
+          <p className="mt-2 text-[11px] text-gray-400">
+            {shown.some((p) => p.source === 'google') && <span className="font-medium">Powered by Google. </span>}
+            {shown.some((p) => p.source !== 'google') && <>Places from © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline">OpenStreetMap</a> contributors. </>}
+            Check hours before you go.
+          </p>
         </>
       )}
     </section>
