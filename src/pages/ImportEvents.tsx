@@ -141,6 +141,8 @@ export default function ImportEvents() {
     });
   }
   const [confirmed, setConfirmed] = useState(false);
+  // Sell tickets on TapIN (copy) or keep selling on the original site (link).
+  const [sell, setSell] = useState<'tapin' | 'external'>('tapin');
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ created: { id: string; title: string }[]; skipped: { title: string; reason: string; existing_event_id?: string }[] } | null>(null);
 
@@ -181,7 +183,7 @@ export default function ImportEvents() {
     const chosen = preview.events.filter((e) => selected.has(e.key)).map((e) => ({ ...e, location_address: tidyAddress(e) }));
     setImporting(true);
     setError(null);
-    const { data, error: fnError } = await supabase.functions.invoke('import-events-from-url', { body: { action: 'create', events: chosen } });
+    const { data, error: fnError } = await supabase.functions.invoke('import-events-from-url', { body: { action: 'create', events: chosen, sell } });
     setImporting(false);
     if (fnError || !data) {
       setError("Couldn't import those events. Please try again.");
@@ -205,8 +207,8 @@ export default function ImportEvents() {
   return (
     <div className="mx-auto max-w-3xl">
       <BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" />
-      <h1 className="mt-2 font-display text-3xl font-extrabold text-bone">Import events</h1>
-      <p className="mt-1 text-muted">Bring in events from your website or Eventbrite. They arrive as drafts, so you can review everything before publishing.</p>
+      <h1 className="mt-2 font-display text-3xl font-extrabold text-bone">Copy events to TapIN</h1>
+      <p className="mt-1 text-muted">Already posted your event on your website or Eventbrite? Paste the link and TapIN fills in the details for you, so you don’t have to start over. Events arrive as drafts, so you can review everything before publishing.</p>
 
       {!result && (
         <div className="mt-6 rounded-2xl border border-gray-200 bg-surface2 p-5">
@@ -314,7 +316,20 @@ export default function ImportEvents() {
 
               {importable.length > 0 && (
                 <div className="mt-4 rounded-2xl border border-gray-200 bg-surface2 p-4">
-                  <label className="flex cursor-pointer items-start gap-3 text-sm text-bone">
+                  <p className="text-sm font-semibold text-bone">How will you sell tickets?</p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="How will you sell tickets">
+                    {([
+                      ['tapin', '🎟️ Sell tickets on TapIN', 'Recommended. We copy the event so you can add ticket types, sell here, and use every TapIN tool.'],
+                      ['external', '🔗 Keep selling on the original site', 'Your TapIN page links buyers to the original ticket page.'],
+                    ] as const).map(([v, title, desc]) => (
+                      <button key={v} type="button" role="radio" aria-checked={sell === v} onClick={() => setSell(v)}
+                        className={`rounded-xl border-2 p-3 text-left ${sell === v ? 'border-marigold bg-white' : 'border-gray-200 bg-white/60'}`}>
+                        <span className="block text-sm font-semibold text-gray-900">{title}</span>
+                        <span className="mt-0.5 block text-xs text-gray-500">{desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-bone">
                     <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
                     <span>I'm the organizer of these events, or I have permission to post them on TapIN.</span>
                   </label>
@@ -324,9 +339,9 @@ export default function ImportEvents() {
                     </p>
                   )}
                   <button type="button" onClick={importSelected} disabled={!confirmed || chosenCount === 0 || importing} className="mt-3 w-full rounded-lg bg-marigold px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 sm:w-auto">
-                    {importing ? 'Importing…' : `Import ${chosenCount} as draft${chosenCount === 1 ? '' : 's'}`}
+                    {importing ? 'Copying…' : `${sell === 'tapin' ? 'Copy' : 'Import'} ${chosenCount} as draft${chosenCount === 1 ? '' : 's'}`}
                   </button>
-                  <p className="mt-2 text-xs text-muted">Tickets stay on the original site. Your TapIN event page will link people there.</p>
+                  <p className="mt-2 text-xs text-muted">{sell === 'tapin' ? 'Next, add your ticket types and prices, then publish. If you were selling elsewhere, close sales there so the same seats aren\u2019t sold twice.' : 'Tickets stay on the original site. Your TapIN event page will link people there.'}</p>
                 </div>
               )}
             </>
@@ -337,14 +352,14 @@ export default function ImportEvents() {
       {result && (
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
           <h2 className="font-display text-xl font-bold text-bone">
-            {result.created.length > 0 ? `Imported ${result.created.length} event${result.created.length === 1 ? '' : 's'} as drafts` : 'Nothing new was imported'}
+            {result.created.length > 0 ? `${sell === 'tapin' ? 'Copied' : 'Imported'} ${result.created.length} event${result.created.length === 1 ? '' : 's'} as drafts` : 'Nothing new was imported'}
           </h2>
-          {result.created.length > 0 && <p className="mt-0.5 text-sm text-muted">Review each one, add any missing details, then publish when it's ready.</p>}
+          {result.created.length > 0 && <p className="mt-0.5 text-sm text-muted">{sell === 'tapin' ? 'Open each one to add ticket types and prices, check the details, then publish.' : 'Review each one, add any missing details, then publish when it\u2019s ready.'}</p>}
           <div className="mt-3 flex flex-col gap-2">
             {result.created.map((c) => (
               <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2.5">
                 <span className="min-w-0 truncate text-sm font-medium text-gray-900">{c.title}</span>
-                <Link to={`/organizer/events/${c.id}/edit`} className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-marigold hover:border-marigold">Review &amp; publish</Link>
+                <Link to={`/organizer/events/${c.id}/edit`} className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-marigold hover:border-marigold">{sell === 'tapin' ? 'Add tickets & publish' : 'Review & publish'}</Link>
               </div>
             ))}
             {result.skipped.map((s, i) => (

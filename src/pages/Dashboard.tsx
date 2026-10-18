@@ -237,7 +237,7 @@ export default function Dashboard() {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <Link to="/organizer/import" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold">
-            Import events
+            Copy events from a link
           </Link>
         <Link
           to="/organizer/new"

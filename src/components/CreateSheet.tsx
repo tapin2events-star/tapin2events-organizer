@@ -66,7 +66,7 @@ export default function CreateSheet({ onClose }: { onClose: () => void }) {
             color="linear-gradient(135deg,#4F46E5,#14B8A6)" title="Create an event" desc="Snap your flyer and we'll fill in the details" onClick={() => go('/organizer/new')}>
             <div className="flex gap-4 border-t border-gray-100 px-4 py-2.5 text-sm">
               <button type="button" onClick={() => go('/organizer/new?start=scratch')} className="font-medium text-marigold">Start from scratch</button>
-              <button type="button" onClick={() => go('/organizer/import')} className="font-medium text-marigold">Import from a link</button>
+              <button type="button" onClick={() => go('/organizer/import')} className="font-medium text-marigold">Copy from a link</button>
             </div>
           </Option>
           {isOrganizer && (

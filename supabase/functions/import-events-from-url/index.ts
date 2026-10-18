@@ -4,7 +4,8 @@ import { easternToIso, fixRange, nowLocal, parseDate, parseTime, toLocal } from 
 
 // Imports events from a link an organizer pastes (their website, Eventbrite, a
 // calendar page). action "preview" reads the page and returns what it found;
-// action "create" saves the chosen events as drafts.
+// action "create" saves the chosen events as drafts. sell: "tapin" (default) copies the event so tickets
+// are sold on TapIN; "external" keeps a link to buy tickets on the original site.
 //
 // Reading order: the page's built-in schema.org event data first (free and
 // exact); otherwise Claude reads the page text: Haiku for single-event pages,
@@ -518,6 +519,7 @@ Deno.serve(async (req) => {
     // ----- Create: save the chosen events as drafts -----
     if (body.action === "create" && user) {
       const chosen = (Array.isArray(body.events) ? body.events : []).slice(0, MAX_CREATE) as Record<string, unknown>[];
+      const sellOnTapin = body.sell !== "external";
       if (chosen.length === 0) return respond({ error: "Choose at least one event to import." }, 400);
       const created: { id: string; title: string }[] = [];
       const skipped: { title: string; reason: string; existing_event_id?: string }[] = [];
@@ -567,7 +569,7 @@ Deno.serve(async (req) => {
           event_type: isFree ? "free" : "paid",
           ticket_price: isFree ? 0 : price ?? 0,
           poster_url: posterUrl,
-          external_ticket_url: ticketUrl,
+          external_ticket_url: sellOnTapin ? null : ticketUrl,
           import_source_url: key,
           status: "draft",
           organizer_id: user.id,
@@ -576,7 +578,7 @@ Deno.serve(async (req) => {
         if (insErr || !row) { console.error("[import-events] insert failed", insErr); skipped.push({ title, reason: "couldn't be saved" }); continue; }
         created.push({ id: row.id, title });
       }
-      console.log(`[import-events] ${user.email} created=${created.length} skipped=${skipped.length}`);
+      console.log(`[import-events] ${user.email} sell=${sellOnTapin ? "tapin" : "external"} created=${created.length} skipped=${skipped.length}`);
       return respond({ created, skipped });
     }
 
