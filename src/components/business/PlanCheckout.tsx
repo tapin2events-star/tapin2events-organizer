@@ -47,6 +47,12 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
       const r = await load();
       const leadsNow = (r.status?.orgs ?? []).filter((o) => o.role === 'owner' || o.role === 'admin');
       if (r.artist?.live || (!org && (preferArtist || leadsNow.length === 0))) setPlan('artist');
+      const want = q.get('pack');
+      if (want && !r.artist?.live && leadsNow.length > 0) {
+        if (want === 'business') setPlan('business');
+        else { setPlan('essentials'); if (want !== 'essentials') setTimeout(() => setPacks((x) => (x.includes(want as PackId) ? x : [...x, want as PackId])), 50); }
+      }
+      if (window.location.hash === '#get-plan') setTimeout(() => document.getElementById('get-plan')?.scrollIntoView({ behavior: 'smooth' }), 400);
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const leads = useMemo(() => (st?.orgs ?? []).filter((o) => o.role === 'owner' || o.role === 'admin'), [st]);

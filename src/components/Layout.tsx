@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import UpgradePrompt from './business/UpgradePrompt';
 import { useDisplayPrefs } from '../lib/display';
 import HelpButton from './HelpPanel';
 import { effectiveRoles, reloadSetup, useSetup } from '../lib/setup';
@@ -226,6 +227,7 @@ export default function Layout() {
       </main>
 
       {!whiteLabel && <BottomTabBar />}
+      <UpgradePrompt />
     </div>
   );
 }

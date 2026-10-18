@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import FeatureLock from './FeatureLock';
 import PremiumBadge, { PremiumNotice } from './PremiumBadge';
 import { useFeature } from '../../lib/preview';
 import FeatureFeedback from '../feedback/FeatureFeedback';
@@ -16,7 +17,7 @@ const Stat = ({ value, label, tone = '' }: { value: string | number; label: stri
 interface PromoEvent { id: string; title: string; start_date: string | null; links: number; visits: number; tickets: number; revenue: number; top_link: string | null; boost: 'live' | 'scheduled' | 'ended' | null; upcoming: boolean }
 interface PromoSummary { visits: number; tickets: number; revenue: number; live_boosts: number; events: PromoEvent[]; promoters: { email: string; name: string | null; events: number; tickets: number; revenue: number; commission: number }[] }
 
-export function OrgPromoteTab({ orgId }: { orgId: string }) {
+function OrgPromoteTabInner({ orgId }: { orgId: string }) {
   const [s, setS] = useState<PromoSummary | null>(null);
   const [pick, setPick] = useState('');
   useEffect(() => { supabase.rpc('org_promotion_summary', { p_org_id: orgId }).then(({ data }) => setS((data ?? null) as PromoSummary | null)); }, [orgId]);
@@ -99,7 +100,7 @@ export function useOrgAttendance(orgId: string, on: boolean) {
 
 interface Attendee { email: string; full_name: string | null; photo: string | null; events: number; tickets: number; spent: number; last_event: string | null; last_date: string | null }
 
-export function OrgAttendees({ orgId, orgName }: { orgId: string; orgName: string }) {
+function OrgAttendeesInner({ orgId, orgName }: { orgId: string; orgName: string }) {
   const [rows, setRows] = useState<Attendee[] | null>(null);
   const [q, setQ] = useState('');
   useEffect(() => { supabase.rpc('org_attendees', { p_org_id: orgId }).then(({ data }) => setRows((data ?? []) as Attendee[])); }, [orgId]);
@@ -151,7 +152,7 @@ interface Sales { tickets: number; invoices: number; merch: number; donations: n
   by_event: { id: string; title: string; start_date: string | null; gross: number; refunds: number; tickets_sold: number; registrations: number }[]; by_month: { month: string; gross: number }[] }
 const PERIODS = [{ id: 'month', label: 'This month' }, { id: 'year', label: 'This year' }, { id: 'all', label: 'All time' }] as const;
 
-export function OrgSales({ orgId }: { orgId: string }) {
+function OrgSalesInner({ orgId }: { orgId: string }) {
   const planPageOn = useFeature('business_plan_page');
   const [period, setPeriod] = useState<(typeof PERIODS)[number]['id']>('year');
   const [s, setS] = useState<Sales | null>(null);
@@ -215,4 +216,16 @@ export function OrgSales({ orgId }: { orgId: string }) {
       )}
     </section>
   );
+}
+
+export function OrgPromoteTab({ orgId }: { orgId: string }) {
+  return <FeatureLock orgId={orgId} feature="insights" title="Promotion insights"><OrgPromoteTabInner orgId={orgId} /></FeatureLock>;
+}
+
+export function OrgAttendees({ orgId, orgName }: { orgId: string; orgName: string }) {
+  return <FeatureLock orgId={orgId} feature="insights" title="Your attendee list"><OrgAttendeesInner orgId={orgId} orgName={orgName} /></FeatureLock>;
+}
+
+export function OrgSales({ orgId }: { orgId: string }) {
+  return <FeatureLock orgId={orgId} feature="insights" title="Sales across your events"><OrgSalesInner orgId={orgId} /></FeatureLock>;
 }
