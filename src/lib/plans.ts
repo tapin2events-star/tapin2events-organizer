@@ -34,7 +34,7 @@ export const PACKS: { id: PackId; icon: string; name: string; price: { month: nu
 ];
 export const BUSINESS_EXTRAS: Feature[] = [
   { key: 'featured', icon: '⭐', name: 'Featured on Discover', desc: 'Your organization in the Featured row' },
-  { key: 'boost_credit', icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature your events in Discover' },
+  { key: 'boost_credit', icon: '🚀', name: '$15 monthly Boost credit', desc: 'A free 3-day boost in Discover\u2019s Promoted row every month' },
 ];
 
 export function planTotal(plan: PlanId | 'artist', interval: 'month' | 'year', packs: PackId[], extraClients: number, founding: boolean) {
@@ -51,5 +51,5 @@ export const ARTIST_PLAN = { month: 10, year: 100 };
 export const ARTIST_FEATURES: Feature[] = [
   { key: 'artist_video', icon: '🎬', name: 'Video header on your artist profile', desc: 'A trailer at the top of your profile' },
   { key: 'featured_artist', icon: '⭐', name: 'Featured Artist', desc: 'Shown first in Artists & vendors, with a Featured badge' },
-  { key: 'boost_credit', icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature your shows in Discover' },
+  { key: 'boost_credit', icon: '🚀', name: '$10 monthly Boost credit', desc: 'Toward boosting your shows in Discover\u2019s Promoted row' },
 ];

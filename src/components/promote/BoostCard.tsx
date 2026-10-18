@@ -15,7 +15,9 @@ export default function BoostCard({ eventId }: { eventId: string }) {
   const [start, setStart] = useState(() => new Date().toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [credit, setCredit] = useState<{ amount: number; available: number; plan: string | null; resets?: string } | null>(null);
   const load = useCallback(async () => {
+    supabase.rpc('boost_credit_status', { p_event_id: eventId }).then(({ data }) => setCredit((data ?? null) as typeof credit));
     const [{ data: e }, { data: b }] = await Promise.all([
       supabase.from('events').select('status, start_date, end_date, is_test').eq('id', eventId).maybeSingle(),
       supabase.rpc('event_boosts_for', { p_event_id: eventId }),
@@ -37,6 +39,11 @@ export default function BoostCard({ eventId }: { eventId: string }) {
   async function buy() {
     setBusy(true); setMsg(null);
     const { data, error } = await supabase.functions.invoke('boost-manage', { body: { action: 'create', event_id: eventId, days, start_date: start, returnBase: `${window.location.origin}${import.meta.env.BASE_URL}` } });
+    if (!error && data?.activated) {
+      setBusy(false);
+      setMsg({ ok: true, text: `🎉 Boost started with your Boost credit, no payment needed. ${new Date(`${start}T12:00:00`).getTime() <= Date.now() + 86400000 ? 'It\u2019s live in Discover now.' : 'It starts on your chosen date.'}` });
+      return load();
+    }
     if (error || !data?.url) {
       let m = "Couldn't start the boost.";
       try { const j = await (error as { context?: Response })?.context?.json(); if (j?.error) m = j.error; } catch { /* default */ }
@@ -49,6 +56,8 @@ export default function BoostCard({ eventId }: { eventId: string }) {
   const end = Date.parse(ev.end_date || ev.start_date || '');
   const canBoost = ev.status === 'published' && !ev.is_test && Number.isFinite(end) && end > Date.now();
   const pkg = PACKAGES.find((p) => p.days === days)!;
+  const applied = Math.min(pkg.price, Math.max(0, Number(credit?.available ?? 0)));
+  const due = Math.round((pkg.price - applied) * 100) / 100;
   const now = Date.now();
   const shown = boosts.filter((b) => b.status !== 'pending');
   return (
@@ -73,13 +82,17 @@ export default function BoostCard({ eventId }: { eventId: string }) {
           <label className="mt-3 block text-xs font-medium text-gray-500">Start
             <input type="date" value={start} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setStart(e.target.value)} className="mt-1 block h-12 w-full appearance-none rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900" />
           </label>
+          {credit && credit.amount > 0 && (
+            <p className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">🎁 <strong>${Number(credit.available).toFixed(0)} Boost credit</strong> left this month with your {credit.plan} (${credit.amount}/month{credit.resets ? `, resets ${credit.resets}` : ''}). It's applied automatically.</p>
+          )}
           <div className="mt-3 space-y-1 rounded-xl bg-white/80 p-3 text-sm">
             <div className="flex justify-between text-gray-700"><span>Boost, {pkg.days} days</span><span>${pkg.price.toFixed(2)}</span></div>
-            <div className="flex justify-between text-gray-700"><span>Processing fee</span><span>${fee(pkg.price).toFixed(2)}</span></div>
-            <div className="flex justify-between border-t border-gray-200 pt-1 font-bold text-gray-900"><span>Total</span><span>${(pkg.price + fee(pkg.price)).toFixed(2)}</span></div>
+            {applied > 0 && <div className="flex justify-between text-green-700"><span>Boost credit</span><span>−${applied.toFixed(2)}</span></div>}
+            {due > 0 && <div className="flex justify-between text-gray-700"><span>Processing fee</span><span>${fee(due).toFixed(2)}</span></div>}
+            <div className="flex justify-between border-t border-gray-200 pt-1 font-bold text-gray-900"><span>Total</span><span>{due > 0 ? `$${(due + fee(due)).toFixed(2)}` : 'Free with credit'}</span></div>
             <p className="text-xs text-gray-500">If the event is cancelled, unused days are refunded. The processing fee isn't refundable.</p>
           </div>
-          <button onClick={buy} disabled={busy} className="mt-3 w-full rounded-xl bg-marigold py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Opening checkout…' : `Boost for ${pkg.days} days`}</button>
+          <button onClick={buy} disabled={busy} className="mt-3 w-full rounded-xl bg-marigold py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? (due > 0 ? 'Opening checkout…' : 'Starting…') : due > 0 ? `Boost for ${pkg.days} days` : `Boost for ${pkg.days} days with credit`}</button>
         </>
       )}
       {shown.some((b) => b.status === 'paid' || b.status === 'refunded') && <FeatureFeedback feature="boost" label="Boost" className="mt-4" />}
