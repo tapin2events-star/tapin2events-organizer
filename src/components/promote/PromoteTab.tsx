@@ -52,7 +52,6 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
         <button onClick={() => setCreating(true)} className="rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-white">+ New link</button>
       </div>
       {payoutsOn && stats && <PromoterPayoutsCard eventId={eventId} links={stats.links} onLinksChanged={load} />}
-      <WebsiteEmbedCard eventId={eventId} />
       {msg && <p role="status" className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{msg}</p>}
 
       {stats === null ? <ListSkeleton rows={3} className="mt-4" /> : (
@@ -100,6 +99,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
         </>
       )}
       {creating && <NewLinkSheet eventId={eventId} onClose={() => setCreating(false)} onDone={(code) => { setCreating(false); navigator.clipboard?.writeText(shortUrl(code)); flash('Link created and copied.'); load(); }} />}
+      <div className="mt-10"><WebsiteEmbedCard eventId={eventId} /></div>
     </div>
   );
 }
