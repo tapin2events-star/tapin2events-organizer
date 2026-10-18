@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { effectiveRoles, useSetup } from '../lib/setup';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -26,6 +27,10 @@ export default function CreateSheet({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   const go = (to: string) => { onClose(); navigate(to); };
+  // Organizers (and organizations) can start an organization right from here.
+  const setup = useSetup();
+  const myRoles = effectiveRoles(setup);
+  const isOrganizer = myRoles.has('organizer') || myRoles.has('organization') || !!setup?.is_admin;
 
   const Option = ({ icon, color, title, desc, onClick, children }: { icon: ReactNode; color: string; title: string; desc: string; onClick: () => void; children?: ReactNode }) => (
     <div className="rounded-2xl border border-gray-200 bg-white">
@@ -64,6 +69,10 @@ export default function CreateSheet({ onClose }: { onClose: () => void }) {
               <button type="button" onClick={() => go('/organizer/import')} className="font-medium text-marigold">Import from a link</button>
             </div>
           </Option>
+          {isOrganizer && (
+            <Option icon={svg('M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 10h.01M15 10h.01')}
+              color="linear-gradient(135deg,#0F1B3D,#1E3A8A)" title={setup?.has_org ? 'Another organization' : 'Create an organization'} desc="A page for your group or business, with team tools" onClick={() => go('/business#create-org')} />
+          )}
           {hasResource === false && (
             <Option icon={svg('M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM19 10v2a7 7 0 0 1-14 0v-2M12 19v3')}
               color="linear-gradient(135deg,#7C3AED,#C026D3)" title="Offer my services" desc="Get booked as an artist, vendor, or service" onClick={() => go('/resources/new')} />

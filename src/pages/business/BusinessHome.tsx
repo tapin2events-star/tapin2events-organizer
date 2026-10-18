@@ -19,7 +19,11 @@ function BusinessHomeInner() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [orgs, setOrgs] = useState<MyOrg[] | null>(null);
-  const [creating, setCreating] = useState(false);
+  // Opened from the + menu ("Create an organization"): show the form right away.
+  const [creating, setCreating] = useState(() => typeof window !== 'undefined' && window.location.hash === '#create-org');
+  useEffect(() => {
+    if (window.location.hash === '#create-org') setTimeout(() => document.getElementById('create-org')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+  }, []);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
