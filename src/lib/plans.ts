@@ -11,6 +11,7 @@ export const ESSENTIALS: Feature[] = [
   { key: 'promotion_links', icon: '📣', name: 'Promotion links', desc: 'Track every link and promoter' },
   { key: 'invoices', icon: '🧾', name: 'Invoices', desc: 'Bill companies for group tickets' },
   { key: 'meetings', icon: '📝', name: 'Meeting extras', desc: 'Recurring meetings, minutes, agenda templates' },
+  { key: 'embed_polish', icon: '🌐', name: 'Website embed, your way', desc: 'Your brand colors and font, list, grid or calendar layouts, and no "Tickets by TapIN" link' },
 ];
 export const PACKS: { id: PackId; icon: string; name: string; price: { month: number; year: number }; for: string; features: Feature[] }[] = [
   { id: 'performers', icon: '🎤', name: 'Performers & Promotion', price: { month: 5, year: 50 }, for: 'Shows, concerts and open mics', features: [
