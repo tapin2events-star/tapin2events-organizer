@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useEventWhiteLabel } from '../lib/whiteLabel';
+import { useBrandedTab, useEventWhiteLabel } from '../lib/whiteLabel';
 import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
 import { useFeature } from '../lib/preview';
 import TransferTicket, { canTransfer } from '../components/TransferTicket';
@@ -48,6 +48,7 @@ export default function TicketPass() {
   const location = useLocation();
   const [data, setData] = useState<PassData | null>(null);
   const whiteLabel = useEventWhiteLabel((data as { event?: { id?: string } } | null)?.event?.id ?? null);
+  useBrandedTab(whiteLabel, (data as { event?: { title?: string } } | null)?.event?.title ? `Your ticket: ${(data as { event: { title: string } }).event.title}` : 'Your ticket');
   const { user } = useAuth();
   const invoicesOn = useFeature('invoices');
   const networkingOn = useFeature('networking');

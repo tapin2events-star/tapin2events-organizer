@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import BrandedSignIn from '../BrandedSignIn';
 import EmbeddedCheckoutSheet from '../events/EmbeddedCheckoutSheet';
 import { publishableKey } from '../../lib/embeddedCheckout';
 import { useWhiteLabel } from '../../lib/whiteLabel';
@@ -28,6 +29,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   const [busy, setBusy] = useState(false);
   const [addOns, setAddOns] = useState<AddOnPick[]>([]);
   const whiteLabel = useWhiteLabel();
+  const [brandedSignIn, setBrandedSignIn] = useState(false);
   const [embedSecret, setEmbedSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Promo code
@@ -77,7 +79,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   }
 
   async function go() {
-    if (!user) { navigate('/login', { state: { from: location.pathname } }); return; }
+    if (!user) { if (whiteLabel) { setBrandedSignIn(true); return; } navigate('/login', { state: { from: location.pathname } }); return; }
     const items = chosen.map((t) => ({ tier_id: t.id, qty: qty[t.id] }));
     if (beforeContinue) {
       const next = await beforeContinue(items);
@@ -205,7 +207,8 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
         {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : (addOns.length ? 'Checkout with merch' : `Checkout · ${money(subtotal + fees + giftCharge)}`)}
       </button>
       {!user && <p className="mt-2 text-center text-xs text-gray-500">Already have an account? <Link to="/login" className="text-marigold">Sign in</Link></p>}
-    {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
+    {whiteLabel && brandedSignIn && <BrandedSignIn brand={whiteLabel} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
+      {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
       </div>
   );
 }

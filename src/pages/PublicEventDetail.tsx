@@ -3,7 +3,8 @@ import EventHighlights from '../components/video/EventHighlights';
 import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing } from '../components/video/HeaderVideo';
 import EmbeddedCheckoutSheet from '../components/events/EmbeddedCheckoutSheet';
 import { publishableKey } from '../lib/embeddedCheckout';
-import { useEventWhiteLabel } from '../lib/whiteLabel';
+import { useBrandedTab, useEventWhiteLabel } from '../lib/whiteLabel';
+import BrandedSignIn from '../components/BrandedSignIn';
 import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
 import MerchAddOns, { type AddOnPick } from '../components/events/MerchAddOns';
 import GalaGuestCard from '../components/events/GalaGuestCard';
@@ -66,6 +67,8 @@ export default function PublicEventDetail() {
   // Business / nonprofit events: organization brand, agenda, speakers, sponsors (TapIN for Business).
   const biz = useBusinessData(event);
   const whiteLabel = useEventWhiteLabel(event?.id);
+  useBrandedTab(whiteLabel, event?.title);
+  const [brandedSignIn, setBrandedSignIn] = useState(false);
   const headerVideo = useHeaderVideo(event?.id);
   const headerProcessing = useHeaderVideoProcessing(event?.id);
   const videoHeadersOn = useFeature('video_headers');
@@ -202,6 +205,7 @@ export default function PublicEventDetail() {
   async function toggleSave() {
     if (!id) return;
     if (!user?.email) {
+      if (whiteLabel) { setBrandedSignIn(true); return; }
       navigate('/login', { state: { from: location.pathname } });
       return;
     }
@@ -370,6 +374,7 @@ export default function PublicEventDetail() {
   return (
     <div className="min-h-screen bg-ink">
       {whiteLabel && <WhiteLabelHeader brand={whiteLabel} />}
+      {whiteLabel && brandedSignIn && <BrandedSignIn brand={whiteLabel} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
       {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? event?.title ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
       {isPreview && (
         <div className="sticky top-0 z-40 border-b border-amber-300 bg-amber-100 px-4 py-2.5 sm:px-6">
@@ -599,7 +604,7 @@ export default function PublicEventDetail() {
               </div>
             ) : !user ? (
               <button
-                onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                onClick={() => (whiteLabel ? setBrandedSignIn(true) : navigate('/login', { state: { from: location.pathname } }))}
                 className="mt-3 rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
               >
                 Sign in to choose seats
@@ -732,7 +737,7 @@ export default function PublicEventDetail() {
               </div>
             ) : !user ? (
               <button
-                onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                onClick={() => (whiteLabel ? setBrandedSignIn(true) : navigate('/login', { state: { from: location.pathname } }))}
                 className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
               >
                 Sign in to {isFree ? 'register' : 'buy a ticket'}
@@ -829,7 +834,7 @@ export default function PublicEventDetail() {
                   </div>
                   {!user ? (
                     <button
-                      onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                      onClick={() => (whiteLabel ? setBrandedSignIn(true) : navigate('/login', { state: { from: location.pathname } }))}
                       className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90"
                     >
                       Sign in to buy

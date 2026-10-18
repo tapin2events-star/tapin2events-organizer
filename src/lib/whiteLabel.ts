@@ -32,3 +32,16 @@ export function useEventWhiteLabel(eventId: string | null | undefined): WhiteLab
   useEffect(() => { setWhiteLabel(brand); return () => setWhiteLabel(null); }, [brand]);
   return brand;
 }
+
+// White-labeled pages: the browser tab shows the event's name and the organization's logo (restored on leave).
+export function useBrandedTab(brand: WhiteLabelBrand | null, title: string | null | undefined) {
+  useEffect(() => {
+    if (!brand) return;
+    const prevTitle = document.title;
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const prevIcon = icon?.href ?? null;
+    document.title = title ? `${title} · ${brand.name}` : brand.name;
+    if (icon && brand.logo) icon.href = brand.logo;
+    return () => { document.title = prevTitle; if (icon && prevIcon) icon.href = prevIcon; };
+  }, [brand, title]);
+}
