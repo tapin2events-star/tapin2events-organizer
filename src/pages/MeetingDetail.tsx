@@ -88,7 +88,7 @@ export default function MeetingDetail() {
           {m.video_url && m.status === 'scheduled' && <a href={m.video_url} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">💻 Join the call</a>}
           {m.status === 'scheduled' && !past && (
             <>
-              <a href={googleCalendarUrl(m)} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700">Add to Google Calendar</a>
+              <a href={googleCalendarUrl(m, m.can_manage ? (m.invitees ?? []).map((i) => i.email).filter((e) => e.toLowerCase() !== (user?.email ?? '').toLowerCase()) : [])} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700">{m.can_manage && (m.invitees ?? []).length > 1 ? 'Add to Google Calendar (with guests)' : 'Add to Google Calendar'}</a>
               <button onClick={() => downloadIcs(m)} className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700">Apple / Outlook (.ics)</button>
             </>
           )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { extractMeetingLink } from '../../lib/meetings';
 import { AGENDA_TEMPLATES } from '../../lib/meetingTemplates';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -115,13 +116,15 @@ export function MeetingSheet({ targets, defaultTarget = '', initial, onClose, on
   async function save() {
     if (!title.trim()) return setErr('Give the meeting a name.');
     if (!date) return setErr('Pick a date.');
-    if (videoUrl.trim() && !/^https?:\/\//i.test(videoUrl.trim())) return setErr('The video link should start with https://');
+    const link = videoUrl.trim() ? extractMeetingLink(videoUrl) : '';
+    if (videoUrl.trim() && !link) return setErr("That doesn't look like a meeting link. Paste the link itself (for example https://meet.google.com/abc-defg-hij).");
+    if (link && link !== videoUrl.trim()) setVideoUrl(link);
     setBusy(true); setErr(null);
     const starts = toIso(date, time);
     const [kind, id] = target.split(':');
     const { data, error } = await supabase.rpc('save_meeting', { p: {
       id: initial?.id ?? null, title: title.trim(), starts_at: starts, ends_at: new Date(new Date(starts).getTime() + duration * 60000).toISOString(),
-      location: location.trim(), video_url: videoUrl.trim(), agenda, event_id: kind === 'event' ? id : null, organization_id: kind === 'org' ? id : null, invitees,
+      location: location.trim(), video_url: link || '', agenda, event_id: kind === 'event' ? id : null, organization_id: kind === 'org' ? id : null, invitees,
     } });
     setBusy(false);
     if (error || !data) return setErr(error?.message && !/function|permission denied/i.test(error.message) ? error.message : "Couldn't save the meeting.");
@@ -152,7 +155,7 @@ export function MeetingSheet({ targets, defaultTarget = '', initial, onClose, on
       <label className="mt-3 block text-xs font-medium text-gray-500">How long
         <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} className={field}>{DURATIONS.map(([m, l]) => <option key={m} value={m}>{l}</option>)}</select>
       </label>
-      <label className="mt-3 block text-xs font-medium text-gray-500">Video link (optional)<input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://meet.google.com/… or Zoom link" className={field} inputMode="url" /></label>
+      <label className="mt-3 block text-xs font-medium text-gray-500">Video link (optional)<input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} onPaste={(e) => { const text = e.clipboardData.getData('text/plain'); const html = e.clipboardData.getData('text/html'); const href = html.match(/href="(https?:\/\/[^"]+)"/i)?.[1]; const link = extractMeetingLink(text) ?? (href ? extractMeetingLink(href) : null); if (link) { e.preventDefault(); setVideoUrl(link); } }} placeholder="https://meet.google.com/… or Zoom link" className={field} inputMode="url" /></label>
       <label className="mt-3 block text-xs font-medium text-gray-500">Place (optional)<input value={location} maxLength={300} onChange={(e) => setLocation(e.target.value)} placeholder="Coffee shop, studio, office…" className={field} /></label>
       {!editing && <TargetAndPeople targets={targets} target={target} setTarget={setTarget} invitees={invitees} setInvitees={setInvitees} />}
       {editing && <p className="mt-3 text-xs text-gray-500">Changing the time asks everyone to RSVP again. Invite more people from the meeting page.</p>}
@@ -192,7 +195,7 @@ export function PollSheet({ targets, defaultTarget = '', onClose }: { targets: P
     setBusy(true); setErr(null);
     const [kind, id] = target.split(':');
     const { data, error } = await supabase.rpc('create_poll', { p: {
-      title: title.trim(), duration_minutes: duration, location: location.trim(), video_url: videoUrl.trim(),
+      title: title.trim(), duration_minutes: duration, location: location.trim(), video_url: videoUrl.trim() ? (extractMeetingLink(videoUrl) ?? videoUrl.trim()) : '',
       options: [...new Set(filled.map((o) => toIso(o.date, o.time)))], invitees,
       event_id: kind === 'event' ? id : null, organization_id: kind === 'org' ? id : null,
     } });
@@ -229,7 +232,7 @@ export function PollSheet({ targets, defaultTarget = '', onClose }: { targets: P
         {options.length < 8 && <button type="button" onClick={() => setOptions([...options, { date: options[options.length - 1]?.date ?? '', time: options[options.length - 1]?.time ?? '19:00' }])} className="mt-2 min-h-[44px] w-full rounded-xl border border-dashed border-gray-300 text-sm font-semibold text-marigold">+ Add another time</button>}
         <p className="mt-1 text-xs text-gray-500">{filled.length} of {options.length} times picked · at least 2 needed</p>
       </div>
-      <label className="mt-3 block text-xs font-medium text-gray-500">Video link (optional)<input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://…" className={field} inputMode="url" /></label>
+      <label className="mt-3 block text-xs font-medium text-gray-500">Video link (optional)<input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} onPaste={(e) => { const text = e.clipboardData.getData('text/plain'); const html = e.clipboardData.getData('text/html'); const href = html.match(/href="(https?:\/\/[^"]+)"/i)?.[1]; const link = extractMeetingLink(text) ?? (href ? extractMeetingLink(href) : null); if (link) { e.preventDefault(); setVideoUrl(link); } }} placeholder="https://…" className={field} inputMode="url" /></label>
       <label className="mt-3 block text-xs font-medium text-gray-500">Place (optional)<input value={location} maxLength={300} onChange={(e) => setLocation(e.target.value)} className={field} /></label>
       <TargetAndPeople targets={targets} target={target} setTarget={setTarget} invitees={invitees} setInvitees={setInvitees} />
       {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
