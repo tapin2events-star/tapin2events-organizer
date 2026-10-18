@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { MoveEventToOrgSheet } from '../business/MoveEvents';
 import { Link } from 'react-router-dom';
 import type { TapEvent } from '../../lib/types';
 import { useEscapeKey } from '../../lib/useEscapeKey';
@@ -23,6 +26,8 @@ export default function EventActions({
 }) {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState<'delete' | 'cancel' | null>(null);
+  const [moving, setMoving] = useState(false);
+  const { user } = useAuth();
   const ref = useRef<HTMLDivElement>(null);
   useEscapeKey(() => setOpen(false), open);
 
@@ -53,6 +58,8 @@ export default function EventActions({
         {open && (
           <div className="mt-1 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-lg">
             <Link to={`/organizer/events/${event.id}/edit`} className="block px-4 py-2.5 text-gray-800 hover:bg-gray-50">Edit event</Link>
+            {!event.organization_id && event.organizer_id === user?.id && <button type="button" onClick={() => { setOpen(false); setMoving(true); }} className="block w-full px-4 py-2.5 text-left text-gray-800 hover:bg-gray-50">Move to organization…</button>}
+            {event.organization_id && (event.event_kind ?? 'community') === 'community' && <button type="button" onClick={async () => { setOpen(false); if (!window.confirm('Remove this event from its organization? It will be hosted under your name, and future ticket money goes to your own payout account.')) return; const { error } = await supabase.rpc('remove_event_from_org', { p_event_id: event.id }); if (error) window.alert(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't remove it."); else window.location.reload(); }} className="block w-full px-4 py-2.5 text-left text-gray-800 hover:bg-gray-50">Remove from organization</button>}
             <Link to={`/events/${event.id}`} className="block px-4 py-2.5 text-gray-800 hover:bg-gray-50">
               {event.status === 'draft' ? 'Preview' : 'View live page'}
             </Link>
@@ -80,6 +87,8 @@ export default function EventActions({
       {confirm === 'delete' && (
         <DeleteEventDialog event={event} seriesChildren={seriesChildren} onClose={() => setConfirm(null)} onDeleted={(ids) => { setConfirm(null); onDeleted(ids); }} />
       )}
+
+      {moving && <MoveEventToOrgSheet eventId={event.id} eventTitle={event.title} onClose={() => setMoving(false)} onDone={(name) => { setMoving(false); window.alert(`Moved to ${name}.`); window.location.reload(); }} />}
     </>
   );
 }

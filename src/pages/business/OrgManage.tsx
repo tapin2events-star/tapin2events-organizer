@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AddExistingEventsSheet } from '../../components/business/MoveEvents';
 import WebsiteEmbedCard from '../../components/promote/WebsiteEmbedCard';
 import TeamPeopleShortcut from '../../components/business/TeamPeopleShortcut';
 import OrgReelManager from '../../components/video/OrgReelManager';
@@ -294,12 +295,22 @@ function EventsTab({ org, canEdit, insights = false, onAudience }: { org: Organi
   const attendance = useOrgAttendance(org.id, insights);
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; status: string; is_test: boolean }[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [movedMsg, setMovedMsg] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const reloadEvents = () => setReload((n) => n + 1);
+  const isLeadHere = canEdit;
   useEffect(() => {
     supabase.from('events').select('id, title, start_date, status, is_test').eq('organization_id', org.id).order('start_date', { ascending: false }).then(({ data }) => { setEvents((data ?? []) as typeof events); setEventsLoaded(true); });
-  }, [org.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [org.id, reload]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div>
-      {canEdit && <Link to={`/organizer/new?org=${org.id}&kind=${org.kind}`} className="inline-block rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">+ Create {org.kind === 'nonprofit' ? 'nonprofit' : 'business'} event</Link>}
+      {canEdit && <div className="flex flex-wrap gap-2">
+        <Link to={`/organizer/new?org=${org.id}&kind=${org.kind}`} className="inline-block rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">+ Create {org.kind === 'nonprofit' ? 'nonprofit' : org.kind === 'business' ? 'business' : 'an'} event</Link>
+        {isLeadHere && <button onClick={() => setAdding(true)} className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800">+ Add an existing event</button>}
+      </div>}
+      {movedMsg && <p role="status" className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">{movedMsg}</p>}
+      {adding && <AddExistingEventsSheet orgId={org.id} orgName={org.name} onClose={() => setAdding(false)} onDone={(n) => { setAdding(false); setMovedMsg(n ? `Added ${n} event${n === 1 ? '' : 's'} to ${org.name}.` : 'Those events are already in an organization.'); reloadEvents(); }} />}
       {events.length === 0 ? !eventsLoaded ? <ListSkeleton rows={3} className="mt-3" /> : <p className="mt-4 text-sm text-muted">No events yet.</p> : (
         <ul className="mt-4 flex flex-col gap-2">
           {events.map((e) => (
