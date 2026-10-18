@@ -889,7 +889,6 @@ export default function PublicEventDetail() {
         )}
 
         {networkingOn && id && <NetworkingInvite eventId={id} />}
-        {nearbyOn && <AroundTheVenue eventId={event.id} />}
         {videoHeadersOn && <EventHighlights eventId={event.id} eventTitle={event.title} ended={hasEnded} started={!!event.start_date && new Date(event.start_date).getTime() <= Date.now()} />}
         {galaOn && <GalaGuestCard eventId={event.id} />}
         {volunteersOn && <VolunteerCard eventId={event.id} />}
@@ -957,6 +956,8 @@ export default function PublicEventDetail() {
             })()}
           </div>
         )}
+
+        {nearbyOn && !event.is_online && <AroundTheVenue eventId={event.id} />}
 
         <ShopSection ownerType="event" ownerId={event.id} />
 

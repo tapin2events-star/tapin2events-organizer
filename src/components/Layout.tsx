@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import GetAppBanner from './GetAppBanner';
 import UpgradePrompt from './business/UpgradePrompt';
 import { useDisplayPrefs } from '../lib/display';
 import HelpButton from './HelpPanel';
@@ -222,6 +223,7 @@ export default function Layout() {
       <main className={whiteLabel
         ? 'mx-auto min-w-0 max-w-4xl flex-1 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:px-8'
         : 'min-w-0 flex-1 px-4 py-6 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:px-8 md:py-8 md:pt-8 md:pb-8'}>
+        {!whiteLabel && <div className="-mx-4 -mt-3 mb-4 md:hidden"><GetAppBanner /></div>}
         <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
         <ScrollToTop />
       </main>
