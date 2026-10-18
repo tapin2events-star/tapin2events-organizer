@@ -16,6 +16,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // Links: any link to the old site address (tapin2events-star.github.io/
 // tapin2events-organizer/) is rewritten to app.tapin2events.com before sending.
 //
+// Perks: ticket emails (payment and registration confirmations, ticket copies) for an event with local partners
+// get a "Your ticket unlocks N perks nearby" box above the footer (see the deployed function, v26).
+//
 // White-label: attendee emails about a white-labeled event (ticket confirmations, registrations, ticket copies,
 // reminders, event updates/cancellations, organizer messages) are re-skinned with the organization's logo, name
 // and colors, TapIN mentions are removed, they're sent from the organization's name, and replies go to the
