@@ -1174,7 +1174,7 @@ export default function EventForm() {
             {isAdmin && (
               <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 <input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} className="mt-0.5 h-4 w-4 accent-marigold" />
-                <span><strong>Test event</strong> (admin only)<span className="block text-xs">Only you and this event's team can see it, even when published. It never appears on Discover or in follower emails.</span></span>
+                <span><strong>Test event</strong> (admin only)<span className="block text-xs">Only TapIN admins can see it, even when published. It never appears on Discover or in follower emails.</span></span>
               </label>
             )}
           </>

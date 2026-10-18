@@ -232,7 +232,7 @@ function ComposeSheet({ orgId, counts, draft, onClose, onSent, onError }: { orgI
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
-    supabase.from('events').select('id, title, start_date').eq('organization_id', orgId).eq('status', 'published').gte('start_date', new Date().toISOString()).order('start_date')
+    supabase.from('events').select('id, title, start_date').eq('organization_id', orgId).eq('status', 'published').eq('is_test', false).gte('start_date', new Date().toISOString()).order('start_date')
       .then(({ data }) => setEvents((data ?? []) as typeof events));
   }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
