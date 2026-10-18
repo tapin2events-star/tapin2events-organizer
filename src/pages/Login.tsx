@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
+import GetAppBanner from '../components/GetAppBanner';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, SUSPENDED_MESSAGE } from '../context/AuthContext';
 import { isAppMode } from '../lib/displayMode';
@@ -115,6 +116,8 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink px-4">
+      {/* Get the TapIN app (Android, Chrome on iPhone, in-app browsers), signed out too. */}
+      <div className="fixed inset-x-0 top-0 z-50 md:hidden" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}><GetAppBanner /></div>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-900 mb-4">
