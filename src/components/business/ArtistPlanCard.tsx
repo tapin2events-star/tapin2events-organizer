@@ -42,7 +42,7 @@ export default function ArtistPlanCard({ compact = false }: { compact?: boolean 
       <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 ${live ? 'border-green-200 bg-green-50' : 'border-[#C9A227]/50 bg-[#C9A227]/10'}`}>
         <div className="min-w-0">
           <p className="font-semibold text-bone">{live ? '✓ 🎤 Artist plan' : '🎤 Artist plan · $10/month'}</p>
-          <p className="text-sm text-muted">{live ? `${p.interval === 'year' ? 'Yearly' : 'Monthly'} · ${p.cancel_at_period_end ? `ends ${day(p.renews_at)}` : `renews ${day(p.renews_at)}`}` : 'Video header on your profile, Featured Artist placement, and promotion tools for shows you host. Free for now.'}</p>
+          <p className="text-sm text-muted">{live ? `${p.interval === 'year' ? 'Yearly' : 'Monthly'} · ${p.cancel_at_period_end ? `ends ${day(p.renews_at)}` : `renews ${day(p.renews_at)}`}` : 'Video header on your profile, Featured Artist placement and Boost credit. Free for now.'}</p>
         </div>
         <Link to="/business/plan#artist-plan" className={`rounded-xl px-4 py-2 text-sm font-semibold ${live ? 'border border-gray-300 bg-white text-gray-700' : 'bg-[#C9A227] text-[#0F1B3D]'}`}>{live ? 'Manage' : 'See the Artist plan ›'}</Link>
       </div>
@@ -52,7 +52,7 @@ export default function ArtistPlanCard({ compact = false }: { compact?: boolean 
     <section id="artist-plan" className="mt-10 scroll-mt-24 rounded-2xl border-2 border-purple-300 bg-purple-50/40 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.15em] text-purple-700">For artists & performers</p>
       <h2 className="mt-1 font-display text-2xl font-bold text-bone">🎤 Artist plan · {money(ARTIST_PLAN.month)}/month</h2>
-      <p className="mt-1 text-sm text-muted">For individual artists, no organization needed. Stand out to organizers and fans, and promote the shows you host.</p>
+      <p className="mt-1 text-sm text-muted">For individual artists, no organization needed. Stand out to organizers and fans. Hosting your own shows? Add the Performers & Promotion pack (+$5/month) for promoter payouts and event video headers.</p>
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
         {ARTIST_FEATURES.map((f) => (
           <li key={f.key} className="flex items-start gap-3 rounded-xl border border-gray-200 bg-surface p-3">

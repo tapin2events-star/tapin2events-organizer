@@ -20,7 +20,7 @@ const PLAN_ICON: Record<string, string> = { essentials: '🌱', business: '⭐',
 // personally, with packs), with the live price, checkout or change.
 type UIPlan = PlanId | 'artist';
 interface MyArtist { status: string | null; interval: string | null; renews_at: string | null; cancel_at_period_end: boolean; live: boolean; packs: PackId[]; has_profile: boolean }
-const ARTIST_PACK_IDS: PackId[] = ['conference', 'fundraising', 'community'];
+const ARTIST_PACK_IDS: PackId[] = ['performers', 'conference', 'fundraising', 'community'];
 export default function PlanCheckout({ preferArtist = false }: { preferArtist?: boolean }) {
   const [st, setSt] = useState<Status | null>(null);
   const [artist, setArtist] = useState<MyArtist | null>(null);
@@ -104,7 +104,7 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
       )}
       {isArtist ? (
         <div className="mt-3 rounded-xl bg-purple-50 px-3 py-2 text-sm text-purple-900">
-          <strong>Billed to you personally.</strong> {artist?.live ? `🎤 Artist plan${artist.packs?.length ? ` + ${artist.packs.length} pack${artist.packs.length === 1 ? '' : 's'}` : ''} · ${artist.interval === 'year' ? 'yearly' : 'monthly'} · ${artist.cancel_at_period_end ? `ends ${day(artist.renews_at)}` : `renews ${day(artist.renews_at)}`}` : 'Video header on your artist profile, Featured Artist placement, and promotion tools for shows you host.'}
+          <strong>Billed to you personally.</strong> {artist?.live ? `🎤 Artist plan${artist.packs?.length ? ` + ${artist.packs.length} pack${artist.packs.length === 1 ? '' : 's'}` : ''} · ${artist.interval === 'year' ? 'yearly' : 'monthly'} · ${artist.cancel_at_period_end ? `ends ${day(artist.renews_at)}` : `renews ${day(artist.renews_at)}`}` : 'Video header on your artist profile, Featured Artist placement and Boost credit. Add packs for shows you host.'}
           {artist && !artist.has_profile && <Link to="/resources/new" className="ml-1 font-semibold underline">Create your artist profile</Link>}
         </div>
       ) : org ? (
@@ -138,7 +138,7 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
       {(plan === 'essentials' || isArtist) && (
         <div className="mt-4">
           <p className="text-sm font-semibold text-gray-900">Add packs{isArtist ? ' (for events you host)' : ''}</p>
-          {isArtist && <p className="text-xs text-gray-500">Performers & Promotion features are already included in the Artist plan.</p>}
+          {isArtist && <p className="text-xs text-gray-500">Hosting your own shows? Performers & Promotion adds automatic promoter payouts and event video headers.</p>}
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {packChoices.map((p) => (
               <li key={p.id}><label className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 ${packs.includes(p.id) ? 'border-marigold bg-white' : 'border-gray-200 bg-white'}`}>

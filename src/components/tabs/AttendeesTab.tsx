@@ -8,7 +8,7 @@ import { downloadCsv, fileSlug } from '../../lib/csv';
 import { DecideSheet, type Registrant } from '../business/RegistrationTab';
 import type { Ticket, TapEvent } from '../../lib/types';
 
-type T = Ticket & { tier?: { name?: string } | null; checked_in_at?: string | null; transferred_from?: string | null };
+type T = Ticket & { tier?: { name?: string } | null; checked_in_at?: string | null; transferred_from?: string | null; guest_name?: string | null };
 interface Person { email: string; name: string | null; tickets: T[]; qty: number; paid: number; checkedIn: boolean; answers: Record<string, unknown>; request: Registrant | null }
 
 // Event dashboard > Attendees: everyone coming in one place: their tickets, check-in, answers to your
@@ -79,7 +79,8 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
     return [...map.values()];
   }, [tickets, regs, names]);
   const pending = regs.filter((r) => r.request_status === 'pending');
-  const shown = people.filter((p) => !q.trim() || p.email.includes(q.trim().toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.trim().toLowerCase()));
+  const shown = people.filter((p) => !q.trim() || p.email.includes(q.trim().toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.trim().toLowerCase())
+    || p.tickets.some((t) => (t.guest_name ?? '').toLowerCase().includes(q.trim().toLowerCase())));
   const totalQty = people.reduce((n, p) => n + p.qty, 0);
   const checkedIn = people.filter((p) => p.checkedIn).length;
 
@@ -93,13 +94,13 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
     const { data: orders } = orderIds.length ? await supabase.from('orders').select('id, order_number, customer_name').in('id', orderIds) : { data: [] };
     const byId = new Map(((orders ?? []) as { id: string; order_number: string | null; customer_name: string | null }[]).map((o) => [o.id, o]));
     const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '');
-    const rows: unknown[][] = [['Name', 'Email', 'Ticket type', 'Section', 'Seat', 'Quantity', 'Price per ticket', 'Total paid', 'Status', 'Checked in', 'Checked in at', 'Registered', 'Order #', 'Request', ...questions.map((x) => x.label), ...(workshopsOn ? ['Sessions'] : [])]];
+    const rows: unknown[][] = [['Name', 'Guest name', 'Email', 'Ticket type', 'Section', 'Seat', 'Quantity', 'Price per ticket', 'Total paid', 'Status', 'Checked in', 'Checked in at', 'Registered', 'Order #', 'Request', ...questions.map((x) => x.label), ...(workshopsOn ? ['Sessions'] : [])]];
     for (const p of people) {
       const ans = [...questions.map((x) => answerText(p.answers[x.id])), ...(workshopsOn ? [(sessionsBy.get(p.email) ?? []).join('; ')] : [])];
-      if (!p.tickets.length) { rows.push([p.name ?? '', p.email, '', '', '', 0, '', '', '', 'No', '', '', '', p.request?.request_status ?? '', ...ans]); continue; }
+      if (!p.tickets.length) { rows.push([p.name ?? '', '', p.email, '', '', '', 0, '', '', '', 'No', '', '', '', p.request?.request_status ?? '', ...ans]); continue; }
       for (const t of p.tickets) {
         const o = t.order_id ? byId.get(t.order_id) : undefined;
-        rows.push([o?.customer_name || p.name || '', p.email, t.tier?.name || t.ticket_type, t.section_name ?? '', t.seat_assignment ?? '', t.quantity, t.price_paid, (t.price_paid || 0) * (t.quantity || 1), t.status,
+        rows.push([o?.customer_name || p.name || '', t.guest_name ?? '', p.email, t.tier?.name || t.ticket_type, t.section_name ?? '', t.seat_assignment ?? '', t.quantity, t.price_paid, (t.price_paid || 0) * (t.quantity || 1), t.status,
           t.checked_in_at || String(t.status) === 'used' ? 'Yes' : 'No', when(t.checked_in_at), when(t.created_at), o?.order_number ?? '', p.request?.request_status ?? '', ...ans]);
       }
     }
@@ -164,6 +165,7 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
                   <button type="button" onClick={() => setOpen(expanded ? null : p.email)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left" aria-expanded={expanded}>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-bone">{p.name || p.email}</span>
+                      {p.tickets.some((t) => t.guest_name) && <span className="block truncate text-xs text-gray-600">Guests: {p.tickets.map((t) => t.guest_name).filter(Boolean).join(', ')}</span>}
                       <span className="block truncate text-xs text-muted">{p.name ? `${p.email} · ` : ''}{p.qty > 0 ? `${p.qty} ${p.qty === 1 ? 'ticket' : 'tickets'}` : p.request?.request_status === 'approved' ? 'Approved, not registered yet' : p.request?.request_status === 'declined' ? 'Declined' : 'No ticket'}{types.length ? ` · ${types.join(', ')}` : ''}{transferred ? ' · transferred to them' : ''}</span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
@@ -183,7 +185,7 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
                       {p.tickets.length > 0 && (
                         <ul className={`${hasAnswers ? 'mt-3 border-t border-gray-100 pt-2' : ''} flex flex-col gap-1 text-xs text-muted`}>
                           {p.tickets.map((t) => (
-                            <li key={t.id}>{t.tier?.name || t.ticket_type} · Qty {t.quantity}{t.section_name ? ` · ${t.section_name}` : ''}{t.seat_assignment ? ` · Seat ${t.seat_assignment}` : ''} · ${((t.price_paid || 0) * (t.quantity || 1)).toFixed(2)} · {t.status}{t.checked_in_at ? ` · checked in ${new Date(t.checked_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}</li>
+                            <li key={t.id}>{t.guest_name && <strong className="text-gray-800">{t.guest_name} · </strong>}{t.tier?.name || t.ticket_type} · Qty {t.quantity}{t.section_name ? ` · ${t.section_name}` : ''}{t.seat_assignment ? ` · Seat ${t.seat_assignment}` : ''} · ${((t.price_paid || 0) * (t.quantity || 1)).toFixed(2)} · {t.status}{t.checked_in_at ? ` · checked in ${new Date(t.checked_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}</li>
                           ))}
                         </ul>
                       )}

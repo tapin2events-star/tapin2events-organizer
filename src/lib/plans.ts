@@ -39,7 +39,7 @@ export const BUSINESS_EXTRAS: Feature[] = [
 
 export function planTotal(plan: PlanId | 'artist', interval: 'month' | 'year', packs: PackId[], extraClients: number, founding: boolean) {
   let total = plan === 'artist' ? ARTIST_PLAN[interval] : PLAN_PRICES[plan][interval];
-  if (plan === 'essentials' || plan === 'artist') total += packs.filter((p) => plan !== 'artist' || p !== 'performers').reduce((n, p) => n + (PACKS.find((x) => x.id === p)?.price[interval] ?? 0), 0);
+  if (plan === 'essentials' || plan === 'artist') total += packs.reduce((n, p) => n + (PACKS.find((x) => x.id === p)?.price[interval] ?? 0), 0);
   if (plan === 'agency') total += extraClients * AGENCY_EXTRA[interval];
   const discounted = founding && plan !== 'artist' && FOUNDING_PLANS.includes(plan) ? Math.round(total * 0.6 * 100) / 100 : total;
   return { full: total, due: discounted };
@@ -51,7 +51,5 @@ export const ARTIST_PLAN = { month: 10, year: 100 };
 export const ARTIST_FEATURES: Feature[] = [
   { key: 'artist_video', icon: '🎬', name: 'Video header on your artist profile', desc: 'A trailer at the top of your profile' },
   { key: 'featured_artist', icon: '⭐', name: 'Featured Artist', desc: 'Shown first in Artists & vendors, with a Featured badge' },
-  { key: 'promoter_payouts', icon: '📣', name: 'Automatic promoter payouts', desc: 'On shows you host: commission sent on every ticket sold through a promo link' },
-  { key: 'video_headers', icon: '🎞️', name: 'Event video headers & highlight reels', desc: 'Trailers and highlights on events you host' },
   { key: 'boost_credit', icon: '🚀', name: 'Boost credit', desc: 'Monthly credit to feature your shows in Discover' },
 ];
