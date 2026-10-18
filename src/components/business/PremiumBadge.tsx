@@ -8,9 +8,9 @@ export default function PremiumBadge({ note = true, feature }: { note?: boolean;
   const [open, setOpen] = useState(false);
   const pack = packFor(feature);
   return (
-    <span className="inline-flex flex-col align-middle">
+    <span className="inline-flex max-w-full flex-col align-middle">
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
-        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#C9A227]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#8A6D0F]">
+        className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#C9A227]/15 px-2 py-0.5 text-left text-[10px] font-bold uppercase leading-tight tracking-wide text-[#8A6D0F]">
         ⭐ {pack.label} · free for now
       </button>
       {note && open && (

@@ -26,7 +26,7 @@ export default function OverviewTab({ event }: { event: TapEvent }) {
   }, [event.id]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Tickets sold" value={ticketCount === null ? '—' : ticketCount.toString()} />
         <StatCard
@@ -40,7 +40,7 @@ export default function OverviewTab({ event }: { event: TapEvent }) {
         />
       </div>
 
-      <div className="rounded-xl bg-surface p-5">
+      <div className="min-w-0 rounded-xl bg-surface p-5">
         <h3 className="mb-2 font-display text-lg font-semibold text-bone">Details</h3>
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <Detail label="Status" value={event.status} />
@@ -57,7 +57,7 @@ export default function OverviewTab({ event }: { event: TapEvent }) {
           <Detail label="Address" value={event.location_address || '—'} />
         </dl>
         {event.description && (
-          <p className="mt-4 whitespace-pre-wrap text-sm text-muted">{event.description}</p>
+          <p className="mt-4 whitespace-pre-wrap text-sm text-muted [overflow-wrap:anywhere]">{event.description}</p>
         )}
       </div>
     </div>
@@ -66,10 +66,10 @@ export default function OverviewTab({ event }: { event: TapEvent }) {
 
 function StatCard({ label, value, accent = 'marigold' }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="rounded-xl bg-surface p-5">
+    <div className="min-w-0 rounded-xl bg-surface p-5">
       <p className="font-mono text-xs uppercase tracking-widest text-muted">{label}</p>
       <p
-        className={`mt-1 font-display text-3xl font-extrabold ${
+        className={`mt-1 break-words font-display text-3xl font-extrabold ${
           accent === 'mint' ? 'text-mint' : 'text-marigold'
         }`}
       >
@@ -83,7 +83,7 @@ function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
-      <dd className="text-bone">{value}</dd>
+      <dd className="text-bone [overflow-wrap:anywhere]">{value}</dd>
     </div>
   );
 }

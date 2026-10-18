@@ -139,7 +139,7 @@ export default function EventDetail() {
   if (!event || !id) return <p className="text-magenta">Event not found.</p>;
 
   return (
-    <div>
+    <div className="min-w-0 [overflow-wrap:anywhere]">
       {event.poster_url && (
         <div className="mb-6 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-100">
           <img src={event.poster_url} alt="" className="h-full w-full object-cover" />
