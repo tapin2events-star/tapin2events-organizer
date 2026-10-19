@@ -243,7 +243,7 @@ export default function Profile() {
         <PasswordSection email={user?.email ?? ''} />
       </div>
 
-      <div id="payouts" className="mt-8">
+      <div id="payouts" className="mt-8 scroll-mt-24">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Payouts</h2>
         <div data-tour="payouts"><PayoutsCard hasAccount={!!profile.stripe_account_id} chargesEnabled={!!profile.stripe_charges_enabled} variant="creator" /></div>
       </div>

@@ -3,6 +3,7 @@ import BackButton from '../components/BackButton';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { PRODUCT_CATEGORIES, type Product } from '../lib/types';
+import { priceLabel } from '../lib/productMoney';
 import MyProductOrders from '../components/products/MyProductOrders';
 import MyProducts from '../components/products/MyProducts';
 import { EventCardGridSkeleton } from '../components/ui/Skeleton';
@@ -10,6 +11,8 @@ import { EventCardGridSkeleton } from '../components/ui/Skeleton';
 interface ProductWithSeller extends Product {
   sellerName: string;
   linkTo: string;
+  left: number;
+  priceText: string;
 }
 
 const TABS = ['Browse', 'My Orders', 'My Products'] as const;
@@ -27,7 +30,7 @@ export default function ProductsPage() {
   // Loads (and reloads) the product list.
   const load = useCallback(async () => {
     {
-      const { data: productRows, error } = await supabase.from('products').select('*');
+      const { data: productRows, error } = await supabase.from('products').select('*').eq('is_active', true).eq('visibility', 'public').order('created_at', { ascending: false });
       if (error) {
         console.error('Failed to load products:', error);
         setLoading(false);
@@ -41,13 +44,19 @@ export default function ProductsPage() {
         eventIds.length ? supabase.from('events').select('id, title').in('id', eventIds) : Promise.resolve({ data: [] }),
         resourceIds.length ? supabase.from('resources').select('id, display_name').in('id', resourceIds) : Promise.resolve({ data: [] }),
       ]);
+      const ids = (productRows ?? []).map((p) => p.id);
+      const { data: variantRows } = ids.length ? await supabase.from('product_variants').select('product_id, stock_quantity, sold_quantity, price_adjustment').in('product_id', ids) : { data: [] as { product_id: string; stock_quantity: number; sold_quantity: number; price_adjustment: number }[] };
+      const vLeft = new Map<string, number>(); const vAdj = new Map<string, number[]>();
+      (variantRows ?? []).forEach((v) => { vLeft.set(v.product_id, (vLeft.get(v.product_id) ?? 0) + Math.max(0, v.stock_quantity - v.sold_quantity)); vAdj.set(v.product_id, [...(vAdj.get(v.product_id) ?? []), Number(v.price_adjustment) || 0]); });
       const eventsById = new Map((events ?? []).map((e) => [e.id, e]));
       const resourcesById = new Map((resources ?? []).map((r) => [r.id, r]));
 
       const merged = (productRows ?? []).map((p: any) => ({
         ...p,
-        sellerName: p.event_id ? (eventsById.get(p.event_id)?.title ?? 'An event') : (resourcesById.get(p.resource_id)?.display_name ?? 'A resource'),
-        linkTo: p.event_id ? `/events/${p.event_id}` : `/resources/${p.resource_id}`,
+        sellerName: p.event_id ? (eventsById.get(p.event_id)?.title ?? 'An event') : (resourcesById.get(p.resource_id)?.display_name ?? 'An artist'),
+        linkTo: `/products/${p.id}`,
+        left: vLeft.has(p.id) ? vLeft.get(p.id)! : Math.max(0, p.stock_quantity - p.sold_quantity),
+        priceText: priceLabel(Number(p.price), vAdj.get(p.id)),
       }));
       setProducts(merged);
       setLoading(false);
@@ -130,7 +139,7 @@ export default function ProductsPage() {
           ) : (
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((p) => {
-                const available = p.stock_quantity - p.sold_quantity;
+                const available = p.left;
                 return (
                   <Link
                     key={p.id}
@@ -148,8 +157,8 @@ export default function ProductsPage() {
                       <p className="font-display text-lg font-bold text-gray-900">{p.name}</p>
                       <p className="mt-0.5 text-sm text-gray-400">Sold by {p.sellerName}</p>
                       <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">
-                        <span className="text-gray-500">{available > 0 ? `${available} available` : 'Sold out'}</span>
-                        <span className="font-medium text-gray-900">${p.price}</span>
+                        <span className="text-gray-500">{available > 0 ? `${available} left` : 'Sold out'}</span>
+                        <span className="font-medium text-gray-900">{p.priceText}</span>
                       </div>
                     </div>
                   </Link>

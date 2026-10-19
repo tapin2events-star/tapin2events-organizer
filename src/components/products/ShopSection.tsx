@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import type { Product } from '../../lib/types';
+import { priceLabel } from '../../lib/productMoney';
 
 interface ShopSectionProps {
   ownerType: 'event' | 'resource';
@@ -11,6 +12,7 @@ interface ShopSectionProps {
 export default function ShopSection({ ownerType, ownerId }: ShopSectionProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [variantAvailability, setVariantAvailability] = useState<Map<string, number>>(new Map());
+  const [variantAdjustments, setVariantAdjustments] = useState<Map<string, number[]>>(new Map());
 
   const ownerColumn = ownerType === 'event' ? 'event_id' : 'resource_id';
 
@@ -19,6 +21,8 @@ export default function ShopSection({ ownerType, ownerId }: ShopSectionProps) {
       .from('products')
       .select('*')
       .eq(ownerColumn, ownerId)
+      .eq('is_active', true)
+      .eq('visibility', 'public')
       .then(async ({ data }) => {
         const rows = (data ?? []) as Product[];
         setProducts(rows);
@@ -26,13 +30,16 @@ export default function ShopSection({ ownerType, ownerId }: ShopSectionProps) {
         // across all variants, so the card can still show a sensible number.
         const { data: variantRows } = await supabase
           .from('product_variants')
-          .select('product_id, stock_quantity, sold_quantity')
+          .select('product_id, stock_quantity, sold_quantity, price_adjustment')
           .in('product_id', rows.map((p) => p.id));
         const totals = new Map<string, number>();
+        const adjustments = new Map<string, number[]>();
         (variantRows ?? []).forEach((v) => {
-          totals.set(v.product_id, (totals.get(v.product_id) ?? 0) + (v.stock_quantity - v.sold_quantity));
+          totals.set(v.product_id, (totals.get(v.product_id) ?? 0) + Math.max(0, v.stock_quantity - v.sold_quantity));
+          adjustments.set(v.product_id, [...(adjustments.get(v.product_id) ?? []), Number(v.price_adjustment) || 0]);
         });
         setVariantAvailability(totals);
+        setVariantAdjustments(adjustments);
       });
   }, [ownerId]);
 
@@ -44,7 +51,7 @@ export default function ShopSection({ ownerType, ownerId }: ShopSectionProps) {
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {products.map((p) => {
           const hasVariants = variantAvailability.has(p.id);
-          const available = hasVariants ? variantAvailability.get(p.id)! : p.stock_quantity - p.sold_quantity;
+          const available = hasVariants ? variantAvailability.get(p.id)! : Math.max(0, p.stock_quantity - p.sold_quantity);
           return (
             <Link key={p.id} to={`/products/${p.id}`} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:border-marigold">
               <div className="flex gap-3">
@@ -55,9 +62,9 @@ export default function ShopSection({ ownerType, ownerId }: ShopSectionProps) {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{p.name}</p>
-                  <p className="text-sm text-gray-500">${p.price}{hasVariants && '+'}</p>
-                  <p className="text-xs text-gray-400">{available > 0 ? `${available} available` : 'Sold out'}</p>
-                  {hasVariants && <p className="mt-1 text-xs font-medium text-marigold">Select options &rarr;</p>}
+                  <p className="text-sm text-gray-500">{priceLabel(Number(p.price), variantAdjustments.get(p.id))}</p>
+                  <p className="text-xs text-gray-400">{available > 0 ? `${available} left` : 'Sold out'}</p>
+                  {hasVariants && available > 0 && <p className="mt-1 text-xs font-medium text-marigold">Choose size/color &rarr;</p>}
                 </div>
               </div>
             </Link>

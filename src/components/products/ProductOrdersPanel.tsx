@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 import { FULFILLMENT_STYLES, FULFILLMENT_LABELS, type FulfillmentStatus, type ProductOrder } from '../../lib/types';
+import { money } from '../../lib/productMoney';
 
 interface ProductOrdersPanelProps {
   ownerType: 'event' | 'resource';
@@ -15,6 +16,9 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
   const [trackingFormId, setTrackingFormId] = useState<string | null>(null);
   const [trackingCarrier, setTrackingCarrier] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
+  // Ready for pickup: tell the buyer where and when.
+  const [pickupFormId, setPickupFormId] = useState<string | null>(null);
+  const [pickupNote, setPickupNote] = useState('');
 
   const ownerColumn = ownerType === 'event' ? 'event_id' : 'resource_id';
 
@@ -50,7 +54,7 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
     supabase.from('notifications').insert({ user_email: order.customer_email, type: `order_${status}`, message, link: '/activity' }).then(() => {});
   }
 
-  async function updateStatus(order: ProductOrder, status: FulfillmentStatus, extra?: { tracking_number?: string | null; tracking_carrier?: string | null }) {
+  async function updateStatus(order: ProductOrder, status: FulfillmentStatus, extra?: { tracking_number?: string | null; tracking_carrier?: string | null; pickup_instructions?: string | null }) {
     setBusyId(order.id);
     const payload: any = { fulfillment_status: status, ...extra };
     const { error } = await supabase.from('orders').update(payload).eq('id', order.id);
@@ -63,9 +67,15 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
     setTrackingFormId(null);
     setTrackingCarrier('');
     setTrackingNumber('');
+    setPickupFormId(null);
   }
 
   function handleStatusClick(order: ProductOrder, status: FulfillmentStatus) {
+    if (status === 'ready_for_pickup') {
+      setPickupFormId(order.id);
+      setPickupNote((order as ProductOrder & { pickup_instructions?: string | null }).pickup_instructions ?? '');
+      return;
+    }
     if (status === 'shipped') {
       setTrackingFormId(order.id);
       setTrackingCarrier(order.tracking_carrier ?? '');
@@ -77,13 +87,15 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
 
   if (loading) return <ListSkeleton rows={4} className="mt-4" />;
 
-  const revenue = orders.reduce((sum, o) => sum + o.total_amount, 0);
+  // What the seller earns: items + shipping (buyer fees go to TapIN and aren't the seller's sales).
+  const earned = (o: ProductOrder) => Number((o as ProductOrder & { subtotal?: number }).subtotal ?? o.total_amount) || 0;
+  const revenue = orders.reduce((sum, o) => sum + earned(o), 0);
 
   return (
     <div className="mt-10">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-bold text-gray-900">Product Sales</h2>
-        {orders.length > 0 && <p className="text-sm text-gray-500">{orders.length} order{orders.length === 1 ? '' : 's'} &middot; ${revenue.toFixed(2)}</p>}
+        <h2 className="font-display text-xl font-bold text-gray-900">Product orders</h2>
+        {orders.length > 0 && <p className="text-sm text-gray-500">{orders.length} order{orders.length === 1 ? '' : 's'} &middot; {money(revenue)} in sales</p>}
       </div>
 
       {orders.length === 0 ? (
@@ -104,7 +116,8 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
                     <p className="font-medium text-gray-900">
                       {o.items.map((i) => `${i.item_name} \u00d7 ${i.quantity}`).join(', ')}
                     </p>
-                    <p className="text-sm text-gray-500">{o.customer_name || o.customer_email} &middot; ${o.total_amount.toFixed(2)}</p>
+                    <p className="text-sm text-gray-500">{o.customer_name || o.customer_email} &middot; You earn {money(earned(o))}</p>
+                    <p className="text-xs text-gray-400">{o.order_number ? `${o.order_number} · ` : ''}{new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                   </div>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${FULFILLMENT_STYLES[o.fulfillment_status] ?? FULFILLMENT_STYLES.pending}`}>
                     {FULFILLMENT_LABELS[o.fulfillment_status] ?? o.fulfillment_status}
@@ -113,14 +126,24 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
 
                 {isShippable && o.shipping_address && (
                   <p className="mt-2 text-xs text-gray-400">
-                    Ship to: {o.shipping_address.name}, {o.shipping_address.address_line1}, {o.shipping_address.city}, {o.shipping_address.state} {o.shipping_address.postal_code}
+                    Ship to: {[o.shipping_address.name, o.shipping_address.address_line1, (o.shipping_address as { address_line2?: string }).address_line2, o.shipping_address.city].filter(Boolean).join(', ')}, {o.shipping_address.state} {o.shipping_address.postal_code}
                   </p>
                 )}
                 {o.tracking_number && (
                   <p className="mt-1 text-xs text-gray-500">Tracking: {o.tracking_number}{o.tracking_carrier ? ` (${o.tracking_carrier})` : ''}</p>
                 )}
 
-                {trackingFormId === o.id ? (
+                {pickupFormId === o.id ? (
+                  <div className="mt-3 flex flex-col gap-2 rounded-lg bg-gray-50 p-3">
+                    <label className="text-xs font-medium text-gray-600">Pickup details for the buyer (where and when)
+                      <input value={pickupNote} maxLength={500} onChange={(e) => setPickupNote(e.target.value)} placeholder="At the merch table, 6–10 PM on event night" className="mt-1 block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-base sm:text-sm" />
+                    </label>
+                    <div className="flex gap-2">
+                      <button onClick={() => updateStatus(o, 'ready_for_pickup', { pickup_instructions: pickupNote.trim() || null })} disabled={busyId === o.id} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Mark ready &amp; notify buyer</button>
+                      <button onClick={() => setPickupFormId(null)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700">Cancel</button>
+                    </div>
+                  </div>
+                ) : trackingFormId === o.id ? (
                   <div className="mt-3 flex flex-col gap-2 rounded-lg bg-gray-50 p-3">
                     <div className="flex gap-2">
                       <input placeholder="Carrier (optional)" value={trackingCarrier} onChange={(e) => setTrackingCarrier(e.target.value)} className="w-1/2 rounded-lg border border-gray-300 px-2 py-1 text-sm" />
@@ -132,7 +155,7 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
                         disabled={busyId === o.id}
                         className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-ink hover:bg-marigold/90 disabled:opacity-50"
                       >
-                        Confirm shipped
+                        Mark shipped &amp; notify buyer
                       </button>
                       <button onClick={() => setTrackingFormId(null)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700">Cancel</button>
                     </div>
