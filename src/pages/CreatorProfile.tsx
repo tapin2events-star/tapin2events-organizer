@@ -255,7 +255,7 @@ export default function CreatorProfile() {
       <div className="mt-4 flex items-center gap-6">
         <div>
           <p className="text-center font-display text-lg font-bold text-bone">{posts.length}</p>
-          <p className="text-xs text-muted">Posts</p>
+          <p className="text-xs text-muted">{posts.length === 1 ? 'Video' : 'Videos'}</p>
         </div>
         <button onClick={() => setOpenList('followers')} className="text-left">
           <p className="text-center font-display text-lg font-bold text-bone">{profile.followers_count ?? 0}</p>
@@ -300,7 +300,7 @@ export default function CreatorProfile() {
       <div className="mt-8">
         <div className="flex gap-1 border-b border-gray-200">
           {([
-            { id: 'posts', label: `Posts (${posts.length})` },
+            { id: 'posts', label: `Videos (${posts.length})` },
             ...(tagged.length > 0 ? [{ id: 'tagged' as const, label: `Tagged (${tagged.length})` }] : []),
             { id: 'events', label: `Events (${new Set(events.map((e) => e.parent_event_id ?? e.id)).size})` },
             { id: 'shop', label: `Shop (${products.length})` },
@@ -347,7 +347,7 @@ export default function CreatorProfile() {
         {tab === 'events' && <CreatorEvents events={events} />}
         {tab === 'shop' && <CreatorProducts products={products} />}
         {tab === 'posts' && (posts.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No posts yet.</p>
+          <p className="mt-2 text-sm text-muted">No videos yet.</p>
         ) : isOwnProfile ? (
           <MyPostsManager posts={posts} onPostsChange={setPosts} />
         ) : (

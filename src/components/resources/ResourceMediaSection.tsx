@@ -19,6 +19,7 @@ export default function ResourceMediaSection({ resourceId, resourceEmail, groupI
   const [items, setItems] = useState<ResourceMedia[]>([]);
   const [albums, setAlbums] = useState<ResourceAlbum[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [videoCount, setVideoCount] = useState(0);
   const [openAlbum, setOpenAlbum] = useState<{ title: string; photos: ResourceMedia[] } | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const touchX = useRef<number | null>(null);
@@ -27,16 +28,16 @@ export default function ResourceMediaSection({ resourceId, resourceEmail, groupI
     Promise.all([
       supabase.from('resource_media').select('*').eq('resource_id', resourceId).order('display_order', { ascending: true }),
       supabase.from('resource_albums').select('*').eq('resource_id', resourceId).order('display_order', { ascending: true }),
-      // Only videos the creator posted as a resource ("Posting as: Resource"),
-      // not ones posted as an organizer or with no role chosen.
+      // All of the creator's public TapIN videos (the same ones on their profile and in the Feed), with the total count.
       // Groups: videos members chose to show on the group's page.
       groupId
-        ? supabase.from('posts').select('id, thumbnail_url, caption').eq('group_id', groupId).eq('status', 'active').eq('feed_visible', true).order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1)
-        : supabase.from('posts').select('id, thumbnail_url, caption').eq('author_email', resourceEmail).eq('poster_type', 'resource').eq('status', 'active').eq('feed_visible', true).order('created_at', { ascending: false }).limit(FEED_PREVIEW + 1),
-    ]).then(([{ data: m }, { data: a }, { data: p }]) => {
+        ? supabase.from('posts').select('id, thumbnail_url, caption', { count: 'exact' }).eq('group_id', groupId).eq('status', 'active').eq('feed_visible', true).order('created_at', { ascending: false }).limit(FEED_PREVIEW)
+        : supabase.from('posts').select('id, thumbnail_url, caption', { count: 'exact' }).eq('author_email', resourceEmail).eq('status', 'active').eq('feed_visible', true).order('created_at', { ascending: false }).limit(FEED_PREVIEW),
+    ]).then(([{ data: m }, { data: a }, { data: p, count }]) => {
       setItems((m ?? []) as ResourceMedia[]);
       setAlbums((a ?? []) as ResourceAlbum[]);
       setPosts((p ?? []) as FeedPost[]);
+      setVideoCount(count ?? (p ?? []).length);
     });
   }, [resourceId, resourceEmail, groupId]);
 
@@ -94,9 +95,9 @@ export default function ResourceMediaSection({ resourceId, resourceEmail, groupI
       {posts.length > 0 && (
         <div>
           <div className="flex items-baseline justify-between">
-            {heading('Videos on TapIN')}
-            {posts.length > FEED_PREVIEW && !groupId && (
-              <Link to={`/creator/${encodeURIComponent(resourceEmail)}`} className="text-sm font-medium text-marigold">See all &rarr;</Link>
+            {heading(`Videos on TapIN · ${videoCount}`)}
+            {videoCount > FEED_PREVIEW && !groupId && (
+              <Link to={`/creator/${encodeURIComponent(resourceEmail)}`} className="text-sm font-medium text-marigold">See all {videoCount} &rarr;</Link>
             )}
           </div>
           <div className="grid grid-cols-3 gap-1.5">
