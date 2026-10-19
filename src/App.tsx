@@ -47,6 +47,7 @@ const Embed = lazyWithRetry(() => import('./pages/Embed'));
 const MeetingMinutes = lazyWithRetry(() => import('./pages/MeetingMinutes'));
 const PartnerInvite = lazyWithRetry(() => import('./pages/PartnerInvite'));
 const PartnerCard = lazyWithRetry(() => import('./pages/PartnerCard'));
+const PartnerOptout = lazyWithRetry(() => import('./pages/PartnerOptout'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -94,6 +95,7 @@ export default function App() {
           <Route path="/embed/event/:id" element={<Embed />} />
           <Route path="/partner/:token" element={<PartnerInvite />} />
           <Route path="/partners/:id/card" element={<PartnerCard />} />
+          <Route path="/partner-optout/:token" element={<PartnerOptout />} />
           <Route path="/meetings/:id/minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
 
           <Route element={<Layout />}>
