@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
 import PremiumBadge from '../business/PremiumBadge';
+import InvitePartnerSheet from './InvitePartnerSheet';
 
 // Event > Promote: local partners and ticket-holder perks (free for 2 per event; more with Performers & Promotion).
 interface Partner { id: string; name: string; address: string | null; website: string | null; perk: string; perk_details: string | null; business_email: string | null; redeemed: number | null; distance_m: number | null }
@@ -11,6 +12,17 @@ const field = 'mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3
 export default function LocalPartnersCard({ eventId }: { eventId: string }) {
   const [rows, setRows] = useState<Partner[] | null>(null);
   const [editing, setEditing] = useState<Partial<Partner> | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const [invites, setInvites] = useState<{ id: string; business_name: string; status: string; perk: string | null; perk_details: string | null; contact_name: string | null; contact_email: string | null; partner_id: string | null }[]>([]);
+  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
+  const loadInvites = useCallback(() => { supabase.rpc('event_partner_invites', { p_event_id: eventId }).then(({ data }) => setInvites((data ?? []) as typeof invites)); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadInvites(); }, [loadInvites]);
+  async function decide(id: string, approve: boolean) {
+    setInviteMsg(null);
+    const { error } = await supabase.rpc('decide_partner_invite', { p_invite_id: id, p_approve: approve });
+    if (error) return setInviteMsg(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't update it.");
+    loadInvites(); load();
+  }
   const load = useCallback(() => { supabase.rpc('event_partners_list', { p_event_id: eventId }).then(({ data }) => setRows((data ?? []) as Partner[])); }, [eventId]);
   useEffect(() => { load(); }, [load]);
   async function remove(p: Partner) {
@@ -29,12 +41,44 @@ export default function LocalPartnersCard({ eventId }: { eventId: string }) {
               <p className="font-semibold text-gray-900">{p.name}</p>
               <p className="text-gray-700">🎁 {p.perk}</p>
               <p className="text-xs text-gray-500">Redeemed {p.redeemed ?? 0} time{p.redeemed === 1 ? '' : 's'}{p.business_email ? ` · Contact: ${p.business_email}` : ''}</p>
-              <div className="mt-1.5 flex gap-4 text-xs"><button onClick={() => setEditing(p)} className="font-medium text-marigold">Edit</button><button onClick={() => remove(p)} className="text-gray-500 hover:text-red-600">Remove</button></div>
+              <div className="mt-1.5 flex gap-4 text-xs"><button onClick={() => setEditing(p)} className="font-medium text-marigold">Edit</button><a href={`/partners/${p.id}/card`} target="_blank" rel="noopener" className="font-medium text-gray-700">Counter card</a><button onClick={() => remove(p)} className="text-gray-500 hover:text-red-600">Remove</button></div>
             </li>
           ))}
         </ul>
       )}
-      <button onClick={() => setEditing({})} className="mt-3 rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-semibold text-white">+ Add a local partner</button>
+      {invites.length > 0 && (
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Invitations</p>
+          {inviteMsg && <p role="alert" className="mt-1 text-sm text-red-600">{inviteMsg}</p>}
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {invites.map((i) => (
+              <li key={i.id} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate font-medium text-gray-900">{i.business_name}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${i.status === 'accepted' ? 'bg-amber-100 text-amber-800' : i.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {i.status === 'sent' ? 'Waiting for reply' : i.status === 'accepted' ? 'Said yes · approve?' : i.status === 'approved' ? 'Partner' : i.status === 'declined' ? 'Passed' : 'Not approved'}
+                  </span>
+                </div>
+                {i.status === 'accepted' && (
+                  <div className="mt-1.5">
+                    <p className="text-gray-700">🎁 {i.perk}{i.perk_details ? <span className="text-gray-500"> · {i.perk_details}</span> : null}</p>
+                    {(i.contact_name || i.contact_email) && <p className="text-xs text-gray-500">Contact: {[i.contact_name, i.contact_email].filter(Boolean).join(' · ')}</p>}
+                    <div className="mt-1.5 flex gap-2">
+                      <button onClick={() => decide(i.id, true)} className="rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white">Approve perk</button>
+                      <button onClick={() => decide(i.id, false)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700">Not this time</button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button onClick={() => setInviting(true)} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-semibold text-white">✉️ Invite a business</button>
+        <button onClick={() => setEditing({})} className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800">+ Add one yourself</button>
+      </div>
+      {inviting && <InvitePartnerSheet eventId={eventId} onClose={() => setInviting(false)} onCreated={loadInvites} />}
       {editing && <PartnerSheet eventId={eventId} initial={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </section>
   );
