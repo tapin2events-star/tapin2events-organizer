@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ProfileExtras from '../components/profile/ProfileExtras';
 import Sheet from '../components/scouting/Sheet';
 import ShareQR from '../components/ShareQR';
 import NetCard from '../components/networking/NetCard';
@@ -296,6 +297,8 @@ export default function CreatorProfile() {
           <button onClick={() => setShowBlock(true)} className="mt-3 text-xs text-muted hover:text-red-600">Block</button>
         )
       )}
+
+      {!blocked && <ProfileExtras email={decodedEmail} />}
 
       <div className="mt-8">
         <div className="flex gap-1 border-b border-gray-200">
