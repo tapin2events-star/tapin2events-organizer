@@ -145,6 +145,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
     const { data: savedProduct, error: saveError } = editingId
       ? await supabase.from('products').update(payload).eq('id', editingId).select().single()
       : await supabase.from('products').insert(payload).select().single();
+    window.dispatchEvent(new Event('tapin-products-changed'));
 
     if (saveError || !savedProduct) {
       setSaving(false);
@@ -181,11 +182,13 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
 
   async function toggleActive(p: Product) {
     await supabase.from('products').update({ is_active: !p.is_active }).eq('id', p.id);
+    window.dispatchEvent(new Event('tapin-products-changed'));
     setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_active: !x.is_active } : x)));
   }
 
   async function deleteProduct(id: string) {
     await supabase.from('products').delete().eq('id', id);
+    window.dispatchEvent(new Event('tapin-products-changed'));
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }
 

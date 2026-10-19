@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import BackButton from '../components/BackButton';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -24,8 +24,9 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
 
-  useEffect(() => {
-    (async () => {
+  // Loads (and reloads) the product list.
+  const load = useCallback(async () => {
+    {
       const { data: productRows, error } = await supabase.from('products').select('*');
       if (error) {
         console.error('Failed to load products:', error);
@@ -50,8 +51,24 @@ export default function ProductsPage() {
       }));
       setProducts(merged);
       setLoading(false);
-    })();
+    }
   }, []);
+  // Refresh when the page opens, when you come back to the app or tab, and when products change anywhere in the app.
+  useEffect(() => {
+    load();
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    const onChanged = () => load();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onChanged);
+    window.addEventListener('tapin-products-changed', onChanged);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onChanged);
+      window.removeEventListener('tapin-products-changed', onChanged);
+    };
+  }, [load]);
+  // Switching back to Browse shows the latest products.
+  useEffect(() => { if (tab === 'Browse') load(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
     return products
