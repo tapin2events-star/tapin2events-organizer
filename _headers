@@ -1,0 +1,10 @@
+# Cloudflare Pages: pages always check for the newest TapIN; build files (with unique names) are kept for a year.
+/*
+  Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+/assets/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+/version.json
+  ! Cache-Control
+  Cache-Control: no-store
