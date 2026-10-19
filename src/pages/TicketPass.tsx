@@ -120,6 +120,7 @@ export default function TicketPass() {
         {!whiteLabel && <BackButton fallback="/activity" fallbackLabel="My tickets" />}
 
         {whiteLabel && <WhiteLabelHeader brand={whiteLabel} />}
+        {whiteLabel?.slug && <Link to={`/tickets/${whiteLabel.slug}`} className="mt-2 inline-block text-sm font-semibold print:hidden" style={{ color: whiteLabel.primary }}>All my {whiteLabel.name} tickets &rarr;</Link>}
         <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm print:mt-0 print:shadow-none">
           {cancelledNow && (
             <p role="status" className="bg-green-50 px-4 py-3 text-center text-sm text-green-800">Your registration is cancelled. Thanks for letting the organizer know.</p>

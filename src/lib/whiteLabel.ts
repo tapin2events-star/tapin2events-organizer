@@ -45,3 +45,25 @@ export function useBrandedTab(brand: WhiteLabelBrand | null, title: string | nul
     return () => { document.title = prevTitle; if (icon && prevIcon) icon.href = prevIcon; };
   }, [brand, title]);
 }
+
+// For an organization's own pages (like "Your tickets"): branded when the organization has a white-labeled event.
+// Returns the brand plus one of its white-labeled events (used for the branded sign-in code).
+export function useOrgWhiteLabel(slug: string | null | undefined): { brand: WhiteLabelBrand | null; orgId: string | null; eventId: string | null; ready: boolean } {
+  const on = useFeature('white_label');
+  const [state, setState] = useState<{ brand: WhiteLabelBrand | null; orgId: string | null; eventId: string | null; ready: boolean }>({ brand: null, orgId: null, eventId: null, ready: false });
+  useEffect(() => {
+    if (!slug) { setState({ brand: null, orgId: null, eventId: null, ready: true }); return; }
+    let alive = true;
+    (async () => {
+      const { data: org } = await supabase.from('organizations').select('id, name, slug, logo_url, brand').eq('slug', slug).maybeSingle();
+      const o = org as { id: string; name: string; slug: string | null; logo_url: string | null; brand: { primary?: string; accent?: string } | null } | null;
+      if (!o) { if (alive) setState({ brand: null, orgId: null, eventId: null, ready: true }); return; }
+      const { data: ev } = await supabase.from('events').select('id').eq('organization_id', o.id).eq('white_label', true).limit(1).maybeSingle();
+      const brand = on && ev ? { name: o.name, slug: o.slug, logo: o.logo_url, primary: o.brand?.primary || '#0F1B3D', accent: o.brand?.accent || '#C9A227' } : null;
+      if (alive) setState({ brand, orgId: o.id, eventId: (ev as { id: string } | null)?.id ?? null, ready: true });
+    })();
+    return () => { alive = false; };
+  }, [on, slug]);
+  useEffect(() => { setWhiteLabel(state.brand); return () => setWhiteLabel(null); }, [state.brand]);
+  return state;
+}
