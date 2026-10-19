@@ -69,7 +69,11 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
     setChecking(null);
     if (error) return notify("Couldn't check right now.", false);
     const added = ((data?.results ?? []) as { added: number }[]).reduce((n, r) => n + r.added, 0);
-    notify(added ? `Found ${added} new event${added === 1 ? '' : 's'} to review.` : 'Checked. Nothing new this time.');
+    // A single run has a time limit; tell the admin if Check all didn't reach every source.
+    const activeCount = sources.filter((x) => x.active).length;
+    const checked = Number(data?.checked ?? 0);
+    const leftover = !sourceId && checked < activeCount ? ` Checked ${checked} of ${activeCount} sources; tap Check all again for the rest.` : '';
+    notify((added ? `Found ${added} new event${added === 1 ? '' : 's'} to review.` : 'Checked. Nothing new this time.') + leftover);
     load();
   }
 
@@ -120,7 +124,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-lg font-semibold text-bone">Event sources · Raleigh &amp; the Triangle</h2>
-            <p className="mt-1 text-sm text-muted">Checked automatically every morning. New finds wait below for your approval; nothing is published on its own. Calendars that load in the browser are read through the data feed behind them when one exists.</p>
+            <p className="mt-1 text-sm text-muted">Checked only when you tap Check now or Check all (automatic daily checks are off to save on AI costs). New finds wait below for your approval; nothing is published on its own. Calendars that load in the browser are read through the data feed behind them when one exists.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setAdding((a) => !a)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">+ Add source</button>
@@ -205,7 +209,7 @@ export default function ImportsTab({ notify: rawNotify }: { notify: (kind: 'ok' 
         </div>
         {view === 'pending' && <p className="mt-1 text-xs text-muted">Published events show "Listed from [source]," send people to the original page for tickets, and include a "Claim this event" link for the real organizer. Images aren't copied from other sites (except Ticketmaster).</p>}
         {found === null ? <ListSkeleton rows={4} className="mt-4" /> : found.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after each morning’s check (or tap Check all now).' : view === 'skipped' ? 'Nothing skipped for upcoming events. Skipped events disappear once they’re over.' : 'Nothing here.'}</p>
+          <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-muted">{view === 'pending' ? 'Nothing waiting. New finds appear here after you check your sources (tap Check all).' : view === 'skipped' ? 'Nothing skipped for upcoming events. Skipped events disappear once they’re over.' : 'Nothing here.'}</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {found.map((f) => (
