@@ -66,8 +66,13 @@ export default function MyProductOrders({ title = 'My Orders' }: { title?: strin
                       {o.order_number && <span className="text-gray-400"> · {o.order_number}</span>}
                     </p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${FULFILLMENT_STYLES[o.fulfillment_status] ?? FULFILLMENT_STYLES.pending}`}>
-                    {FULFILLMENT_LABELS[o.fulfillment_status] ?? o.fulfillment_status}
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${FULFILLMENT_STYLES[o.fulfillment_status] ?? FULFILLMENT_STYLES.pending}`}>
+                      {FULFILLMENT_LABELS[o.fulfillment_status] ?? o.fulfillment_status}
+                    </span>
+                    {(o as typeof o & { payment_status?: string }).payment_status === 'refunded'
+                      ? <span className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-700">Refunded</span>
+                      : Number((o as typeof o & { refund_amount?: number }).refund_amount) > 0 && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Refunded ${Number((o as typeof o & { refund_amount?: number }).refund_amount).toFixed(2)}</span>}
                   </span>
                 </div>
                 {o.fulfillment_status === 'ready_for_pickup' && o.pickup_instructions && (

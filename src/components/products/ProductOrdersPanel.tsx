@@ -19,6 +19,28 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
   // Ready for pickup: tell the buyer where and when.
   const [pickupFormId, setPickupFormId] = useState<string | null>(null);
   const [pickupNote, setPickupNote] = useState('');
+  // Refunds (items + shipping; fees aren't refundable).
+  const [refundFormId, setRefundFormId] = useState<string | null>(null);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [restock, setRestock] = useState(true);
+  const [refundMsg, setRefundMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null);
+  const refundable = (o: ProductOrder) => Math.max(0, earned(o) - (Number((o as ProductOrder & { refund_amount?: number }).refund_amount) || 0));
+  async function issueRefund(o: ProductOrder) {
+    const amt = parseFloat(refundAmount);
+    const max = refundable(o);
+    if (!Number.isFinite(amt) || amt <= 0 || amt > max + 0.001) return setRefundMsg({ id: o.id, ok: false, text: `Enter an amount up to ${money(max)}.` });
+    const fullRefund = Math.abs(amt - max) < 0.005;
+    if (!window.confirm(`Refund ${money(amt)} to ${o.customer_name || o.customer_email}? This can't be undone. It comes out of your payout.`)) return;
+    setBusyId(o.id); setRefundMsg(null);
+    const { data, error } = await supabase.functions.invoke('refund-product-order', { body: { order_id: o.id, amount: amt, restock: fullRefund && restock } });
+    let err: string | null = data?.error ?? null;
+    if (!err && error) { try { err = (await (error as { context?: Response }).context?.json())?.error ?? 'Couldn\u2019t issue the refund.'; } catch { err = 'Couldn\u2019t issue the refund.'; } }
+    setBusyId(null);
+    if (err) return setRefundMsg({ id: o.id, ok: false, text: err });
+    setRefundFormId(null);
+    setRefundMsg({ id: o.id, ok: true, text: `Refunded ${money(amt)}. The buyer was notified.` });
+    load();
+  }
 
   const ownerColumn = ownerType === 'event' ? 'event_id' : 'resource_id';
 
@@ -119,10 +141,33 @@ export default function ProductOrdersPanel({ ownerType, ownerId }: ProductOrders
                     <p className="text-sm text-gray-500">{o.customer_name || o.customer_email} &middot; You earn {money(earned(o))}</p>
                     <p className="text-xs text-gray-400">{o.order_number ? `${o.order_number} · ` : ''}{new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                   </div>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${FULFILLMENT_STYLES[o.fulfillment_status] ?? FULFILLMENT_STYLES.pending}`}>
-                    {FULFILLMENT_LABELS[o.fulfillment_status] ?? o.fulfillment_status}
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${FULFILLMENT_STYLES[o.fulfillment_status] ?? FULFILLMENT_STYLES.pending}`}>
+                      {FULFILLMENT_LABELS[o.fulfillment_status] ?? o.fulfillment_status}
+                    </span>
+                    {(o as ProductOrder & { payment_status?: string }).payment_status === 'refunded'
+                      ? <span className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-700">Refunded</span>
+                      : Number((o as ProductOrder & { refund_amount?: number }).refund_amount) > 0 && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Refunded {money(Number((o as ProductOrder & { refund_amount?: number }).refund_amount))}</span>}
                   </span>
                 </div>
+                {refundMsg?.id === o.id && <p role="status" className={`mt-2 rounded-lg px-3 py-2 text-xs ${refundMsg.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{refundMsg.text}</p>}
+                {(o as ProductOrder & { payment_status?: string }).payment_status === 'paid' && refundable(o) > 0 && (refundFormId === o.id ? (
+                  <div className="mt-3 flex flex-col gap-2 rounded-lg bg-gray-50 p-3 text-sm">
+                    <label className="text-xs font-medium text-gray-600">Refund amount (up to {money(refundable(o))}; fees aren't refundable)
+                      <span className="relative mt-1 block"><span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                        <input type="number" inputMode="decimal" min="0.01" step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} className="block w-40 rounded-lg border border-gray-300 py-1.5 pl-6 pr-2 text-base sm:text-sm" /></span>
+                    </label>
+                    {Math.abs((parseFloat(refundAmount) || 0) - refundable(o)) < 0.005 && (
+                      <label className="flex items-center gap-2 text-xs text-gray-700"><input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="h-4 w-4 accent-marigold" /> Put the items back in stock</label>
+                    )}
+                    <div className="flex gap-2">
+                      <button onClick={() => issueRefund(o)} disabled={busyId === o.id} className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{busyId === o.id ? 'Refunding…' : 'Issue refund'}</button>
+                      <button onClick={() => setRefundFormId(null)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setRefundFormId(o.id); setRefundAmount(refundable(o).toFixed(2)); setRestock(true); setRefundMsg(null); }} className="mt-2 text-xs font-medium text-gray-500 hover:text-red-600">Refund…</button>
+                ))}
 
                 {isShippable && o.shipping_address && (
                   <p className="mt-2 text-xs text-gray-400">
