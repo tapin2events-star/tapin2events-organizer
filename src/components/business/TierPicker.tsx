@@ -207,7 +207,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
         {disabledReason ? disabledReason : busy ? 'Please wait…' : !user ? 'Sign in to continue' : count === 0 ? 'Choose tickets' : actionLabel ? actionLabel : allFree ? `Register${count > 1 ? ` (${count})` : ''}` : (addOns.length ? 'Checkout with merch' : `Checkout · ${money(subtotal + fees + giftCharge)}`)}
       </button>
       {!user && <p className="mt-2 text-center text-xs text-gray-500">Already have an account? <Link to="/login" className="text-marigold">Sign in</Link></p>}
-    {whiteLabel && brandedSignIn && <BrandedSignIn brand={whiteLabel} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
+    {whiteLabel && brandedSignIn && <BrandedSignIn brand={whiteLabel} eventId={eventId} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
       {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
       </div>
   );

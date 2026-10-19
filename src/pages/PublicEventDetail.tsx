@@ -377,7 +377,7 @@ export default function PublicEventDetail() {
   return (
     <div className="min-h-screen bg-ink">
       {whiteLabel && <WhiteLabelHeader brand={whiteLabel} />}
-      {whiteLabel && brandedSignIn && <BrandedSignIn brand={whiteLabel} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
+      {whiteLabel && brandedSignIn && <BrandedSignIn brand={whiteLabel} eventId={event?.id} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
       {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? event?.title ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
       {isPreview && (
         <div className="sticky top-0 z-40 border-b border-amber-300 bg-amber-100 px-4 py-2.5 sm:px-6">

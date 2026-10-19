@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { WhiteLabelBrand } from '../lib/whiteLabel';
 
 // White-labeled events: sign in (or create an account) right on the event page, in the organization's colors.
 // Just an email and a 6-digit code; a TapIN account is created quietly so tickets, QR codes and transfers work.
-export default function BrandedSignIn({ brand, onClose, onDone }: { brand: WhiteLabelBrand; onClose: () => void; onDone: () => void }) {
+export default function BrandedSignIn({ brand, eventId, onClose, onDone }: { brand: WhiteLabelBrand; eventId?: string | null; onClose: () => void; onDone: () => void }) {
   const { sendCode, verifyCode, user } = useAuth();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -17,9 +18,22 @@ export default function BrandedSignIn({ brand, onClose, onDone }: { brand: White
   async function send() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setErr('Enter your email address.');
     setBusy(true); setErr(null);
-    const { error } = await sendCode(email);
+    // The code email in the organization's branding; falls back to the regular sign-in email if that isn't possible.
+    let sentBranded = false;
+    if (eventId) {
+      const { data, error: fnErr } = await supabase.functions.invoke('wl-signin-code', { body: { email: email.trim(), event_id: eventId } });
+      if (data?.ok) sentBranded = true;
+      else if (fnErr) {
+        let msg: string | null = null;
+        try { msg = (await (fnErr as { context?: Response }).context?.json())?.error ?? null; } catch { /* no details */ }
+        if (msg && msg !== 'fallback') { setBusy(false); return setErr(msg); }
+      }
+    }
+    if (!sentBranded) {
+      const { error } = await sendCode(email);
+      if (error) { setBusy(false); return setErr(error); }
+    }
     setBusy(false);
-    if (error) return setErr(error);
     setStep('code'); setTimeout(() => codeRef.current?.focus(), 100);
   }
   async function verify() {
