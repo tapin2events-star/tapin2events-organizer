@@ -18,6 +18,7 @@ export const PACKS: { id: PackId; icon: string; name: string; price: { month: nu
     { key: 'promoter_payouts', icon: '📣', name: 'Automatic promoter payouts', desc: 'Commission sent on every ticket sold through a promo link' },
     { key: 'video_headers', icon: '🎬', name: 'Video headers & highlight reels', desc: 'Trailers on your pages and past-event highlights' },
     { key: 'local_partners', icon: '🤝', name: 'Unlimited local partners', desc: 'Perks from nearby businesses, emailed invitations, redemption counts and results summaries' },
+    { key: 'nearby_plus', icon: '✨', name: 'Enhanced nearby places', desc: 'Google ratings, price levels and today’s hours in Make a night of it' },
   ] },
   { id: 'conference', icon: '🎓', name: 'Conference', price: { month: 15, year: 150 }, for: 'Conferences, summits and workshops', features: [
     { key: 'program', icon: '🗓️', name: 'Program extras', desc: 'Visual agenda, speakers, sponsors' },
