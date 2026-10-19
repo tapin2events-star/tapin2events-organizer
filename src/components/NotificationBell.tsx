@@ -138,8 +138,8 @@ export default function NotificationBell() {
           {/* Mobile: full backdrop + near-full-width panel below the header,
               matching the same drawer pattern used for the sidebar nav.
               Desktop: reverts to a small dropdown anchored to the bell. */}
-          <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />
-          <div className="fixed inset-x-3 top-16 z-50 max-h-[75vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg md:absolute md:inset-x-auto md:right-0 md:top-auto md:mt-2 md:w-80 md:max-h-none">
+          <div className="fixed inset-0 z-40 bg-black/30 md:bg-transparent" onClick={() => setOpen(false)} />
+          <div className="fixed inset-x-3 top-16 z-50 max-h-[75vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg md:inset-x-auto md:left-[17rem] md:top-4 md:w-[26rem] md:max-h-[calc(100vh-2rem)]">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
               <span className="text-sm font-semibold text-gray-900">Notifications</span>
               <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export default function NotificationBell() {
             {notifications.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-gray-400">Nothing yet</p>
             ) : (
-              <ul className="max-h-[calc(75vh-48px)] overflow-y-auto md:max-h-96">
+              <ul className="max-h-[calc(75vh-48px)] overflow-y-auto md:max-h-[calc(100vh-6rem)]">
                 {notifications.map((n) => (
                   <li key={n.id}>
                     <button
