@@ -37,6 +37,7 @@ export default function ResourceDiscovery() {
     });
   }, [user?.email]);
   const [featured, setFeatured] = useState<Set<string>>(new Set());
+  const [withShop, setWithShop] = useState<Set<string>>(new Set());
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
   const [resources, setResources] = useState<Resource[]>([]);
@@ -74,6 +75,8 @@ export default function ResourceDiscovery() {
       setResources((data ?? []) as Resource[]);
       const { data: f } = await supabase.rpc('featured_artist_ids');
       setFeatured(new Set(((f ?? []) as string[]).map(String)));
+      const { data: shops } = await supabase.from('products').select('resource_id').eq('is_active', true).eq('visibility', 'public').not('resource_id', 'is', null);
+      setWithShop(new Set(((shops ?? []) as { resource_id: string }[]).map((x) => x.resource_id)));
       setLoading(false);
     })();
   }, []);
@@ -247,6 +250,7 @@ export default function ResourceDiscovery() {
                   <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-gray-900">
                     {r.display_name}
                     {r.kind === 'group' && <span className="rounded-full bg-purple-100 px-2 py-0.5 font-sans text-[11px] font-semibold text-purple-800">Group</span>}
+                    {withShop.has(r.id) && <span className="rounded-full bg-amber-100 px-2 py-0.5 font-sans text-[11px] font-semibold text-amber-800">🛍️ Shop</span>}
                   </p>
                   {(r.city || r.state || distanceOf(r) != null) && (
                     <p className="mt-0.5 text-xs text-gray-400">

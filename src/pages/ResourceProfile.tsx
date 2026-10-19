@@ -32,6 +32,12 @@ export default function ResourceProfile() {
   const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
   const headerVideo = useHeaderVideo(null, null, resource?.id ?? null);
+  const [shopCount, setShopCount] = useState(0);
+  useEffect(() => {
+    if (!resource?.id) return;
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('resource_id', resource.id).eq('is_active', true).eq('visibility', 'public')
+      .then(({ count }) => setShopCount(count ?? 0));
+  }, [resource?.id]);
   const [isFeatured, setIsFeatured] = useState(false);
   useEffect(() => {
     if (!resource?.id) return;
@@ -203,7 +209,11 @@ export default function ResourceProfile() {
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <FollowButton email={resource.email} />
               {user && user.email !== resource.email && <SaveToBoard resourceId={resource.id} name={resource.display_name} />}
-              <ShareQR path={`/resources/${resource.id}`} title={resource.display_name} subtitle={isGroup ? 'Group on TapIN' : 'Artist & resource on TapIN'} />
+              {shopCount > 0 && (
+                <button type="button" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm font-semibold text-gray-800 hover:border-marigold">🛍️ Shop ({shopCount})</button>
+              )}
+              <ShareQR path={`/resources/${resource.id}`} title={resource.display_name} subtitle={isGroup ? 'Group on TapIN' : 'Artist & services on TapIN'} />
             </div>
             {!isGroup && <GroupBadges email={resource.email} className="mt-3" />}
 
@@ -215,6 +225,8 @@ export default function ResourceProfile() {
               <h2 className="font-display text-lg font-semibold text-gray-900">About</h2>
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
+
+            <div id="shop" className="scroll-mt-24"><ShopSection ownerType="resource" ownerId={resource.id} /></div>
 
             <UpcomingAppearances resourceId={resource.id} name={resource.display_name} />
 
@@ -252,7 +264,6 @@ export default function ResourceProfile() {
               </div>
             )}
 
-            <ShopSection ownerType="resource" ownerId={resource.id} />
           </div>
 
           <div className="md:sticky md:top-6 md:self-start">
