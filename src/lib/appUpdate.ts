@@ -6,8 +6,8 @@ const CURRENT = typeof __TAPIN_BUILD__ === 'string' ? __TAPIN_BUILD__ : 'dev';
 let updateReady = false;
 let lastCheck = 0;
 
-async function check() {
-  if (CURRENT === 'dev' || updateReady || Date.now() - lastCheck < 30_000) return;
+async function check(force = false) {
+  if (CURRENT === 'dev' || updateReady || (!force && Date.now() - lastCheck < 30_000)) return;
   lastCheck = Date.now();
   try {
     const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
@@ -36,9 +36,10 @@ export function startUpdateChecks() {
   if (CURRENT === 'dev') return;
   check();
   setInterval(check, 2 * 60_000);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { refreshIfReady(); check(); }
-  });
+  // Coming back to the tab or app (including Chrome restoring a tab from memory): check, and switch right away.
+  const onReturn = async () => { refreshIfReady(); await check(true); refreshIfReady(); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onReturn(); });
+  window.addEventListener('pageshow', (e) => { if ((e as PageTransitionEvent).persisted) onReturn(); });
   window.addEventListener('focus', () => check());
 }
 
