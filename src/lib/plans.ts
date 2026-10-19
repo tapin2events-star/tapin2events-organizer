@@ -17,6 +17,7 @@ export const PACKS: { id: PackId; icon: string; name: string; price: { month: nu
   { id: 'performers', icon: '🎤', name: 'Performers & Promotion', price: { month: 5, year: 50 }, for: 'Shows, concerts and open mics', features: [
     { key: 'promoter_payouts', icon: '📣', name: 'Automatic promoter payouts', desc: 'Commission sent on every ticket sold through a promo link' },
     { key: 'video_headers', icon: '🎬', name: 'Video headers & highlight reels', desc: 'Trailers on your pages and past-event highlights' },
+    { key: 'local_partners', icon: '🤝', name: 'Unlimited local partners', desc: 'Perks from nearby businesses, emailed invitations, redemption counts and results summaries' },
   ] },
   { id: 'conference', icon: '🎓', name: 'Conference', price: { month: 15, year: 150 }, for: 'Conferences, summits and workshops', features: [
     { key: 'program', icon: '🗓️', name: 'Program extras', desc: 'Visual agenda, speakers, sponsors' },

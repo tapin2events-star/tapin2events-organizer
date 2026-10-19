@@ -13,7 +13,7 @@ const NAVY = '#0F1B3D';
 const GOLD = '#C9A227';
 // Planned premium features (also the "what matters most to you?" options on the reservation).
 const PREMIUM: { icon: string; name: string; desc: string }[] = [...ESSENTIALS, ...PACKS.flatMap((p) => p.features), ...BUSINESS_EXTRAS];
-const FREE = ['Create events and sell tickets (buyers pay the fees)', 'Revenue splits: pay performers and partners automatically from ticket sales', 'Show your events on your website: paste one code and new events appear automatically', 'Organization page with your brand', 'Team roles across all your events', 'Planning hub, tasks, meetings and polls',
+const FREE = ['Create events and sell tickets (buyers pay the fees)', 'Revenue splits: pay performers and partners automatically from ticket sales', 'Show your events on your website: paste one code and new events appear automatically', 'Make a night of it: nearby food, drinks, coffee, parking and places to stay on every event page', 'Local partners & perks for 2 businesses per event, with ready-made invitations and printable counter cards', 'Organization page with your brand', 'Team roles across all your events', 'Planning hub, tasks, meetings and polls',
   'Photo gallery (24 photos)', 'Promo codes', 'Donations and support', 'Payouts to your own bank', 'Personal TapIN QR and profile sharing', 'Feed videos, and featuring them on your organization page'];
 const PLANS = [
   { id: 'essentials', label: 'Essentials', price: '$15' },

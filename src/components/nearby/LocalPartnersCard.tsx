@@ -38,7 +38,7 @@ export default function LocalPartnersCard({ eventId }: { eventId: string }) {
   }
   return (
     <section className="mt-8 rounded-2xl border border-gray-200 bg-surface p-4">
-      <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">🤝 Local partners & perks <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+      <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">🤝 Local partners & perks</p>
       <p className="text-sm text-muted">Team up with nearby restaurants, bars and shops: they offer a perk to your ticket holders, and the perks help sell tickets. Perks show on your event page, on each ticket, and staff can mark them used.</p>
       <p className="mt-1 text-xs text-gray-500">Free for up to 2 partners per event. More partners: <PremiumBadge feature="local_partners" /></p>
       {rows && rows.length > 0 && (

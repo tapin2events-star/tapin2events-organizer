@@ -25,7 +25,7 @@ type Item = { to: string; label: string; icon: string; end?: boolean; badge?: ke
 // Discover, Feed, Activity and Profile live in the bottom tab bar on phones,
 // so the phone menu only shows them on desktop (where there's no tab bar).
 // Simple mode: just the essentials.
-const SIMPLE_MENU = new Set(['/', '/activity', '/tutorials', '/resources/dashboard', '/organizer', '/business', '/admin']);
+const SIMPLE_MENU = new Set(['/', '/activity', '/tutorials', '/organizations', '/products', '/resources/dashboard', '/organizer', '/business', '/admin']);
 const EXPLORE: Item[] = [
   { to: '/', label: 'Discover', icon: 'discover', end: true, desktopOnly: true },
   { to: '/feed', label: 'Feed', icon: 'feed', desktopOnly: true },
