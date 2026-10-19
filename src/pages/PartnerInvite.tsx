@@ -52,6 +52,8 @@ export default function PartnerInvite() {
               {v.perk && <p className="mt-2"><strong>Your perk:</strong> {v.perk}{v.perk_details ? ` (${v.perk_details})` : ''}</p>}
               {status === 'approved' && v.partner_id && <a href={`/partners/${v.partner_id}/card`} target="_blank" rel="noopener" className="mt-3 inline-block rounded-xl bg-[#0F1B3D] px-4 py-2.5 font-semibold text-white">Print your counter card</a>}
             </div>
+          ) : status === 'withdrawn' ? (
+            <p className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm text-gray-700">This invitation is no longer active. If you have questions, reach out to {v.host ?? 'the organizer'} directly.</p>
           ) : status === 'declined' || status === 'not_approved' ? (
             <p className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm text-gray-700">{status === 'declined' ? 'No problem, thanks for letting us know! Maybe next time.' : 'Thanks for your interest! The organizer isn\u2019t adding partners for this event right now.'}</p>
           ) : (

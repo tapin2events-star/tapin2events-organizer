@@ -17,6 +17,13 @@ export default function LocalPartnersCard({ eventId }: { eventId: string }) {
   const [inviteMsg, setInviteMsg] = useState<string | null>(null);
   const loadInvites = useCallback(() => { supabase.rpc('event_partner_invites', { p_event_id: eventId }).then(({ data }) => setInvites((data ?? []) as typeof invites)); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { loadInvites(); }, [loadInvites]);
+  async function removeInvite(i: { id: string; business_name: string; status: string }) {
+    if (i.status === 'sent' && !window.confirm(`Withdraw the invitation to ${i.business_name}? Their link will stop working.`)) return;
+    setInviteMsg(null);
+    const { error } = await supabase.rpc('remove_partner_invite', { p_invite_id: i.id });
+    if (error) return setInviteMsg(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't remove it.");
+    loadInvites();
+  }
   async function decide(id: string, approve: boolean) {
     setInviteMsg(null);
     const { error } = await supabase.rpc('decide_partner_invite', { p_invite_id: id, p_approve: approve });
@@ -59,6 +66,9 @@ export default function LocalPartnersCard({ eventId }: { eventId: string }) {
                     {i.status === 'sent' ? 'Waiting for reply' : i.status === 'accepted' ? 'Said yes · approve?' : i.status === 'approved' ? 'Partner' : i.status === 'declined' ? 'Passed' : 'Not approved'}
                   </span>
                 </div>
+                {['sent', 'declined', 'not_approved'].includes(i.status) && (
+                  <button onClick={() => removeInvite(i)} className="mt-1 text-xs font-medium text-gray-500 hover:text-red-600">{i.status === 'sent' ? 'Withdraw invitation' : 'Remove from list'}</button>
+                )}
                 {i.status === 'accepted' && (
                   <div className="mt-1.5">
                     <p className="text-gray-700">🎁 {i.perk}{i.perk_details ? <span className="text-gray-500"> · {i.perk_details}</span> : null}</p>
