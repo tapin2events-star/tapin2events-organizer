@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { startUpdateChecks } from './lib/appUpdate';
 import { applyCachedDisplay } from './lib/display';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -8,6 +9,7 @@ import { markDisplayMode } from './lib/displayMode';
 // Coming back to TapIN with the browser's Back button (for example from a Stripe checkout page) can restore the
 // page exactly as it was, including buttons stuck on "Opening checkout…". Reload so every page starts fresh.
 applyCachedDisplay();
+startUpdateChecks();
 window.addEventListener('pageshow', (e) => { if ((e as PageTransitionEvent).persisted) window.location.reload(); });
 
 

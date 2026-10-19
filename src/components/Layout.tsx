@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import { onNavigate } from '../lib/appUpdate';
 import GetAppBanner from './GetAppBanner';
 import UpgradePrompt from './business/UpgradePrompt';
 import { useDisplayPrefs } from '../lib/display';
@@ -59,6 +60,8 @@ export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   useEscapeKey(() => setMenuOpen(false), menuOpen);
   const location = useLocation();
+  // A newer TapIN is live: switch to it when the person moves to another page.
+  useEffect(() => { onNavigate(); }, [location.pathname]);
   const badges = useNavBadges(user?.email, user?.id, `${location.pathname}|${menuOpen}`);
   const [me, setMe] = useState<{ full_name: string | null; profile_photo: string | null } | null>(null);
   useEffect(() => {
