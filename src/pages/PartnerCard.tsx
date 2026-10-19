@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
@@ -29,20 +29,47 @@ export default function PartnerCard() {
   const { id } = useParams<{ id: string }>();
   const [d, setD] = useState<CardData | null | undefined>(undefined);
   useEffect(() => { supabase.rpc('partner_card', { p_partner_id: id }).then(({ data }) => setD((data ?? null) as CardData | null)); }, [id]);
-  useEffect(() => { if (d) { document.title = `Counter card · ${d.name}`; const t = setTimeout(() => window.print(), 700); return () => clearTimeout(t); } }, [d]);
+  // On screen, the Letter-size page scales down to fit the phone; printing always uses the real size.
+  const LETTER_W = 816, LETTER_H = 1056;
+  const [scale, setScale] = useState(1);
+  const holder = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const fit = () => setScale(Math.min(1, (window.innerWidth - 24) / LETTER_W));
+    fit(); window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+  // Computers open the print screen right away; phones get the buttons first (no surprise pop-up).
+  useEffect(() => {
+    if (!d) return;
+    document.title = `Counter card · ${d.name}`;
+    if (window.matchMedia('(pointer: fine)').matches) { const t = setTimeout(() => window.print(), 700); return () => clearTimeout(t); }
+  }, [d]);
+  async function share() {
+    const url = window.location.href;
+    try { if (navigator.share) await navigator.share({ title: `Counter card · ${d?.name ?? ''}`, url }); else { await navigator.clipboard.writeText(url); window.alert('Link copied.'); } } catch { /* cancelled */ }
+  }
   if (d === undefined) return <p style={{ padding: 32, textAlign: 'center', fontFamily: 'sans-serif', color: '#6B7280' }}>Preparing your counter card…</p>;
   if (d === null) return <p style={{ padding: 32, textAlign: 'center', fontFamily: 'sans-serif', color: '#6B7280' }}>This counter card isn't available.</p>;
   return (
     <div style={{ background: '#fff' }}>
       <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&display=swap" rel="stylesheet" />
-      <style>{'@page { size: letter; margin: 0 } body { margin: 0 } @media print { .no-print { display: none !important } }'}</style>
-      <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 12, padding: 12, background: '#F3F4F6', fontFamily: 'sans-serif' }}>
-        <button onClick={() => window.print()} style={{ padding: '10px 18px', borderRadius: 10, border: 0, background: '#0F1B3D', color: '#fff', fontWeight: 700 }}>Print or save as PDF</button>
+      <style>{'@page { size: letter; margin: 0 } body { margin: 0; background: #F3F4F6 } @media print { body { background: #fff } .no-print { display: none !important } .card-holder { height: auto !important; padding: 0 !important } .card-page { position: static !important; transform: none !important; box-shadow: none !important; margin: 0 !important } }'}</style>
+      <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F3F4F6', padding: 'calc(12px + env(safe-area-inset-top, 0px)) 12px 12px', fontFamily: 'system-ui, -apple-system, sans-serif', borderBottom: '1px solid #E5E7EB' }}>
+        <div style={{ maxWidth: 520, margin: '0 auto' }}>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>Counter card for {d.name}</p>
+          <p style={{ margin: '2px 0 10px', fontSize: 13, color: '#4B5563' }}>Two cards on one page. Print it, cut along the dashed line, and keep one at the register.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button onClick={() => window.print()} style={{ minHeight: 46, borderRadius: 12, border: 0, background: '#0F1B3D', color: '#fff', fontSize: 15, fontWeight: 700 }}>Print or save PDF</button>
+            <button onClick={share} style={{ minHeight: 46, borderRadius: 12, border: '1px solid #D1D5DB', background: '#fff', color: '#111827', fontSize: 15, fontWeight: 600 }}>Share link</button>
+          </div>
+        </div>
       </div>
-      <div style={{ width: '8.5in', margin: '0 auto' }}>
+      <div ref={holder} className="card-holder" style={{ position: 'relative', height: LETTER_H * scale + 24, overflow: 'hidden' }}>
+      <div className="card-page" style={{ position: 'absolute', top: 12, left: '50%', width: '8.5in', height: '11in', background: '#fff', transform: `translateX(-50%) scale(${scale})`, transformOrigin: 'top center', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
         <Card d={d} />
         <div style={{ borderTop: '2px dashed #9CA3AF', position: 'relative' }}><span style={{ position: 'absolute', right: '0.55in', top: -11, background: '#fff', padding: '0 8px', fontSize: 12, fontWeight: 600, color: '#4B5563', fontFamily: 'sans-serif' }}>CUT ALONG THE LINE</span></div>
         <Card d={d} />
+      </div>
       </div>
     </div>
   );
