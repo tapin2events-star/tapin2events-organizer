@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { webSafeImage } from './webImage';
 
 export type OrgKind = 'business' | 'nonprofit' | 'community';
 export type EventKind = 'community' | 'business' | 'nonprofit';
@@ -35,7 +36,9 @@ export function loadFont(font?: string) {
 }
 
 // Upload an image (logo, cover, speaker photo, sponsor logo) to TapIN storage.
-export async function uploadImage(userId: string, file: File, label: string): Promise<{ url?: string; error?: string }> {
+export async function uploadImage(userId: string, fileIn: File, label: string): Promise<{ url?: string; error?: string }> {
+  let file: File;
+  try { file = await webSafeImage(fileIn); } catch (e) { return { error: (e as Error).message }; }
   if (!/^image\/(jpeg|png|webp|gif|svg\+xml)$/.test(file.type)) return { error: 'Please choose a JPG, PNG, WebP, GIF or SVG image.' };
   if (file.size > 5 * 1024 * 1024) return { error: 'That image is over 5 MB.' };
   const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { webSafeImage } from '../lib/webImage';
 import { DetailSkeleton } from '../components/ui/Skeleton';
 import TemplatePicker from '../components/business/TemplatePicker';
 import type { EventTemplate } from '../lib/eventTemplates';
@@ -233,8 +234,10 @@ export default function EventForm() {
     setShowFlyerMaker(true);
   }, [loading, isEdit, searchParams]);
 
-  async function handleFlyerUpload(file: File) {
+  async function handleFlyerUpload(picked: File) {
     if (!user) return;
+    let file: File;
+    try { file = await webSafeImage(picked); } catch (e) { setQuickError((e as Error).message); return; }
     if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
       setQuickError('Please upload a JPG, PNG, WebP, or GIF image.');
       return;
@@ -1404,7 +1407,7 @@ export default function EventForm() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => setPosterFile(e.target.files?.[0] ?? null)}
+                onChange={async (e) => { const f = e.target.files?.[0] ?? null; if (!f) return setPosterFile(null); try { setPosterFile(await webSafeImage(f)); } catch (err) { window.alert((err as Error).message); } }}
                 className="text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface2 file:px-3 file:py-1.5 file:text-bone"
               />
               {posterUrl && !posterFile && (

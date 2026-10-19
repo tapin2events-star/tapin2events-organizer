@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { webSafeImage } from '../lib/webImage';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,7 +20,7 @@ export default function MultiImageUpload({ urls, onChange, pathPrefix, label = '
   const [error, setError] = useState<string | null>(null);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     e.target.value = ''; // allow re-selecting the same file later
     if (!file || !user?.id) return;
 
@@ -27,6 +28,7 @@ export default function MultiImageUpload({ urls, onChange, pathPrefix, label = '
       setError('Please choose an image file.');
       return;
     }
+    try { file = await webSafeImage(file); } catch (e) { setError((e as Error).message); return; }
     if (file.size > MAX_SIZE_BYTES) {
       setError('Image must be under 5MB.');
       return;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { webSafeImage } from '../lib/webImage';
 import DisplaySettings from '../components/profile/DisplaySettings';
 import YourProfile from '../components/profile/YourProfile';
 import { useFeature } from '../lib/preview';
@@ -122,9 +123,11 @@ export default function Profile() {
   }, [user, authLoading, navigate, location.pathname]);
 
   async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+    const picked = e.target.files?.[0];
+    if (!picked || !user) return;
     setUploadingPhoto(true);
+    let file: File;
+    try { file = await webSafeImage(picked); } catch (err) { setUploadingPhoto(false); window.alert((err as Error).message); return; }
     const path = `${user.id}/profile-photo-${Date.now()}-${file.name}`;
     const { error: uploadError } = await supabase.storage.from('user-uploads').upload(path, file, { upsert: true });
     if (!uploadError) {
