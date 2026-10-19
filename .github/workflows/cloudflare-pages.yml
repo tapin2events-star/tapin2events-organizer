@@ -18,10 +18,11 @@ jobs:
         with:
           node-version: 20
       - name: Prepare the site files
-        # Leave out GitHub-only files: 404.html (GitHub's workaround; Cloudflare serves the app for every page) and CNAME.
+        # Leave out GitHub-only files (404.html, CNAME) and functions/: the link-preview code, which wrangler deploys from
+        # ./functions as Cloudflare Pages Functions instead of as plain files.
         run: |
           mkdir -p site
-          rsync -a --exclude .git --exclude .github --exclude site --exclude 404.html --exclude CNAME ./ site/
+          rsync -a --exclude .git --exclude .github --exclude site --exclude functions --exclude 404.html --exclude CNAME ./ site/
       - name: Create the Cloudflare project (first run only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
