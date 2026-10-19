@@ -267,7 +267,9 @@ function ComposeSheet({ orgId, counts, draft, onClose, onSent, onError }: { orgI
     if (error) { const m = await errMsg(error, "Sending didn't go through."); setNote(m); onError(m); return; }
     onSent(data?.mode === 'direct' && data?.remaining > 0
       ? `Sending to ${data.recipients} people: ${data.sent_now} sent now, the rest over the next day or two (daily limit).`
-      : `Sent to ${data?.recipients ?? audienceCount} people! Clicks and ticket sales will show here.`);
+      : data?.queued
+        ? `Your email to ${data.recipients} people is next in line: another organization's newsletter is going out right now. It will send automatically within about 15 minutes.`
+        : `Sent to ${data?.recipients ?? audienceCount} people! Clicks and ticket sales will show here.`);
   }
   return (
     <Sheet title={draft ? 'Edit email' : 'New email'} onClose={onClose}>
