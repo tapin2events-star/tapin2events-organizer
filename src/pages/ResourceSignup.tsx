@@ -196,7 +196,7 @@ export default function ResourceSignup() {
           <div className="border-t border-gray-100 pt-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-marigold">Photos</p>
             <div className="flex flex-col gap-4">
-              <ImageUpload currentUrl={profileImage || null} onUploaded={setProfileImage} pathPrefix="resources" label="Profile photo" />
+              <ImageUpload currentUrl={profileImage || null} onUploaded={setProfileImage} pathPrefix="resources" label="Profile photo" crop="round" />
 
           {existing && (
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">

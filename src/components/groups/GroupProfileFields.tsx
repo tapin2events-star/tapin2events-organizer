@@ -18,7 +18,7 @@ export default function GroupProfileFields({ value, onChange }: { value: GroupFi
       <label className="text-sm font-medium text-gray-700">Group name
         <input className={input} value={value.name} maxLength={120} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. The Monday Night Collective" />
       </label>
-      <ImageUpload currentUrl={value.profile_image} onUploaded={(url) => set({ profile_image: url })} pathPrefix="groups" label="Group photo or logo" />
+      <ImageUpload currentUrl={value.profile_image} onUploaded={(url) => set({ profile_image: url })} pathPrefix="groups" label="Group photo or logo" crop="round" />
       <ImageUpload currentUrl={value.cover_image} onUploaded={(url) => set({ cover_image: url })} pathPrefix="groups" label="Banner image (optional, wide works best)" />
       <label className="text-sm font-medium text-gray-700">About the group
         <textarea className={input} rows={5} maxLength={3000} value={value.bio} onChange={(e) => set({ bio: e.target.value })} placeholder="Who you are, what you do, and what you bring to an event." />

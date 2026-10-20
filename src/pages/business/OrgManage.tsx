@@ -163,8 +163,8 @@ function ProfileTab({ org, canEdit, onSave }: { org: Organization; canEdit: bool
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:gap-6">
-        <ImagePicker label="Logo" value={org.logo_url} onChange={(url) => onSave({ logo_url: url })} hint="Square works best" />
-        <ImagePicker label="Cover image" shape="wide" value={org.cover_url} onChange={(url) => onSave({ cover_url: url })} hint="Wide, at least 1600 px" />
+        <ImagePicker label="Logo" value={org.logo_url} onChange={(url) => onSave({ logo_url: url })} hint="Square works best" crop />
+        <ImagePicker label="Cover image" shape="wide" value={org.cover_url} onChange={(url) => onSave({ cover_url: url })} hint="Wide, at least 1600 px" crop />
       </div>
       <label className="text-xs font-medium text-gray-500">Name<input disabled={!canEdit} className={field} value={f.name} maxLength={120} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
       <label className="text-xs font-medium text-gray-500">Tagline<input disabled={!canEdit} className={field} value={f.tagline} maxLength={160} onChange={(e) => setF({ ...f, tagline: e.target.value })} placeholder="One line about what you do" /></label>

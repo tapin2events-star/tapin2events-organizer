@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import PhotoCropper from '../components/PhotoCropper';
 import { webSafeImage } from '../lib/webImage';
 import DisplaySettings from '../components/profile/DisplaySettings';
 import YourProfile from '../components/profile/YourProfile';
@@ -63,6 +64,7 @@ export default function Profile() {
   const [openList, setOpenList] = useState<'followers' | 'following' | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [tab, setTab] = useState<SettingsTab>(() => (typeof window !== 'undefined' && window.location.hash === '#notifications' ? 'notifs' : 'basic'));
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
@@ -122,14 +124,22 @@ export default function Profile() {
     })();
   }, [user, authLoading, navigate, location.pathname]);
 
+  // Pick a photo, then position and zoom it in a circle (Adjust photo) before it's saved.
   async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = e.target.files?.[0];
+    e.target.value = '';
     if (!picked || !user) return;
-    setUploadingPhoto(true);
     let file: File;
-    try { file = await webSafeImage(picked); } catch (err) { setUploadingPhoto(false); window.alert((err as Error).message); return; }
-    const path = `${user.id}/profile-photo-${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage.from('user-uploads').upload(path, file, { upsert: true });
+    try { file = await webSafeImage(picked); } catch (err) { window.alert((err as Error).message); return; }
+    setCropSrc(URL.createObjectURL(file));
+  }
+  async function savePhoto(blob: Blob) {
+    if (cropSrc?.startsWith('blob:')) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+    if (!user) return;
+    setUploadingPhoto(true);
+    const path = `${user.id}/profile-photo-${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage.from('user-uploads').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
     if (!uploadError) {
       const { data: publicUrlData } = supabase.storage.from('user-uploads').getPublicUrl(path);
       await supabase.from('profiles').update({ profile_photo: publicUrlData.publicUrl }).eq('id', user.id);
@@ -200,6 +210,10 @@ export default function Profile() {
             </svg>
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
+          {profile.profile_photo && !uploadingPhoto && (
+            <button type="button" onClick={() => setCropSrc(profile.profile_photo)} className="mt-1 block w-20 text-center text-[11px] font-medium text-marigold">Adjust</button>
+          )}
+          {cropSrc && <PhotoCropper src={cropSrc} shape="round" onCancel={() => { if (cropSrc.startsWith('blob:')) URL.revokeObjectURL(cropSrc); setCropSrc(null); }} onDone={savePhoto} />}
         </div>
         <div>
           <h1 className="font-display text-2xl font-extrabold text-bone">{profile.full_name || profile.email}</h1>
