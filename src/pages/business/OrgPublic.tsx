@@ -12,14 +12,16 @@ import EventCover from '../../components/EventCover';
 import { DEFAULT_BRAND, loadFont, type Organization } from '../../lib/business';
 
 // An organization's public page, in its own brand: logo, cover, about, and its events.
-export default function OrgPublic() {
-  return <BusinessGate><OrgPublicInner /></BusinessGate>;
+// slugOverride: shown on an organization's own domain (custom domains), where there's no /o/:slug in the address.
+export default function OrgPublic({ slugOverride }: { slugOverride?: string } = {}) {
+  return <BusinessGate><OrgPublicInner slugOverride={slugOverride} /></BusinessGate>;
 }
 
-function OrgPublicInner() {
+function OrgPublicInner({ slugOverride }: { slugOverride?: string }) {
   const volunteersOn = useFeature('volunteers');
   const videoHeadersOn = useFeature('video_headers');
-  const { slug = '' } = useParams<{ slug: string }>();
+  const params = useParams<{ slug: string }>();
+  const slug = slugOverride ?? params.slug ?? '';
   const [org, setOrg] = useState<Organization | null | undefined>(() => { const c = cachedOrg(slug); return c ? ({ description: null, website: null, contact_email: null, ...c, brand: { ...DEFAULT_BRAND, ...(c.brand ?? {}) } } as unknown as Organization) : undefined; });
   const [events, setEvents] = useState<{ id: string; title: string; start_date: string | null; location_name: string | null; poster_url: string | null; category: string | null }[]>([]);
   const [eventsLoaded, setEventsLoaded] = useState(false);

@@ -6,7 +6,7 @@ import OrgDomainHome from '../pages/OrgDomainHome';
 
 // On an organization's own domain, only its white-labeled content is shown: its branded home page, its
 // white-labeled events, tickets and "Your tickets". Anything else goes to app.tapin2events.com.
-const ALLOWED = ['/events/:id', '/pass/:ticketId', '/tickets/:slug', '/terms', '/privacy', '/refund-policy'];
+const ALLOWED = ['/events/:id', '/pass/:ticketId', '/tickets/:slug', '/o/:slug', '/terms', '/privacy', '/refund-policy'];
 
 export default function DomainGate({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -19,6 +19,9 @@ export default function DomainGate({ children }: { children: ReactNode }) {
     const path = location.pathname + location.search;
     if (!org) { sendToApp(path); return; }
     if (location.pathname === '/') return;
+    // The organization's own page lives at the domain's main address; other organizations go to TapIN.
+    const orgMatch = matchPath('/o/:slug', location.pathname);
+    if (orgMatch) { if (orgMatch.params.slug === org.slug) window.history.replaceState(null, '', '/'); else sendToApp(path); return; }
     if (!ALLOWED.some((p) => matchPath(p, location.pathname))) { sendToApp(path); return; }
     if (eventMatch?.params.id) {
       // Only this organization's white-labeled events live on its domain.
@@ -31,7 +34,7 @@ export default function DomainGate({ children }: { children: ReactNode }) {
   }, [custom, ready, org, location.pathname, location.search]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!custom) return <>{children}</>;
   if (!ready || !org) return <div className="min-h-screen bg-white" />;
-  if (location.pathname === '/') return <OrgDomainHome org={org} />;
+  if (location.pathname === '/' || matchPath('/o/:slug', location.pathname)?.params.slug === org.slug) return <OrgDomainHome org={org} />;
   if (eventMatch && !eventOk) return <div className="min-h-screen bg-white" />;
   return <>{children}</>;
 }
