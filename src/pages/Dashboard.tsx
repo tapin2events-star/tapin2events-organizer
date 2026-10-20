@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { HeldPayoutsNotice } from '../components/HeldPayouts';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import NeedsAttention from '../components/dashboard/NeedsAttention';
 import EventActions from '../components/dashboard/EventActions';
@@ -250,6 +251,7 @@ export default function Dashboard() {
 
       {!loading && user?.id && user.email ? <NeedsAttention events={events} userId={user.id} userEmail={user.email} onReady={() => setAlertsReady(true)} /> : <NeedsAttentionSkeleton />}
 
+      <HeldPayoutsNotice />
       {!revealed ? <Skeleton className="mb-4 h-12 w-full rounded-xl" /> : <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
       {!revealed && <RowSkeleton tall />}

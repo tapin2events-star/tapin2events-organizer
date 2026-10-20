@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { EventPayoutWarning } from '../components/HeldPayouts';
 import VideoHeaderCard from '../components/video/VideoHeaderCard';
 import WhiteLabelCard from '../components/business/WhiteLabelCard';
 import GalaTab from '../components/tabs/GalaTab';
@@ -147,6 +148,7 @@ export default function EventDetail() {
       )}
 
       <div className="mb-3"><BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" /></div>
+      <EventPayoutWarning eventId={event.id} paid={event.event_type !== 'free'} />
       <div className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>

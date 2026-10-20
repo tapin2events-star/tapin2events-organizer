@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { HeldPayoutsNotice } from '../../components/HeldPayouts';
 import { useFeature } from '../../lib/preview';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -67,6 +68,7 @@ function BusinessHomeInner() {
             </div>
           </section>
           <div className="px-6 pt-6 sm:px-10">
+        <HeldPayoutsNotice orgsOnly />
         {/* Your organizations */}
         {orgs && orgs.length > 0 && (
           <section className="mb-6">
