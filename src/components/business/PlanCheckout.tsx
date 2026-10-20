@@ -28,6 +28,8 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
   const [plan, setPlan] = useState<UIPlan>('business');
   const [interval, setInterval] = useState<'month' | 'year'>('month');
   const [packs, setPacks] = useState<PackId[]>([]);
+  // White-label pack: with any organization plan ($99/mo, $990/yr).
+  const [wl, setWl] = useState(false);
   const [extra, setExtra] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -49,7 +51,8 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
       if (r.artist?.live || (!org && (preferArtist || leadsNow.length === 0))) setPlan('artist');
       const want = q.get('pack');
       if (want && !r.artist?.live && leadsNow.length > 0) {
-        if (want === 'business') setPlan('business');
+        if (want === 'white_label') { setWl(true); setPlan((pl) => (pl === 'artist' ? 'business' : pl)); }
+        else if (want === 'business') setPlan('business');
         else { setPlan('essentials'); if (want !== 'essentials') setTimeout(() => setPacks((x) => (x.includes(want as PackId) ? x : [...x, want as PackId])), 50); }
       }
       if (window.location.hash === '#get-plan') setTimeout(() => document.getElementById('get-plan')?.scrollIntoView({ behavior: 'smooth' }), 400);
@@ -66,17 +69,21 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
       return;
     }
     if (!org) return;
-    if (isLive(org)) { setPlan(org.plan as PlanId); setPacks(org.packs ?? []); setExtra(org.extra_clients ?? 0); setInterval(org.interval === 'year' ? 'year' : 'month'); }
+    if (isLive(org)) { setPlan(org.plan as PlanId); setPacks(((org.packs ?? []) as string[]).filter((x) => x !== 'white_label') as PackId[]); setWl(((org.packs ?? []) as string[]).includes('white_label')); setExtra(org.extra_clients ?? 0); setInterval(org.interval === 'year' ? 'year' : 'month'); }
   }, [org?.id, isArtist]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!st) return null;
   const founding = !isArtist && !!org?.founding_number;
-  const price = planTotal(plan, interval, packs, extra, founding);
+  const wlPrice = interval === 'year' ? 990 : 99;
+  const base = planTotal(plan, interval, packs, extra, founding);
+  const wlOn = !isArtist && wl;
+  const price = { ...base, full: base.full + (wlOn ? wlPrice : 0), due: base.due + (wlOn ? (founding && plan !== 'essentials' ? wlPrice * 0.6 : wlPrice) : 0) };
+  const sentPacks = !isArtist && wl ? [...packs, 'white_label'] : packs;
   const orgLive = org ? isLive(org) : false;
   const live = isArtist ? !!artist?.live : orgLive;
   const same = isArtist
     ? !!artist?.live && (artist.interval === 'year' ? 'year' : 'month') === interval && [...(artist.packs ?? [])].sort().join() === [...packs].sort().join()
     : !!org && orgLive && org.plan === plan && (org.interval === 'year' ? 'year' : 'month') === interval
-      && [...(org.packs ?? [])].sort().join() === [...(plan === 'essentials' ? packs : [])].sort().join() && (org.extra_clients ?? 0) === (plan === 'agency' ? extra : 0);
+      && [...(org.packs ?? [])].sort().join() === [...(plan === 'essentials' ? packs : []), ...(wl ? ['white_label'] : [])].sort().join() && (org.extra_clients ?? 0) === (plan === 'agency' ? extra : 0);
   const per = interval === 'year' ? '/year' : '/month';
   async function go(key: string, body: Record<string, unknown>) {
     setBusy(key); setMsg(null);
@@ -141,6 +148,16 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
         })}
       </div>
 
+      {!isArtist && (
+        <label className={`mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 ${wl ? 'border-marigold bg-white' : 'border-gray-200 bg-white'}`}>
+          <input type="checkbox" checked={wl} onChange={() => setWl((x) => !x)} className="mt-1 h-4 w-4 accent-marigold" />
+          <span className="text-sm">
+            <span className="font-semibold text-gray-900">🏷️ White-label pack · ${wlPrice}{per}</span>
+            <span className="block text-gray-600">Every event in your brand (pages, sign-in, tickets, emails, link previews) plus your own web address, like tickets.yourorg.com.</span>
+          </span>
+        </label>
+      )}
+
       {(plan === 'essentials' || isArtist) && (
         <div className="mt-4">
           <p className="text-sm font-semibold text-gray-900">Add packs{isArtist ? ' (for events you host)' : ''}</p>
@@ -186,9 +203,9 @@ export default function PlanCheckout({ preferArtist = false }: { preferArtist?: 
         ) : org && (orgLive
           ? <div className="flex flex-wrap gap-2">
               <button onClick={() => go('portal', { action: 'portal', org_id: org.id })} disabled={!!busy} className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 disabled:opacity-50">{busy === 'portal' ? 'Opening…' : 'Billing & invoices'}</button>
-              <button onClick={() => go('change', { action: 'change', org_id: org.id, plan, interval, packs, extra_clients: extra })} disabled={!!busy || same} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === 'change' ? 'Updating…' : same ? 'Current plan' : 'Change plan'}</button>
+              <button onClick={() => go('change', { action: 'change', org_id: org.id, plan, interval, packs: sentPacks, extra_clients: extra })} disabled={!!busy || same} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === 'change' ? 'Updating…' : same ? 'Current plan' : 'Change plan'}</button>
             </div>
-          : <button onClick={() => go('checkout', { action: 'checkout', org_id: org.id, plan, interval, packs, extra_clients: extra })} disabled={!!busy || !!org.agency} className="rounded-xl bg-[#0F1B3D] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy === 'checkout' ? 'Opening checkout…' : org.agency ? 'Covered by your agency' : `Get ${PLAN_LABEL[plan]}`}</button>)}
+          : <button onClick={() => go('checkout', { action: 'checkout', org_id: org.id, plan, interval, packs: sentPacks, extra_clients: extra })} disabled={!!busy || !!org.agency} className="rounded-xl bg-[#0F1B3D] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy === 'checkout' ? 'Opening checkout…' : org.agency ? 'Covered by your agency' : `Get ${PLAN_LABEL[plan]}`}</button>)}
       </div>
       {live && <p className="mt-2 text-xs text-gray-500">Plan changes take effect right away; Stripe adjusts your bill for the rest of the period.</p>}
       {!isArtist && org && orgLive && org.plan === 'agency' && <AgencyClients agencyId={org.id} />}

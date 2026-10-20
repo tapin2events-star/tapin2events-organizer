@@ -119,7 +119,7 @@ export default function BusinessPlan() {
             </div>
             <div className="rounded-2xl border-2 border-[#0F1B3D] p-5">
               <p className="font-display text-2xl font-extrabold text-bone">🏢 Agency · ${PLAN_PRICES.agency.month}/month</p>
-              <p className="mt-1 text-sm text-muted">For event planners and agencies: everything in Business for <strong>up to 5 client organizations</strong>, one bill. Extra clients ${AGENCY_EXTRA.month}/month each; white-label $199/event instead of $299.</p>
+              <p className="mt-1 text-sm text-muted">For event planners and agencies: everything in Business for <strong>up to 5 client organizations</strong>, one bill. Extra clients ${AGENCY_EXTRA.month}/month each; white-label $149/event instead of $199.</p>
               <p className="mt-2 text-xs font-semibold" style={{ color: '#8A6D12' }}>Founding: ${(PLAN_PRICES.agency.month * 0.6).toFixed(2)}/month for life</p>
             </div>
           </div>
@@ -130,15 +130,23 @@ export default function BusinessPlan() {
           <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD }}>Add-on</p>
-              <h3 className="mt-1 font-display text-2xl font-extrabold">White-label events</h3>
-              <p className="mt-2 max-w-lg text-sm text-white/80">Run an event that looks entirely like your own brand: your logo, colors and name across the event page, tickets and emails, without TapIN branding. Ideal for conferences, galas and corporate events.</p>
+              <h3 className="mt-1 font-display text-2xl font-extrabold">White-label</h3>
+              <p className="mt-2 max-w-lg text-sm text-white/80">Events that look entirely like your own brand: your logo, colors and name everywhere attendees look, with no TapIN branding. Ideal for conferences, galas, festivals and organizations that host often.</p>
               <ul className="mt-3 grid gap-1.5 text-sm text-white/90 sm:grid-cols-2">
-                <li>✓ Your branding on the event page</li><li>✓ Branded tickets and emails</li><li>✓ No TapIN branding for attendees</li><li>✓ Works with any plan · $199 on Agency</li>
+                <li>✓ Branded event pages and checkout</li><li>✓ Branded sign-in, tickets and emails</li>
+                <li>✓ Shared links show your event and name</li><li>✓ Your name on card statements</li>
+                <li>✓ Free address: <em>yourname</em>.tapin2events.com</li><li>✓ Your own domain (monthly pack)</li>
               </ul>
             </div>
-            <div className="rounded-2xl bg-white/10 p-4 text-center sm:min-w-[170px]">
-              <p className="text-4xl font-extrabold">$299</p>
-              <p className="text-sm text-white/70">per event</p>
+            <div className="grid gap-2 sm:min-w-[190px]">
+              <div className="rounded-2xl bg-white/10 p-3 text-center">
+                <p className="text-3xl font-extrabold">$199</p>
+                <p className="text-xs text-white/70">per event · $149 on Agency</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-3 text-center">
+                <p className="text-3xl font-extrabold">$99<span className="text-base font-semibold">/mo</span></p>
+                <p className="text-xs text-white/70">every event + your own domain · $990/yr · with any plan</p>
+              </div>
               <a href="#reserve" onClick={() => setWanted((w) => (w.includes('White-label events') ? w : [...w, 'White-label events']))} className="mt-3 inline-block rounded-full px-4 py-2 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>I'm interested</a>
             </div>
           </div>
