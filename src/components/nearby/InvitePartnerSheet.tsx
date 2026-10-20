@@ -18,6 +18,8 @@ export default function InvitePartnerSheet({ eventId, onClose, onCreated }: { ev
   const [email, setEmail] = useState('');
   const [emailState, setEmailState] = useState<{ ok: boolean; text: string } | null>(null);
   const [sending, setSending] = useState(false);
+  // What TapIN knows about reaching this business: a remembered or public email, phone and website.
+  const [contact, setContact] = useState<{ email: string | null; email_source: 'remembered' | 'public' | null; phone: string | null; website: string | null } | null>(null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -38,6 +40,10 @@ export default function InvitePartnerSheet({ eventId, onClose, onCreated }: { ev
     const { data: v } = await supabase.rpc('partner_invite_view', { p_token: t });
     setBusy(false);
     setToken(t);
+    const { data: c } = await supabase.rpc('partner_contact_suggest', { p_event_id: eventId, p_place_id: placeId, p_name: name.trim() });
+    const known = (c ?? null) as typeof contact;
+    setContact(known);
+    if (known?.email) setEmail(known.email);
     setText(v ? buildPitch(v as InviteView, t, sender || 'the organizer') : `Hi ${name.trim()}! Would you like to partner with our event and offer our ticket holders a perk? It's free. Say yes here: ${inviteLink(t)}`);
     onCreated();
   }
@@ -79,9 +85,17 @@ export default function InvitePartnerSheet({ eventId, onClose, onCreated }: { ev
             <button onClick={copy} className="rounded-xl border border-gray-300 bg-white py-3 text-sm font-semibold text-gray-800">{copied ? '✓ Copied' : 'Copy message'}</button>
             <button onClick={share} className="rounded-xl bg-[#0F1B3D] py-3 text-sm font-semibold text-white">Share…</button>
           </div>
+          {(contact?.phone || contact?.website) && (
+            <div className="mt-2 flex flex-wrap gap-2 text-sm">
+              {contact.phone && <a href={`sms:${contact.phone.replace(/[^\d+]/g, '')}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(text)}`} className="rounded-full border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800">💬 Text {contact.phone}</a>}
+              {contact.phone && <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="rounded-full border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800">📞 Call</a>}
+              {contact.website && <a href={contact.website} target="_blank" rel="noopener noreferrer" className="rounded-full border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800">🌐 Website</a>}
+            </div>
+          )}
           <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
             <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">Or email it from TapIN <PremiumBadge feature="partner_emails" /></p>
             <p className="text-xs text-gray-500">Sent from your name via TapIN, and replies come straight to you. Up to 10 a day per event.</p>
+            {contact?.email && email === contact.email && <p className="mt-1 text-xs font-medium text-green-700">✓ {contact.email_source === 'remembered' ? 'Filled in from your team\u2019s last invite to this business' : 'Filled in from their public listing'}</p>}
             {emailState?.ok ? (
               <p role="status" className="mt-2 text-sm text-green-800">✓ {emailState.text}</p>
             ) : (
