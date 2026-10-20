@@ -13,8 +13,16 @@ export function applyTextSize(size: TextSize | null | undefined) {
 export function applyCachedDisplay() {
   try { applyTextSize((localStorage.getItem('tapin_text_size') as TextSize) || 'normal'); } catch { /* ignore */ }
 }
+// Simple mode is cached on the device too, so pages don't show extras for a moment and then hide them
+// while the account's settings load.
+const cachedSimple = () => { try { return localStorage.getItem('tapin_simple_mode') === '1'; } catch { return false; } };
 export function useDisplayPrefs() {
   const s = useSetup();
   useEffect(() => { if (s?.text_size) applyTextSize(s.text_size); }, [s?.text_size]);
-  return { simple: !!s?.simple_mode, textSize: (s?.text_size ?? 'normal') as TextSize };
+  const loaded = !!s && typeof s.simple_mode === 'boolean';
+  useEffect(() => {
+    if (!loaded) return;
+    try { localStorage.setItem('tapin_simple_mode', s!.simple_mode ? '1' : '0'); } catch { /* ignore */ }
+  }, [loaded, s?.simple_mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { simple: loaded ? !!s!.simple_mode : cachedSimple(), textSize: (s?.text_size ?? 'normal') as TextSize };
 }

@@ -12,6 +12,13 @@
     <meta name="apple-mobile-web-app-title" content="TapIN" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light" />
+    <style>
+      html, body { background: #ffffff; margin: 0; }
+      #boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #ffffff; }
+      #boot span { font: 800 30px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.5px;
+        background: linear-gradient(135deg, #4F46E5, #14B8A6); -webkit-background-clip: text; background-clip: text; color: transparent; opacity: 0.9; }
+    </style>
     <!-- iPhone Safari: "Open in the TapIN app" banner (Get, if not installed). app-argument = the page being viewed. -->
     <meta name="apple-itunes-app" content="app-id=6474884074" />
     <script>
@@ -40,7 +47,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div id="boot" aria-hidden="true"><span>TapIN</span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
