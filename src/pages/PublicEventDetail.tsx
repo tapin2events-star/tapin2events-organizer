@@ -509,7 +509,8 @@ export default function PublicEventDetail() {
           <>
             {businessOn && biz.org ? <OrgHostedBy org={biz.org} /> : event.organizer_email && <HostedBy organizerEmail={event.organizer_email} fallbackName={organizerName} />}
             <div className="mt-2 text-right text-sm">
-              <a href={`mailto:${event.organizer_email}`} className="font-medium text-marigold hover:underline">
+              {/* Organization events: the organization's contact (falls back to the event creator). */}
+              <a href={`mailto:${(event.organization_id && biz.org?.contact_email) || event.organizer_email}`} className="font-medium text-marigold hover:underline">
                 Contact organizer
               </a>
             </div>

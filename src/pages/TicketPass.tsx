@@ -37,6 +37,7 @@ interface PassData {
     organizer_email: string;
   };
   organizerName: string | null;
+  contactEmail?: string | null;
   // The rest of the same order: a group's seats at this event, and a series
   // pass's dates. One QR code covers all of them.
   group?: { id: string; section_name: string | null; seat_assignment: string | null; quantity: number; status: string; checked_in_at: string | null }[];
@@ -103,7 +104,7 @@ export default function TicketPass() {
   if (loading) return <TicketSkeleton />;
   if (error || !data) return <div className="p-10 text-center text-magenta">{error || 'Ticket not found.'}</div>;
 
-  const { ticket, event, organizerName } = data;
+  const { ticket, event, organizerName, contactEmail } = data;
   const group = (data.group ?? []).filter((t) => t.status !== 'cancelled');
   const people = group.reduce((n, t) => n + (Number(t.quantity) || 1), 0);
   const seated = group.some((t) => t.seat_assignment);
@@ -210,8 +211,13 @@ export default function TicketPass() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Organized by</span>
-                <span className="font-medium text-gray-900">{organizerName || event.organizer_email}</span>
+                <span className="text-right font-medium text-gray-900">{organizerName || event.organizer_email}</span>
               </div>
+              {(contactEmail || event.organizer_email) && (
+                <div className="flex justify-end print:hidden">
+                  <a href={`mailto:${contactEmail || event.organizer_email}`} className="text-xs font-medium" style={{ color: whiteLabel?.primary ?? '#4F46E5' }}>Contact organizer</a>
+                </div>
+              )}
             </div>
           </div>
         </div>
