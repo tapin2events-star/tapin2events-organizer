@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import DomainGate from './components/DomainGate';
 import { TourProvider } from './components/TourGuide';
 import lazyWithRetry from './lib/lazyWithRetry';
 import AppErrorBoundary from './components/AppErrorBoundary';
@@ -77,7 +78,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <AppErrorBoundary><TourProvider><Routes>
+        <AppErrorBoundary><TourProvider><DomainGate><Routes>
           <Route path="/login" element={<Login />} />
           <Route
             path="/feed"
@@ -164,7 +165,7 @@ export default function App() {
             />
             <Route path="/organizer/events/:id/edit" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
           </Route>
-        </Routes></TourProvider></AppErrorBoundary>
+        </Routes></DomainGate></TourProvider></AppErrorBoundary>
       </BrowserRouter>
     </AuthProvider>
   );

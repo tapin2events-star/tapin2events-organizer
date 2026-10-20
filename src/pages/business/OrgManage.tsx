@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import CustomDomainCard from '../../components/business/CustomDomainCard';
 import { AddExistingEventsSheet } from '../../components/business/MoveEvents';
 import WebsiteEmbedCard from '../../components/promote/WebsiteEmbedCard';
 import TeamPeopleShortcut from '../../components/business/TeamPeopleShortcut';
@@ -50,6 +51,7 @@ function OrgManageInner() {
   const billingOn = useFeature('billing');
   const promoterPayoutsOn = useFeature('promoter_payouts');
   const videoHeadersOn = useFeature('video_headers');
+  const whiteLabelOn = useFeature('white_label');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
   const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
@@ -135,6 +137,7 @@ function OrgManageInner() {
         {tab === 'Profile' && <ProfileTab org={org} canEdit={canEdit} onSave={save} />}
         {tab === 'Profile' && role === 'owner' && org.status !== 'deleted' && <DangerZone orgId={org.id} orgName={org.name} />}
         {tab === 'Brand kit' && <BrandTab org={org} canEdit={canEdit} onSave={save} />}
+        {tab === 'Brand kit' && isLead && whiteLabelOn && <CustomDomainCard orgId={org.id} />}
         {tab === 'Team' && <Link to={`/team-chat/${org.id}`} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm"><span><strong className="text-gray-900">💬 Team chat</strong><span className="block text-gray-600">Message everyone on {org.name}'s team, share photos and files</span></span><span className="shrink-0 font-semibold text-indigo-700">Open ›</span></Link>}
         {tab === 'Team' && canEditPage && <TeamPeopleShortcut orgId={org.id} onManage={() => { setTab('Page'); setTimeout(() => document.getElementById('featured-people')?.scrollIntoView({ behavior: 'smooth' }), 300); }} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
