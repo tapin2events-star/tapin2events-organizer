@@ -1,5 +1,5 @@
 // "Invite a local partner": the ready-to-send ask, written from the event's details.
-export interface InviteView {
+export interface InviteView { photo_url?: string | null;
   business_name: string; status: string; perk: string | null; perk_details: string | null; partner_id: string | null;
   event: { id: string; title: string; start_date: string | null; location: string | null; poster: string | null; published: boolean; guests: number; capacity: number | null };
   host: string | null; distance_m: number | null;

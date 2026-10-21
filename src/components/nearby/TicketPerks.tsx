@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 // Ticket page: perks this ticket unlocks. Show it at the counter; staff can tap Redeem (once per ticket).
-interface Perk { id: string; name: string; address: string | null; perk: string; perk_details: string | null; redeemed_at: string | null }
+interface Perk { id: string; name: string; address: string | null; perk: string; perk_details: string | null; redeemed_at: string | null; photo_url?: string | null }
 export default function TicketPerks({ ticketId }: { ticketId: string }) {
   const [rows, setRows] = useState<Perk[]>([]);
   const load = useCallback(() => { supabase.rpc('ticket_perks', { p_ticket_id: ticketId }).then(({ data }) => setRows((data ?? []) as Perk[])); }, [ticketId]);
@@ -21,8 +21,13 @@ export default function TicketPerks({ ticketId }: { ticketId: string }) {
       <ul className="mt-3 flex flex-col gap-2">
         {rows.map((p) => (
           <li key={p.id} className="rounded-xl bg-white p-3">
-            <p className="font-semibold text-gray-900">{p.perk}</p>
-            <p className="text-sm text-gray-600">at <strong>{p.name}</strong>{p.address ? ` · ${p.address}` : ''}</p>
+            <div className="flex gap-3">
+              {p.photo_url && <img src={p.photo_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-lg object-cover" />}
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900">{p.perk}</p>
+                <p className="text-sm text-gray-600">at <strong>{p.name}</strong>{p.address ? ` · ${p.address}` : ''}</p>
+              </div>
+            </div>
             {p.perk_details && <p className="mt-0.5 text-xs text-gray-500">{p.perk_details}</p>}
             {p.redeemed_at
               ? <p className="mt-2 text-sm font-semibold text-gray-500">✓ Redeemed {new Date(p.redeemed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>

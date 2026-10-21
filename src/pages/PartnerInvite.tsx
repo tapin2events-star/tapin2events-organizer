@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { eventDay, type InviteView } from '../lib/partnerInvite';
+import PartnerPhotoPicker from '../components/nearby/PartnerPhotoPicker';
 
 // A local business's invitation page: see the event, choose a perk for ticket holders, and say yes (no account needed).
 export default function PartnerInvite() {
@@ -50,6 +51,7 @@ export default function PartnerInvite() {
               <p className="font-semibold">{status === 'approved' ? '🎉 You\u2019re a local partner!' : 'Thank you! You\u2019re all set.'}</p>
               <p className="mt-1">{status === 'approved' ? 'Your perk is on the event page and on every guest\u2019s ticket.' : 'The organizer will confirm your perk shortly. Guests will see it on the event page and their tickets.'}</p>
               {v.perk && <p className="mt-2"><strong>Your perk:</strong> {v.perk}{v.perk_details ? ` (${v.perk_details})` : ''}</p>}
+              {token && <PartnerPhotoPicker token={token} url={v.photo_url} onChange={(url) => setV((x) => (x ? { ...x, photo_url: url } : x))} />}
               {status === 'approved' && v.partner_id && <a href={`/partners/${v.partner_id}/card`} target="_blank" rel="noopener" className="mt-3 inline-block rounded-xl bg-[#0F1B3D] px-4 py-2.5 font-semibold text-white">Print your counter card</a>}
             </div>
           ) : status === 'withdrawn' ? (
@@ -72,6 +74,7 @@ export default function PartnerInvite() {
               <label className="mt-3 block text-sm font-medium text-gray-700">Details <span className="font-normal text-gray-400">(optional)</span>
                 <input value={details} onChange={(e) => setDetails(e.target.value)} maxLength={500} placeholder="Day of the event, before 8 PM, dine-in only" className={field} />
               </label>
+              {token && <PartnerPhotoPicker token={token} url={v.photo_url} onChange={(url) => setV((x) => (x ? { ...x, photo_url: url } : x))} />}
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <label className="block text-sm font-medium text-gray-700">Your name <span className="font-normal text-gray-400">(optional)</span><input value={contactName} onChange={(e) => setContactName(e.target.value)} maxLength={100} autoComplete="name" className={field} /></label>
                 <label className="block text-sm font-medium text-gray-700">Email <span className="font-normal text-gray-400">(optional)</span><input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} type="email" autoComplete="email" maxLength={200} className={field} /></label>

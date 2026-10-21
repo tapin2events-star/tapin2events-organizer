@@ -12,13 +12,13 @@ export const ESSENTIALS: Feature[] = [
   { key: 'invoices', icon: '🧾', name: 'Invoices', desc: 'Bill companies for group tickets' },
   { key: 'meetings', icon: '📝', name: 'Meeting extras', desc: 'Recurring meetings, minutes, agenda templates' },
   { key: 'embed_polish', icon: '🌐', name: 'Website embed, your way', desc: 'Your brand colors and font, list, grid or calendar layouts, and no "Tickets by TapIN" link' },
+  { key: 'nearby_plus', icon: '⭐', name: 'Google places in Make a night of it', desc: 'Ratings, review counts, price levels and today’s hours (the free version uses OpenStreetMap)' },
 ];
 export const PACKS: { id: PackId; icon: string; name: string; price: { month: number; year: number }; for: string; features: Feature[] }[] = [
   { id: 'performers', icon: '🎤', name: 'Performers & Promotion', price: { month: 5, year: 50 }, for: 'Shows, concerts and open mics', features: [
     { key: 'promoter_payouts', icon: '📣', name: 'Automatic promoter payouts', desc: 'Commission sent on every ticket sold through a promo link' },
     { key: 'video_headers', icon: '🎬', name: 'Video headers & highlight reels', desc: 'Trailers on your pages and past-event highlights' },
     { key: 'local_partners', icon: '🤝', name: 'Unlimited local partners', desc: 'Perks from nearby businesses, emailed invitations, redemption counts and results summaries' },
-    { key: 'nearby_plus', icon: '✨', name: 'Enhanced nearby places', desc: 'Google ratings, price levels and today’s hours in Make a night of it' },
   ] },
   { id: 'conference', icon: '🎓', name: 'Conference', price: { month: 15, year: 150 }, for: 'Conferences, summits and workshops', features: [
     { key: 'program', icon: '🗓️', name: 'Program extras', desc: 'Visual agenda, speakers, sponsors' },
@@ -60,9 +60,9 @@ export const ARTIST_FEATURES: Feature[] = [
 export function packFor(feature?: string): { label: string; detail: string } {
   const pack = (id: PackId) => { const p = PACKS.find((x) => x.id === id)!; return { label: `${p.name} pack`, detail: `the ${p.name} pack (+${money(p.price.month)}/month with Essentials or the Artist plan, and included in Business)` }; };
   switch (feature) {
-    case 'templates': case 'insights': case 'promotion_links': case 'invoices': case 'meetings': case 'embed_polish':
+    case 'templates': case 'insights': case 'promotion_links': case 'invoices': case 'meetings': case 'embed_polish': case 'nearby_plus':
       return { label: 'Essentials', detail: `Essentials (${money(PLAN_PRICES.essentials.month)}/month, and included in Business)` };
-    case 'promoter_payouts': case 'video_headers': case 'local_partners': case 'nearby_plus': case 'partner_emails': return pack('performers');
+    case 'promoter_payouts': case 'video_headers': case 'local_partners': case 'partner_emails': return pack('performers');
     case 'program': case 'workshops': case 'networking': return pack('conference');
     case 'gala': case 'donors': return pack('fundraising');
     case 'volunteers': case 'newsletters': return pack('community');

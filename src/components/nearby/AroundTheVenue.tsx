@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 
 // Event page: "Make a night of it" — places near the venue. Anyone signed in can save their own picks (only they
 // see them); the event's organizers can recommend up to 3 places to everyone ("Our pick").
-interface Place { id: string; name: string; category: 'eat' | 'drink' | 'coffee' | 'parking' | 'stay'; kind: string | null; distance_m: number | null; hours: string | null; website: string | null; phone: string | null; address: string | null; lat: number; lng: number; pinned: boolean; hidden: boolean; source?: string; rating?: number | null; rating_count?: number | null; price_level?: string | null; saved?: boolean }
+interface Place { id: string; name: string; category: 'eat' | 'drink' | 'coffee' | 'parking' | 'stay'; kind: string | null; distance_m: number | null; hours: string | null; website: string | null; phone: string | null; address: string | null; lat: number; lng: number; pinned: boolean; hidden: boolean; source?: string; rating?: number | null; rating_count?: number | null; price_level?: string | null; saved?: boolean; photo_url?: string | null }
 const CATS: { id: Place['category']; label: string; icon: string }[] = [
   { id: 'eat', label: 'Eat', icon: '🍽️' }, { id: 'drink', label: 'Drink', icon: '🍸' }, { id: 'coffee', label: 'Coffee', icon: '☕' }, { id: 'parking', label: 'Parking', icon: '🅿️' }, { id: 'stay', label: 'Stay', icon: '🛏️' },
 ];
@@ -21,7 +21,7 @@ const walk = (m: number | null) => (m == null ? '' : m < 120 ? 'Steps away' : `$
 
 export default function AroundTheVenue({ eventId }: { eventId: string }) {
   const { user } = useAuth();
-  const [d, setD] = useState<{ enabled: boolean; fetched: boolean; can_manage: boolean; enhanced?: boolean; places: Place[] } | null>(null);
+  const [d, setD] = useState<{ enabled: boolean; fetched: boolean; can_manage: boolean; can_recommend?: boolean; enhanced?: boolean; places: Place[] } | null>(null);
   const [cat, setCat] = useState<Place['category'] | null>(null);
   const load = useCallback(async () => {
     const { data } = await supabase.rpc('event_nearby', { p_event_id: eventId });
@@ -61,7 +61,7 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
       <div>
         {d.can_manage && d.enhanced && <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">✨ Enhanced places (ratings, hours and price) <PremiumBadge feature="nearby_plus" /></p>}
       </div>
-      {d.can_manage && <p className="mt-1 text-xs text-gray-500">Only you see these controls. Recommend up to 3 places to everyone (they show as Our pick), or hide places you don't recommend.{!d.enabled && ' This section is hidden from attendees.'}</p>}
+      {d.can_manage && <p className="mt-1 text-xs text-gray-500">Only your team sees these controls. Hide places you don't recommend; the event's organizer and Admins can also recommend up to 3 places to everyone (they show as Our pick).{!d.enabled && ' This section is hidden from attendees.'}</p>}
       {!places.length ? <p className="mt-2 text-sm text-gray-500">{d.fetched ? 'No nearby places found yet.' : 'Finding places nearby…'}</p> : (
         <>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="tablist">
@@ -74,7 +74,8 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
             {shown.map((p) => (
               <li key={p.id} className={`rounded-2xl border bg-white p-3 ${p.pinned || p.saved ? 'border-[#C9A227]' : 'border-gray-200'} ${p.hidden ? 'opacity-50' : ''}`}>
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  {p.photo_url && <img src={p.photo_url} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl object-cover" />}
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-gray-900">{p.name}{p.saved && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 align-middle text-[10px] font-bold text-amber-800">★ YOUR PICK</span>}{p.pinned && <span className="ml-2 rounded-full bg-[#C9A227] px-2 py-0.5 align-middle text-[10px] font-bold text-[#0F1B3D]">OUR PICK</span>}</p>
                     {(p.rating != null || p.price_level) && <p className="text-sm text-gray-700">{p.rating != null && <><span className="text-amber-500" aria-hidden="true">★</span> {p.rating.toFixed(1)}{p.rating_count ? <span className="text-gray-400"> ({p.rating_count.toLocaleString()})</span> : null}</>}{p.rating != null && p.price_level ? ' · ' : ''}{p.price_level}</p>}
                     <p className="truncate text-sm text-gray-500">{[p.kind, walk(p.distance_m), p.address].filter(Boolean).join(' · ')}</p>
@@ -86,7 +87,7 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
                   <div className="mt-1.5 flex flex-wrap gap-x-4 text-xs">
                     {p.website && <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noopener" className="font-medium text-marigold">Website</a>}
                     {user && <button onClick={() => save(p)} className={`font-medium ${p.saved ? 'text-amber-700' : 'text-gray-600'}`} aria-pressed={!!p.saved}>{p.saved ? '★ Saved' : '☆ Save'}</button>}
-                    {d.can_manage && <button onClick={() => pin(p)} className="font-medium text-gray-600">{p.pinned ? 'Stop recommending' : '📌 Recommend to everyone'}</button>}
+                    {d.can_recommend && <button onClick={() => pin(p)} className="font-medium text-gray-600">{p.pinned ? 'Stop recommending' : '📌 Recommend to everyone'}</button>}
                     {d.can_manage && <button onClick={() => hide(p)} className="text-gray-500">{p.hidden ? 'Show' : 'Hide'}</button>}
                   </div>
                 )}
