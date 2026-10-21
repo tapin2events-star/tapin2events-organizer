@@ -1,1 +1,0 @@
-var e=e=>`$${(Number(e)||0).toFixed(2)}`;function t(e,t){let n=Math.round(e*100)+Math.round(t*100),r=Math.round(n*.037)+179,i=Math.round(n*.029);return{subtotal:n/100,service:r/100,processing:i/100,total:(n+r+i)/100}}function n(t,n=[]){if(!n.length)return e(t);let r=n.map(e=>t+(Number(e)||0)),i=Math.min(...r);return i===Math.max(...r)?e(i):`From ${e(i)}`}export{n,t as r,e as t};

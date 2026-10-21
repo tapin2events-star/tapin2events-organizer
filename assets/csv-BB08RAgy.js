@@ -1,2 +1,0 @@
-function e(e){let t=String(e??``);return/^[=+\-@\t\r]/.test(t)&&(t=`'`+t),`"${t.replace(/"/g,`""`)}"`}function t(t){return t.map(t=>t.map(e).join(`,`)).join(`\r
-`)}function n(e,t=40){return(e||`export`).toLowerCase().replace(/[^a-z0-9]+/g,`-`).slice(0,t).replace(/(^-+|-+$)/g,``)||`export`}function r(e,n){let r=new Blob([`﻿`+t(n)],{type:`text/csv;charset=utf-8`}),i=document.createElement(`a`);i.href=URL.createObjectURL(r),i.download=e,document.body.appendChild(i),i.click(),i.remove(),setTimeout(()=>URL.revokeObjectURL(i.href),5e3)}export{n,r as t};
