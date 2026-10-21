@@ -53,6 +53,7 @@ const PartnerCard = lazyWithRetry(() => import('./pages/PartnerCard'));
 const PartnerOptout = lazyWithRetry(() => import('./pages/PartnerOptout'));
 const OrgTickets = lazyWithRetry(() => import('./pages/OrgTickets'));
 const TransferAccept = lazyWithRetry(() => import('./pages/TransferAccept'));
+const EmbedPage = lazyWithRetry(() => import('./pages/EmbedPage'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -98,6 +99,7 @@ export default function App() {
               ProtectedRoute, not by which shell wraps them. */}
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/embed/org/:slug" element={<Embed />} />
+          <Route path="/embed/page/:slug" element={<EmbedPage />} />
           <Route path="/embed/event/:id" element={<Embed />} />
           <Route path="/partner/:token" element={<PartnerInvite />} />
           <Route path="/partners/:id/card" element={<PartnerCard />} />

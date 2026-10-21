@@ -13,11 +13,11 @@ import { DEFAULT_BRAND, loadFont, type Organization } from '../../lib/business';
 
 // An organization's public page, in its own brand: logo, cover, about, and its events.
 // slugOverride: shown on an organization's own domain (custom domains), where there's no /o/:slug in the address.
-export default function OrgPublic({ slugOverride }: { slugOverride?: string } = {}) {
-  return <BusinessGate><OrgPublicInner slugOverride={slugOverride} /></BusinessGate>;
+export default function OrgPublic({ slugOverride, embedded = false }: { slugOverride?: string; embedded?: boolean } = {}) {
+  return <BusinessGate><OrgPublicInner slugOverride={slugOverride} embedded={embedded} /></BusinessGate>;
 }
 
-function OrgPublicInner({ slugOverride }: { slugOverride?: string }) {
+function OrgPublicInner({ slugOverride, embedded = false }: { slugOverride?: string; embedded?: boolean }) {
   const volunteersOn = useFeature('volunteers');
   const videoHeadersOn = useFeature('video_headers');
   const params = useParams<{ slug: string }>();
@@ -69,8 +69,10 @@ function OrgPublicInner({ slugOverride }: { slugOverride?: string }) {
         <div className="relative z-10 -mt-12 flex items-end justify-between gap-3 sm:-mt-14">
           {org.logo_url ? <img src={org.logo_url} alt="" className="h-24 w-24 shrink-0 rounded-3xl border-4 bg-white object-cover shadow-md sm:h-28 sm:w-28" style={{ borderColor: dark ? '#0B1020' : '#fff' }} /> : <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border-4 text-3xl font-bold text-white shadow-md sm:h-28 sm:w-28" style={{ background: b.primary, borderColor: dark ? '#0B1020' : '#fff' }}>{org.name.charAt(0)}</span>}
           <div className="mb-1 flex flex-wrap items-center justify-end gap-2">
-            {canManage && <Link to={`/business/${org.slug}/manage`} className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm">Manage</Link>}
-            <OrgFollowButton orgId={org.id} color={b.primary} />
+            {!embedded && canManage && <Link to={`/business/${org.slug}/manage`} className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm">Manage</Link>}
+            {embedded
+              ? <a href={`https://app.tapin2events.com/o/${org.slug}`} target="_blank" rel="noopener" className="rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm" style={{ background: b.primary }}>Follow on TapIN</a>
+              : <OrgFollowButton orgId={org.id} color={b.primary} />}
           </div>
         </div>
         <div className="mt-3 min-w-0">
