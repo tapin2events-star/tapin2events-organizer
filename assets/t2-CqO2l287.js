@@ -1,0 +1,1 @@
+function e(e,t=`success`){window.dispatchEvent(new CustomEvent(`tapin-toast`,{detail:{text:e,kind:t}}))}var t=t=>e(t?`✓ ${t} saved`:`✓ Changes saved`),n=(t=`Couldn't save. Please try again.`)=>e(t,`error`);export{n,t as r,e as t};
