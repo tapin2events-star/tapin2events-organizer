@@ -9,6 +9,9 @@ export default function lazyWithRetry<T extends ComponentType<object>>(factory: 
       try { sessionStorage.removeItem('tapin_chunk_reload'); } catch { /* storage unavailable */ }
       return mod;
     } catch (err) {
+      // Refresh the browser's saved copy of the file that failed (a bad copy would otherwise be reused on reload).
+      const url = String((err as Error)?.message ?? '').match(/https?:\/\/[^\s'"]+\.js/)?.[0];
+      if (url) { try { await fetch(url, { cache: 'reload' }); } catch { /* offline: the reload below still helps */ } }
       let last = 0;
       try { last = Number(sessionStorage.getItem('tapin_chunk_reload') || 0); } catch { /* storage unavailable */ }
       if (Date.now() - last > 30000) {

@@ -18,6 +18,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        // File names are just content hashes under a "t2/" prefix: a fresh set of addresses (so no browser reuses a bad
+        // saved copy from before), and no words an ad blocker could match.
+        entryFileNames: 'assets/t2-[hash].js',
+        chunkFileNames: 'assets/t2-[hash].js',
+        assetFileNames: 'assets/t2-[hash][extname]',
         // Shared libraries in their own files, so phones keep them cached between TapIN updates.
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
