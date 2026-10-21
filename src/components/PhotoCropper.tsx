@@ -46,7 +46,7 @@ export default function PhotoCropper({ src, shape = 'round', png = false, onCanc
     }
   }
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-black/90" role="dialog" aria-modal="true" aria-label="Adjust photo">
+    <div className="fixed inset-0 z-[1300] flex flex-col bg-black/90" role="dialog" aria-modal="true" aria-label="Adjust photo">
       <div className="flex items-center justify-between px-4 py-3 text-white" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
         <button type="button" onClick={onCancel} className="text-sm font-medium text-white/80">Cancel</button>
         <p className="text-sm font-semibold">Adjust photo</p>

@@ -43,7 +43,7 @@ export default function TransferOwnershipSheet({ kind, targetId, name, onClose }
     setSent(null); load();
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label="Transfer ownership" onClick={(e) => e.stopPropagation()}
         className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl sm:max-h-[85vh] sm:rounded-3xl">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">

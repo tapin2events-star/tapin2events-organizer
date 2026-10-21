@@ -865,7 +865,7 @@ export default function Feed() {
       )}
 
       {reportingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-surface p-5">
             <p className="font-semibold text-bone">Report or block</p>
             <div className="mt-3 flex flex-col gap-2">
