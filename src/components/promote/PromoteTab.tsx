@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useShareBase } from '../../lib/shareBase';
 import PeopleInput from '../PeopleInput';
 import LocalPartnersCard from '../nearby/LocalPartnersCard';
 import WebsiteEmbedCard from './WebsiteEmbedCard';
@@ -16,12 +17,14 @@ interface LinkRow { id: string; code: string; label: string; promoter_email: str
 interface Stats { links: LinkRow[]; other_tickets: number; other_revenue: number }
 const money = (n: number) => `$${(Number(n) || 0).toFixed(2).replace(/\.00$/, '')}`;
 const field = 'mt-1 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900';
-export const shortUrl = (code: string) => `${window.location.origin}${import.meta.env.BASE_URL}p/${code}`;
+export const shortUrl = (code: string, base?: string) => `${base ?? `${window.location.origin}${import.meta.env.BASE_URL}`}p/${code}`;
 const IDEAS = ['Instagram bio', 'Facebook post', 'Flyer', 'Email newsletter', 'TikTok', 'Group chat'];
 
 // Event > Promote (Preview): tracking links for each place you share the event, optionally for a promoter
 // with a commission; visits, tickets and revenue per link.
 export default function PromoteTab({ eventId }: { eventId: string }) {
+  // White-labeled events with a connected domain share links on that domain.
+  const base = useShareBase(eventId);
   const nearbyOn = useFeature('nearby');
   const payoutsOn = useFeature('promoter_payouts');
   const [stats, setStats] = useState<Stats | null>(null);
@@ -34,7 +37,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
   }, [eventId]);
   useEffect(() => { load(); }, [load]);
   const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(null), 2500); };
-  const copy = (code: string) => { navigator.clipboard?.writeText(shortUrl(code)); flash('Link copied.'); };
+  const copy = (code: string) => { navigator.clipboard?.writeText(shortUrl(code, base)); flash('Link copied.'); };
   async function toggle(l: LinkRow) {
     await supabase.rpc('update_event_link', { p_link_id: l.id, p_label: l.label, p_active: !l.active });
     load();
@@ -99,14 +102,14 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
                       <div className="min-w-0">
                         <p className="truncate font-semibold text-bone">{l.label}{!l.active && <span className="ml-1.5 rounded bg-gray-200 px-1.5 text-[10px] font-bold text-gray-600">PAUSED</span>}</p>
                         {l.promoter_email && <p className="truncate text-xs text-muted">Promoter: {l.promoter_name || l.promoter_email}{l.commission_pct ? ` · ${l.commission_pct}% commission` : ''}</p>}
-                        <p className="truncate text-xs text-gray-400">{shortUrl(l.code).replace(/^https?:\/\//, '')}</p>
+                        <p className="truncate text-xs text-gray-400">{shortUrl(l.code, base).replace(/^https?:\/\//, '')}</p>
                       </div>
                       <p className="shrink-0 text-right text-sm"><span className="font-bold text-bone">{money(l.revenue)}</span><span className="block text-xs text-muted">{l.tickets} ticket{l.tickets === 1 ? '' : 's'}</span></p>
                     </div>
                     <p className="mt-1 text-xs text-muted">{l.visits} visit{l.visits === 1 ? '' : 's'} · {l.visitors} people · {conv}% bought{owed > 0 ? ` · ${money(owed)} commission owed` : ''}</p>
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                       <button onClick={() => copy(l.code)} className="font-medium text-marigold">Copy link</button>
-                      <ShareQR path={`/p/${l.code}`} title={l.label} subtitle="Scan for tickets" label="QR" className="font-medium text-marigold" />
+                      <ShareQR path={`/p/${l.code}`} eventId={eventId} title={l.label} subtitle="Scan for tickets" label="QR" className="font-medium text-marigold" />
                       <button onClick={() => toggle(l)} className="text-gray-500">{l.active ? 'Pause' : 'Resume'}</button>
                       {!l.active && <button onClick={() => remove(l)} className="text-gray-500 hover:text-red-600">{l.used ? 'Archive' : 'Delete'}</button>}
                     </div>
@@ -134,7 +137,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
           <p className="mt-1 text-xs text-muted">A ticket counts for a link when the buyer came through it within the last 7 days. Commissions are tracked here; pay promoters directly for now.</p>
         </>
       )}
-      {creating && <NewLinkSheet eventId={eventId} onClose={() => setCreating(false)} onDone={(code) => { setCreating(false); navigator.clipboard?.writeText(shortUrl(code)); flash('Link created and copied.'); load(); }} />}
+      {creating && <NewLinkSheet eventId={eventId} onClose={() => setCreating(false)} onDone={(code) => { setCreating(false); navigator.clipboard?.writeText(shortUrl(code, base)); flash('Link created and copied.'); load(); }} />}
       {nearbyOn && <LocalPartnersCard eventId={eventId} />}
       <div className="mt-10"><WebsiteEmbedCard eventId={eventId} /></div>
     </div>

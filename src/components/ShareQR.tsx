@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
+import { useShareBase } from '../lib/shareBase';
 import { supabase } from '../lib/supabaseClient';
 import QRCode from 'qrcode';
 import Sheet from './scouting/Sheet';
 
 // A QR code for a TapIN page (event or profile): show it on a phone screen,
 // print it on a flyer, or save/share the image.
-export default function ShareQR({ path, title, subtitle, label = 'QR code', className = '', track }: {
+export default function ShareQR({ path, title, subtitle, label = 'QR code', className = '', track, eventId, orgId }: {
   path: string; title: string; subtitle?: string; label?: string; className?: string; track?: string;
+  /** White-labeled events (and organizations) with a connected domain share that domain instead of TapIN's. */
+  eventId?: string | null; orgId?: string | null;
 }) {
+  const base = useShareBase(eventId, orgId);
   const [open, setOpen] = useState(false);
   const [png, setPng] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const url = `${window.location.origin}${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+  const url = `${base}${path.replace(/^\//, '')}`;
   const fileName = `tapin-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'qr'}.png`;
 
   useEffect(() => {

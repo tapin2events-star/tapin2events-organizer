@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { getShareBase } from '../../lib/shareBase';
 import PeopleInput, { type KnownPerson } from '../PeopleInput';
 import PremiumBadge from '../business/PremiumBadge';
 import { supabase } from '../../lib/supabaseClient';
@@ -101,7 +102,7 @@ export default function VolunteersTab({ event }: { event: TapEvent }) {
             {event.organization_id && (notified
               ? <span className="rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-600">✓ Past volunteers notified</span>
               : <button onClick={notifyPast} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">Notify past volunteers</button>)}
-            <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}${import.meta.env.BASE_URL}events/${event.id}#volunteer`); flash('Volunteer link copied.'); }} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Copy sign-up link</button>
+            <button onClick={async () => { navigator.clipboard?.writeText(`${await getShareBase(event.id)}events/${event.id}#volunteer`); flash('Volunteer link copied.'); }} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Copy sign-up link</button>
             {roster.length > 0 && <button onClick={exportCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Export</button>}
           </div>
         </div>

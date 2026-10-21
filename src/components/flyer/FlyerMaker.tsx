@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getShareBase } from '../../lib/shareBase';
 import QRCode from 'qrcode';
 import { supabase } from '../../lib/supabaseClient';
 import { drawFlyer, PALETTES, SIZES, type FlyerSize, type FlyerStyle } from './renderFlyer';
@@ -103,8 +104,7 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
   // QR code to the event page -- only once the event exists (has been saved).
   useEffect(() => {
     if (!event.id) return;
-    const url = `${window.location.origin}${import.meta.env.BASE_URL}events/${event.id}`;
-    QRCode.toDataURL(url, { margin: 1, width: 512 }).then(loadImage).then(setQr).catch(() => setQr(null));
+    getShareBase(event.id).then((base) => QRCode.toDataURL(`${base}events/${event.id}`, { margin: 1, width: 512 })).then(loadImage).then(setQr).catch(() => setQr(null));
   }, [event.id]);
 
   async function suggest(hasPhoto: boolean) {

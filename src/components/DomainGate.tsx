@@ -6,7 +6,7 @@ import OrgDomainHome from '../pages/OrgDomainHome';
 
 // On an organization's own domain, only its white-labeled content is shown: its branded home page, its
 // white-labeled events, tickets and "Your tickets". Anything else goes to app.tapin2events.com.
-const ALLOWED = ['/events/:id', '/pass/:ticketId', '/tickets/:slug', '/o/:slug', '/terms', '/privacy', '/refund-policy'];
+const ALLOWED = ['/events/:id', '/pass/:ticketId', '/tickets/:slug', '/o/:slug', '/p/:code', '/terms', '/privacy', '/refund-policy'];
 
 export default function DomainGate({ children }: { children: ReactNode }) {
   const location = useLocation();

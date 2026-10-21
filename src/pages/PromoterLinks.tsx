@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getShareBase } from '../lib/shareBase';
 import { useFeature } from '../lib/preview';
 import { MyPromoterPayouts } from '../components/promote/PromoterPayouts';
 import { Link } from 'react-router-dom';
@@ -48,8 +49,8 @@ export default function PromoterLinks() {
                 </div>
                 {r.active && (
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                    <button onClick={() => { navigator.clipboard?.writeText(shortUrl(r.code)); setMsg('Link copied.'); setTimeout(() => setMsg(null), 2000); }} className="font-medium text-marigold">Copy my link</button>
-                    <ShareQR path={`/p/${r.code}`} title={r.event_title} subtitle="Scan for tickets" label="QR" className="font-medium text-marigold" />
+                    <button onClick={async () => { navigator.clipboard?.writeText(shortUrl(r.code, await getShareBase(r.event_id))); setMsg('Link copied.'); setTimeout(() => setMsg(null), 2000); }} className="font-medium text-marigold">Copy my link</button>
+                    <ShareQR path={`/p/${r.code}`} eventId={r.event_id} title={r.event_title} subtitle="Scan for tickets" label="QR" className="font-medium text-marigold" />
                   </div>
                 )}
               </li>
