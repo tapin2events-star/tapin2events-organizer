@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -56,6 +57,8 @@ export default function NotificationBell() {
   useEscapeKey(() => setOpen(false), open);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  // The panel is drawn at the top level of the page (not inside the desktop sidebar, which would clip it).
+  const panelRef = useRef<HTMLDivElement>(null);
   // The header renders a bell for desktop and one for mobile, so each needs
   // its own live-channel name.
   const channelName = useRef(`notifications-${Math.random().toString(36).slice(2)}`);
@@ -96,7 +99,8 @@ export default function NotificationBell() {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (containerRef.current && !containerRef.current.contains(t) && !panelRef.current?.contains(t)) setOpen(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -133,13 +137,13 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {open && (
+      {open && createPortal(
         <>
           {/* Mobile: full backdrop + near-full-width panel below the header,
               matching the same drawer pattern used for the sidebar nav.
               Desktop: reverts to a small dropdown anchored to the bell. */}
-          <div className="fixed inset-0 z-40 bg-black/30 md:bg-transparent" onClick={() => setOpen(false)} />
-          <div className="fixed inset-x-3 top-16 z-50 max-h-[75vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg md:inset-x-auto md:left-[17rem] md:top-4 md:w-[26rem] md:max-h-[calc(100vh-2rem)]">
+          <div className="fixed inset-0 z-[1100] bg-black/30 md:bg-transparent" onClick={() => setOpen(false)} />
+          <div ref={panelRef} className="fixed inset-x-3 top-16 z-[1101] max-h-[75vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg md:inset-x-auto md:left-[17rem] md:top-4 md:w-[26rem] md:max-h-[calc(100vh-2rem)]">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
               <span className="text-sm font-semibold text-gray-900">Notifications</span>
               <div className="flex items-center gap-2">
@@ -175,7 +179,8 @@ export default function NotificationBell() {
               </ul>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

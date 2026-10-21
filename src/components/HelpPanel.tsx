@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { GUIDES, GUIDE_TOURS, areasFor, type Guide, type HelpArea } from '../lib/helpGuides';
 import { useTour } from './TourGuide';
@@ -15,7 +16,8 @@ export default function HelpButton() {
       <button onClick={() => setOpen(true)} aria-label="Help and guides" className="rounded-lg p-2 text-muted hover:bg-gray-100">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5" /><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9" /><circle cx="12" cy="17.2" r="0.6" fill="currentColor" /></svg>
       </button>
-      {open && <HelpPanel onClose={() => setOpen(false)} />}
+      {/* Drawn at the top level of the page: inside the desktop sidebar it would be clipped. */}
+      {open && createPortal(<HelpPanel onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }
