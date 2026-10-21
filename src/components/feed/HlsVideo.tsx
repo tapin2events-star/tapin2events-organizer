@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import { supabase } from '../../lib/supabaseClient';
+
+// Private playback problem reports (device type + error only), at most a few per page visit.
+let reportsLeft = 5;
+function report(kind: string, detail: Record<string, unknown>) {
+  if (reportsLeft-- <= 0) return;
+  supabase.rpc('log_client_issue', { p_kind: kind, p_detail: detail, p_user_agent: navigator.userAgent }).then(() => {}, () => {});
+}
 
 interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
   src: string;
@@ -25,6 +33,9 @@ function prefersNativeHls(video: HTMLVideoElement): boolean {
 export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted, ...rest }: HlsVideoProps) {
   const internalRef = useRef<HTMLVideoElement | null>(null);
   const [needsTap, setNeedsTap] = useState(false);
+  // Stream failed even after automatic recovery: offer a retry.
+  const [failed, setFailed] = useState(false);
+  const [attemptKey, setAttemptKey] = useState(0);
 
   // React sets the `muted` *property* but never writes the `muted`
   // *attribute* to the DOM (a long-standing React quirk). Safari's autoplay
@@ -50,24 +61,36 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
     }
 
     if (Hls.isSupported()) {
-      const hls = new Hls();
+      // capLevelToPlayerSize: phones get a stream sized to the screen (not full HD), which helps slower Android phones.
+      const hls = new Hls({ capLevelToPlayerSize: true, startLevel: -1, maxBufferLength: 20 });
+      let mediaRecoveries = 0, networkRetries = 0;
+      setFailed(false);
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal) return;
         console.error('[HlsVideo] hls.js fatal error:', { type: data.type, details: data.details, src });
+        // Recover automatically: retry the connection, or recover from a decoding glitch (common on some Android phones).
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && networkRetries < 3) { networkRetries++; setTimeout(() => hls.startLoad(), 1000 * networkRetries); return; }
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaRecoveries < 2) { mediaRecoveries++; if (mediaRecoveries === 2) hls.swapAudioCodec(); hls.recoverMediaError(); return; }
+        report('video_error', { player: 'hls.js', type: data.type, details: data.details, src });
+        setFailed(true);
       });
       hls.loadSource(src);
       hls.attachMedia(video);
       return () => hls.destroy();
     }
+    report('video_error', { player: 'none', details: 'hls_not_supported', src });
 
     // Last resort for a browser with neither -- just try it directly.
     video.src = src;
-  }, [src, shouldLoad]);
+  }, [src, shouldLoad, attemptKey]);
 
   useEffect(() => {
     const video = internalRef.current;
     if (!video) return;
-    const onError = () => console.error('[HlsVideo] native <video> error:', video.error, 'src:', src);
+    const onError = () => {
+      console.error('[HlsVideo] native <video> error:', video.error, 'src:', src);
+      if (prefersNativeHls(video)) { report('video_error', { player: 'native', code: video.error?.code, message: video.error?.message, src }); setFailed(true); }
+    };
     const onPlaying = () => setNeedsTap(false);
     video.addEventListener('error', onError);
     video.addEventListener('playing', onPlaying);
@@ -106,7 +129,7 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
         .catch((err) => {
           if (cancelled) return;
           if (err?.name === 'NotAllowedError') setNeedsTap(true);
-          else if (err?.name !== 'AbortError') console.error('[HlsVideo] play() rejected:', err?.name, err?.message);
+          else if (err?.name !== 'AbortError') { console.error('[HlsVideo] play() rejected:', err?.name, err?.message); report('video_play_rejected', { name: err?.name, message: String(err?.message ?? '').slice(0, 200), src }); }
           // AbortError = a newer load interrupted this attempt; the next
           // `canplay` event retries automatically.
         });
@@ -136,12 +159,27 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
         muted={muted}
         {...rest}
       />
-      {needsTap && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/50 text-white">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-          </div>
-        </div>
+      {(needsTap || failed) && (
+        <button
+          type="button"
+          aria-label={failed ? 'Retry video' : 'Play video'}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const video = internalRef.current;
+            if (failed) { setFailed(false); setAttemptKey((k) => k + 1); return; }
+            // Started from a tap, so phones that block autoplay (like Android apps) allow it.
+            video?.play().then(() => setNeedsTap(false), (err) => report('video_play_rejected', { name: err?.name, after_tap: true, src }));
+          }}
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/10"
+        >
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-white">
+            {failed
+              ? <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 4v5h-5" /></svg>
+              : <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>}
+          </span>
+          <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">{failed ? 'Tap to retry' : 'Tap to play'}</span>
+        </button>
       )}
     </>
   );
