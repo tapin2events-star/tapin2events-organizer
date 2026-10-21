@@ -8,10 +8,9 @@ export default function OrgDomainHome({ org }: { org: DomainOrg }) {
   useOrgWhiteLabel(org.slug);
   if (!org.slug) return <div className="min-h-screen bg-white" />;
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-5xl px-4 py-6" style={{ paddingTop: 'calc(1.5rem + env(safe-area-inset-top, 0px))' }}>
-        <OrgPublic slugOverride={org.slug} />
-      </div>
+    // Full screen: the page's own edge-to-edge layout (its cover spans the whole width; content stays centered).
+    <div className="min-h-screen overflow-x-clip px-4 pt-4 sm:px-6">
+      <OrgPublic slugOverride={org.slug} />
     </div>
   );
 }

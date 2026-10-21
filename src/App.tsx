@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import MeetingRedirect from './components/MeetingRedirect';
 import DomainGate from './components/DomainGate';
 import { TourProvider } from './components/TourGuide';
 import lazyWithRetry from './lib/lazyWithRetry';
@@ -99,6 +100,8 @@ export default function App() {
           <Route path="/partners/:id/card" element={<PartnerCard />} />
           <Route path="/partner-optout/:token" element={<PartnerOptout />} />
           <Route path="/meetings/:id/minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
+          {/* Short meeting address (used in meeting emails and calendar entries). */}
+          <Route path="/meetings/:id" element={<MeetingRedirect />} />
 
           <Route element={<Layout />}>
             <Route path="/" element={<Discover />} />

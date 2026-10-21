@@ -52,3 +52,17 @@ input[type='datetime-local']::-webkit-datetime-edit {
 
 /* No accidental browser pull-to-refresh when scrolling up at the top of a page on phones. */
 html, body { overscroll-behavior-y: none; }
+
+/* ---------- Phone layout safety nets (every screen) ---------- */
+/* 1. The page itself never slides sideways, even if something inside is too wide.
+      (clip, not hidden, so sticky headers keep working; wide tables still scroll inside their own boxes.) */
+html, body { overflow-x: clip; }
+/* 2. Long words (emails, links, names) wrap instead of running off the screen. */
+body { overflow-wrap: anywhere; }
+/* 3. iPhones zoom in when you tap a text box with text smaller than 16px, and the page stays zoomed
+      ("jiggle"). On phones, every text box uses at least 16px. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"]),
+  select,
+  textarea { font-size: 16px !important; }
+}
