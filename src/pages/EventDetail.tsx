@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TransferOwnershipSheet from '../components/TransferOwnershipSheet';
 import { EventPayoutWarning } from '../components/HeldPayouts';
 import VideoHeaderCard from '../components/video/VideoHeaderCard';
 import WhiteLabelCard from '../components/business/WhiteLabelCard';
@@ -61,7 +62,8 @@ export default function EventDetail() {
   // Older links (?tab=Lineup, ?tab=Bookings) open the matching view inside "Lineup & bookings".
   const tabParam = new URLSearchParams(window.location.search).get('tab') ?? '';
   const [tab, setTab] = useState<Tab>(() => (tabParam === 'Lineup' || tabParam === 'Bookings' ? 'Lineup & bookings' : tabParam === 'Ticket Sales' ? 'Sales' : tabParam === 'Volunteers' ? 'Team & tasks' : (TABS as readonly string[]).includes(tabParam) ? (tabParam as Tab) : 'Overview'));
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const [transferOpen, setTransferOpen] = useState(false);
   const navigate = useNavigate();
   // Cancel / delete (organizer only). An event with any tickets, registrations,
   // or payments can only be cancelled; the database enforces this too.
@@ -236,7 +238,10 @@ export default function EventDetail() {
               {manageOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setManageOpen(false)} />
-                  <div className={`absolute z-20 mt-1 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-lg ${menuAlignRight ? 'right-0' : 'left-0'}`}>
+                  <div className={`absolute z-20 mt-1 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-lg ${menuAlignRight ? 'right-0' : 'left-0'}`}>
+                    {(isAdmin || (user?.email && event.organizer_email?.toLowerCase() === user.email.toLowerCase())) && (
+                      <button type="button" onClick={() => { setManageOpen(false); setTransferOpen(true); }} className="block w-full px-4 py-2.5 text-left text-gray-800 hover:bg-gray-50">🔑 Transfer ownership</button>
+                    )}
                     {hasSales === undefined ? (
                       <p className="px-4 py-2.5 text-gray-400">Checking…</p>
                     ) : hasSales ? (
@@ -254,6 +259,7 @@ export default function EventDetail() {
             </div>
           )}
         </div>
+      {transferOpen && <TransferOwnershipSheet kind="event" targetId={event.id} name={event.title} onClose={() => setTransferOpen(false)} />}
       {dialog === 'cancel' && (
         <CancelEventDialog eventId={event.id} eventTitle={event.title} onClose={() => setDialog(null)} onCancelled={() => setEvent({ ...event, status: 'cancelled' })} />
       )}

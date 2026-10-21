@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import TransferOwnershipSheet from '../../components/TransferOwnershipSheet';
 import CustomDomainCard from '../../components/business/CustomDomainCard';
 import { AddExistingEventsSheet } from '../../components/business/MoveEvents';
 import WebsiteEmbedCard from '../../components/promote/WebsiteEmbedCard';
@@ -35,7 +36,8 @@ export default function OrgManage() {
 
 function OrgManageInner() {
   const { slug = '' } = useParams<{ slug: string }>();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const [transferOpen, setTransferOpen] = useState(false);
   const [org, setOrg] = useState<Organization | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined); // undefined = still checking
   const navigate = useNavigate();
@@ -141,6 +143,14 @@ function OrgManageInner() {
         {tab === 'Team' && <Link to={`/team-chat/${org.id}`} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm"><span><strong className="text-gray-900">💬 Team chat</strong><span className="block text-gray-600">Message everyone on {org.name}'s team, share photos and files</span></span><span className="shrink-0 font-semibold text-indigo-700">Open ›</span></Link>}
         {tab === 'Team' && canEditPage && <TeamPeopleShortcut orgId={org.id} onManage={() => { setTab('Page'); setTimeout(() => document.getElementById('featured-people')?.scrollIntoView({ behavior: 'smooth' }), 300); }} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
+        {tab === 'Team' && (role === 'owner' || isAdmin) && (
+          <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-5">
+            <h3 className="font-display text-lg font-bold text-gray-900">🔑 Transfer ownership</h3>
+            <p className="mt-1 text-sm text-gray-600">Make someone else the Owner of {org.name}, for example if you set it up on their behalf. They accept by email, and you can stay on as an Admin.</p>
+            <button onClick={() => setTransferOpen(true)} className="mt-3 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:border-marigold hover:text-marigold">Transfer ownership…</button>
+          </section>
+        )}
+        {transferOpen && <TransferOwnershipSheet kind="organization" targetId={org.id} name={org.name} onClose={() => setTransferOpen(false)} />}
         {tab === 'Page' && canEditPage && videoHeadersOn && <VideoHeaderCard orgId={org.id} what="your organization page" />}
         {tab === 'Page' && canEditPage && <><OrgPageSectionsTab orgId={org.id} slug={org.slug} /><section className="mt-10 border-t border-gray-200 pt-8"><h3 className="font-display text-lg font-bold text-bone">📸 Photos</h3><p className="mb-3 text-sm text-muted">Up to 24 photos for your page's gallery.</p><OrgPhotosTab orgId={org.id} /></section>{videoHeadersOn && <OrgReelManager orgId={org.id} />}</>}
         {tab === 'Events' && <EventsTab org={org} canEdit={canEdit} insights={insightsOn && isLead} onAudience={() => setTab('Audience')} />}

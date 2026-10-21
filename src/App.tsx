@@ -51,6 +51,7 @@ const PartnerInvite = lazyWithRetry(() => import('./pages/PartnerInvite'));
 const PartnerCard = lazyWithRetry(() => import('./pages/PartnerCard'));
 const PartnerOptout = lazyWithRetry(() => import('./pages/PartnerOptout'));
 const OrgTickets = lazyWithRetry(() => import('./pages/OrgTickets'));
+const TransferAccept = lazyWithRetry(() => import('./pages/TransferAccept'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -115,6 +116,7 @@ export default function App() {
             <Route path="/team-chat/:orgId" element={<ProtectedRoute><TeamChat /></ProtectedRoute>} />
             <Route path="/pass/:ticketId" element={<TicketPass />} />
             <Route path="/tickets/:slug" element={<OrgTickets />} />
+            <Route path="/transfer/:token" element={<TransferAccept />} />
             <Route path="/receipt" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
             <Route path="/activity" element={<MyActivity />} />
             <Route path="/my-activity" element={<ActivityRedirect />} />
