@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PeopleInput from '../PeopleInput';
 import ProgramLayout, { type SessionPreset } from './ProgramLayout';
 import { SessionRosterSheet, SessionRulesCard } from './SessionSignups';
 import { useFeature } from '../../lib/preview';
@@ -243,7 +244,12 @@ function SpeakerSheet({ eventId, orgId = null, speaker, onClose, onSaved }: { ev
         </label>
       )}
       <ImagePicker label="Photo" shape="round" value={f.photo_url} onChange={(url) => setF({ ...f, photo_url: url })} />
-      <label className="mt-3 block text-xs font-medium text-gray-500">Name<input className={field} value={f.name} maxLength={120} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus /></label>
+      <label className="mt-3 block text-xs font-medium text-gray-500">Name
+        {/* Suggests people already in this event (and its organization); picking fills in their name and photo. */}
+        <PeopleInput eventId={eventId} orgId={orgId} value={f.name} onChange={(t) => setF({ ...f, name: t.slice(0, 120) })} className={field} autoFocus includeTapIN={false} ariaLabel="Speaker name"
+          placeholder="Name (people from your events appear as you type)"
+          onPick={(pk) => setF((x) => ({ ...x, name: pk.name, ...(pk.photo && !x.photo_url ? { photo_url: pk.photo } : {}) }))} />
+      </label>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <label className="text-xs font-medium text-gray-500">Title<input className={field} value={f.title} maxLength={120} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Chief Executive Officer" /></label>
         <label className="text-xs font-medium text-gray-500">Company<input className={field} value={f.company} maxLength={120} onChange={(e) => setF({ ...f, company: e.target.value })} /></label>

@@ -7,9 +7,11 @@ import { supabase } from '../lib/supabaseClient';
 // email. Suggestions are visible only to the event's or organization's organizers.
 export interface KnownPerson { name: string; email: string | null; user_id: string | null; photo: string | null; sources?: string[]; in_event?: boolean }
 
-export default function PeopleInput({ eventId, orgId, value, onChange, onPick, placeholder, className, includeTapIN = true, autoFocus = false, ariaLabel }: {
+export default function PeopleInput({ eventId, orgId, value, onChange, onPick, placeholder, className, includeTapIN = true, autoFocus = false, ariaLabel, accountsOnly = false }: {
   eventId?: string | null; orgId?: string | null; value: string; onChange: (text: string) => void; onPick: (p: KnownPerson) => void;
   placeholder?: string; className?: string; includeTapIN?: boolean; autoFocus?: boolean; ariaLabel?: string;
+  /** Only suggest people with a TapIN account (for sections that need one, like volunteers). */
+  accountsOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [known, setKnown] = useState<KnownPerson[]>([]);
@@ -31,7 +33,8 @@ export default function PeopleInput({ eventId, orgId, value, onChange, onPick, p
     }, 250);
     return () => clearTimeout(t);
   }, [open, q, includeTapIN]);
-  const knownIds = new Set(known.map((k) => k.user_id).filter(Boolean));
+  const knownShown = accountsOnly ? known.filter((k) => k.user_id) : known;
+  const knownIds = new Set(knownShown.map((k) => k.user_id).filter(Boolean));
   const tapinOnly = tapin.filter((t) => !knownIds.has(t.user_id));
   const pick = (p: KnownPerson) => { onPick(p); setOpen(false); };
   const row = (p: KnownPerson, sub: string, key: string) => (
@@ -45,7 +48,7 @@ export default function PeopleInput({ eventId, orgId, value, onChange, onPick, p
       </button>
     </li>
   );
-  const showList = open && (known.length > 0 || tapinOnly.length > 0);
+  const showList = open && (knownShown.length > 0 || tapinOnly.length > 0);
   return (
     <div className="relative min-w-0">
       <input value={value} onChange={(e) => { onChange(e.target.value); setOpen(true); }} placeholder={placeholder} aria-label={ariaLabel} autoFocus={autoFocus}
@@ -54,8 +57,8 @@ export default function PeopleInput({ eventId, orgId, value, onChange, onPick, p
         onBlur={() => { blurTimer.current = window.setTimeout(() => setOpen(false), 150); }} />
       {showList && (
         <ul className="absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
-          {known.length > 0 && <li className="px-3 pb-1 pt-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-400">Your people</li>}
-          {known.map((p, i) => row(p, [p.email, (p.sources ?? []).join(' · ')].filter(Boolean).join(' · ') || 'Added before', `k${i}`))}
+          {knownShown.length > 0 && <li className="px-3 pb-1 pt-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-400">Your people</li>}
+          {knownShown.map((p, i) => row(p, [accountsOnly ? null : p.email, (p.sources ?? []).join(' · ')].filter(Boolean).join(' · ') || 'Added before', `k${i}`))}
           {tapinOnly.length > 0 && <li className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">On TapIN</li>}
           {tapinOnly.map((p, i) => row(p, 'TapIN member', `t${i}`))}
         </ul>

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import PeopleInput from '../PeopleInput';
 import PayoutsCard from '../PayoutsCard';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 interface Row { user_id?: string | null; email?: string | null; percent: number; label: string | null; name?: string | null; photo?: string | null; ready?: boolean; has_account?: boolean; sent?: number; waiting?: number }
-interface Found { id: string; full_name: string; profile_photo: string | null; payouts_ready: boolean }
 interface Overview { can_edit: boolean; starts_at?: string | null; rows: Row[]; main_sent: number; main_waiting: number }
 const money = (cents: number) => `$${(Number(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const field = 'block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm';
@@ -17,12 +17,6 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
   const [editing, setEditing] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [q, setQ] = useState('');
-  const [found, setFound] = useState<Found[]>([]);
-  useEffect(() => {
-    if (q.trim().length < 2) { setFound([]); return; }
-    const t = setTimeout(() => { supabase.rpc('search_people_for_splits', { p_query: q.trim() }).then(({ data }) => setFound((data ?? []) as Found[])); }, 250);
-    return () => clearTimeout(t);
-  }, [q]);
   const load = useCallback(async () => {
     const { data } = await supabase.rpc('event_splits_overview', { p_event_id: eventId });
     const d = data as Overview | null;
@@ -54,23 +48,13 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
 
       {editing ? (
         <div className="mt-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people on TapIN by name" aria-label="Search people on TapIN" className={field} />
-          {found.length > 0 && (
-            <ul className="mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
-              {found.map((f) => {
-                const added = rows.some((r) => r.user_id === f.id);
-                return (
-                  <li key={f.id} className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-0">
-                    {f.profile_photo ? <img src={f.profile_photo} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{f.full_name.charAt(0)}</span>}
-                    <span className="min-w-0 flex-1"><span className="block truncate text-sm text-gray-900">{f.full_name}</span><span className={`block text-[11px] ${f.payouts_ready ? 'text-green-700' : 'text-gray-500'}`}>{f.payouts_ready ? '✓ Payouts connected' : 'Payouts not connected yet'}</span></span>
-                    <button disabled={added} onClick={() => { setRows([...rows, { user_id: f.id, name: f.full_name, photo: f.profile_photo, ready: f.payouts_ready, percent: 0, label: null }]); setQ(''); }}
-                      className="shrink-0 rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white disabled:bg-gray-200 disabled:text-gray-500">{added ? 'Added' : 'Add'}</button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {q.trim().length >= 2 && found.length === 0 && <p className="mt-1 text-xs text-gray-500">No one on TapIN by that name. You can add them by email below.</p>}
+          <PeopleInput eventId={eventId} value={q} onChange={setQ} className={field} ariaLabel="Add someone to the split"
+            placeholder="Name: your people or anyone on TapIN (or type an email)"
+            onPick={(p) => {
+              if (p.user_id && !rows.some((r) => r.user_id === p.user_id)) setRows([...rows, { user_id: p.user_id, name: p.name, photo: p.photo, ready: false, percent: 0, label: null }]);
+              else if (!p.user_id && p.email && !rows.some((r) => (r.email ?? '').toLowerCase() === p.email)) setRows([...rows, { email: p.email, name: p.name, percent: 0, label: null }]);
+              setQ('');
+            }} />
           <ul className="mt-3 flex flex-col gap-2">
             {rows.map((r, i) => (
               <li key={i} className="grid grid-cols-[1fr_5.5rem_auto] items-center gap-2">

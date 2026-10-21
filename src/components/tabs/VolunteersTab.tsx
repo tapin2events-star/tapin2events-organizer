@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PeopleInput, { type KnownPerson } from '../PeopleInput';
 import PremiumBadge from '../business/PremiumBadge';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
@@ -159,7 +160,7 @@ export default function VolunteersTab({ event }: { event: TapEvent }) {
                     </ul>
                   </>
                 )}
-                <ShiftTools onAddSpots={(n) => addSpots(s, n)} onAddPerson={(id, who, w) => addPerson(s, id, who, w)} hasWaitlist={waiting.length > 0} />
+                <ShiftTools eventId={event.id} onAddSpots={(n) => addSpots(s, n)} onAddPerson={(id, who, w) => addPerson(s, id, who, w)} hasWaitlist={waiting.length > 0} />
                 {people.length === 0 && <p className="mt-2 text-xs text-muted">No one yet.</p>}
                 <div className="mt-3 flex gap-4 text-sm">
                   <button onClick={() => setEditing(s)} className="font-medium text-marigold">Edit</button>
@@ -221,16 +222,12 @@ function ShiftSheet({ event, shift, onClose, onSaved }: { event: TapEvent; shift
 }
 
 // Per shift: add spots (lets people in from the top of the waitlist) and add someone directly.
-function ShiftTools({ onAddSpots, onAddPerson, hasWaitlist }: { onAddSpots: (n: number) => void; onAddPerson: (userId: string, name: string, waitlist: boolean) => void; hasWaitlist: boolean }) {
+function ShiftTools({ onAddSpots, onAddPerson, hasWaitlist, eventId }: { onAddSpots: (n: number) => void; onAddPerson: (userId: string, name: string, waitlist: boolean) => void; hasWaitlist: boolean; eventId: string }) {
   const [open, setOpen] = useState(false);
   const [n, setN] = useState('1');
   const [q, setQ] = useState('');
-  const [found, setFound] = useState<{ id: string; full_name: string; profile_photo: string | null }[]>([]);
-  useEffect(() => {
-    if (q.trim().length < 2) { setFound([]); return; }
-    const t = setTimeout(() => { supabase.rpc('search_people_for_splits', { p_query: q.trim() }).then(({ data }) => setFound((data ?? []) as typeof found)); }, 250);
-    return () => clearTimeout(t);
-  }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Picked from your people (TapIN accounts only: volunteers need one) or TapIN.
+  const [chosen, setChosen] = useState<KnownPerson | null>(null);
   if (!open) return <button onClick={() => setOpen(true)} className="mt-2 text-xs font-medium text-marigold">+ Add spots or someone</button>;
   return (
     <div className="mt-3 rounded-xl bg-gray-50 p-3">
@@ -240,18 +237,18 @@ function ShiftTools({ onAddSpots, onAddPerson, hasWaitlist }: { onAddSpots: (n: 
         {hasWaitlist && <span className="text-xs text-gray-500">People are let in from the top of the waitlist.</span>}
         <button onClick={() => setOpen(false)} className="ml-auto text-xs text-gray-400">Close</button>
       </div>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Add someone: search people on TapIN" aria-label="Search people to add" className="mt-3 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm" />
-      {found.length > 0 && (
-        <ul className="mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
-          {found.map((f) => (
-            <li key={f.id} className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 last:border-0">
-              {f.profile_photo ? <img src={f.profile_photo} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{f.full_name.charAt(0)}</span>}
-              <span className="min-w-0 flex-1 truncate text-sm text-gray-900">{f.full_name}</span>
-              <button onClick={() => { onAddPerson(f.id, f.full_name, false); setQ(''); }} className="rounded-lg bg-marigold px-2.5 py-1 text-xs font-semibold text-white">Sign up</button>
-              <button onClick={() => { onAddPerson(f.id, f.full_name, true); setQ(''); }} className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs text-gray-700">Waitlist</button>
-            </li>
-          ))}
-        </ul>
+      <div className="mt-3">
+        <PeopleInput eventId={eventId} value={q} onChange={(t) => { setQ(t); setChosen(null); }} accountsOnly ariaLabel="Add someone"
+          placeholder="Add someone: your people or anyone on TapIN" onPick={(p) => { setChosen(p); setQ(p.name); }}
+          className="block w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 sm:text-sm" />
+      </div>
+      {chosen?.user_id && (
+        <div className="mt-2 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+          {chosen.photo ? <img src={chosen.photo} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{chosen.name.charAt(0)}</span>}
+          <span className="min-w-0 flex-1 truncate text-sm text-gray-900">{chosen.name}</span>
+          <button onClick={() => { onAddPerson(chosen.user_id!, chosen.name, false); setQ(''); setChosen(null); }} className="rounded-lg bg-marigold px-2.5 py-1 text-xs font-semibold text-white">Sign up</button>
+          <button onClick={() => { onAddPerson(chosen.user_id!, chosen.name, true); setQ(''); setChosen(null); }} className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs text-gray-700">Waitlist</button>
+        </div>
       )}
     </div>
   );
