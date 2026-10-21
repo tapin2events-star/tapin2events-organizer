@@ -1,0 +1,5 @@
+var e=e=>`https://app.tapin2events.com/partner/${e}`,t=e=>e?new Date(e).toLocaleDateString(`en-US`,{weekday:`long`,month:`long`,day:`numeric`}):`an upcoming date`,n=e=>e==null?``:e<120?`, right next door to you`:`, just a ${Math.max(1,Math.round(e/80))}-minute walk from you`,r=e=>e.event.guests>=20?`We already have ${e.event.guests} guests coming`:e.event.capacity&&e.event.capacity>=20?`We're expecting up to ${e.event.capacity} guests`:`We’re expecting a great crowd`;function i(i,a,o){return`Hi ${i.business_name}! I'm ${o}${i.host&&i.host!==o?` with ${i.host}`:``}. We're hosting ${i.event.title} at ${i.event.location||`a venue nearby`} on ${t(i.event.start_date)}${n(i.distance_m)}. ${r(i)}.
+
+Would you like to offer our ticket holders a perk, like 10% off or a free drink before the show? It's free for you: your business is featured on our event page and on every guest's ticket, and guests just show their ticket at your counter.
+
+You can say yes and choose your perk here (takes a minute): ${e(a)}`}export{t as n,e as r,i as t};
