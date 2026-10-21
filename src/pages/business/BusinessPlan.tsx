@@ -147,7 +147,12 @@ export default function BusinessPlan() {
                 <p className="text-3xl font-extrabold">$99<span className="text-base font-semibold">/mo</span></p>
                 <p className="text-xs text-white/70">every event + your own domain · $990/yr · with any plan</p>
               </div>
-              <a href="#reserve" onClick={() => setWanted((w) => (w.includes('White-label events') ? w : [...w, 'White-label events']))} className="mt-3 inline-block rounded-full px-4 py-2 text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>I'm interested</a>
+              {billingOn && user ? (
+                <Link to="/business/plan?pack=white_label#get-plan" onClick={() => setTimeout(() => document.getElementById('get-plan')?.scrollIntoView({ behavior: 'smooth' }), 50)} className="mt-3 inline-block rounded-full px-4 py-2 text-center text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>Get the White-label pack</Link>
+              ) : (
+                <Link to="/login" state={{ from: '/business/plan?pack=white_label#get-plan' }} className="mt-3 inline-block rounded-full px-4 py-2 text-center text-sm font-bold text-[#0F1B3D]" style={{ background: GOLD }}>Sign in to get it</Link>
+              )}
+              <p className="mt-2 text-center text-[11px] text-white/70">Just one event? Buy it from that event's dashboard.</p>
             </div>
           </div>
         </section>

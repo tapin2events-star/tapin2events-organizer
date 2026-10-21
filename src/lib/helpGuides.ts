@@ -49,6 +49,9 @@ export const GUIDES: Guide[] = [
   { id: 'program', area: 'organizer', title: 'Agenda, workshops and galas', keywords: 'program agenda speakers sponsors workshop sessions gala tables paddle',
     steps: ['Business and nonprofit events have a Program tab for the agenda, speakers, sponsors and FAQ.', 'Mark sessions as sign-up workshops with limited seats.', 'Galas get a Gala tab for table seating, paddle numbers and the paddle raise.'] },
 
+  { id: 'white-label', area: 'organization', title: 'White-label: your brand, your own web address', keywords: 'white label branding brand custom domain own website address subdomain logo colors statement',
+    steps: ['White-label shows only your organization\u2019s brand (logo, colors, name) on an event\u2019s page, checkout, sign-in, tickets, emails and shared-link previews, with no TapIN branding. Card statements show your name too.', 'For one event: on the event\u2019s dashboard, open White-label and buy it for $199 ($149 on Agency). Hosting often? The White-label pack ($99/month, with any plan) covers every event; turn it on per event.', 'Your own address: in your organization\u2019s Brand kit, open Custom domain. Pick a free name.tapin2events.com address (instant), or connect your own, like tickets.yourorg.com (add one CNAME record; part of the White-label pack). Your address shows your full organization page and white-labeled events.'] },
+
   // Organizations
   { id: 'organization', area: 'organization', title: 'Create your organization', keywords: 'organization business nonprofit page create',
     steps: ['Go to TapIN for Business and create your organization.', 'Add your logo, colors and description in organization settings.', 'Host events as your organization so they appear on your page.'], link: { to: '/business', label: 'TapIN for Business' } },
