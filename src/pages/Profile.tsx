@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import OtherEmailsSection from '../components/OtherEmailsSection';
 import PhotoCropper from '../components/PhotoCropper';
 import { webSafeImage } from '../lib/webImage';
 import DisplaySettings from '../components/profile/DisplaySettings';
@@ -258,6 +259,11 @@ export default function Profile() {
       <div id="password" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Password</h2>
         <PasswordSection email={user?.email ?? ''} />
+      </div>
+
+      <div id="other-emails" className="mt-8 scroll-mt-20">
+        <h2 className="mb-2 font-display text-lg font-semibold text-bone">Other emails</h2>
+        <OtherEmailsSection />
       </div>
 
       <div id="payouts" className="mt-8 scroll-mt-24">
