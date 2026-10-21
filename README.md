@@ -48,3 +48,9 @@ Your live Base44 app still has all your real events, users, tickets, and orders.
 - Vendor/resource marketplace and booking flow
 - Messaging & notifications UI
 - Data migration from Base44
+
+## Publishing (main branch)
+After copying a new `dist/` into the `main` branch checkout (keeping `.git`, `.github` and `assets/`), run
+`python3 .github/prune_assets.py "$(ls dist/assets | paste -sd, -)"` from that checkout (pass the new build's file names).
+It removes app files that haven't been part of a release for 14 days, so `assets/` stays small (Cloudflare Pages allows
+20,000 files per deployment). Then commit and push; the Cloudflare workflow publishes in about 30 seconds.
