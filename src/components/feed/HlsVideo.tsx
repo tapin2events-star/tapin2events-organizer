@@ -25,6 +25,10 @@ interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
 // failed on these streams (confirmed: MediaError code 4).
 function prefersNativeHls(video: HTMLVideoElement): boolean {
   const ua = navigator.userAgent;
+  // Some app wrappers (TapIN's Android app, built with Twinr) report an iPhone user agent on Android.
+  // Chromium (Android, desktop Chrome, Android WebViews) exposes navigator.userAgentData; Apple's WebKit doesn't,
+  // so a device with it is never really an iPhone, whatever its user agent says.
+  if ('userAgentData' in navigator || /Android/i.test(ua)) return false;
   const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isDesktopSafari = /^((?!chrome|chromium|crios|fxios|edg|android).)*safari/i.test(ua);
   return (isIOS || isDesktopSafari) && !!video.canPlayType('application/vnd.apple.mpegurl');
@@ -36,6 +40,8 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
   // Stream failed even after automatic recovery: offer a retry.
   const [failed, setFailed] = useState(false);
   const [attemptKey, setAttemptKey] = useState(0);
+  // Set when native playback failed: use hls.js from then on (works on Android even if the device claims to be an iPhone).
+  const [forceHlsJs, setForceHlsJs] = useState(false);
 
   // React sets the `muted` *property* but never writes the `muted`
   // *attribute* to the DOM (a long-standing React quirk). Safari's autoplay
@@ -55,10 +61,11 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
     const video = internalRef.current;
     if (!video || !shouldLoad) return;
 
-    if (prefersNativeHls(video)) {
+    if (!forceHlsJs && prefersNativeHls(video)) {
       video.src = src;
       return;
     }
+    if (forceHlsJs) { video.removeAttribute('src'); video.load(); }
 
     if (Hls.isSupported()) {
       // capLevelToPlayerSize: phones get a stream sized to the screen (not full HD), which helps slower Android phones.
@@ -82,14 +89,19 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
 
     // Last resort for a browser with neither -- just try it directly.
     video.src = src;
-  }, [src, shouldLoad, attemptKey]);
+  }, [src, shouldLoad, attemptKey, forceHlsJs]);
 
   useEffect(() => {
     const video = internalRef.current;
     if (!video) return;
     const onError = () => {
       console.error('[HlsVideo] native <video> error:', video.error, 'src:', src);
-      if (prefersNativeHls(video)) { report('video_error', { player: 'native', code: video.error?.code, message: video.error?.message, src }); setFailed(true); }
+      if (!forceHlsJs && prefersNativeHls(video)) {
+        report('video_error', { player: 'native', code: video.error?.code, message: video.error?.message, src, fallback: Hls.isSupported() });
+        // "Source not supported" or "failed to decode": switch to hls.js instead of giving up.
+        if (Hls.isSupported() && (video.error?.code === 4 || video.error?.code === 3)) { setForceHlsJs(true); return; }
+        setFailed(true);
+      }
     };
     const onPlaying = () => setNeedsTap(false);
     video.addEventListener('error', onError);
@@ -98,7 +110,7 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
       video.removeEventListener('error', onError);
       video.removeEventListener('playing', onPlaying);
     };
-  }, [src]);
+  }, [src, forceHlsJs]);
 
   // Autoplay: try as soon as the video can actually play, retrying on the
   // next `canplay` if a load interrupted the attempt (AbortError). If the
