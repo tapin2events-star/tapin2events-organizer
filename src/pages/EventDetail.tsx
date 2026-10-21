@@ -62,8 +62,14 @@ export default function EventDetail() {
   // Older links (?tab=Lineup, ?tab=Bookings) open the matching view inside "Lineup & bookings".
   const tabParam = new URLSearchParams(window.location.search).get('tab') ?? '';
   const [tab, setTab] = useState<Tab>(() => (tabParam === 'Lineup' || tabParam === 'Bookings' ? 'Lineup & bookings' : tabParam === 'Ticket Sales' ? 'Sales' : tabParam === 'Volunteers' ? 'Team & tasks' : (TABS as readonly string[]).includes(tabParam) ? (tabParam as Tab) : 'Overview'));
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [transferOpen, setTransferOpen] = useState(false);
+  // Who may transfer this event: its creator, TapIN admins, and the Owner of its organization (asked from the database).
+  const [canTransfer, setCanTransfer] = useState(false);
+  useEffect(() => {
+    if (!id || !user) { setCanTransfer(false); return; }
+    supabase.rpc('ownership_current', { p_kind: 'event', p_target: id }).then(({ data }) => setCanTransfer(!!(data as { can_transfer?: boolean } | null)?.can_transfer));
+  }, [id, user]);
   const navigate = useNavigate();
   // Cancel / delete (organizer only). An event with any tickets, registrations,
   // or payments can only be cancelled; the database enforces this too.
@@ -220,13 +226,13 @@ export default function EventDetail() {
           <ShareQR path={`/events/${id}`} title={event.title}
             subtitle={event.start_date ? new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : undefined}
             className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-bone hover:border-marigold hover:text-marigold" />
-          {isOwner && (event.status !== 'cancelled' || hasSales === false) && (
+          {((isOwner && (event.status !== 'cancelled' || hasSales === false)) || canTransfer) && (
             <div className="relative">
               <button
                 type="button"
                 onClick={(e) => {
                   const r = e.currentTarget.getBoundingClientRect();
-                  setMenuAlignRight(r.left + 200 > window.innerWidth - 8);
+                  setMenuAlignRight(r.left + 216 > window.innerWidth - 8);
                   setManageOpen((o) => !o);
                 }}
                 aria-expanded={manageOpen}
@@ -239,10 +245,10 @@ export default function EventDetail() {
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setManageOpen(false)} />
                   <div className={`absolute z-20 mt-1 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-lg ${menuAlignRight ? 'right-0' : 'left-0'}`}>
-                    {(isAdmin || (user?.email && event.organizer_email?.toLowerCase() === user.email.toLowerCase())) && (
+                    {canTransfer && (
                       <button type="button" onClick={() => { setManageOpen(false); setTransferOpen(true); }} className="block w-full px-4 py-2.5 text-left text-gray-800 hover:bg-gray-50">🔑 Transfer ownership</button>
                     )}
-                    {hasSales === undefined ? (
+                    {!isOwner || (event.status === 'cancelled' && hasSales !== false) ? null : hasSales === undefined ? (
                       <p className="px-4 py-2.5 text-gray-400">Checking…</p>
                     ) : hasSales ? (
                       <button type="button" onClick={() => { setManageOpen(false); setDialog('cancel'); }} className="block w-full px-4 py-2.5 text-left text-magenta hover:bg-red-50">
