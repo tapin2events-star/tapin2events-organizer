@@ -52,7 +52,9 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
             placeholder="Name: your people or anyone on TapIN (or type an email)"
             onPick={(p) => {
               if (p.user_id && !rows.some((r) => r.user_id === p.user_id)) setRows([...rows, { user_id: p.user_id, name: p.name, photo: p.photo, ready: false, percent: 0, label: null }]);
-              else if (!p.user_id && p.email && !rows.some((r) => (r.email ?? '').toLowerCase() === p.email)) setRows([...rows, { email: p.email, name: p.name, percent: 0, label: null }]);
+              else if (!p.user_id && p.email && !rows.some((r) => (r.email ?? '').toLowerCase() === p.email)) setRows([...rows, { email: p.email, name: p.name === p.email ? null : p.name, percent: 0, label: null }]);
+              // Name only (no email or TapIN account yet): add them with an email box to fill in.
+              else if (!p.user_id && !p.email) setRows([...rows, { email: '', name: p.name, percent: 0, label: p.name }]);
               setQ('');
             }} />
           <ul className="mt-3 flex flex-col gap-2">
@@ -64,7 +66,10 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
                     <span className="min-w-0"><span className="block truncate text-sm font-medium text-gray-900">{r.name}</span><span className={`block text-[11px] ${r.ready ? 'text-green-700' : 'text-amber-700'}`}>{r.ready ? '✓ Payouts connected' : 'Needs to connect payouts'}</span></span>
                   </span>
                 ) : (
-                  <input value={r.email ?? ''} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} placeholder="Email (not on TapIN yet)" type="email" aria-label="Email" className={field} />
+                  <span className="block min-w-0">
+                    {r.name && <span className="mb-0.5 block truncate text-sm font-medium text-gray-900">{r.name}</span>}
+                    <input value={r.email ?? ''} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} placeholder={r.name ? `${r.name}'s email (to send their share)` : 'Email (not on TapIN yet)'} type="email" aria-label={r.name ? `${r.name}'s email` : 'Email'} className={field} autoFocus={!!r.name && !r.email} />
+                  </span>
                 )}
                 <span className="relative"><input value={String(r.percent)} inputMode="decimal" onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, percent: Number(e.target.value.replace(/[^0-9.]/g, '')) || 0 } : x)))} aria-label="Percent" className={`${field} pr-7`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">%</span></span>
                 <button onClick={() => setRows(rows.filter((_, j) => j !== i))} aria-label="Remove" className="px-2 text-gray-400 hover:text-red-600">✕</button>
