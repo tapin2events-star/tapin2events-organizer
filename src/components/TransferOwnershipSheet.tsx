@@ -45,7 +45,8 @@ export default function TransferOwnershipSheet({ kind, targetId, name, onClose }
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label="Transfer ownership" onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl" style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}>
+        className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl sm:max-h-[85vh] sm:rounded-3xl">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-xl font-bold text-gray-900">🔑 Transfer ownership</h2>
@@ -78,7 +79,7 @@ export default function TransferOwnershipSheet({ kind, targetId, name, onClose }
                 <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Search people on TapIN, or type an email" autoCapitalize="none" autoCorrect="off" aria-label="New owner"
                   className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900 sm:text-sm" />
                 {results.length > 0 && (
-                  <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                  <ul className="mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                     {results.map((r) => (
                       <li key={r.id}>
                         <button type="button" onClick={() => { setPicked(r); setResults([]); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
@@ -102,7 +103,13 @@ export default function TransferOwnershipSheet({ kind, targetId, name, onClose }
             </label>
             {kind === 'event' && <p className="mt-3 rounded-xl bg-gray-50 p-3 text-xs text-gray-600">Ticket sales after the transfer are paid to the new owner{''} (or the event&apos;s organization, if it belongs to one). Sales before it stay with you.</p>}
             {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
-            <button onClick={send} disabled={busy || (!picked && !isEmail)} className="mt-4 w-full rounded-xl bg-[#0F1B3D] py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Sending…' : 'Send transfer request'}</button>
+          </div>
+        )}
+        </div>
+        {pending === null && (
+          <div className="border-t border-gray-100 bg-white px-5 pt-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+            <button onClick={send} disabled={busy || (!picked && !isEmail)} className="w-full rounded-xl bg-[#0F1B3D] py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Sending…' : 'Send transfer request'}</button>
+            {!picked && !isEmail && <p className="mt-1.5 text-center text-xs text-gray-500">Pick someone from the search, or enter a full email address.</p>}
           </div>
         )}
       </div>
