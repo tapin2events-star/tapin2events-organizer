@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isIOS } from '../../lib/displayMode';
 import PremiumBadge from '../business/PremiumBadge';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -87,7 +88,7 @@ export default function InvitePartnerSheet({ eventId, onClose, onCreated }: { ev
           </div>
           {(contact?.phone || contact?.website) && (
             <div className="mt-2 flex flex-wrap gap-2 text-sm">
-              {contact.phone && <a href={`sms:${contact.phone.replace(/[^\d+]/g, '')}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(text)}`} className="rounded-full border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800">💬 Text {contact.phone}</a>}
+              {contact.phone && <a href={`sms:${contact.phone.replace(/[^\d+]/g, '')}${isIOS() ? '&' : '?'}body=${encodeURIComponent(text)}`} className="rounded-full border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800">💬 Text {contact.phone}</a>}
               {contact.phone && <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="rounded-full border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800">📞 Call</a>}
               {contact.website && <a href={contact.website} target="_blank" rel="noopener noreferrer" className="rounded-full border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800">🌐 Website</a>}
             </div>
