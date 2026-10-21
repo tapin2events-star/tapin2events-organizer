@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast, toastError } from '../../lib/toast';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
 
@@ -17,7 +18,8 @@ export default function OrgReelManager({ orgId }: { orgId: string }) {
     supabase.rpc('video_header_candidates', { p_event_id: null, p_org_id: orgId }).then(({ data }) => setCands((data ?? []) as typeof cands));
   }, [adding, orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   async function set(id: string, patch: { pinned?: boolean; hidden?: boolean; sort?: number }) {
-    await supabase.rpc('set_reel_item', { p_org_id: orgId, p_post_id: id, p_pinned: patch.pinned ?? null, p_hidden: patch.hidden ?? null, p_sort: patch.sort ?? null });
+    const { error: rErr } = await supabase.rpc('set_reel_item', { p_org_id: orgId, p_post_id: id, p_pinned: patch.pinned ?? null, p_hidden: patch.hidden ?? null, p_sort: patch.sort ?? null });
+    if (rErr) toastError(); else toast('✓ Highlight reel updated');
     load();
   }
   async function move(i: number, dir: -1 | 1) {

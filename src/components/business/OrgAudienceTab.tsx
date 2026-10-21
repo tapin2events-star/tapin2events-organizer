@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast, toastSaved, toastError } from '../../lib/toast';
 import FeatureFeedback from '../feedback/FeatureFeedback';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
@@ -77,7 +78,8 @@ export default function OrgAudienceTab({ orgId, orgName, newsletterOn }: { orgId
 
   async function remove(p: Person) {
     if (!window.confirm(`Remove ${p.email} from your imported contacts?`)) return;
-    await supabase.rpc('remove_org_contact', { p_org_id: orgId, p_email: p.email });
+    const { error: rmErr } = await supabase.rpc('remove_org_contact', { p_org_id: orgId, p_email: p.email });
+    if (rmErr) toastError("Couldn't remove them."); else toast('Contact removed');
     load();
   }
   function exportCsv() {
@@ -196,6 +198,7 @@ function ImportSheet({ orgId, orgName, onClose, onDone }: { orgId: string; orgNa
     let total = 0;
     for (let i = 0; i < found.length; i += 2000) {
       const { data, error } = await supabase.rpc('import_org_contacts', { p_org_id: orgId, p_rows: found.slice(i, i + 2000), p_consent: true });
+      if (error) toastError("Couldn't import those contacts.");
       if (error) { setBusy(false); return setErr(await errMsg(error, "Couldn't import.")); }
       total += Number(data) || 0;
     }
@@ -246,6 +249,7 @@ function ComposeSheet({ orgId, counts, draft, onClose, onSent, onError }: { orgI
     if (!subject.trim()) { setNote('Add a subject.'); return null; }
     if (!body.trim()) { setNote('Write a message.'); return null; }
     const { data, error } = await supabase.rpc('save_org_campaign', { p: { id, org_id: orgId, subject, body, event_id: eventId || null, promo_code: promo || null, audience } });
+    if (error) toastError(); else toastSaved('Campaign');
     if (error || !data) { setNote(await errMsg(error, "Couldn't save.")); return null; }
     setId(data as string); return data as string;
   }

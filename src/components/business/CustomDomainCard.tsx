@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast, toastError } from '../../lib/toast';
 import { supabase } from '../../lib/supabaseClient';
 
 // Organization > Brand kit: connect the organization's own web address for its white-labeled events.
@@ -21,7 +22,8 @@ export default function CustomDomainCard({ orgId, slug }: { orgId: string; slug?
     let msg: string | null = data?.error ?? null;
     if (!msg && error) { try { msg = (await (error as { context?: Response }).context?.json())?.error ?? 'Something went wrong.'; } catch { msg = 'Something went wrong.'; } }
     setBusy(false);
-    if (msg) return setErr(msg);
+    if (msg) { toastError(msg); return setErr(msg); }
+    toast(action === 'remove' ? 'Domain disconnected' : action === 'add' ? '✓ Domain connected' : '✓ Status updated');
     if (action === 'remove') setHost('');
     load();
   }

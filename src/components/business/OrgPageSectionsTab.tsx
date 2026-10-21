@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toastSaved, toastError } from '../../lib/toast';
 import { uploadImage } from '../../lib/business';
 import { useAuth } from '../../context/AuthContext';
 import Sheet from '../scouting/Sheet';
@@ -53,11 +54,13 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
   async function saveRoster(list: Artist[], h = heading) {
     const entries = list.map((a) => (a.resource_id ? { resource_id: a.resource_id, title: a.title ?? null } : { name: a.name, title: a.title ?? null, bio: a.bio ?? null, photo_url: a.photo ?? null, link: a.link ?? null }));
     const { error } = await supabase.rpc('save_org_roster', { p_org_id: orgId, p_heading: h, p_entries: entries });
+    if (error) toastError(); else toastSaved('Section');
     flash(error ? "Couldn't save." : 'Saved. It\u2019s on your page now.');
     load();
   }
   async function saveSection(section: 'artists' | 'videos' | 'products', ids: string[]) {
     const { error } = await supabase.rpc('set_org_section', { p_org_id: orgId, p_section: section, p_ids: ids });
+    if (error) toastError(); else toastSaved('Section');
     flash(error ? "Couldn't save." : 'Saved. It\u2019s on your page now.');
     if (section === 'artists') load();
   }

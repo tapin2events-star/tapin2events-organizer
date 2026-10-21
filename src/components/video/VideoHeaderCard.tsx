@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast, toastError } from '../../lib/toast';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
@@ -45,6 +46,7 @@ export default function VideoHeaderCard({ eventId, orgId, resourceId, what }: { 
   async function choose(postId: string | null) {
     setErr(null);
     const { error } = await supabase.rpc('set_header_video', { p_event_id: eventId ?? null, p_org_id: orgId ?? null, p_post_id: postId, p_resource_id: resourceId ?? null });
+    if (error) toastError(); else toast(postId ? '✓ Header video saved' : 'Header video removed');
     if (error) return setErr(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't change the video.");
     setOpen(false); load();
   }

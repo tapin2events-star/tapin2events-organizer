@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast, toastSaved, toastError } from '../../lib/toast';
 import TransferOwnershipSheet from '../../components/TransferOwnershipSheet';
 import CustomDomainCard from '../../components/business/CustomDomainCard';
 import { AddExistingEventsSheet } from '../../components/business/MoveEvents';
@@ -79,8 +80,9 @@ function OrgManageInner() {
     if (!org) return;
     setMsg(null);
     const { error } = await supabase.from('organizations').update(patch).eq('id', org.id);
-    if (error) return setMsg({ ok: false, text: "Couldn't save. Please try again." });
+    if (error) { toastError(); return setMsg({ ok: false, text: "Couldn't save. Please try again." }); }
     setOrg({ ...org, ...patch });
+    toastSaved();
     setMsg({ ok: true, text: 'Saved.' });
     window.setTimeout(() => setMsg(null), 2000);
   }
@@ -271,6 +273,7 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
     const e = email.trim().toLowerCase();
     if (!EMAIL_RE.test(e)) return setMsg('Enter a valid email.');
     const { error } = await supabase.from('organization_members').insert({ org_id: orgId, user_email: e, role, added_by: me });
+    if (error) toastError(/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them."); else toast('✓ Added to the team');
     setMsg(error ? (/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them.") : `Added. We've emailed ${e} to let them know${role === 'admin' ? ' they can now manage this organization' : ''}.`);
     setEmail(''); load();
   }
@@ -291,10 +294,10 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
             <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{m.full_name || m.user_email}</span><span className="block text-xs text-muted">{({ owner: 'Owner', admin: 'Admin', editor: 'Editor', viewer: 'Viewer', helper: 'Helper' } as Record<string, string>)[m.role] ?? m.role}{m.user_email === me ? ' · you' : ''}</span></span>
             {canEdit && m.role !== 'owner' && (
               <span className="flex items-center gap-2">
-                <select value={m.role} onChange={async (e) => { await supabase.from('organization_members').update({ role: e.target.value }).eq('org_id', orgId).eq('user_email', m.user_email); load(); }} aria-label="Role" className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs">
+                <select value={m.role} onChange={async (e) => { const { error: rErr } = await supabase.from('organization_members').update({ role: e.target.value }).eq('org_id', orgId).eq('user_email', m.user_email); if (rErr) toastError("Couldn't change the role."); else toast('✓ Role updated'); load(); }} aria-label="Role" className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs">
                   <option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="helper">Helper</option>
                 </select>
-                <button onClick={async () => { await supabase.from('organization_members').delete().eq('org_id', orgId).eq('user_email', m.user_email); load(); }} className="text-xs text-gray-400 hover:text-red-600">Remove</button>
+                <button onClick={async () => { const { error: dErr } = await supabase.from('organization_members').delete().eq('org_id', orgId).eq('user_email', m.user_email); if (dErr) toastError("Couldn't remove them."); else toast('Removed from the team'); load(); }} className="text-xs text-gray-400 hover:text-red-600">Remove</button>
               </span>
             )}
           </li>

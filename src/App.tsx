@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import Toaster from './components/Toaster';
 import MeetingRedirect from './components/MeetingRedirect';
 import DomainGate from './components/DomainGate';
 import { TourProvider } from './components/TourGuide';
@@ -80,6 +81,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <Toaster />
         <AppErrorBoundary><TourProvider><DomainGate><Routes>
           <Route path="/login" element={<Login />} />
           <Route

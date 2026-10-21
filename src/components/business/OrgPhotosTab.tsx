@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast, toastSaved, toastError } from '../../lib/toast';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { uploadImage } from '../../lib/business';
@@ -30,17 +31,20 @@ export default function OrgPhotosTab({ orgId }: { orgId: string }) {
       if (r.error || !r.url) { setErr(r.error ?? 'Upload failed.'); continue; }
       order += 1;
       const { error } = await supabase.from('organization_media').insert({ org_id: orgId, url: r.url, sort_order: order, created_by: user.email });
+      if (error) toastError("Couldn't add the photo."); else toast('✓ Photo added');
       if (error) { setErr(error.message.includes('24') ? `You can add up to ${LIMIT} photos.` : "Couldn't save a photo."); break; }
     }
     setBusy(false);
     load();
   }
   async function caption(p: Photo, text: string) {
-    await supabase.from('organization_media').update({ caption: text.trim().slice(0, 200) || null }).eq('id', p.id);
+    const { error: cErr } = await supabase.from('organization_media').update({ caption: text.trim().slice(0, 200) || null }).eq('id', p.id);
+    if (cErr) toastError(); else toastSaved('Caption');
   }
   async function remove(p: Photo) {
     if (!window.confirm('Remove this photo?')) return;
-    await supabase.from('organization_media').delete().eq('id', p.id);
+    const { error: dErr } = await supabase.from('organization_media').delete().eq('id', p.id);
+    if (dErr) toastError("Couldn't remove the photo."); else toast('Photo removed');
     load();
   }
   async function move(i: number, dir: -1 | 1) {
@@ -52,6 +56,7 @@ export default function OrgPhotosTab({ orgId }: { orgId: string }) {
       supabase.from('organization_media').update({ sort_order: b.sort_order === a.sort_order ? a.sort_order + dir : b.sort_order }).eq('id', a.id),
       supabase.from('organization_media').update({ sort_order: a.sort_order }).eq('id', b.id),
     ]);
+    toastSaved('Order');
     load();
   }
 

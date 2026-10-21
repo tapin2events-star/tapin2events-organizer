@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast, toastError } from '../../lib/toast';
 import { supabase } from '../../lib/supabaseClient';
 
 interface Status { connected: boolean; charges_enabled: boolean; payouts_enabled: boolean; details_submitted: boolean; linked_email?: string | null; linked_name?: string | null; linked_is_me?: boolean; is_owner?: boolean; my_account_ready?: boolean }
@@ -42,6 +43,7 @@ export default function OrgPayoutsTab({ orgId, orgName, slug }: { orgId: string;
     if (!window.confirm(`Use your own TapIN payout account for ${orgName}?\n\nMoney from all of ${orgName}'s events (tickets, donations, vendor fees and event merch) will go to your account, and Stripe reports it under your name and tax info. For a registered business with its own tax ID, a separate account is better.\n\nYou can switch to a separate account anytime.`)) return;
     setBusy(true); setErr(null);
     const { error } = await supabase.rpc('link_owner_payout_account', { p_org_id: orgId });
+    if (error) toastError("Couldn't link payouts."); else toast('✓ Payouts linked');
     if (error) { setBusy(false); return setErr(error.message && !/function|permission/i.test(error.message) ? error.message : "Couldn't link your account."); }
     const { data } = await supabase.rpc('org_payout_status', { p_org_id: orgId });
     setStatus(data as Status | null); setBusy(false);
@@ -50,6 +52,7 @@ export default function OrgPayoutsTab({ orgId, orgName, slug }: { orgId: string;
     if (!window.confirm(thenConnect ? `Switch ${orgName} to its own separate payout account? You'll set it up with Stripe next. New payments go to each event's creator until it's ready.` : `Stop using ${status?.linked_is_me ? 'your' : 'this'} account for ${orgName}? New payments go to each event's creator until the organization connects an account.`)) return;
     setBusy(true); setErr(null);
     const { error } = await supabase.rpc('unlink_owner_payout_account', { p_org_id: orgId });
+    if (error) toastError("Couldn't unlink payouts."); else toast('Payouts unlinked');
     if (error) { setBusy(false); return setErr("Couldn't change the payout account."); }
     if (thenConnect) return connect();
     const { data } = await supabase.rpc('org_payout_status', { p_org_id: orgId });
