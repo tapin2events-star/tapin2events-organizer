@@ -12,6 +12,18 @@ export default function CustomDomainCard({ orgId, slug }: { orgId: string; slug?
   const [host, setHost] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // What this organization can connect, and a live availability check while typing.
+  const [elig, setElig] = useState<{ free: boolean; own: boolean } | null>(null);
+  const [avail, setAvail] = useState<'ok' | 'taken' | 'reserved' | 'invalid' | 'checking' | null>(null);
+  useEffect(() => { supabase.rpc('org_domain_eligibility', { p_org_id: orgId }).then(({ data }) => setElig((data ?? null) as typeof elig)); }, [orgId]);
+  const typed = mode === 'free' ? (free.trim() ? `${free.trim().toLowerCase()}.${ZONE}` : '') : host.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  useEffect(() => {
+    if (!typed || (mode === 'free' && free.trim().length < 3)) { setAvail(typed ? 'invalid' : null); return; }
+    setAvail('checking');
+    const t = setTimeout(() => { supabase.rpc('custom_domain_available', { p_host: typed, p_org_id: orgId }).then(({ data }) => setAvail((data ?? 'invalid') as typeof avail)); }, 300);
+    return () => clearTimeout(t);
+  }, [typed, mode, free, orgId]);
+  const allowed = !elig ? true : mode === 'free' ? elig.free : elig.own;
   const load = useCallback(() => { supabase.rpc('org_domain_status', { p_org_id: orgId }).then(({ data }) => setS((data ?? {}) as Status)); }, [orgId]);
   useEffect(() => { load(); }, [load]);
   async function call(action: 'add' | 'check' | 'remove') {
@@ -47,8 +59,23 @@ export default function CustomDomainCard({ orgId, slug }: { orgId: string; slug?
             ) : (
               <input value={host} onChange={(e) => setHost(e.target.value)} placeholder="tickets.yourorganization.com" aria-label="Web address" autoCapitalize="none" autoCorrect="off" className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 sm:text-sm" />
             )}
-            <button onClick={() => call('add')} disabled={busy || (mode === 'free' ? free.trim().length < 3 : !host.trim())} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Connecting…' : 'Connect'}</button>
+            <button onClick={() => call('add')} disabled={busy || !allowed || avail !== 'ok'} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Connecting…' : 'Connect'}</button>
           </div>
+          {typed && (
+            <p className={`mt-2 text-sm ${avail === 'ok' ? 'text-green-700' : avail === 'checking' ? 'text-gray-500' : 'text-red-600'}`}>
+              <span className="font-semibold [overflow-wrap:anywhere]">{typed}</span>{' '}
+              {avail === 'ok' ? '✓ Available' : avail === 'checking' ? '· Checking…' : avail === 'taken' ? '· Already taken. Try another.' : avail === 'reserved' ? '· Reserved. Try another.'
+                : mode === 'free' ? '· Use 3 to 40 letters, numbers or hyphens (not at the start or end).' : '· Enter a full address, like tickets.yourorganization.com.'}
+            </p>
+          )}
+          {elig && !allowed && (
+            <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+              {mode === 'free'
+                ? 'Free addresses come with white-label: white-label one of your events, or get the White-label pack ($99/month).'
+                : 'Your own domain is part of the White-label pack ($99/month).'}{' '}
+              <a href="/business/plan?pack=white_label#get-plan" className="font-semibold underline">See the White-label pack</a>
+            </p>
+          )}
         </div>
       ) : (
         <div className="mt-4">
