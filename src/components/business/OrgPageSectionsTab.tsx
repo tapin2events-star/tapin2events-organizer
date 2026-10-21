@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PeopleInput from '../PeopleInput';
 import { toastSaved, toastError } from '../../lib/toast';
 import { uploadImage } from '../../lib/business';
 import { useAuth } from '../../context/AuthContext';
@@ -129,7 +130,7 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
             ))}
           </ul>
         )}
-        {editing && <PersonSheet person={editing === 'new' ? null : editing} onClose={() => setEditing(null)}
+        {editing && <PersonSheet orgId={orgId} person={editing === 'new' ? null : editing} onClose={() => setEditing(null)}
           onSave={(p) => { const n = editing === 'new' ? [...artists, p] : artists.map((x) => (x.id === p.id ? p : x)); setArtists(n); setEditing(null); saveRoster(n); }} />}
       </section>
 
@@ -180,7 +181,7 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
 
 // Add or edit a person: TapIN profiles only get a title (their photo and bio come from their profile);
 // people added by hand get a photo, name, title, short bio and an optional link.
-function PersonSheet({ person, onClose, onSave }: { person: Artist | null; onClose: () => void; onSave: (p: Artist) => void }) {
+function PersonSheet({ person, onClose, onSave, orgId }: { person: Artist | null; onClose: () => void; onSave: (p: Artist) => void; orgId?: string }) {
   const { user } = useAuth();
   const isProfile = !!person?.resource_id;
   const [name, setName] = useState(person?.name ?? '');
@@ -213,7 +214,11 @@ function PersonSheet({ person, onClose, onSave }: { person: Artist | null; onClo
               <input type="file" accept="image/*" className="sr-only" onChange={(e) => upload(e.target.files?.[0])} />
             </label>
           </div>
-          <label className="mt-3 block text-xs font-medium text-gray-500">Name<input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} className={field} autoFocus /></label>
+          <label className="mt-3 block text-xs font-medium text-gray-500">Name
+            {/* Suggests people already on your team or in your events; picking fills in their name and photo. */}
+            <PeopleInput orgId={orgId} value={name} onChange={(t) => setName(t.slice(0, 100))} className={field} autoFocus includeTapIN={false} ariaLabel="Name"
+              placeholder="Name (your team and event people appear as you type)" onPick={(pk) => { setName(pk.name); if (pk.photo && !photo) setPhoto(pk.photo); }} />
+          </label>
         </>
       )}
       <label className="mt-3 block text-xs font-medium text-gray-500">Title or role (optional)<input value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder="Keynote · CEO of Acme" className={field} /></label>

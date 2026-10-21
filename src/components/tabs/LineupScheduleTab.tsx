@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import PeopleInput from '../PeopleInput';
 import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
@@ -35,10 +36,12 @@ function validUrl(v: string): string | null {
 }
 
 // ---------- Lineup person editor (manual entries get name/photo/link; booked ones just role & bio) ----------
-function PersonForm({ initial, booked, onSave, onCancel }: {
+function PersonForm({ initial, booked, onSave, onCancel, eventId, initialEmail = '' }: {
   initial: Partial<LineupRow>; booked: boolean;
-  onSave: (v: Partial<LineupRow>) => Promise<string | null>; onCancel: () => void;
+  onSave: (v: Partial<LineupRow>, email?: string) => Promise<string | null>; onCancel: () => void; eventId?: string; initialEmail?: string;
 }) {
+  // Private (never on the public page): lets this person be picked for promotion links, the team, and more.
+  const [email, setEmail] = useState(initialEmail);
   const [name, setName] = useState(initial.name ?? '');
   const [role, setRole] = useState(initial.role ?? '');
   const [bio, setBio] = useState(initial.bio ?? '');
@@ -65,7 +68,7 @@ function PersonForm({ initial, booked, onSave, onCancel }: {
     setBusy(true);
     const err = await onSave(booked
       ? { role: role.trim() || null, bio: bio.trim() || null }
-      : { name: name.trim(), role: role.trim() || null, bio: bio.trim() || null, link_url: url, image_url: image, user_id: userId });
+      : { name: name.trim(), role: role.trim() || null, bio: bio.trim() || null, link_url: url, image_url: image, user_id: userId }, booked ? undefined : email.trim());
     setBusy(false);
     if (err) setError(err);
   }
@@ -74,7 +77,19 @@ function PersonForm({ initial, booked, onSave, onCancel }: {
     <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-marigold/40 bg-marigold/5 p-3">
       {!booked && (
         <>
-          <label className="text-sm font-medium text-gray-700">Name<input className={input} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} placeholder="Performer, speaker, or group" /></label>
+          <label className="text-sm font-medium text-gray-700">Name
+            <PeopleInput eventId={eventId} value={name} onChange={(t) => setName(t.slice(0, 120))} className={input} placeholder="Performer, speaker, or group" ariaLabel="Name"
+              onPick={(p) => {
+                setName(p.name);
+                if (p.user_id) { setUserId(p.user_id); setConnectedName(p.name); }
+                if (p.photo && !image) setImage(p.photo);
+                if (p.email) setEmail(p.email);
+              }} />
+          </label>
+          <label className="text-sm font-medium text-gray-700">Email <span className="font-normal text-gray-400">(optional, private)</span>
+            <input className={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoCapitalize="none" />
+            <span className="mt-0.5 block text-xs font-normal text-gray-500">Only your team sees this. It lets you pick them for promotion links, your team and more.</span>
+          </label>
           <ImageUpload currentUrl={image} onUploaded={setImage} pathPrefix="lineup" label="Photo (optional)" />
           <div className="text-sm font-medium text-gray-700">On TapIN? <span className="font-normal text-gray-400">(optional: lets them get a promo link and be paid)</span>
             {userId ? (
@@ -223,10 +238,12 @@ export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { eve
   const [editingItem, setEditingItem] = useState<string | 'new' | null>(null);
   const [removePerson, setRemovePerson] = useState<LineupRow | null>(null);
   const [removeItem, setRemoveItem] = useState<ScheduleItem | null>(null);
+  // Private lineup emails (organizers only): { lineupId: email }.
+  const [lineupEmails, setLineupEmails] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const [l, p, s] = await Promise.all([
-      supabase.from('event_lineup').select('id, booking_id, name, image_url, link_url, role, bio, sort_order').eq('event_id', event.id).order('sort_order').order('created_at'),
+      supabase.from('event_lineup').select('id, booking_id, user_id, name, image_url, link_url, role, bio, sort_order').eq('event_id', event.id).order('sort_order').order('created_at'),
       supabase.rpc('event_program', { p_event_id: event.id }),
       supabase.from('event_schedule_items').select('*').eq('event_id', event.id).order('starts_at'),
     ]);
@@ -234,6 +251,7 @@ export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { eve
     setRows((l.data ?? []) as LineupRow[]);
     setDisplay(new Map(((p.data?.lineup ?? []) as LineupEntry[]).map((x) => [x.id, x])));
     setItems((s.data ?? []) as ScheduleItem[]);
+    supabase.rpc('lineup_emails', { p_event_id: event.id }).then(({ data }) => setLineupEmails((data ?? {}) as Record<string, string>));
     if (isOwner) {
       const { data: all } = await supabase.from('resource_bookings').select('id, resource_id, show_on_event_page, status, kind, booking_details')
         .eq('event_id', event.id).in('status', ['pending', 'counter_offered', 'accepted', 'confirmed', 'completed']);
@@ -269,14 +287,20 @@ export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { eve
     await load();
   }
 
-  async function savePerson(id: string | 'new', v: Partial<LineupRow>): Promise<string | null> {
+  async function savePerson(id: string | 'new', v: Partial<LineupRow>, email?: string): Promise<string | null> {
+    let rowId = id;
     if (id === 'new') {
       const nextOrder = rows.length ? Math.max(...rows.map((r) => r.sort_order)) + 1 : 0;
-      const { error: e } = await supabase.from('event_lineup').insert({ event_id: event.id, sort_order: nextOrder, ...v });
-      if (e) return "Couldn't save. Please try again.";
+      const { data: ins, error: e } = await supabase.from('event_lineup').insert({ event_id: event.id, sort_order: nextOrder, ...v }).select('id').single();
+      if (e || !ins) return "Couldn't save. Please try again.";
+      rowId = (ins as { id: string }).id;
     } else {
       const { error: e } = await supabase.from('event_lineup').update(v).eq('id', id);
       if (e) return "Couldn't save. Please try again.";
+    }
+    if (email !== undefined && email !== (lineupEmails[rowId] ?? '')) {
+      const { error: mErr } = await supabase.rpc('set_lineup_email', { p_lineup_id: rowId, p_email: email });
+      if (mErr) return mErr.message;
     }
     setEditingPerson(null);
     await load();
@@ -352,7 +376,7 @@ export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { eve
           </div>
         )}
 
-        {editingPerson === 'new' && <div className="mt-3"><PersonForm initial={{}} booked={false} onSave={(v) => savePerson('new', v)} onCancel={() => setEditingPerson(null)} /></div>}
+        {editingPerson === 'new' && <div className="mt-3"><PersonForm initial={{}} booked={false} eventId={event.id} onSave={(v, em) => savePerson('new', v, em)} onCancel={() => setEditingPerson(null)} /></div>}
 
         {isOwner && bookings.length > 0 && (
           <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3">
@@ -375,7 +399,7 @@ export default function LineupScheduleTab({ event, isOwner, onGoPromote }: { eve
             {rows.map((r, i) => {
               const p = lineup[i];
               if (editingPerson === r.id) {
-                return <li key={r.id}><PersonForm initial={r} booked={!!r.booking_id} onSave={(v) => savePerson(r.id, v)} onCancel={() => setEditingPerson(null)} /></li>;
+                return <li key={r.id}><PersonForm initial={r} booked={!!r.booking_id} eventId={event.id} initialEmail={lineupEmails[r.id] ?? ''} onSave={(v, em) => savePerson(r.id, v, em)} onCancel={() => setEditingPerson(null)} /></li>;
               }
               return (
                 <li key={r.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">

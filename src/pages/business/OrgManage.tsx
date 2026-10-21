@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PeopleInput, { type KnownPerson } from '../../components/PeopleInput';
 import { toast, toastSaved, toastError } from '../../lib/toast';
 import TransferOwnershipSheet from '../../components/TransferOwnershipSheet';
 import CustomDomainCard from '../../components/business/CustomDomainCard';
@@ -259,6 +260,7 @@ function BrandTab({ org, canEdit, onSave }: { org: Organization; canEdit: boolea
 function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: string }) {
   const [members, setMembers] = useState<{ user_email: string; role: string; full_name?: string | null }[]>([]);
   const [email, setEmail] = useState('');
+  const [picked, setPicked] = useState<KnownPerson | null>(null);
   const [role, setRole] = useState('admin');
   const [msg, setMsg] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -270,8 +272,15 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
   }, [orgId]);
   useEffect(() => { load(); }, [load]);
   async function add() {
+    // Picked a TapIN member without a known email: add them by account (their email stays private).
+    if (picked?.user_id && !picked.email) {
+      const { error: uErr } = await supabase.rpc('add_org_member_user', { p_org_id: orgId, p_user_id: picked.user_id, p_role: role });
+      if (uErr) { toastError(/duplicate/i.test(uErr.message) ? 'Already on the team.' : uErr.message); setMsg(/duplicate/i.test(uErr.message) ? 'Already on the team.' : uErr.message); return; }
+      toast('✓ Added to the team'); setMsg(`Added ${picked.name}.`); setEmail(''); setPicked(null); load();
+      return;
+    }
     const e = email.trim().toLowerCase();
-    if (!EMAIL_RE.test(e)) return setMsg('Enter a valid email.');
+    if (!EMAIL_RE.test(e)) return setMsg('Enter a valid email, or pick someone from the list.');
     const { error } = await supabase.from('organization_members').insert({ org_id: orgId, user_email: e, role, added_by: me });
     if (error) toastError(/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them."); else toast('✓ Added to the team');
     setMsg(error ? (/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them.") : `Added. We've emailed ${e} to let them know${role === 'admin' ? ' they can now manage this organization' : ''}.`);
@@ -282,7 +291,7 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
       <p className="text-sm text-muted">Everyone here is added to <strong>all of this organization's events</strong> (current and future) with their role. Owners and Admins also manage the organization itself.</p>
       {canEdit && (
         <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 sm:flex">
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@company.com" className="col-span-2 min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900" />
+          <div className="col-span-2 min-w-0 flex-1"><PeopleInput orgId={orgId} value={email} onChange={(t) => { setEmail(t); setPicked(null); }} onPick={(p) => { setPicked(p); setEmail(p.email ?? p.name); }} placeholder="Name or email" ariaLabel="Add someone to the team" className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900" /></div>
           <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role" className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm"><option value="admin">Admin: everything, including the team</option><option value="editor">Editor: edit events, lineups and tasks</option><option value="viewer">Viewer: see everything</option><option value="helper">Helper: their own tasks</option></select>
           <button onClick={add} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">Add</button>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import PeopleInput, { type KnownPerson } from '../PeopleInput';
 import { Link } from 'react-router-dom';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
@@ -20,6 +21,8 @@ export default function TeamTab({ eventId, team = [], canManageTeam = true, filt
   const { user } = useAuth();
   const [collabs, setCollabs] = useState<EventCollaboration[]>([]);
   const [email, setEmail] = useState('');
+  // Picked from your people / TapIN: a TapIN member without a known email is added by account (email stays private).
+  const [picked, setPicked] = useState<KnownPerson | null>(null);
   const [role, setRole] = useState<CollaborationRole>('editor');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +66,12 @@ export default function TeamTab({ eventId, team = [], canManageTeam = true, filt
     e.preventDefault();
     if (!email.trim() || !user?.email) return;
     setError(null);
+    if (picked?.user_id && !picked.email) {
+      const { error: uErr } = await supabase.rpc('add_event_teammate_user', { p_event_id: eventId, p_user_id: picked.user_id, p_role: role });
+      if (uErr) { setError(uErr.message); return; }
+      setEmail(''); setPicked(null); load(); onChanged?.();
+      return;
+    }
     const invitedEmail = email.trim().toLowerCase();
 
     // The event_collaborations row is just a record of the invite -- actual
@@ -131,14 +140,11 @@ export default function TeamTab({ eventId, team = [], canManageTeam = true, filt
       <h2 className="font-display text-xl font-bold text-bone">People</h2>
       {canManageTeam && <form onSubmit={handleInvite} className="flex flex-wrap items-end gap-3 rounded-xl bg-surface p-4">
         <label className="flex flex-1 min-w-[200px] flex-col gap-1 text-xs text-muted">
-          Invite by email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="collaborator@email.com"
-            className="rounded-lg border border-gray-300 bg-surface2 px-3 py-2 text-sm text-bone outline-none focus-visible:border-marigold"
-          />
+          Add someone
+          <PeopleInput eventId={eventId} value={email} onChange={(t) => { setEmail(t); setPicked(null); }}
+            onPick={(p) => { setPicked(p); setEmail(p.email ?? p.name); }}
+            placeholder="Name or email" ariaLabel="Add someone to the team"
+            className="w-full rounded-lg border border-gray-300 bg-surface2 px-3 py-2 text-base text-bone outline-none focus-visible:border-marigold sm:text-sm" />
         </label>
         <label className="flex w-36 flex-col gap-1 text-xs text-muted">
           Role
