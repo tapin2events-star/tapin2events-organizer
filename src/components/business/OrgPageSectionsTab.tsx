@@ -42,6 +42,32 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
   }, [orgId]);
   useEffect(() => { load(); }, [load]);
 
+  // People search: TapIN members and people already on your team or in your events (alongside artist profiles).
+  const [members, setMembers] = useState<{ key: string; name: string; photo: string | null; sub: string }[]>([]);
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 2) { setMembers([]); return; }
+    const t = setTimeout(async () => {
+      const [{ data: kp }, { data: tp }] = await Promise.all([
+        supabase.rpc('known_people', { p_org_id: orgId, p_query: term }),
+        supabase.rpc('search_people_for_splits', { p_query: term }),
+      ]);
+      const out: { key: string; name: string; photo: string | null; sub: string }[] = [];
+      const seen = new Set<string>();
+      for (const k of ((kp ?? []) as { name: string; user_id: string | null; photo: string | null; sources?: string[] }[])) {
+        const key = k.user_id ?? `n:${k.name.toLowerCase()}`;
+        if (seen.has(key)) continue; seen.add(key);
+        out.push({ key, name: k.name, photo: k.photo, sub: (k.sources ?? []).join(' · ') || 'Your people' });
+      }
+      for (const r of ((tp ?? []) as { id: string; full_name: string; profile_photo: string | null }[])) {
+        if (seen.has(r.id)) continue; seen.add(r.id);
+        out.push({ key: r.id, name: r.full_name, photo: r.profile_photo, sub: 'TapIN member' });
+      }
+      setMembers(out.slice(0, 8));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q, orgId]);
+
   // Artist search (TapIN artist & resource profiles).
   useEffect(() => {
     if (q.trim().length < 2) { setResults([]); return; }
@@ -96,11 +122,12 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
         )}
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search TapIN profiles by name" aria-label="Search TapIN profiles" className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 sm:text-sm" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people and profiles on TapIN" aria-label="Search people and profiles on TapIN" className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 sm:text-sm" />
           <button onClick={() => setEditing('new')} className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800">+ Add someone not on TapIN</button>
         </div>
-        {results.length > 0 && (
+        {(results.length > 0 || members.length > 0) && (
           <ul className="mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
+            {results.length > 0 && members.length > 0 && <li className="bg-gray-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Artist &amp; vendor profiles</li>}
             {results.map((r) => {
               const added = artists.some((a) => a.resource_id === r.id);
               return (
@@ -108,6 +135,18 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
                   {r.photo ? <img src={r.photo} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{r.name.charAt(0)}</span>}
                   <span className="min-w-0 flex-1 truncate text-gray-900">{r.name}<span className="text-gray-500">{r.categories?.length ? ` · ${r.categories.slice(0, 2).join(', ')}` : ''}</span></span>
                   <button disabled={added} onClick={() => { const next = [...artists, r]; setArtists(next); saveRoster(next); setQ(''); }} className="shrink-0 rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white disabled:bg-gray-200 disabled:text-gray-500">{added ? 'Added' : 'Add'}</button>
+                </li>
+              );
+            })}
+            {members.length > 0 && <li className="bg-gray-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">People</li>}
+            {members.map((m) => {
+              const added = artists.some((a) => !a.resource_id && a.name.toLowerCase() === m.name.toLowerCase());
+              return (
+                <li key={m.key} className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm last:border-0">
+                  {m.photo ? <img src={m.photo} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{m.name.charAt(0)}</span>}
+                  <span className="min-w-0 flex-1 truncate text-gray-900">{m.name}<span className="text-gray-500"> · {m.sub}</span></span>
+                  <button disabled={added} onClick={() => { const next = [...artists, { id: crypto.randomUUID(), resource_id: null, name: m.name, photo: m.photo, categories: null, city: null, title: null }]; setArtists(next); saveRoster(next); setQ(''); }}
+                    className="shrink-0 rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">{added ? 'Added' : 'Add'}</button>
                 </li>
               );
             })}
@@ -216,8 +255,8 @@ function PersonSheet({ person, onClose, onSave, orgId }: { person: Artist | null
           </div>
           <label className="mt-3 block text-xs font-medium text-gray-500">Name
             {/* Suggests people already on your team or in your events; picking fills in their name and photo. */}
-            <PeopleInput orgId={orgId} value={name} onChange={(t) => setName(t.slice(0, 100))} className={field} autoFocus includeTapIN={false} ariaLabel="Name"
-              placeholder="Name (your team and event people appear as you type)" onPick={(pk) => { setName(pk.name); if (pk.photo && !photo) setPhoto(pk.photo); }} />
+            <PeopleInput orgId={orgId} value={name} onChange={(t) => setName(t.slice(0, 100))} className={field} autoFocus allowEmail={false} ariaLabel="Name"
+              placeholder="Name (your people and TapIN members appear as you type)" onPick={(pk) => { setName(pk.name); if (pk.photo && !photo) setPhoto(pk.photo); }} />
           </label>
         </>
       )}
