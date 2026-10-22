@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { OrgAlbumsSection } from '../../components/business/OrgAlbums';
 import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing } from '../../components/video/HeaderVideo';
 import { cachedRole, loadRole } from '../../lib/orgFollows';
 import { useFeature } from '../../lib/preview';
@@ -20,6 +21,7 @@ export default function OrgPublic({ slugOverride, embedded = false }: { slugOver
 function OrgPublicInner({ slugOverride, embedded = false }: { slugOverride?: string; embedded?: boolean }) {
   const volunteersOn = useFeature('volunteers');
   const videoHeadersOn = useFeature('video_headers');
+  const albumsOn = useFeature('org_albums');
   const params = useParams<{ slug: string }>();
   const slug = slugOverride ?? params.slug ?? '';
   const [org, setOrg] = useState<Organization | null | undefined>(() => { const c = cachedOrg(slug); return c ? ({ description: null, website: null, contact_email: null, ...c, brand: { ...DEFAULT_BRAND, ...(c.brand ?? {}) } } as unknown as Organization) : undefined; });
@@ -105,6 +107,7 @@ function OrgPublicInner({ slugOverride, embedded = false }: { slugOverride?: str
         {volunteersOn && <OrgVolunteer orgId={org.id} accent={b.accent} dark={dark} />}
         {videoHeadersOn && <OrgHighlights orgId={org.id} />}
         <OrgGallery orgId={org.id} accent={b.accent} dark={dark} />
+        {albumsOn && <OrgAlbumsSection orgId={org.id} />}
         <PastEvents orgId={org.id} accent={b.accent} dark={dark} />
       </div>
     </div>
@@ -116,7 +119,7 @@ function OrgGallery({ orgId }: { orgId: string; accent?: string; dark?: boolean 
   const [photos, setPhotos] = useState<{ id: string; url: string; caption: string | null }[]>([]);
   const [open, setOpen] = useState<number | null>(null);
   useEffect(() => {
-    supabase.from('organization_media').select('id, url, caption').eq('org_id', orgId).order('sort_order').order('created_at')
+    supabase.from('organization_media').select('id, url, caption').eq('org_id', orgId).is('album_id', null).order('sort_order').order('created_at')
       .then(({ data }) => setPhotos((data ?? []) as { id: string; url: string; caption: string | null }[]));
   }, [orgId]);
   if (photos.length === 0) return null;

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { OrgAlbumsManager } from './OrgAlbums';
+import { useFeature } from '../../lib/preview';
 import { toast, toastSaved, toastError } from '../../lib/toast';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -10,11 +12,12 @@ interface Photo { id: string; url: string; caption: string | null; sort_order: n
 // Organization > Photos (Owners, Admins, Editors): a free gallery of up to 24 photos on the public page.
 export default function OrgPhotosTab({ orgId }: { orgId: string }) {
   const { user } = useAuth();
+  const albumsOn = useFeature('org_albums');
   const [photos, setPhotos] = useState<Photo[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(async () => {
-    const { data } = await supabase.from('organization_media').select('id, url, caption, sort_order').eq('org_id', orgId).order('sort_order').order('created_at');
+    const { data } = await supabase.from('organization_media').select('id, url, caption, sort_order').eq('org_id', orgId).is('album_id', null).order('sort_order').order('created_at');
     setPhotos((data ?? []) as Photo[]);
   }, [orgId]);
   useEffect(() => { load(); }, [load]);
@@ -63,6 +66,7 @@ export default function OrgPhotosTab({ orgId }: { orgId: string }) {
   const full = (photos?.length ?? 0) >= LIMIT;
   return (
     <div>
+      {albumsOn && <OrgAlbumsManager orgId={orgId} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">Photos show in a gallery on your public page: past events, your team, your space. {photos ? `${photos.length} of ${LIMIT}` : ''}</p>
         <label className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-xl px-4 text-sm font-semibold text-white ${full || busy ? 'pointer-events-none bg-gray-300' : 'bg-marigold'}`}>
