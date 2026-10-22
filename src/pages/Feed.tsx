@@ -464,9 +464,12 @@ export default function Feed() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }
 
-  // Swipe right (phones) to open Discover. Paused while a sheet or dialog is open.
+  // Swipe right (phones) to go back to the previous TapIN screen (like the phone's own back gesture), or to Discover
+  // when there's nowhere to go back to (opened straight to the Feed, or from a shared link). Paused while a sheet or
+  // dialog is open.
+  const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
   const swipeEnabled = !loading && posts.length > 0 && !openComments && !reportingId && !reportingCommentId && !showCreateModal && !tippingPost && !editingPostId;
-  const { dragX, leaving, dragging } = useSwipeRight(feedRootRef, () => navigate('/'), swipeEnabled);
+  const { dragX, leaving, dragging } = useSwipeRight(feedRootRef, () => (canGoBack ? navigate(-1) : navigate('/')), swipeEnabled);
   const swipeProgress = Math.min(dragX / (typeof window !== 'undefined' ? window.innerWidth * 0.33 : 1), 1);
 
   if (loading) return <FeedSkeleton />;
@@ -492,12 +495,14 @@ export default function Feed() {
   return (
     <>
     <ProcessingChip refreshKey={processingKey} onLive={() => loadPosts()} />
-    {/* Revealed behind the feed while swiping right toward Discover */}
+    {/* Revealed behind the feed while swiping right: Back (or Discover when there's nowhere to go back to) */}
     {dragging && (
       <div className="fixed inset-0 z-20 flex items-center bg-gray-50" aria-hidden="true">
         <div className="flex items-center gap-2 pl-6 text-gray-900" style={{ opacity: 0.4 + swipeProgress * 0.6, transform: `scale(${0.9 + swipeProgress * 0.1})` }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" /></svg>
-          <span className="font-display text-lg font-bold">{swipeProgress >= 1 ? 'Let go for Discover' : 'Discover'}</span>
+          {canGoBack
+            ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" /></svg>}
+          <span className="font-display text-lg font-bold">{canGoBack ? (swipeProgress >= 1 ? 'Let go to go back' : 'Back') : (swipeProgress >= 1 ? 'Let go for Discover' : 'Discover')}</span>
         </div>
       </div>
     )}
@@ -938,7 +943,7 @@ export default function Feed() {
           onClick={() => setShowSwipeTip(false)}
           className="fixed inset-x-0 top-1/2 z-[1100] mx-auto flex w-fit -translate-y-1/2 items-center gap-2 rounded-full bg-black/75 px-5 py-3 text-sm font-semibold text-white shadow-xl backdrop-blur-sm"
         >
-          <span aria-hidden="true" className="inline-block animate-pulse">👉</span> Swipe right for Discover
+          <span aria-hidden="true" className="inline-block animate-pulse">👉</span> {canGoBack ? 'Swipe right to go back' : 'Swipe right for Discover'}
         </button>
       )}
     </div>
