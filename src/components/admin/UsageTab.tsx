@@ -26,6 +26,7 @@ export default function UsageTab() {
   if (!d) return <ListSkeleton rows={6} />;
   return (
     <div className="flex flex-col gap-8">
+      <DomainCount />
       <section>
         <h2 className="font-display text-xl font-bold text-bone">Feature usage</h2>
         <p className="text-sm text-muted">Who uses each feature and whether they come back. "Repeat" = people who used it on 2 or more events. Feedback comes from the one-question check-ins.</p>
@@ -182,5 +183,21 @@ function StripeKeyField() {
       </div>
       {msg && <p className="mt-1 text-xs text-muted">{msg}</p>}
     </div>
+  );
+}
+
+// Custom addresses in use vs Cloudflare's 100 free (app.tapin2events.com counts as one). Heads-up from 80.
+function DomainCount() {
+  const [d, setD] = useState<{ connected: number; redirecting: number; used: number; limit: number } | null>(null);
+  useEffect(() => { supabase.rpc('admin_domain_count').then(({ data }) => setD((data ?? null) as typeof d)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!d) return null;
+  const warn = d.used >= 80;
+  return (
+    <section className={`rounded-2xl border p-4 ${warn ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-surface'}`}>
+      <p className="text-sm font-semibold text-bone">🌐 Custom addresses: {d.used} of {d.limit}</p>
+      <p className="mt-0.5 text-xs text-muted">{d.connected} connected · {d.redirecting} redirecting after disconnecting · plus app.tapin2events.com</p>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200"><div className={`h-full ${warn ? 'bg-amber-500' : 'bg-marigold'}`} style={{ width: `${Math.min(100, (d.used / d.limit) * 100)}%` }} /></div>
+      {warn && <p className="mt-2 text-xs font-medium text-amber-900">Getting close to Cloudflare's 100 free custom addresses. Time to move free name.tapin2events.com addresses to a wildcard setup (they'd stop counting) and own domains to Cloudflare for SaaS.</p>}
+    </section>
   );
 }

@@ -26,8 +26,17 @@ export default function CustomDomainCard({ orgId, slug }: { orgId: string; slug?
   const allowed = !elig ? true : mode === 'free' ? elig.free : elig.own;
   const load = useCallback(() => { supabase.rpc('org_domain_status', { p_org_id: orgId }).then(({ data }) => setS((data ?? {}) as Status)); }, [orgId]);
   useEffect(() => { load(); }, [load]);
+  // Disconnect: show what's using the address and require typing it (connected addresses go into redirect mode).
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [usage, setUsage] = useState<{ upcoming_events: number; promotion_links: number; tickets: number; redirect_until: string; own_domain: boolean } | null>(null);
+  const [typed2, setTyped2] = useState('');
+  async function openDisconnect() {
+    if (s?.status !== 'active') { if (window.confirm(`Disconnect ${s?.hostname}? It never finished connecting, so nothing is using it yet.`)) call('remove'); return; }
+    setTyped2(''); setUsage(null); setDisconnecting(true);
+    const { data } = await supabase.rpc('domain_usage', { p_org_id: orgId });
+    setUsage((data ?? null) as typeof usage);
+  }
   async function call(action: 'add' | 'check' | 'remove') {
-    if (action === 'remove' && !window.confirm(`Disconnect ${s?.hostname}? Links using it will stop working.`)) return;
     setBusy(true); setErr(null);
     const hostname = mode === 'free' ? `${free.trim().toLowerCase()}.${ZONE}` : host;
     const { data, error } = await supabase.functions.invoke('custom-domain', { body: { action, org_id: orgId, hostname } });
@@ -35,7 +44,10 @@ export default function CustomDomainCard({ orgId, slug }: { orgId: string; slug?
     if (!msg && error) { try { msg = (await (error as { context?: Response }).context?.json())?.error ?? 'Something went wrong.'; } catch { msg = 'Something went wrong.'; } }
     setBusy(false);
     if (msg) { toastError(msg); return setErr(msg); }
-    toast(action === 'remove' ? 'Domain disconnected' : action === 'add' ? '✓ Domain connected' : '✓ Status updated');
+    toast(action === 'remove'
+      ? (data?.redirect_until ? `Disconnected. Old links redirect to TapIN until ${new Date(data.redirect_until).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Domain disconnected')
+      : action === 'add' ? '✓ Domain connected' : '✓ Status updated');
+    if (action === 'remove') setDisconnecting(false);
     if (action === 'remove') setHost('');
     load();
   }
@@ -102,7 +114,31 @@ export default function CustomDomainCard({ orgId, slug }: { orgId: string; slug?
           )}
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
             {s.status !== 'active' && <button onClick={() => call('check')} disabled={busy} className="font-semibold text-marigold disabled:opacity-50">{busy ? 'Checking…' : 'Check status'}</button>}
-            <button onClick={() => call('remove')} disabled={busy} className="font-medium text-gray-500 hover:text-red-600 disabled:opacity-50">Disconnect</button>
+            <button onClick={openDisconnect} disabled={busy} className="font-medium text-gray-500 hover:text-red-600 disabled:opacity-50">Disconnect</button>
+          </div>
+        </div>
+      )}
+      {disconnecting && s?.hostname && (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-semibold">Disconnect {s.hostname}?</p>
+          {usage === null ? <p className="mt-1 text-red-800">Checking what uses it…</p> : (
+            <>
+              <p className="mt-1">It&apos;s currently used by:</p>
+              <ul className="mt-1 list-disc pl-5">
+                <li>{usage.upcoming_events} upcoming white-labeled event{usage.upcoming_events === 1 ? '' : 's'}</li>
+                <li>{usage.promotion_links} promotion link{usage.promotion_links === 1 ? '' : 's'}</li>
+                <li>{usage.tickets} ticket{usage.tickets === 1 ? '' : 's'} (their emails link here)</li>
+              </ul>
+              <p className="mt-2">Shared links, printed QR codes and emails will keep working: visitors go to the same page on TapIN until <strong>{new Date(usage.redirect_until).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</strong>. The address stays reserved for you until then, and you can reconnect it anytime.</p>
+              {usage.own_domain && <p className="mt-2">Keep the CNAME record at your domain provider until then, so the redirect keeps working.</p>}
+            </>
+          )}
+          <label className="mt-3 block text-xs font-medium text-red-900">Type <strong>{s.hostname}</strong> to confirm
+            <input value={typed2} onChange={(e) => setTyped2(e.target.value.trim().toLowerCase())} autoCapitalize="none" autoCorrect="off" className="mt-1 w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm" />
+          </label>
+          <div className="mt-3 flex gap-2">
+            <button onClick={() => call('remove')} disabled={busy || typed2 !== s.hostname} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{busy ? 'Disconnecting…' : 'Disconnect'}</button>
+            <button onClick={() => setDisconnecting(false)} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-900">Keep it</button>
           </div>
         </div>
       )}
