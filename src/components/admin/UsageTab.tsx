@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast, toastError } from '../../lib/toast';
 import PremiumUsagePanel from './PremiumUsagePanel';
 import { supabase } from '../../lib/supabaseClient';
 import { ListSkeleton } from '../ui/Skeleton';
@@ -26,6 +27,7 @@ export default function UsageTab() {
   if (!d) return <ListSkeleton rows={6} />;
   return (
     <div className="flex flex-col gap-8">
+      <ComplimentaryAccess />
       <DomainCount />
       <section>
         <h2 className="font-display text-xl font-bold text-bone">Feature usage</h2>
@@ -198,6 +200,56 @@ function DomainCount() {
       <p className="mt-0.5 text-xs text-muted">{d.connected} connected · {d.redirecting} redirecting after disconnecting · plus app.tapin2events.com</p>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200"><div className={`h-full ${warn ? 'bg-amber-500' : 'bg-marigold'}`} style={{ width: `${Math.min(100, (d.used / d.limit) * 100)}%` }} /></div>
       {warn && <p className="mt-2 text-xs font-medium text-amber-900">Getting close to Cloudflare's 100 free custom addresses. Time to move free name.tapin2events.com addresses to a wildcard setup (they'd stop counting) and own domains to Cloudflare for SaaS.</p>}
+    </section>
+  );
+}
+
+// People who get every premium feature free (their own events and organizations they own), even after billing
+// turns on. Optional note and end date.
+function ComplimentaryAccess() {
+  const [rows, setRows] = useState<{ email: string; name: string | null; note: string | null; expires_at: string | null; active: boolean; orgs: string[] }[] | null>(null);
+  const [email, setEmail] = useState('');
+  const [note, setNote] = useState('');
+  const [until, setUntil] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = () => supabase.rpc('admin_complimentary_list').then(({ data }) => setRows((data ?? []) as NonNullable<typeof rows>));
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  async function save(remove = false, who = email) {
+    if (remove && !window.confirm(`Remove complimentary access for ${who}?`)) return;
+    setBusy(true);
+    const { error } = await supabase.rpc('admin_set_complimentary', { p_email: who, p_note: remove ? null : note, p_expires_at: !remove && until ? new Date(`${until}T23:59:59`).toISOString() : null, p_remove: remove });
+    setBusy(false);
+    if (error) return toastError(error.message);
+    toast(remove ? 'Removed' : '✓ Complimentary access added');
+    if (!remove) { setEmail(''); setNote(''); setUntil(''); }
+    load();
+  }
+  const field = 'rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm';
+  return (
+    <section>
+      <h2 className="font-display text-xl font-bold text-bone">🎁 Complimentary access</h2>
+      <p className="mt-1 text-sm text-muted">These people get every premium feature free, for their own events and the organizations they own, even after billing turns on.</p>
+      {rows && rows.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-2">
+          {rows.map((r) => (
+            <li key={r.email} className={`flex flex-wrap items-start justify-between gap-2 rounded-xl border p-3 text-sm ${r.active ? 'border-gray-200 bg-surface' : 'border-gray-200 bg-gray-50 opacity-70'}`}>
+              <span className="min-w-0">
+                <span className="block font-semibold text-bone [overflow-wrap:anywhere]">{r.name ? `${r.name} · ` : ''}{r.email}</span>
+                <span className="block text-xs text-muted">
+                  {[r.note, r.orgs.length ? `Owns: ${r.orgs.join(', ')}` : null, r.expires_at ? `${r.active ? 'Until' : 'Ended'} ${new Date(r.expires_at).toLocaleDateString()}` : 'No end date'].filter(Boolean).join(' · ')}
+                </span>
+              </span>
+              <button onClick={() => save(true, r.email)} disabled={busy} className="shrink-0 text-xs text-gray-500 hover:text-red-600">Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" autoCapitalize="none" aria-label="Email" className={field} />
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" aria-label="Note" className={field} />
+        <input type="date" value={until} onChange={(e) => setUntil(e.target.value)} aria-label="End date (optional)" title="End date (optional)" className={field} />
+        <button onClick={() => save(false)} disabled={busy || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())} className="rounded-xl bg-[#0F1B3D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Add</button>
+      </div>
     </section>
   );
 }
