@@ -286,17 +286,29 @@ function OrgVolunteer({ orgId, accent, dark }: { orgId: string; accent: string; 
 
 // Highlights from past events (Preview): videos posted to the organization's past events.
 function OrgHighlights({ orgId }: { orgId: string }) {
-  const [items, setItems] = useState<{ id: string; thumbnail: string | null; caption: string | null; event_title: string }[]>([]);
+  const [items, setItems] = useState<{ id: string; thumbnail: string | null; caption: string | null; event_title: string | null; event_id: string | null }[]>([]);
+  // Event filter: All, or one event's highlights.
+  const [only, setOnly] = useState<string | null>(null);
   useEffect(() => { supabase.rpc('org_highlight_reel', { p_org_id: orgId }).then(({ data }) => setItems((data ?? []) as typeof items)); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!items.length) return null;
+  const events = [...new Map(items.filter((v) => v.event_id && v.event_title).map((v) => [v.event_id as string, v.event_title as string])).entries()];
+  const shown = only ? items.filter((v) => v.event_id === only) : items;
   return (
     <section className="pb-10">
       <h2 className="text-xl font-bold">🎞️ Highlights from past events</h2>
+      {events.length > 1 && (
+        <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Filter highlights by event">
+          {[[null, 'All'] as [string | null, string], ...events].map(([id, title]) => (
+            <button key={id ?? 'all'} role="tab" aria-selected={only === id} onClick={() => setOnly(id)}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${only === id ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>{title}</button>
+          ))}
+        </div>
+      )}
       <div className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
-        {items.map((v) => (
-          <Link key={v.id} to={`/feed?post=${v.id}`} className="relative w-36 shrink-0 snap-start overflow-hidden rounded-2xl" aria-label={v.caption || `Video from ${v.event_title}`}>
+        {shown.map((v) => (
+          <Link key={v.id} to={`/feed?post=${v.id}`} className="relative w-36 shrink-0 snap-start overflow-hidden rounded-2xl" aria-label={v.caption || (v.event_title ? `Video from ${v.event_title}` : 'Video')}>
             {v.thumbnail ? <img src={v.thumbnail} alt="" className="aspect-[9/14] w-full object-cover" /> : <span className="flex aspect-[9/14] w-full items-center justify-center bg-gray-800 text-2xl">🎬</span>}
-            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-6 text-xs font-medium text-white">{v.event_title}</span>
+            {v.event_title && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-6 text-xs font-medium text-white">{v.event_title}</span>}
             <span className="absolute left-2 top-2 rounded-full bg-black/50 px-1.5 text-xs text-white">▶</span>
           </Link>
         ))}

@@ -3,14 +3,33 @@ import { toast, toastError } from '../../lib/toast';
 import { supabase } from '../../lib/supabaseClient';
 import Sheet from '../scouting/Sheet';
 
-interface Item { id: string; thumbnail: string | null; caption: string | null; event_title: string | null; pinned: boolean; hidden: boolean; sort_order: number; auto: boolean }
+interface Item { id: string; thumbnail: string | null; caption: string | null; event_title: string | null; pinned: boolean; hidden: boolean; sort_order: number; auto: boolean; event_id: string | null; event_set: boolean }
 
 // Organization settings > Page (Preview): curate "Highlights from past events": pin favorites (in order), hide clips,
-// or add any of your videos. Unpinned clips from past events still fill in automatically.
+// or add any of your videos, and set which event each clip is from (filters on the public page, and the event's own
+// page shows its clips). Unpinned clips from past events still fill in automatically.
 export default function OrgReelManager({ orgId }: { orgId: string }) {
   const [items, setItems] = useState<Item[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [cands, setCands] = useState<{ id: string; thumbnail: string | null; caption: string | null }[] | null>(null);
+  // The organization's events, for each clip's "Event" picker (its own label; the original post isn't changed).
+  const [orgEvents, setOrgEvents] = useState<{ id: string; title: string; start_date: string | null }[]>([]);
+  useEffect(() => {
+    supabase.from('events').select('id, title, start_date').eq('organization_id', orgId).neq('status', 'draft').order('start_date', { ascending: false, nullsFirst: false }).limit(80)
+      .then(({ data }) => setOrgEvents((data ?? []) as typeof orgEvents));
+  }, [orgId]);
+  async function setEvent(id: string, eventId: string | null) {
+    const { error: eErr } = await supabase.rpc('set_reel_event', { p_org_id: orgId, p_post_id: id, p_event_id: eventId });
+    if (eErr) toastError(eErr.message); else toast(eventId ? '✓ Event updated' : 'Event removed');
+    load();
+  }
+  const eventPicker = (x: Item) => (
+    <select value={x.event_id ?? ''} onChange={(e) => setEvent(x.id, e.target.value || null)} aria-label="Which event is this clip from?"
+      className="mt-0.5 block w-full max-w-[16rem] truncate rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-xs text-gray-700">
+      <option value="">No event</option>
+      {orgEvents.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}{ev.start_date ? ` (${new Date(ev.start_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })})` : ''}</option>)}
+    </select>
+  );
   const load = useCallback(async () => { const { data } = await supabase.rpc('org_reel_manage', { p_org_id: orgId }); setItems((data ?? []) as Item[]); }, [orgId]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -49,7 +68,7 @@ export default function OrgReelManager({ orgId }: { orgId: string }) {
           <ul className="mt-1.5 flex flex-col gap-1.5">
             {pinned.map((x, i) => (
               <li key={x.id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-surface p-2">
-                {thumb(x)}<span className="min-w-0 flex-1"><span className="block truncate text-sm text-bone">{x.caption || 'Video'}</span><span className="block truncate text-xs text-muted">{x.event_title ?? ''}</span></span>
+                {thumb(x)}<span className="min-w-0 flex-1"><span className="block truncate text-sm text-bone">{x.caption || 'Video'}</span>{eventPicker(x)}</span>
                 <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up" className="px-1.5 text-gray-500 disabled:opacity-30">↑</button>
                 <button onClick={() => move(i, 1)} disabled={i === pinned.length - 1} aria-label="Move down" className="px-1.5 text-gray-500 disabled:opacity-30">↓</button>
                 <button onClick={() => set(x.id, { pinned: false })} className="text-xs text-gray-500">Unpin</button>
@@ -64,7 +83,7 @@ export default function OrgReelManager({ orgId }: { orgId: string }) {
           <ul className="mt-1.5 flex flex-col gap-1.5">
             {auto.map((x) => (
               <li key={x.id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-surface p-2">
-                {thumb(x)}<span className="min-w-0 flex-1"><span className="block truncate text-sm text-bone">{x.caption || 'Video'}</span><span className="block truncate text-xs text-muted">{x.event_title ?? ''}</span></span>
+                {thumb(x)}<span className="min-w-0 flex-1"><span className="block truncate text-sm text-bone">{x.caption || 'Video'}</span>{eventPicker(x)}</span>
                 <button onClick={() => set(x.id, { pinned: true })} className="text-xs font-medium text-marigold">📌 Pin</button>
                 <button onClick={() => set(x.id, { hidden: true })} className="text-xs text-gray-500">Hide</button>
               </li>
