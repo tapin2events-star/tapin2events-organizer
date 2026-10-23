@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import ProfileLink from '../ProfileLink';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { functionError } from '../../lib/functionError';
@@ -112,7 +112,7 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
               <Row key={u.id}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <Link to={`/creator/${encodeURIComponent(u.email)}`} className="font-medium text-gray-900 hover:text-marigold">{u.full_name || u.email}</Link>{me && <span className="ml-1 text-xs text-gray-400">(you)</span>}
+                    <ProfileLink email={u.email} className="font-medium text-gray-900 hover:text-marigold">{u.full_name || u.email}</ProfileLink>{me && <span className="ml-1 text-xs text-gray-400">(you)</span>}
                     <p className="truncate text-xs text-gray-500">{u.email} · joined {fmtDate(u.created_at)}</p>
                     <p className="truncate text-xs text-gray-500">
                       {u.first_signed_in_at

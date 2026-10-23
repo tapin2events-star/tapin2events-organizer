@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ProfileLink from '../ProfileLink';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -34,7 +35,7 @@ export default function YourProfile({ userId, email, savedCount, vendorAppCounts
             <h2 id="your-profile" className="font-display text-lg font-bold text-bone">Your profile</h2>
             <p className="text-sm text-muted">One TapIN profile. Turn on the parts you need; your public profile shows them together.</p>
           </div>
-          <Link to={`/creator/${encodeURIComponent(email)}`} className="text-sm font-medium text-marigold">View public profile ›</Link>
+          <ProfileLink email={email} className="text-sm font-medium text-marigold">View public profile ›</ProfileLink>
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">

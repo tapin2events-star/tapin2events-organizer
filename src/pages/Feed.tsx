@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ProfileLink from '../components/ProfileLink';
 import ProcessingChip from '../components/feed/ProcessingChip';
 import VideoSeekControls from '../components/feed/VideoSeekControls';
 import { blockUser } from '../lib/blocks';
@@ -721,7 +722,7 @@ export default function Feed() {
             </div>
 
             <div className="absolute inset-x-0 bottom-0 p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
-              <Link to={`/creator/${encodeURIComponent(post.author_email)}`} className="flex items-center gap-2">
+              <ProfileLink email={post.author_email} className="flex items-center gap-2">
                 {post.author_photo ? (
                   <img src={post.author_photo} alt="" className="h-8 w-8 rounded-full object-cover" />
                 ) : (
@@ -730,18 +731,18 @@ export default function Feed() {
                   </span>
                 )}
                 <span className="font-semibold">{post.author_name}</span>
-              </Link>
+              </ProfileLink>
               {post.tagged.length > 0 && (
                 <div className="mt-2 flex max-w-[calc(100%-4.5rem)] flex-wrap items-center gap-1.5 text-xs text-white/90">
                   <span aria-hidden>🏷️ With</span>
                   {post.tagged.map((t) => (
-                    <Link
+                    <ProfileLink
                       key={t.email}
-                      to={`/creator/${encodeURIComponent(t.email)}`}
+                      email={t.email}
                       className="rounded-full bg-white/20 px-2.5 py-1 font-semibold text-white backdrop-blur-sm hover:bg-white/30"
                     >
                       {t.name}
-                    </Link>
+                    </ProfileLink>
                   ))}
                 </div>
               )}
@@ -814,7 +815,7 @@ export default function Feed() {
                 <div className="flex flex-col gap-4">
                   {comments.map((c) => (
                     <div key={c.id} className="flex gap-2.5">
-                      <Link to={`/creator/${encodeURIComponent(c.author_email)}`} className="shrink-0">
+                      <ProfileLink email={c.author_email} className="shrink-0">
                         {c.author_photo ? (
                           <img src={c.author_photo} alt="" className="h-9 w-9 rounded-full object-cover" />
                         ) : (
@@ -822,12 +823,12 @@ export default function Feed() {
                             {c.author_name.charAt(0).toUpperCase()}
                           </span>
                         )}
-                      </Link>
+                      </ProfileLink>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline gap-2">
-                          <Link to={`/creator/${encodeURIComponent(c.author_email)}`} className="truncate text-sm font-semibold text-bone">
+                          <ProfileLink email={c.author_email} className="truncate text-sm font-semibold text-bone">
                             {c.author_name}
-                          </Link>
+                          </ProfileLink>
                           <p className="shrink-0 text-xs text-muted">{timeAgo(c.created_at)}</p>
                         </div>
                         <p className="whitespace-pre-wrap break-words text-sm text-bone">{c.content}</p>

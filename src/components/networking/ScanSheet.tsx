@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { resolveProfileId } from '../../lib/profileLinks';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { supabase } from '../../lib/supabaseClient';
@@ -32,15 +33,22 @@ export default function ScanSheet({ onClose }: { onClose: () => void }) {
     try { const u = new URL(text); path = u.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), ''); } catch { setErr("That isn't a TapIN code."); return; }
     const ev = path.match(/^\/?events\/([0-9a-f-]{36})\/network\/qr\/([0-9a-f]+)/i);
     if (ev) { onClose(); navigate(`/events/${ev[1]}/network/qr/${ev[2]}`); return; }
+    // Profile codes: new ones are /u/<account id>; older ones are /creator/<email>.
+    const byId = path.match(/^\/?u\/([0-9a-f-]{36})/i);
     const cr = path.match(/^\/?creator\/([^/?#]+)/i);
-    if (cr) {
-      const email = decodeURIComponent(cr[1]).toLowerCase();
+    if (byId || cr) {
+      let email = cr ? decodeURIComponent(cr[1]).toLowerCase() : '';
+      if (byId) {
+        const { data: em } = await supabase.rpc('profile_email_by_id', { p_id: byId[1] });
+        if (typeof em !== 'string') { setErr("That profile isn't available."); return; }
+        email = em;
+      }
       const [{ data: shared }, { data: prof }] = await Promise.all([
         supabase.rpc('shared_networking_events', { p_email: email }),
         supabase.from('public_profiles').select('full_name, profile_photo').eq('email', email).maybeSingle(),
       ]);
       const list = (shared ?? []) as Shared[];
-      if (list.length === 0) { onClose(); navigate(`/creator/${encodeURIComponent(email)}`); return; }
+      if (list.length === 0) { onClose(); const pid = await resolveProfileId(email); if (pid) navigate(`/u/${pid}`); return; }
       const p = prof as { full_name: string | null; profile_photo: string | null } | null;
       setPerson({ email, name: p?.full_name ?? null, photo: p?.profile_photo ?? null, shared: list });
       return;
@@ -96,7 +104,7 @@ export default function ScanSheet({ onClose }: { onClose: () => void }) {
               </li>
             ))}
           </ul>
-          <button onClick={() => { onClose(); navigate(`/creator/${encodeURIComponent(person.email)}`); }} className="mt-3 w-full rounded-xl border border-gray-300 py-2.5 text-sm text-gray-700">View profile</button>
+          <button onClick={async () => { onClose(); const pid = await resolveProfileId(person.email); if (pid) navigate(`/u/${pid}`); }} className="mt-3 w-full rounded-xl border border-gray-300 py-2.5 text-sm text-gray-700">View profile</button>
         </div>
       )}
     </Sheet>

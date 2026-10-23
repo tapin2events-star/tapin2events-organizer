@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import ProfileLink from '../ProfileLink';
 import { ListSkeleton } from '../ui/Skeleton';
-import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../lib/useEscapeKey';
@@ -142,7 +142,7 @@ export default function FollowListModal({ email, direction, isPrivate, isOwnList
                 const isMe = entry.email === user?.email;
                 return (
                   <div key={entry.email} className="flex items-center gap-3 rounded-xl p-2 hover:bg-surface2">
-                    <Link to={`/creator/${encodeURIComponent(entry.email)}`} onClick={onClose} className="flex min-w-0 flex-1 items-center gap-3">
+                    <ProfileLink email={entry.email} onClick={onClose} className="flex min-w-0 flex-1 items-center gap-3">
                       {entry.profile_photo ? (
                         <img src={entry.profile_photo} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-full object-cover" />
                       ) : (
@@ -158,7 +158,7 @@ export default function FollowListModal({ email, direction, isPrivate, isOwnList
                           {entry.is_resource && <span className="text-xs text-purple">Artist</span>}
                         </div>
                       </div>
-                    </Link>
+                    </ProfileLink>
                     {user && !isMe && (
                       <button
                         onClick={() => toggleFollow(entry)}

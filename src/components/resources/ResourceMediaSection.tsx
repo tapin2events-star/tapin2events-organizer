@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ProfileLink from '../ProfileLink';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { parseMediaLink } from '../../lib/mediaEmbeds';
@@ -97,7 +98,7 @@ export default function ResourceMediaSection({ resourceId, resourceEmail, groupI
           <div className="flex items-baseline justify-between">
             {heading(`Videos on TapIN · ${videoCount}`)}
             {videoCount > FEED_PREVIEW && !groupId && (
-              <Link to={`/creator/${encodeURIComponent(resourceEmail)}`} className="text-sm font-medium text-marigold">See all {videoCount} &rarr;</Link>
+              <ProfileLink email={resourceEmail} className="text-sm font-medium text-marigold">See all {videoCount} &rarr;</ProfileLink>
             )}
           </div>
           <div className="grid grid-cols-3 gap-1.5">

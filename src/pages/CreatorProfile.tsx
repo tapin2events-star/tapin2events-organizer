@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useProfileId } from '../lib/profileLinks';
 import ProfileExtras from '../components/profile/ProfileExtras';
 import Sheet from '../components/scouting/Sheet';
 import ShareQR from '../components/ShareQR';
@@ -8,7 +9,7 @@ import GroupBadges from '../components/groups/GroupBadges';
 import BackButton from '../components/BackButton';
 import { blockUser, hasBlocked, unblockUser } from '../lib/blocks';
 import BlockConfirm from '../components/BlockConfirm';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import FollowListModal from '../components/profile/FollowListModal';
@@ -75,6 +76,12 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
   const [showBlock, setShowBlock] = useState(false);
 
   const decodedEmail = decodeURIComponent(email ?? '');
+  // Profile links are by account now: an old /creator/<email> link moves to /u/<id> (keeps emails out of addresses).
+  const accountId = useProfileId(decodedEmail);
+  const navigateTo = useNavigate();
+  useEffect(() => {
+    if (!emailOverride && accountId) navigateTo(`/u/${accountId}`, { replace: true });
+  }, [emailOverride, accountId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user?.email || user.email === decodedEmail) { setBlocked(false); return; }
@@ -182,7 +189,7 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
       <div className="flex items-center justify-between gap-3">
         <BackButton fallback="/feed" fallbackLabel="Feed" />
         {profileQrOn && (
-          <ShareQR path={`/creator/${encodeURIComponent(profile.email)}`} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile"
+          <ShareQR path={accountId ? `/u/${accountId}` : '/'} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile"
             label={isOwnProfile ? 'Share my profile' : 'Share'} track="profile_qr"
             className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm" />
         )}
