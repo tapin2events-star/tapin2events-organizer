@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
-  org_albums: { name: 'Organization albums', description: 'Collections of photos and videos (videos from Feed posts) on an organization\'s page, optionally tied to an event. Organization > Photos > Albums; Albums section on the public page.', status: 'preview' },
+  org_albums: { name: 'Organization albums', description: 'Collections of photos and videos (videos from Feed posts) on an organization\'s page, optionally tied to an event. Organization > Photos > Albums; Albums section on the public page.', status: 'live' },
   splits: { name: 'Revenue splits', description: 'Divide an event\'s ticket sales by percentage: each person connects payouts once and gets their share of every sale automatically (Sales tab on the event dashboard; shares shown in Earnings).', status: 'live' },
   billing: { name: 'Business plan billing', description: 'Start the Business plan for an organization (monthly/yearly, founding 40% off), buy one event ($199), Manage billing, plan status in organization settings, and the admin billing panel with the enforcement switch (off).', status: 'live' },
   gala: { name: 'Gala tools', description: 'Gala tab on the event dashboard: tables (add in bulk, seat parties by hand or auto-seat, seating chart download; shows reserved-seating tables for seated events), paddle numbers, paddle raise with running total; guests see table and paddle on their ticket; donors in the organization Audience.', status: 'live' },
