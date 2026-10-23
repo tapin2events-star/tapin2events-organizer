@@ -207,7 +207,7 @@ function DomainCount() {
 // People who get every premium feature free (their own events and organizations they own), even after billing
 // turns on. Optional note and end date.
 function ComplimentaryAccess() {
-  const [rows, setRows] = useState<{ email: string; name: string | null; note: string | null; expires_at: string | null; active: boolean; orgs: string[] }[] | null>(null);
+  const [rows, setRows] = useState<{ email: string; name: string | null; note: string | null; expires_at: string | null; active: boolean; covered: string[]; not_covered: string[] }[] | null>(null);
   const [email, setEmail] = useState('');
   const [note, setNote] = useState('');
   const [until, setUntil] = useState('');
@@ -228,7 +228,7 @@ function ComplimentaryAccess() {
   return (
     <section>
       <h2 className="font-display text-xl font-bold text-bone">🎁 Complimentary access</h2>
-      <p className="mt-1 text-sm text-muted">These people get every premium feature free, for their own events and the organizations they own, even after billing turns on.</p>
+      <p className="mt-1 text-sm text-muted">These people get every premium feature free, for their own events and up to 3 organizations they own (the first 3), even after billing turns on. Further organizations need a plan. TapIN admins always have everything.</p>
       {rows && rows.length > 0 && (
         <ul className="mt-3 flex flex-col gap-2">
           {rows.map((r) => (
@@ -236,8 +236,10 @@ function ComplimentaryAccess() {
               <span className="min-w-0">
                 <span className="block font-semibold text-bone [overflow-wrap:anywhere]">{r.name ? `${r.name} · ` : ''}{r.email}</span>
                 <span className="block text-xs text-muted">
-                  {[r.note, r.orgs.length ? `Owns: ${r.orgs.join(', ')}` : null, r.expires_at ? `${r.active ? 'Until' : 'Ended'} ${new Date(r.expires_at).toLocaleDateString()}` : 'No end date'].filter(Boolean).join(' · ')}
+                  {[r.note, r.expires_at ? `${r.active ? 'Until' : 'Ended'} ${new Date(r.expires_at).toLocaleDateString()}` : 'No end date'].filter(Boolean).join(' · ')}
                 </span>
+                {r.covered.length > 0 && <span className="mt-1 block text-xs text-green-700">✓ Covered ({r.covered.length} of 3): {r.covered.join(', ')}</span>}
+                {r.not_covered.length > 0 && <span className="block text-xs text-amber-700">Needs a plan: {r.not_covered.join(', ')}</span>}
               </span>
               <button onClick={() => save(true, r.email)} disabled={busy} className="shrink-0 text-xs text-gray-500 hover:text-red-600">Remove</button>
             </li>
