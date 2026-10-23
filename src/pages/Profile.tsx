@@ -261,6 +261,11 @@ export default function Profile() {
         <PasswordSection email={user?.email ?? ''} />
       </div>
 
+      <Link to="/me/stats" className="mt-8 flex items-center justify-between rounded-2xl border border-gray-200 bg-surface px-4 py-3 hover:border-marigold">
+        <span><span className="block font-semibold text-bone">📊 Your posts</span><span className="block text-xs text-muted">Views, likes, comments and tips on your Feed posts</span></span>
+        <span className="text-marigold" aria-hidden="true">›</span>
+      </Link>
+
       <div id="other-emails" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Other emails</h2>
         <OtherEmailsSection />

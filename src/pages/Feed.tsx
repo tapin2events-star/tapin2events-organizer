@@ -36,6 +36,7 @@ interface Post {
   event_date: string | null;
   like_count: number;
   comment_count: number;
+  view_count?: number;
   liked_by_me: boolean;
   event_id: string | null;
   org_id?: string | null;
@@ -127,6 +128,18 @@ export default function Feed() {
   const [isMuted, setIsMuted] = useState(true);
   const [activatedPostIds, setActivatedPostIds] = useState<Set<string>>(new Set());
   const [activePostId, setActivePostId] = useState<string | null>(null);
+  const viewedRef = useRef(new Set<string>());
+  useEffect(() => {
+    const id = activePostId;
+    if (!id || viewedRef.current.has(id)) return;
+    const t = window.setTimeout(() => {
+      viewedRef.current.add(id);
+      let device: string | null = null;
+      try { device = localStorage.getItem('tapin-device'); if (!device) { device = crypto.randomUUID(); localStorage.setItem('tapin-device', device); } } catch { /* private mode: signed-in views still count */ }
+      supabase.rpc('record_post_view', { p_post_id: id, p_device: device }).then(() => {}, () => {});
+    }, 2500);
+    return () => window.clearTimeout(t);
+  }, [activePostId]);
   const [burstingHeartId, setBurstingHeartId] = useState<string | null>(null);
   const lastTapRef = useRef<Record<string, number>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
@@ -651,6 +664,11 @@ export default function Feed() {
                 </svg>
                 <span className="text-xs font-medium">{post.comment_count}</span>
               </button>
+              {(user?.email === post.author_email || (post.view_count ?? 0) >= 100) && (
+                user?.email === post.author_email
+                  ? <Link to="/me/stats" className="flex flex-col items-center gap-1 text-white" aria-label={`${post.view_count ?? 0} views. See your stats`}>{viewsIcon}<span className="text-xs font-medium">{compactCount(post.view_count ?? 0)}</span></Link>
+                  : <span className="flex flex-col items-center gap-1 text-white" aria-label={`${post.view_count ?? 0} views`}>{viewsIcon}<span className="text-xs font-medium">{compactCount(post.view_count ?? 0)}</span></span>
+              )}
               {post.author_can_receive_tips && user?.email !== post.author_email && (
                 <button
                   onClick={() => (user ? setTippingPost({ id: post.id, creatorName: post.author_name }) : navigate('/login'))}
@@ -949,4 +967,16 @@ export default function Feed() {
     </div>
     </>
   );
+}
+
+// Views: an eye icon, and counts like 1.2K / 3.4M.
+const viewsIcon = (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" /><circle cx="12" cy="12" r="3" />
+  </svg>
+);
+function compactCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace(/\.0$/, '')}K`;
+  return String(n);
 }
