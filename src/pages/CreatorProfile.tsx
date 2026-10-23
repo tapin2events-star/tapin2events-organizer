@@ -43,8 +43,10 @@ interface TaggedTile {
   author_name: string;
 }
 
-export default function CreatorProfile() {
-  const { email } = useParams<{ email: string }>();
+export default function CreatorProfile({ emailOverride }: { emailOverride?: string } = {}) {
+  const { email: emailParam } = useParams<{ email: string }>();
+  // Opened as /u/:id (a profile link by account), the email comes from there instead of the address.
+  const email = emailOverride ?? emailParam;
   const [pro, setPro] = useState<{ title: string | null; company: string | null; linkedin: string | null; looking_for?: string[]; intro?: string | null } | null>(null);
   const networkingOn = useFeature('networking');
   const profileQrOn = useFeature('profile_qr');

@@ -180,7 +180,7 @@ function PastEvents({ orgId, accent, dark }: { orgId: string; accent: string; da
 // Our artists, Videos and Shop, chosen in the organization's Page settings.
 function OrgSections({ orgId, accent, dark }: { orgId: string; accent: string; dark: boolean }) {
   const [person, setPerson] = useState<{ name: string; photo: string | null; title?: string | null; bio?: string | null; link?: string | null } | null>(null);
-  const [s, setS] = useState<{ roster_heading?: string | null; artists: { id: string; resource_id?: string | null; name: string; photo: string | null; categories: string[] | null; city: string | null; title?: string | null; bio?: string | null; link?: string | null }[]; videos: { id: string; thumbnail: string | null; caption: string | null; author: string | null }[]; products: { id: string; name: string; price: number; image: string | null; seller: string | null }[] } | null>(null);
+  const [s, setS] = useState<{ roster_heading?: string | null; artists: { id: string; resource_id?: string | null; user_id?: string | null; name: string; photo: string | null; categories: string[] | null; city: string | null; title?: string | null; bio?: string | null; link?: string | null }[]; videos: { id: string; thumbnail: string | null; caption: string | null; author: string | null }[]; products: { id: string; name: string; price: number; image: string | null; seller: string | null }[] } | null>(null);
   useEffect(() => { supabase.rpc('org_page_sections', { p_org_id: orgId }).then(({ data }) => setS((data ?? null) as typeof s)); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!s) return null;
   const card = dark ? '#111827' : '#FFFFFF';
@@ -201,6 +201,8 @@ function OrgSections({ orgId, accent, dark }: { orgId: string; accent: string; d
               );
               return a.resource_id
                 ? <Link key={a.id} to={`/resources/${a.resource_id}`} className="w-36 shrink-0 snap-start rounded-2xl border p-3 text-center" style={{ background: card, borderColor: line }}>{inner}</Link>
+                : a.user_id
+                ? <Link key={a.id} to={`/u/${a.user_id}`} className="w-36 shrink-0 snap-start rounded-2xl border p-3 text-center" style={{ background: card, borderColor: line }}>{inner}</Link>
                 : <button key={a.id} type="button" onClick={() => setPerson(a)} className="w-36 shrink-0 snap-start rounded-2xl border p-3 text-center" style={{ background: card, borderColor: line }}>{inner}</button>;
             })}
           </div>

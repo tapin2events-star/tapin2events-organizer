@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { ListSkeleton } from '../ui/Skeleton';
 
-interface Artist { id: string; resource_id?: string | null; name: string; photo: string | null; categories: string[] | null; city: string | null; title?: string | null; bio?: string | null; link?: string | null }
+interface Artist { id: string; resource_id?: string | null; user_id?: string | null; name: string; photo: string | null; categories: string[] | null; city: string | null; title?: string | null; bio?: string | null; link?: string | null }
 const HEADINGS = ['Our artists', 'Our speakers', 'Our performers', 'Our team', 'Our partners', 'Our creatives', 'Our presenters'];
 interface Video { id: string; thumbnail: string | null; caption: string | null; author: string | null }
 interface Product { id: string; name: string; price: number; image: string | null; seller: string | null }
@@ -79,7 +79,7 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
   }, [q]);
 
   async function saveRoster(list: Artist[], h = heading) {
-    const entries = list.map((a) => (a.resource_id ? { resource_id: a.resource_id, title: a.title ?? null } : { name: a.name, title: a.title ?? null, bio: a.bio ?? null, photo_url: a.photo ?? null, link: a.link ?? null }));
+    const entries = list.map((a) => (a.resource_id ? { resource_id: a.resource_id, title: a.title ?? null } : { name: a.name, title: a.title ?? null, bio: a.bio ?? null, photo_url: a.photo ?? null, link: a.link ?? null, user_id: a.user_id ?? null }));
     const { error } = await supabase.rpc('save_org_roster', { p_org_id: orgId, p_heading: h, p_entries: entries });
     if (error) toastError(); else toastSaved('Section');
     flash(error ? "Couldn't save." : 'Saved. It\u2019s on your page now.');
@@ -145,7 +145,7 @@ export default function OrgPageSectionsTab({ orgId, slug }: { orgId: string; slu
                 <li key={m.key} className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm last:border-0">
                   {m.photo ? <img src={m.photo} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{m.name.charAt(0)}</span>}
                   <span className="min-w-0 flex-1 truncate text-gray-900">{m.name}<span className="text-gray-500"> · {m.sub}</span></span>
-                  <button disabled={added} onClick={() => { const next = [...artists, { id: crypto.randomUUID(), resource_id: null, name: m.name, photo: m.photo, categories: null, city: null, title: null }]; setArtists(next); saveRoster(next); setQ(''); }}
+                  <button disabled={added} onClick={() => { const next = [...artists, { id: crypto.randomUUID(), resource_id: null, user_id: m.key.startsWith('n:') ? null : m.key, name: m.name, photo: m.photo, categories: null, city: null, title: null }]; setArtists(next); saveRoster(next); setQ(''); }}
                     className="shrink-0 rounded-lg bg-marigold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">{added ? 'Added' : 'Add'}</button>
                 </li>
               );
