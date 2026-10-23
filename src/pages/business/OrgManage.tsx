@@ -111,7 +111,7 @@ function OrgManageInner() {
               🎉 Founding member #{(org as Organization & { founding_number?: number | null }).founding_number}<span className="hidden sm:inline"> · 40% off the Business plan for life</span><span className="sm:hidden"> · 40% off for life</span>
             </p>
           ) : null}
-          <p className="break-words text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : org.kind === 'community' ? 'Community group' : 'Business'} · you're {role === 'owner' ? 'the owner' : role === 'admin' ? 'an Admin' : role === 'editor' ? 'an Editor' : role === 'helper' ? 'a Helper' : 'a Viewer'} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link></p>
+          <p className="break-words text-xs text-muted">{org.kind === 'nonprofit' ? 'Nonprofit' : org.kind === 'community' ? 'Community group' : 'Business'} · you're {role === 'owner' ? 'the owner' : role === 'admin' ? 'an Admin' : role === 'editor' ? 'an Editor' : role === 'helper' ? 'a Helper' : 'a Viewer'} · <Link to={`/o/${org.slug}`} className="text-marigold">View public page</Link>{canEdit && <> · <Link to={`/business/${org.slug}/stats`} className="text-marigold">📊 Post stats</Link></>}</p>
         </div>
       </div>
 

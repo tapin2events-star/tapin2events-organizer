@@ -123,6 +123,8 @@ export default function App() {
             <Route path="/tickets/:slug" element={<OrgTickets />} />
             <Route path="/transfer/:token" element={<TransferAccept />} />
             <Route path="/me/stats" element={<MyPostStats />} />
+            <Route path="/business/:slug/stats" element={<MyPostStats />} />
+            <Route path="/resources/:id/stats" element={<MyPostStats />} />
             <Route path="/receipt" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
             <Route path="/activity" element={<MyActivity />} />
             <Route path="/my-activity" element={<ActivityRedirect />} />

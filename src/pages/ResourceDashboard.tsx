@@ -279,7 +279,7 @@ export default function ResourceDashboard() {
           ))}
         </div>
 
-        {tab === 'Overview' && <><ArtistPlanCard compact /><VideoHeaderCard resourceId={resource.id} what="your artist profile" /><ResourceEarningsOverview resourceId={resource.id} /></>}
+        {tab === 'Overview' && <><ArtistPlanCard compact /><Link to={`/resources/${resource.id}/stats`} className="mt-4 flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold"><span><span className="block font-semibold text-gray-900">📊 Post stats</span><span className="block text-xs text-gray-500">Views, likes, comments and tips on posts made as this profile</span></span><span className="text-marigold" aria-hidden="true">›</span></Link><VideoHeaderCard resourceId={resource.id} what="your artist profile" /><ResourceEarningsOverview resourceId={resource.id} /></>}
 
         {tab === 'Bookings' && (
           <>

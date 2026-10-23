@@ -66,6 +66,9 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  // Your number of Feed posts (the Posts count opens your stats).
+  const [postCount, setPostCount] = useState<number | null>(null);
+  useEffect(() => { supabase.rpc('my_post_count').then(({ data }) => setPostCount(typeof data === 'number' ? data : 0)); }, []);
   const [tab, setTab] = useState<SettingsTab>(() => (typeof window !== 'undefined' && window.location.hash === '#notifications' ? 'notifs' : 'basic'));
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
@@ -236,10 +239,10 @@ export default function Profile() {
       </div>
 
       <div className="mt-6 flex gap-8 border-y border-gray-200 py-4">
-        <div>
-          <p className="text-center font-display text-xl font-bold text-bone">0</p>
+        <Link to="/me/stats" className="text-left" aria-label="Your posts and stats">
+          <p className="text-center font-display text-xl font-bold text-bone">{postCount ?? '–'}</p>
           <p className="text-xs text-muted">Posts</p>
-        </div>
+        </Link>
         <button onClick={() => setOpenList('followers')} className="text-left">
           <p className="text-center font-display text-xl font-bold text-bone">{profile.followers_count ?? 0}</p>
           <p className="text-xs text-muted">Followers</p>
@@ -252,6 +255,11 @@ export default function Profile() {
 
       {profile.bio && <p className="mt-4 text-sm text-muted">{profile.bio}</p>}
 
+      <Link to="/me/stats" className="mt-4 flex items-center justify-between rounded-2xl border border-gray-200 bg-surface px-4 py-3 hover:border-marigold">
+        <span><span className="block font-semibold text-bone">📊 Your posts</span><span className="block text-xs text-muted">Views, likes, comments and tips on your Feed posts</span></span>
+        <span className="text-marigold" aria-hidden="true">›</span>
+      </Link>
+
       {user?.id && user.email && <YourProfile userId={user.id} email={user.email} savedCount={savedEvents.length} vendorAppCounts={vendorAppCounts} networkingOn={networkingOn} />}
 
       <h2 className="mt-10 font-display text-xl font-extrabold text-bone">Settings</h2>
@@ -261,10 +269,6 @@ export default function Profile() {
         <PasswordSection email={user?.email ?? ''} />
       </div>
 
-      <Link to="/me/stats" className="mt-8 flex items-center justify-between rounded-2xl border border-gray-200 bg-surface px-4 py-3 hover:border-marigold">
-        <span><span className="block font-semibold text-bone">📊 Your posts</span><span className="block text-xs text-muted">Views, likes, comments and tips on your Feed posts</span></span>
-        <span className="text-marigold" aria-hidden="true">›</span>
-      </Link>
 
       <div id="other-emails" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Other emails</h2>

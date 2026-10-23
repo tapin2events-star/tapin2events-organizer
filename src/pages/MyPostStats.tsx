@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 
-// "Your posts": views, likes, comments and tips for the signed-in creator's Feed posts, with this week vs last week.
+// Feed post stats: views, likes, comments and tips, with this week vs last week. For you (/me/stats), an organization
+// (/business/:slug/stats; Owners, Admins and Editors) or an artist/vendor profile (/resources/:id/stats; its owner).
 interface Stats {
   totals: { posts: number; views: number; likes: number; comments: number; tips: number };
   views_this_week: number; views_last_week: number;
@@ -13,11 +14,32 @@ const money = (n: number) => `$${Number(n).toFixed(Number(n) % 1 ? 2 : 0)}`;
 
 export default function MyPostStats() {
   const { user } = useAuth();
-  const [d, setD] = useState<Stats | null>(null);
+  const { slug, id } = useParams<{ slug?: string; id?: string }>();
+  const { pathname } = useLocation();
+  const scope: 'me' | 'org' | 'resource' = slug ? 'org' : pathname.startsWith('/resources/') ? 'resource' : 'me';
+  const [d, setD] = useState<Stats | null | undefined>(undefined);
+  const [who, setWho] = useState<{ name: string; back: string } | null>(null);
   const [sort, setSort] = useState<'recent' | 'views' | 'likes'>('recent');
-  useEffect(() => { if (user) supabase.rpc('my_post_stats').then(({ data }) => setD((data ?? null) as Stats | null)); }, [user]);
-  if (!user) return <div className="mx-auto max-w-2xl px-4 py-10 text-sm text-muted">Sign in to see your stats.</div>;
-  if (!d) return <div className="mx-auto max-w-2xl px-4 py-10 text-sm text-muted">Loading…</div>;
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      let targetId: string | null = null;
+      if (scope === 'org') {
+        const { data: o } = await supabase.from('organizations').select('id, name').eq('slug', slug).maybeSingle();
+        if (!o) { setD(null); return; }
+        targetId = o.id; setWho({ name: o.name, back: `/business/${slug}/manage` });
+      } else if (scope === 'resource') {
+        const { data: r } = await supabase.from('resources').select('id, display_name').eq('id', id).maybeSingle();
+        if (!r) { setD(null); return; }
+        targetId = r.id; setWho({ name: r.display_name || 'Your profile', back: '/resources/dashboard' });
+      }
+      const { data } = await supabase.rpc('post_stats', { p_scope: scope, p_id: targetId });
+      setD((data ?? null) as Stats | null);
+    })();
+  }, [user, scope, slug, id]);
+  if (!user) return <div className="mx-auto max-w-2xl px-4 py-10 text-sm text-muted">Sign in to see stats.</div>;
+  if (d === undefined) return <div className="mx-auto max-w-2xl px-4 py-10 text-sm text-muted">Loading…</div>;
+  if (d === null) return <div className="mx-auto max-w-2xl px-4 py-10 text-sm text-muted">These stats aren&apos;t available to you.</div>;
   const change = d.views_last_week ? Math.round(((d.views_this_week - d.views_last_week) / d.views_last_week) * 100) : null;
   const posts = [...d.posts].sort((a, b) => (sort === 'views' ? b.views - a.views : sort === 'likes' ? b.likes - a.likes : +new Date(b.created_at) - +new Date(a.created_at)));
   const tile = (label: string, value: string) => (
@@ -28,9 +50,9 @@ export default function MyPostStats() {
   );
   return (
     <div className="mx-auto max-w-2xl px-4 pb-24 pt-6">
-      <Link to="/feed" className="text-sm text-marigold">‹ Feed</Link>
-      <h1 className="mt-2 font-display text-2xl font-bold text-bone">📊 Your posts</h1>
-      <p className="mt-1 text-sm text-muted">Views count when someone watches for a couple of seconds (once per person per day). Your own views don&apos;t count. Everyone else sees a video&apos;s views once it passes 100.</p>
+      <Link to={who?.back ?? '/profile'} className="text-sm text-marigold">‹ Back</Link>
+      <h1 className="mt-2 font-display text-2xl font-bold text-bone">📊 {who ? `${who.name}'s posts` : 'Your posts'}</h1>
+      <p className="mt-1 text-sm text-muted">{scope === 'org' ? 'Posts made as this organization.' : scope === 'resource' ? 'Posts made as this profile.' : 'Your Feed posts.'} Views count when someone watches for a couple of seconds (once per person per day); the poster&apos;s own views don&apos;t count. Everyone sees a video&apos;s views once it passes 100.</p>
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {tile('Views', d.totals.views.toLocaleString())}
         {tile('Likes', d.totals.likes.toLocaleString())}
