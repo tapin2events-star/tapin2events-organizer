@@ -6,7 +6,7 @@ import { toast, toastError } from '../../lib/toast';
 import HlsVideo from '../feed/HlsVideo';
 import Sheet from '../scouting/Sheet';
 
-// Organization albums (Preview): collections of photos and videos (videos from the organization's Feed posts),
+// Organization albums: collections of photos and videos (videos from the organization's Feed posts),
 // optionally tied to one of its events. Public section on the organization page + a manager for the team.
 export interface Album { id: string; title: string; description: string | null; event_id: string | null; event_title: string | null; cover: string | null; photos: number; videos: number }
 interface Item { id: string; kind: 'photo' | 'video'; url: string; caption: string | null; post_id: string | null; video_url: string | null; thumbnail: string | null }
@@ -98,7 +98,7 @@ export function OrgAlbumsManager({ orgId }: { orgId: string }) {
     <section className="mb-8">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-display text-lg font-bold text-bone">Albums <span className="ml-1 rounded-full bg-indigo-100 px-2 py-0.5 align-middle text-[10px] font-bold text-marigold">PREVIEW</span></h3>
+          <h3 className="font-display text-lg font-bold text-bone">Albums</h3>
           <p className="text-sm text-muted">Group photos and videos into collections, like one per event. They show in an Albums section on your page.</p>
         </div>
         <button onClick={() => setEditing('new')} className="shrink-0 rounded-xl bg-marigold px-3 py-2 text-sm font-semibold text-white">+ New album</button>

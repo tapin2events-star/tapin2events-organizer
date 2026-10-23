@@ -51,7 +51,7 @@ export default function WhiteLabelCard({ eventId }: { eventId: string }) {
     <section className="mb-4 rounded-2xl border border-gray-200 bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">🏷️ White-label <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">Preview</span></p>
+          <p className="flex flex-wrap items-center gap-2 font-semibold text-bone">🏷️ White-label</p>
           <p className="text-sm text-muted">{st.on
             ? `On: attendees see only ${st.org_name ?? 'your organization'}'s brand on this event's page and tickets. No TapIN menu or branding.`
             : `Show only ${st.org_name ?? 'your organization'}'s brand on this event's page, tickets, emails and sign-in: your logo and colors, with no TapIN menu or branding.${st.included ? ' Included with your White-label pack.' : ` One-time $${st.price} for this event.`}`}</p>
