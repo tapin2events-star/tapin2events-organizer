@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import HostAsOrgBanner from '../components/business/HostAsOrgBanner';
 import TransferOwnershipSheet from '../components/TransferOwnershipSheet';
 import { EventPayoutWarning } from '../components/HeldPayouts';
 import VideoHeaderCard from '../components/video/VideoHeaderCard';
@@ -157,6 +158,9 @@ export default function EventDetail() {
 
       <div className="mb-3"><BackButton fallback="/organizer" fallbackLabel="Organizer Dashboard" /></div>
       <EventPayoutWarning eventId={event.id} paid={event.event_type !== 'free'} />
+      {isOwner && hasSales === false && !(event as { organization_id?: string | null }).organization_id && !(event as { keep_personal?: boolean }).keep_personal && (
+        <HostAsOrgBanner eventId={event.id} onMoved={() => supabase.from('events').select('*').eq('id', event.id).single().then(({ data }) => { if (data) setEvent(data as TapEvent); })} />
+      )}
       <div className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted">{event.category}</p>

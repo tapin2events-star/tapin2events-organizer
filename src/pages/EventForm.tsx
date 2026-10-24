@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import HostAsPicker from '../components/business/HostAsPicker';
 import { webSafeImage } from '../lib/webImage';
 import { DetailSkeleton } from '../components/ui/Skeleton';
 import TemplatePicker from '../components/business/TemplatePicker';
@@ -165,6 +166,8 @@ export default function EventForm() {
   const businessOn = useFeature('business');
   const [eventKind, setEventKind] = useState<EventKind>(() => { const k = new URLSearchParams(window.location.search).get('kind'); return k === 'business' || k === 'nonprofit' ? k : 'community'; });
   const [orgId, setOrgId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('org'));
+  // Set when the organizer picks who's hosting themselves (hosting as yourself on purpose: TapIN won't ask later).
+  const [hostExplicit, setHostExplicit] = useState(false);
   // Ticket types (preview): several tiers instead of one price.
   const [useTiers, setUseTiers] = useState(false);
   // Donations (nonprofit events, preview).
@@ -553,6 +556,7 @@ export default function EventForm() {
         return { event_type: paid.length ? (eventType === 'private' ? 'private' : 'paid') : (eventType === 'private' ? 'private' : 'free'), ticket_price: paid.length ? Math.min(...paid) : 0 };
       })() : {}),
       ...(businessOn ? { event_kind: eventKind, organization_id: orgId || null, ...(!isEdit && template ? { template_id: template.id } : {}) } : {}),
+      ...(!isEdit ? { keep_personal: !orgId && hostExplicit } : {}),
       // While business events are in preview they stay private as test events.
       ...(businessOn && isAdmin && eventKind !== 'community' && FEATURES.business?.status === 'preview' ? { is_test: true } : {}),
     };
@@ -753,6 +757,7 @@ export default function EventForm() {
         {step === 1 && (
           <>
             {!isEdit && templatesOn && <TemplatePicker selected={template?.id ?? null} onPick={applyTemplate} />}
+            {!isEdit && <HostAsPicker orgId={orgId} onOrg={setOrgId} onExplicit={() => setHostExplicit(true)} presetFromUrl={!!new URLSearchParams(window.location.search).get('org')} />}
             {businessOn && <EventKindPicker kind={eventKind} onKind={setEventKind} orgId={orgId} onOrg={setOrgId} />}
             {!isEdit && quickOpen && (
               <div className="rounded-2xl border border-marigold/30 bg-marigold/5 p-4">
