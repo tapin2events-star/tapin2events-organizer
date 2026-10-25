@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
-import { donationFee, loadDonationSummary, MIN_DONATION, money0, money2, type DonationSummary } from '../../lib/donations';
+import { donationFee, loadDonationSummary, MIN_DONATION, money0, money2, TIP_CHOICES, DEFAULT_TIP, type DonationSummary } from '../../lib/donations';
 import type { TapEvent } from '../../lib/types';
 
-// Donation card for nonprofit events: goal progress, amount, "cover the fees", donor wall.
+// Donation card for nonprofit events: goal progress, amount, optional tip to TapIN, donor wall. 100% of the gift reaches the organizer.
 export default function DonationCard({ event, recipient, accent }: { event: TapEvent; recipient: string; accent?: string }) {
   const nonprofit = event.event_kind === 'nonprofit';
   const giftWord = nonprofit ? 'gift' : 'contribution';
@@ -17,7 +17,8 @@ export default function DonationCard({ event, recipient, accent }: { event: TapE
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [amount, setAmount] = useState<number | null>(presets[1] ?? presets[0] ?? 25);
   const [custom, setCustom] = useState('');
-  const [cover, setCover] = useState(true);
+  // Optional tip to TapIN (a share of the gift).
+  const [tipPct, setTipPct] = useState(DEFAULT_TIP);
   const [message, setMessage] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -26,8 +27,9 @@ export default function DonationCard({ event, recipient, accent }: { event: TapE
   useEffect(() => { loadDonationSummary(event.id).then(setSummary); }, [event.id, thanks]);
 
   const value = custom ? Number(custom) : amount ?? 0;
-  const fee = value >= min ? donationFee(value, false) : 0;
-  const total = cover ? value + fee : value;
+  const tip = value >= min ? Math.round(value * tipPct * 100) / 100 : 0;
+  const fee = value >= min ? donationFee(value, false, tip) : 0;
+  const total = value + fee + tip;
   const pct = summary?.goal ? Math.min(100, Math.round((summary.raised / summary.goal) * 100)) : 0;
   const color = accent || '#E11D48';
 
@@ -37,7 +39,7 @@ export default function DonationCard({ event, recipient, accent }: { event: TapE
     setBusy(true); setError(null);
     const base = window.location.origin + import.meta.env.BASE_URL;
     const { data, error: err } = await supabase.functions.invoke('create-donation-checkout', {
-      body: { event_id: event.id, amount: Math.round(value * 100) / 100, cover_fees: cover, message: message.trim() || null, anonymous,
+      body: { event_id: event.id, amount: Math.round(value * 100) / 100, tip_cents: Math.round(tip * 100), message: message.trim() || null, anonymous,
         successUrl: `${base}events/${event.id}?donation=thanks`, cancelUrl: `${base}events/${event.id}` },
     });
     setBusy(false);
@@ -78,11 +80,19 @@ export default function DonationCard({ event, recipient, accent }: { event: TapE
           <input value={custom} inputMode="decimal" onChange={(e) => { setCustom(e.target.value.replace(/[^0-9.]/g, '')); setError(null); }} placeholder={`Other amount (${money0(min)} minimum)`} aria-label="Other amount" className="min-w-0 flex-1 bg-transparent px-1 py-2 text-base text-gray-900 outline-none" />
         </label>
 
-        <label className="mt-3 flex items-start gap-3 rounded-xl bg-gray-50 p-3 text-sm text-gray-700">
-          <input type="checkbox" checked={cover} onChange={(e) => setCover(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
-          <span>Cover the fees{value >= min ? ` (${money2(fee)})` : ''} so 100% of my {giftWord} goes to {recipient}
-            {!cover && value >= min && <span className="block text-xs text-gray-500">{recipient} will receive {money2(value - fee)}.</span>}</span>
-        </label>
+        <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm text-gray-700">
+          <p className="font-semibold text-gray-900">💚 100% of your {giftWord} goes to {recipient}</p>
+          {value >= min && <p className="mt-0.5 text-xs text-gray-500">Card processing ({money2(fee)}) is added on top, so nothing comes out of your {giftWord}.</p>}
+          <p className="mt-3 text-xs font-semibold text-gray-700">Add an optional tip to TapIN? <span className="font-normal text-gray-500">It keeps TapIN free for organizers like {recipient}.</span></p>
+          <div className="mt-1.5 grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Optional tip to TapIN">
+            {TIP_CHOICES.map((t) => (
+              <button key={t} type="button" role="radio" aria-checked={tipPct === t} onClick={() => setTipPct(t)}
+                className={`min-h-[40px] rounded-lg border text-xs font-semibold ${tipPct === t ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>
+                {t === 0 ? 'No tip' : `${Math.round(t * 100)}%${value >= min ? ` · ${money2(Math.round(value * t * 100) / 100)}` : ''}`}
+              </button>
+            ))}
+          </div>
+        </div>
         <input value={message} maxLength={300} onChange={(e) => setMessage(e.target.value)} placeholder="Add a message (optional)" className="mt-2 block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900" />
         <label className="mt-2 flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} className="h-4 w-4 accent-marigold" /> Give anonymously</label>
 

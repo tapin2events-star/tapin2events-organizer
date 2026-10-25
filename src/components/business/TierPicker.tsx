@@ -64,11 +64,11 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
   // Optional donation riding on this order.
   const [gift, setGift] = useState(0);
   const [giftCustom, setGiftCustom] = useState('');
-  const [giftCover, setGiftCover] = useState(true);
   const giftValue = giftCustom ? Number(giftCustom) || 0 : gift;
   const giftOk = !!donation && giftValue >= (donation?.min ?? 5);
-  const giftFee = giftOk ? donationFee(giftValue, paidCount > 0) : 0;
-  const giftCharge = giftOk ? giftValue + (giftCover ? giftFee : 0) : 0;
+  // Gifts always arrive in full: only card processing is added on top.
+  const giftFee = giftOk ? donationFee(giftValue, paidCount > 0 || addOns.length > 0) : 0;
+  const giftCharge = giftOk ? giftValue + giftFee : 0;
   const allFree = (chosen.length > 0 && chosen.every((t) => priceOf(t) === 0) && !giftOk) && addOns.length === 0;
   const anyOnSale = useMemo(() => tiers.some((t) => t.status === 'on_sale'), [tiers]);
 
@@ -99,7 +99,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
     const base = window.location.origin + import.meta.env.BASE_URL;
     const embed = !!whiteLabel && !!(await publishableKey());
     const { data, error: err } = await supabase.functions.invoke('create-tier-checkout', {
-      body: { event_id: eventId, items, embedded: embed, promo_code: promo?.code ?? null, donation: giftOk ? { amount: Math.round(giftValue * 100) / 100, cover_fees: giftCover } : null, add_ons: addOns, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
+      body: { event_id: eventId, items, embedded: embed, promo_code: promo?.code ?? null, donation: giftOk ? { amount: Math.round(giftValue * 100) / 100 } : null, add_ons: addOns, successUrl: `${base}events/${eventId}?checkout=success`, cancelUrl: `${base}events/${eventId}?checkout=cancelled` },
     });
     setBusy(false);
     if (!err && data?.client_secret) { setEmbedSecret(data.client_secret as string); return; }
@@ -158,7 +158,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
           {savings > 0 && <div className="flex justify-between text-green-700"><span>Code {promo?.code}</span><span>−{money(savings)}</span></div>}
           {fees > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Service & processing fees</span><span>{money(fees)}</span></div>}
           {giftOk && <div className="flex justify-between"><span>{donation?.nonprofit ? 'Donation to' : 'Support for'} {donation?.recipient}</span><span>{money(giftValue)}</span></div>}
-          {giftOk && giftCover && <div className="flex justify-between text-xs text-gray-500"><span>{donation?.nonprofit ? 'Donation' : 'Contribution'} fees (covered by you)</span><span>{money(giftFee)}</span></div>}
+          {giftOk && <div className="flex justify-between text-xs text-gray-500"><span>Card processing on your {donation?.nonprofit ? 'donation' : 'contribution'}</span><span>{money(giftFee)}</span></div>}
           {(subtotal > 0 || giftOk) && <div className="mt-1 flex justify-between font-semibold text-gray-900"><span>Total</span><span>{money(subtotal + fees + giftCharge)}</span></div>}
         </div>
       )}
@@ -174,10 +174,7 @@ export default function TierPicker({ eventId, tiers, disabledReason, onRegistere
               className="min-h-[40px] w-24 rounded-full bg-white px-3 text-sm text-gray-900 ring-1 ring-gray-200" />
           </div>
           {giftOk && (
-            <label className="mt-2 flex items-start gap-2 text-xs text-gray-600">
-              <input type="checkbox" checked={giftCover} onChange={(e) => setGiftCover(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-marigold" />
-              <span>Cover the fees ({money(giftFee)}) so 100% goes to {donation.recipient}{donation.nonprofit ? '' : '. Not tax-deductible.'}</span>
-            </label>
+            <p className="mt-2 text-xs text-gray-600">💚 100% goes to {donation.recipient}. Only card processing ({money(giftFee)}) is added on top.{donation.nonprofit ? '' : ' Not tax-deductible.'}</p>
           )}
           {giftValue > 0 && !giftOk && <p className="mt-1 text-xs text-magenta">The minimum is ${donation.min}.</p>}
         </div>

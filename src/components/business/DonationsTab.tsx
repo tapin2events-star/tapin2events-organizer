@@ -84,7 +84,7 @@ export default function DonationsTab({ event, onEventChange }: { event: TapEvent
           <button onClick={save} className="rounded-xl bg-[#0F1B3D] px-5 py-2.5 text-sm font-bold text-white">Save</button>
           {msg && <span className={`text-sm ${msg.ok ? 'text-green-700' : 'text-red-600'}`}>{msg.text}</span>}
         </div>
-        <p className="mt-3 text-xs text-muted">Donors pay the same rates as tickets on their gift (3.7% service + 2.9% processing), plus $0.50 for donations made on their own. "Cover the fees" is checked by default, so most gifts reach you in full. {event.organization_id ? <>Add your EIN to <Link to="/business" className="text-marigold">your organization's profile</Link> to show it on receipts.</> : null}</p>
+        <p className="mt-3 text-xs text-muted">You receive 100% of every gift. Donors pay only card processing on top (2.9%, plus $0.30 for gifts made on their own), with no TapIN service fee, and can add an optional tip to TapIN. {event.organization_id ? <>Add your EIN to <Link to="/business" className="text-marigold">your organization's profile</Link> to show it on receipts.</> : null}</p>
       </section>
 
       {/* Gifts */}
