@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import GiftAddOn from '../components/business/GiftAddOn';
 import EventPerks from '../components/nearby/EventPerks';
 import AroundTheVenue from '../components/nearby/AroundTheVenue';
 import EventHighlights from '../components/video/EventHighlights';
@@ -47,6 +48,9 @@ export default function PublicEventDetail() {
   const [addOns, setAddOns] = useState<AddOnPick[]>([]);
   // More than one ticket per order (single-price and free events).
   const [qty, setQty] = useState(1);
+  // Optional gift added at single-price ticket checkout.
+  const [gift, setGift] = useState(0);
+  const [giftCustom, setGiftCustom] = useState('');
   const [guestNames, setGuestNames] = useState<string[]>([]);
   const [ticketLimit, setTicketLimit] = useState(1);
   const [myCount, setMyCount] = useState(0);
@@ -270,6 +274,7 @@ export default function PublicEventDetail() {
       body: {
         event_id: id,
         add_ons: addOns,
+        donation: (() => { const v = giftCustom ? Number(giftCustom) : gift; return donationsOn && v >= Math.max(5, Number(event.min_donation_amount) || 5) ? { amount: Math.round(v * 100) / 100 } : null; })(),
         embedded: embed,
         quantity: qty,
         guest_names: event.ask_guest_names ? guestNames.slice(0, qty) : [],
@@ -780,6 +785,13 @@ export default function PublicEventDetail() {
                   );
                 })()}
                 {!isFree && <div className="w-full sm:max-w-sm"><MerchAddOns eventId={event.id} value={addOns} onChange={setAddOns} accent={biz.org?.brand.accent} /></div>}
+                {!isFree && donationsOn && !approvalNeeded && (
+                  <div className="w-full sm:max-w-sm">
+                    <GiftAddOn presets={(event.donation_presets ?? [10, 25, 50]).map(Number)} min={Math.max(5, Number(event.min_donation_amount) || 5)}
+                      recipient={biz.org?.name ?? organizerName ?? event.title} nonprofit={event.event_kind === 'nonprofit'}
+                      gift={gift} custom={giftCustom} onGift={setGift} onCustom={setGiftCustom} />
+                  </div>
+                )}
                 <button
                   onClick={async () => { if ((await beforeContinue(null)) === 'stop') return; if (isFree) handleRegister(); else handleBuyTicket(); }}
                   disabled={registering || isPreview || hasEnded}
