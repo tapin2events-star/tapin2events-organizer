@@ -3,7 +3,7 @@ import BackButton from '../components/BackButton';
 
 // Plain-language refund policy reflecting how TapIN handles refunds.
 // NOTE: draft for TapIN LLC to have reviewed by an attorney.
-const UPDATED = 'September 27, 2026';
+const UPDATED = 'October 25, 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -47,6 +47,14 @@ export default function RefundPolicy() {
 
       <Section title="Tips">
         <p>Tips are voluntary and go to the creator. They're generally non-refundable; if you made a mistake, contact us and we'll look into it.</p>
+      </Section>
+
+      <Section title="Donations and contributions">
+        <p><strong>Gifts go to the organizer in full</strong> and support their cause or work, so they're generally non-refundable, including if an event is cancelled (cancelling an event refunds ticket prices, not gifts). If you gave by mistake, contact the organizer, who can refund a gift, or contact us and we'll help. Card processing on a gift is non-refundable.</p>
+      </Section>
+
+      <Section title="Optional tips to TapIN">
+        <p>A tip to TapIN, added when giving, is voluntary and helps keep TapIN free for organizers. Tips to TapIN are generally non-refundable; if you added one by mistake, contact us and we'll look into it.</p>
       </Section>
 
       <Section title="Events ticketed on other sites">

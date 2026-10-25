@@ -45,7 +45,7 @@ export default function DonationSettings({ value, onChange, inputClass, nonprofi
             <input type="checkbox" checked={f.show} onChange={(e) => set({ show: e.target.checked })} className="mt-0.5 h-4 w-4 shrink-0 accent-marigold" />
             <span>Show recent supporters on the event page <span className="block text-xs text-gray-500">First names and messages only, never amounts.</span></span>
           </label>
-          <p className="text-xs text-muted sm:col-span-2">Donors see "Cover the fees" checked by default, so most gifts reach you in full. Example: on a ${example} gift the fees are {money2(donationFee(example, false))} (3.7% + 2.9% + $0.50), or {money2(donationFee(example, true))} when added to a ticket order.</p>
+          <p className="text-xs text-muted sm:col-span-2">You receive 100% of every gift. Donors pay only card processing on top, with no TapIN service fee, and can add an optional tip to TapIN (no tip is selected unless they choose one). Example: on a ${example} gift, card processing is {money2(donationFee(example, false))} on its own, or {money2(donationFee(example, true))} when added to a ticket order.</p>
         </div>
       )}
     </div>

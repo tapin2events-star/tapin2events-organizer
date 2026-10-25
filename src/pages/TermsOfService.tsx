@@ -7,7 +7,7 @@ export default function TermsOfService() {
   return (
     <LegalPage
       title="Terms of Service"
-      updated={LEGAL_EFFECTIVE}
+      updated="October 25, 2026"
       intro={
         <p>
           These terms are an agreement between you and <strong>TapIN LLC</strong> ("TapIN," "we," "us"), a North Carolina company, covering your use of the TapIN2Events website and apps
@@ -44,6 +44,9 @@ export default function TermsOfService() {
 
       <LegalSection title="5. Payments, fees, and payouts">
         <p>Payments on TapIN are processed by <strong>Stripe</strong>. We don't store your full card number. Buyers pay the listed price plus service and processing fees, which are shown before you pay.</p>
+        <p><strong>Donations and contributions.</strong> When you give to an event (a donation to a nonprofit, or a contribution to support an organizer), the full amount of your gift goes to the organizer. You pay card processing on top of your gift; TapIN doesn't charge a service fee on gifts. Contributions to individual organizers aren't tax-deductible charitable donations. Organizers are responsible for describing their cause and tax status accurately, and for any receipts their tax status requires.</p>
+        <p><strong>Optional tips to TapIN.</strong> When giving, you may choose to add a tip to TapIN. Tips are entirely voluntary, nothing is selected unless you choose it, and they go to TapIN (not the organizer) to help keep TapIN free for organizers.</p>
+        <p><strong>Promoter and creator commissions.</strong> Organizers may pay promoters and creators a commission on tickets sold through their links or videos. Commissions are paid automatically from the organizer's proceeds, aren't paid on a promoter's own purchases or before an organizer approves them (where approval is required), and are reversed if the related tickets are refunded.</p>
         <p><strong>Getting paid.</strong> Organizers, sellers, and creators receive payouts through a Stripe account connected to TapIN. Payment processing services for these accounts are provided by Stripe and are subject to the{' '}
           <a href="https://stripe.com/legal/connect-account" target="_blank" rel="noopener noreferrer">Stripe Connected Account Agreement</a>, which includes the{' '}
           <a href="https://stripe.com/legal/ssa" target="_blank" rel="noopener noreferrer">Stripe Services Agreement</a>. By agreeing to these terms or continuing to receive payouts, you agree to be bound by those Stripe agreements, as Stripe may modify them. You authorize TapIN to share information about you and your transactions with Stripe as needed for Stripe to provide its services.</p>
