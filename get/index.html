@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Get TapIN2Events</title>
+<meta name="description" content="Discover local events, artists and more. Get TapIN2Events on the App Store, Google Play, or the web.">
+<meta property="og:title" content="Get TapIN2Events">
+<meta property="og:description" content="Discover local events, artists and more. Download the app or open it on the web.">
+<meta property="og:image" content="https://app.tapin2events.com/og-default.png">
+<meta name="theme-color" content="#4F46E5">
+<link rel="icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #0F1B3D; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: Poppins, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #fff; min-height: 100vh; min-height: 100dvh;
+    background: linear-gradient(150deg, #4F46E5 0%, #3B6FD6 45%, #14B8A6 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: calc(28px + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  .card { width: 100%; max-width: 420px; text-align: center; }
+  .logo { width: 104px; height: 104px; border-radius: 28px; box-shadow: 0 18px 40px rgba(15, 27, 61, .35); border: 3px solid rgba(255,255,255,.35); }
+  h1 { margin-top: 18px; font-size: 30px; font-weight: 800; letter-spacing: -.5px; }
+  .tag { margin-top: 6px; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,.9); }
+  .links { margin-top: 28px; display: flex; flex-direction: column; gap: 12px; }
+  a.btn {
+    display: flex; align-items: center; gap: 14px; text-decoration: none;
+    background: #fff; color: var(--ink); border-radius: 18px; padding: 14px 18px; min-height: 64px;
+    box-shadow: 0 10px 24px rgba(15, 27, 61, .18); transition: transform .12s ease, box-shadow .12s ease;
+  }
+  a.btn:active { transform: scale(.98); }
+  a.btn:hover { box-shadow: 0 14px 30px rgba(15, 27, 61, .25); }
+  a.btn.ghost { background: rgba(255,255,255,.14); color: #fff; box-shadow: none; border: 1.5px solid rgba(255,255,255,.55); }
+  .icon { width: 36px; height: 36px; flex: 0 0 36px; display: flex; align-items: center; justify-content: center; }
+  .txt { text-align: left; flex: 1; min-width: 0; }
+  .small { display: block; font-size: 11px; font-weight: 500; opacity: .7; letter-spacing: .3px; }
+  .big { display: block; font-size: 18px; font-weight: 700; line-height: 1.2; }
+  .arrow { font-size: 22px; opacity: .45; }
+  .badge { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #14B8A6; color: #fff; font-size: 10px; font-weight: 700; vertical-align: middle; }
+  .foot { margin-top: 26px; font-size: 12px; color: rgba(255,255,255,.8); }
+  .foot strong { color: #fff; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <img class="logo" src="/icon-512.png" alt="TapIN" width="104" height="104">
+    <h1>TapIN2Events</h1>
+    <p class="tag">Discover local events, artists &amp; vendors.<br>Get tickets, connect, and never miss a moment.</p>
+
+    <nav class="links" id="links" aria-label="Get TapIN2Events">
+      <a class="btn" id="ios" href="https://apps.apple.com/us/app/tapin2events/id6474884074" rel="noopener">
+        <span class="icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="#0F1B3D"><path d="M16.37 1.43c0 1.14-.42 2.2-1.25 3.06-.98 1.02-2.16 1.6-3.44 1.5-.02-.14-.03-.28-.03-.43 0-1.09.48-2.27 1.33-3.16.42-.45.96-.83 1.6-1.13.64-.29 1.25-.46 1.81-.48.01.21.02.43.02.64h-.04zM20.9 17.1c-.37.86-.81 1.65-1.32 2.37-.7.99-1.27 1.67-1.71 2.05-.68.62-1.41.94-2.19.96-.56 0-1.24-.16-2.03-.48-.79-.32-1.52-.48-2.19-.48-.7 0-1.45.16-2.25.48-.8.32-1.45.49-1.94.51-.75.03-1.5-.3-2.25-.99-.48-.41-1.08-1.12-1.8-2.13-.77-1.08-1.4-2.33-1.9-3.76-.53-1.54-.8-3.03-.8-4.48 0-1.66.36-3.09 1.08-4.29.56-.96 1.31-1.72 2.25-2.27.94-.56 1.95-.84 3.04-.86.6 0 1.38.18 2.35.54.97.36 1.59.55 1.86.55.2 0 .9-.22 2.08-.64 1.12-.4 2.06-.57 2.83-.5 2.09.17 3.66.99 4.71 2.48-1.87 1.13-2.79 2.72-2.77 4.76.02 1.59.59 2.91 1.72 3.96.51.48 1.08.86 1.71 1.12-.14.4-.28.78-.44 1.15z"/></svg>
+        </span>
+        <span class="txt"><span class="small">Download on the</span><span class="big">App Store</span></span>
+        <span class="arrow" aria-hidden="true">›</span>
+      </a>
+      <a class="btn" id="android" href="https://play.google.com/store/apps/details?id=net.tapin2events.app" rel="noopener">
+        <span class="icon" aria-hidden="true">
+          <svg width="28" height="30" viewBox="0 0 26 28"><path fill="#00D7FE" d="M1.1.6C.8.9.6 1.4.6 2v24c0 .6.2 1.1.5 1.4l.1.1L14.6 14.1v-.3L1.2.5z"/><path fill="#FFCE00" d="M19.1 18.6l-4.5-4.5v-.3l4.5-4.5.1.1 5.3 3c1.5.9 1.5 2.3 0 3.2l-5.3 3z"/><path fill="#FF3A44" d="M19.2 18.5L14.6 14 1.1 27.4c.5.5 1.3.6 2.3.1l15.8-9"/><path fill="#00F076" d="M19.2 9.5L3.4.5C2.4-.1 1.6 0 1.1.6L14.6 14z"/></svg>
+        </span>
+        <span class="txt"><span class="small">Get it on</span><span class="big">Google Play</span></span>
+        <span class="arrow" aria-hidden="true">›</span>
+      </a>
+      <a class="btn ghost" id="web" href="https://tapin2events.com/" rel="noopener">
+        <span class="icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </span>
+        <span class="txt"><span class="small">Visit the website</span><span class="big">tapin2events.com</span></span>
+        <span class="arrow" aria-hidden="true">›</span>
+      </a>
+    </nav>
+
+    <p class="foot">Made in Raleigh, NC by <strong>TapIN LLC</strong></p>
+  </main>
+  <script>
+    // Put the visitor's own app store first (and mark it), so it's the obvious tap.
+    (function () {
+      var ua = navigator.userAgent || '';
+      var android = /Android/i.test(ua) || (navigator.userAgentData && /iPhone|iPad|iPod/.test(ua));
+      var ios = !android && /iPhone|iPad|iPod/i.test(ua);
+      var links = document.getElementById('links');
+      var mine = android ? document.getElementById('android') : ios ? document.getElementById('ios') : null;
+      if (mine) {
+        links.insertBefore(mine, links.firstChild);
+        var big = mine.querySelector('.big');
+        if (big) big.insertAdjacentHTML('beforeend', '<span class="badge">For your phone</span>');
+      }
+    })();
+  </script>
+</body>
+</html>
