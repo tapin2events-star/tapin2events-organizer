@@ -163,7 +163,7 @@ function BusinessHomeInner() {
             {[
               ['Ticket tiers & promo codes', 'General, VIP, Early Bird, comps and discount codes.'],
               ['Registration questions & approval', 'Ask what you need to know; approve who attends.'],
-              ['Donations & support', 'Goal bar, "cover the fees", receipts and supporter wall.'],
+              ['Donations & support', 'Goal bar, 100% of every gift to you, receipts and supporter wall.'],
             ].map(([t, d]) => (
               <div key={t} className="rounded-2xl border border-gray-200 bg-surface p-4"><p className="font-semibold text-bone">{t}</p><p className="mt-1 text-sm text-muted">{d}</p></div>
             ))}
