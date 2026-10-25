@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CONTACT_EMAIL, LEGAL_EFFECTIVE, LegalPage, LegalSection } from '../components/LegalPage';
+import { CONTACT_EMAIL, LegalPage, LegalSection } from '../components/LegalPage';
 
 // Plain-language Terms of Service reflecting how TapIN works.
 // NOTE: draft for TapIN LLC to have reviewed by an attorney before relying on it.
