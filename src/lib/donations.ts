@@ -10,7 +10,7 @@ export function donationFee(amount: number, withPaidTickets: boolean, tip = 0) {
 }
 // Optional tip to TapIN on standalone gifts (keeps TapIN free for organizers).
 export const TIP_CHOICES = [0, 0.05, 0.1, 0.15];
-export const DEFAULT_TIP = 0.1;
+export const DEFAULT_TIP = 0; // No tip unless the donor chooses one
 export const MIN_DONATION = 5;
 export const money2 = (n: number) => `$${n.toFixed(2)}`;
 export const money0 = (n: number) => `$${Number.isInteger(n) ? n.toLocaleString() : n.toFixed(2)}`;
