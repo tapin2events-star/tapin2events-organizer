@@ -27,6 +27,11 @@ export default function CreatePostModal({ onClose, onPosted, initialEvent = null
   const [eventSearch, setEventSearch] = useState('');
   const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventOption | null>(() => (initialEvent ? ({ ...initialEvent } as EventOption) : null));
+  // Creator program: events paying creators, and whether to earn from the tagged one.
+  const [paying, setPaying] = useState<{ id: string; title: string; pct: number; approval: boolean }[]>([]);
+  const [earn, setEarn] = useState(true);
+  useEffect(() => { supabase.rpc('events_paying_creators', { p_query: '' }).then(({ data }) => setPaying(((data ?? []) as { id: string; title: string; pct: number; approval: boolean }[]).slice(0, 6))); }, []);
+  const payingSelected = selectedEvent ? paying.find((p) => p.id === selectedEvent.id) ?? null : null;
   const [myEvents, setMyEvents] = useState<EventOption[]>([]);
   // Groups this person belongs to, so the video can also show on a group's page.
   const [myGroups, setMyGroups] = useState<{ group_id: string; name: string }[]>([]);
@@ -201,6 +206,11 @@ export default function CreatePostModal({ onClose, onPosted, initialEvent = null
       setStage('error');
       return;
     }
+    // Creator program: tie this video to the event's program so its Get tickets button carries your code.
+    if (selectedEvent && payingSelected && earn) {
+      const { error: jErr } = await supabase.rpc('join_creator_program', { p_event_id: selectedEvent.id, p_post_id: created.id });
+      if (jErr) console.error('Creator program', jErr.message);
+    }
     if (taggedPeople.length > 0) {
       const results = await Promise.all(taggedPeople.map((p) => supabase.from('post_tags').insert({ post_id: created.id, tagged_email: p.email })));
       results.forEach((r, i) => r.error && console.error('Could not tag', taggedPeople[i].email, r.error.message));
@@ -329,12 +339,31 @@ export default function CreatePostModal({ onClose, onPosted, initialEvent = null
                   <p className="text-sm text-muted">You don't have any events to tag yet.</p>
                 )
               ) : selectedEvent ? (
-                <div className="flex items-center justify-between rounded-lg border border-marigold bg-marigold/10 px-3 py-2 text-sm text-marigold">
-                  {selectedEvent.title}
-                  <button onClick={() => { setSelectedEvent(null); setEventSearch(''); }}>✕</button>
+                <div>
+                  <div className="flex items-center justify-between rounded-lg border border-marigold bg-marigold/10 px-3 py-2 text-sm text-marigold">
+                    {selectedEvent.title}
+                    <button onClick={() => { setSelectedEvent(null); setEventSearch(''); }}>✕</button>
+                  </div>
+                  {payingSelected && (
+                    <label className="mt-2 flex items-start gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
+                      <input type="checkbox" checked={earn} onChange={(e) => setEarn(e.target.checked)} className="mt-0.5 h-4 w-4 accent-marigold" />
+                      <span>💸 Earn {payingSelected.pct}% on tickets this video sells{payingSelected.approval ? ' (the organizer approves creators first)' : ''}</span>
+                    </label>
+                  )}
                 </div>
               ) : (
                 <div className="relative">
+                  {paying.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-xs font-semibold text-gray-500">💸 Events paying creators</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {paying.map((p) => (
+                          <button key={p.id} type="button" onClick={() => { setSelectedEvent({ id: p.id, title: p.title } as EventOption); setEarn(true); }}
+                            className="rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-900">{p.title} · {p.pct}%</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <input
                     value={eventSearch}
                     onChange={(e) => setEventSearch(e.target.value)}

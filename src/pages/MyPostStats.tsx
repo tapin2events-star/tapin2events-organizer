@@ -27,6 +27,12 @@ export default function MyPostStats() {
   const [sort, setSort] = useState<'recent' | 'views' | 'likes'>('recent');
   const [info, setInfo] = useState(false);
   const [engage, setEngage] = useState<{ post: Post; tab: 'likes' | 'comments' } | null>(null);
+  // Your commissions from promoting events (creator program and promotion links), on your own stats only.
+  const [earnings, setEarnings] = useState<{ event_title: string; sent_cents: number; waiting_cents: number }[]>([]);
+  useEffect(() => {
+    if (!user || scope !== 'me') return;
+    supabase.rpc('my_promoter_payouts').then(({ data }) => setEarnings(((data ?? []) as { event_title: string; sent_cents: number; waiting_cents: number }[]).filter((r) => Number(r.sent_cents) + Number(r.waiting_cents) > 0)));
+  }, [user, scope]);
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -125,6 +131,20 @@ export default function MyPostStats() {
             </div>
             <div className="mt-1 flex justify-between text-[10px] text-muted"><span>{shortDate(d.daily[0]?.day ?? '')}</span><span>Today</span></div>
           </section>
+
+          {/* Commissions from promoting events */}
+          {earnings.length > 0 && (
+            <section className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4">
+              <p className="text-sm font-semibold text-green-900">💸 Your earnings from promoting events</p>
+              <p className="mt-0.5 font-display text-2xl font-bold text-green-900">${(earnings.reduce((n, r) => n + Number(r.sent_cents) + Number(r.waiting_cents), 0) / 100).toFixed(2)}</p>
+              <ul className="mt-2 flex flex-col gap-1 text-sm text-green-900">
+                {earnings.map((r, i) => (
+                  <li key={i} className="flex justify-between gap-2"><span className="truncate">{r.event_title}</span><span className="shrink-0">${((Number(r.sent_cents) + Number(r.waiting_cents)) / 100).toFixed(2)}{Number(r.waiting_cents) > 0 ? ` (${(Number(r.waiting_cents) / 100).toFixed(2)} waiting)` : ''}</span></li>
+                ))}
+              </ul>
+              {earnings.some((r) => Number(r.waiting_cents) > 0) && <p className="mt-2 text-xs text-green-800">Waiting amounts are paid once you connect payouts in your Profile.</p>}
+            </section>
+          )}
 
           {/* Top post */}
           {top && top.views + top.likes > 0 && (

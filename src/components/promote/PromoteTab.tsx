@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import CreatorProgramCard from './CreatorProgramCard';
 import { useShareBase } from '../../lib/shareBase';
 import PeopleInput from '../PeopleInput';
 import LocalPartnersCard from '../nearby/LocalPartnersCard';
@@ -67,6 +68,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
   return (
     <div>
       <BoostCard eventId={eventId} />
+      <CreatorProgramCard eventId={eventId} />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-display text-lg font-bold text-bone">📣 Promotion links <PremiumBadge feature="promotion_links" /></p>

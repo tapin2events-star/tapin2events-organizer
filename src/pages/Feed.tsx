@@ -130,6 +130,13 @@ export default function Feed() {
   const [activatedPostIds, setActivatedPostIds] = useState<Set<string>>(new Set());
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const viewedRef = useRef(new Set<string>());
+  // Creator program: videos promoting an event carry the creator's ticket code ({ postId: code }).
+  const [ticketCodes, setTicketCodes] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const ids = posts.filter((p) => (p as { promo_link_id?: string | null }).promo_link_id && !(p.id in ticketCodes)).map((p) => p.id);
+    if (!ids.length) return;
+    supabase.rpc('post_ticket_codes', { p_post_ids: ids }).then(({ data }) => setTicketCodes((cur) => ({ ...cur, ...((data ?? {}) as Record<string, string>) })));
+  }, [posts]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const id = activePostId;
     if (!id || viewedRef.current.has(id)) return;
@@ -772,6 +779,11 @@ export default function Feed() {
                         {post.event_title}
                         {post.event_date && ` · ${new Date(post.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                       </span>
+                    </Link>
+                  )}
+                  {post.event_id && post.event_title && ticketCodes[post.id] && (
+                    <Link to={`/p/${ticketCodes[post.id]}`} className="inline-flex items-center gap-1.5 rounded-full bg-marigold px-3 py-1.5 text-sm font-semibold text-white shadow hover:opacity-90">
+                      <span aria-hidden>🎟️</span> Get tickets
                     </Link>
                   )}
                 </div>
