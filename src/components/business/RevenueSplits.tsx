@@ -110,9 +110,10 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
           ))}
           <li className="flex items-center justify-between gap-2 px-3 py-1 text-xs text-gray-600"><span>{hostName} (main account) · {Math.round((100 - o.rows.reduce((n, r) => n + Number(r.percent), 0)) * 100) / 100}%</span><span>{money(o.main_sent)} sent{o.main_waiting ? ` · ${money(o.main_waiting)} waiting` : ''}</span></li>
         </ul>
+        <EarlierSales eventId={eventId} hostName={hostName} key={o.rows.map((r) => `${r.email}:${r.percent}`).join('|')} />
         </>
       ) : <p className="mt-3 text-sm text-muted">No split. Ticket sales go to {hostName}'s payout account.</p>}
-      <p className="mt-3 text-xs text-muted">Everyone you add gets an email (with sign-up steps if they're not on TapIN yet), plus a weekly reminder while money is waiting for them. Splits apply to ticket sales (one-price and ticket-type events) made after the split is saved. Donations and merch go to the main account. Buyers pay the fees on top, so shares are of the full ticket price. Refunds take back each share proportionally. Reserved seating isn't split yet.</p>
+      <p className="mt-3 text-xs text-muted">Everyone you add gets an email (with sign-up steps if they're not on TapIN yet), plus a weekly reminder while money is waiting for them. Splits apply to ticket sales (one-price and ticket-type events) made after the split is saved, plus sales TapIN is still holding because payouts weren't connected yet (those are split automatically too). Donations and merch go to the main account. Buyers pay the fees on top, so shares are of the full ticket price. Refunds take back each share proportionally. Reserved seating isn't split yet.</p>
     </section>
   );
 }
@@ -149,5 +150,26 @@ export function MySplitEarnings() {
         ))}
       </ul>
     </section>
+  );
+}
+
+// Sales made before the split was set up (already paid out, so they can't be split automatically): what each person
+// would have earned from them under the current split, so the organizer can settle with them directly.
+function EarlierSales({ eventId, hostName }: { eventId: string; hostName: string }) {
+  const [d, setD] = useState<{ orders: number; ticket_cents: number; people: { email: string; name: string; percent: number; owed_cents: number }[] } | null>(null);
+  useEffect(() => { supabase.rpc('split_earlier_sales', { p_event_id: eventId }).then(({ data }) => setD((data ?? null) as typeof d)); }, [eventId]);
+  if (!d || !d.orders || d.ticket_cents <= 0 || !d.people.length) return null;
+  const m = (c: number) => `$${(c / 100).toFixed(2)}`;
+  return (
+    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+      <p className="font-semibold">Sales from before the split</p>
+      <p className="mt-0.5">{d.orders} order{d.orders === 1 ? '' : 's'} ({m(d.ticket_cents)} in tickets) sold before the split was set up and already went to {hostName}, so they weren&apos;t split. Based on the split, here&apos;s what each person would have earned from them:</p>
+      <ul className="mt-2 flex flex-col gap-1">
+        {d.people.map((p) => (
+          <li key={p.email} className="flex justify-between gap-2"><span className="truncate">{p.name} · {Number(p.percent)}%</span><span className="shrink-0 font-semibold">{m(p.owed_cents)}</span></li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs">You can pay them directly (for example, Cash App, Zelle, or a check). Everything sold from now on is split automatically.</p>
+    </div>
   );
 }
