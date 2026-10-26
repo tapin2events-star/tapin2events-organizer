@@ -72,7 +72,7 @@ export default function ResourceMediaSection({ resourceId, resourceEmail, groupI
   const current = openAlbum?.photos[photoIndex];
 
   return (
-    <div className="mt-6 flex flex-col gap-6 border-t border-gray-200 pt-6">
+    <div data-no-viewer className="mt-6 flex flex-col gap-6 border-t border-gray-200 pt-6">
       <h2 className="font-display text-lg font-semibold text-gray-900">Media</h2>
 
       {audio.length > 0 && (

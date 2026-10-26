@@ -14,6 +14,26 @@ export default function LinkViewer() {
     window.addEventListener('tapin-open-link', on);
     return () => window.removeEventListener('tapin-open-link', on);
   }, []);
+  // Every link to an outside website opens here, app-wide (including links added later). Left alone: TapIN's own
+  // pages, email/phone/text, maps and directions, share links, downloads, links inside [data-no-viewer] (media
+  // on artist profiles), and Ctrl/Cmd/Shift/middle clicks.
+  useEffect(() => {
+    const SKIP_HOST = /(^|\.)(tapin2events\.com|tapin2events\.pages\.dev|supabase\.co|stripe\.com|gumlet\.io|wa\.me|whatsapp\.com|maps\.apple\.com)$/i;
+    const SKIP_PATH = /^https?:\/\/((www|maps)\.)?google\.[a-z.]+\/maps|^https?:\/\/maps\.google\.|^https?:\/\/(www\.)?facebook\.com\/sharer|^https?:\/\/(twitter|x)\.com\/intent|^https?:\/\/(www\.)?linkedin\.com\/(sharing|shareArticle)|^https?:\/\/calendar\.google\.com\/calendar\/render/i;
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as HTMLElement | null)?.closest?.('a');
+      if (!a || !a.href || a.hasAttribute('download') || a.closest('[data-no-viewer]')) return;
+      let u: URL;
+      try { u = new URL(a.href, window.location.href); } catch { return; }
+      if (!/^https?:$/.test(u.protocol) || u.origin === window.location.origin || SKIP_HOST.test(u.hostname) || SKIP_PATH.test(u.href)) return;
+      e.preventDefault();
+      const label = (a.getAttribute('aria-label') || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+      setLink({ url: u.href, title: label && !/^(website|link|open|visit)/i.test(label) ? label : undefined });
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, []);
   useEffect(() => {
     if (!link) return;
     let alive = true;
@@ -31,7 +51,7 @@ export default function LinkViewer() {
   try { host = new URL(link.url).hostname.replace(/^www\./, ''); } catch { /* keep as is */ }
   return (
     <div className="fixed inset-0 z-[1400] flex items-end justify-center bg-black/50 sm:items-center sm:p-6" onClick={() => setLink(null)}>
-      <div role="dialog" aria-modal="true" aria-label={link.title ? `${link.title} website` : 'Website'} onClick={(e) => e.stopPropagation()}
+      <div data-no-viewer role="dialog" aria-modal="true" aria-label={link.title ? `${link.title} website` : 'Website'} onClick={(e) => e.stopPropagation()}
         className="flex h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:h-[85vh] sm:rounded-3xl">
         <div className="flex items-center gap-2 border-b border-gray-200 px-3 py-2">
           <button onClick={() => setLink(null)} aria-label="Close" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl leading-none text-gray-600 hover:bg-gray-100">×</button>
