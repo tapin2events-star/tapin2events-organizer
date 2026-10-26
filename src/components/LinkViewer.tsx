@@ -31,7 +31,8 @@ export default function LinkViewer() {
       e.preventDefault();
       // Social links: straight to the social app (or its website).
       if (SOCIAL_HOST.test(u.hostname)) { openSocial(u.href); return; }
-      if (frameKnown(u.href)?.ok === false) { openInBrowser(u.href); return; }
+      // Inside the TapIN app the wrapper takes over pages loaded in the viewer: use the phone's browser.
+      if (isNativeApp() || frameKnown(u.href)?.ok === false) { openInBrowser(u.href); return; }
       const label = (a.getAttribute('aria-label') || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60);
       setLink({ url: u.href, title: label && !/^(website|link|open|visit)/i.test(label) ? label : undefined });
     };

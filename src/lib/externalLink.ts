@@ -11,7 +11,8 @@ export function openExternal(url: string, title?: string) {
   const cap = (window as unknown as { Capacitor?: { Plugins?: { Browser?: CapBrowser } } }).Capacitor?.Plugins?.Browser;
   if (cap) { cap.open({ url: href }).catch(() => window.open(href, '_blank', 'noopener')); return; }
   try { if (SOCIAL_HOST.test(new URL(href).hostname)) { openSocial(href); return; } } catch { /* not a valid address */ }
-  if (frameKnown(href)?.ok === false) { openInBrowser(href); return; }
+  // Inside the TapIN app the wrapper takes over pages loaded in the viewer, so the phone's browser is used instead.
+  if (isNativeApp() || frameKnown(href)?.ok === false) { openInBrowser(href); return; }
   window.dispatchEvent(new CustomEvent('tapin-open-link', { detail: { url: href, title } }));
 }
 
