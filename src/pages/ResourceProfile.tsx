@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useProfileId } from '../lib/profileLinks';
 import PartOfOrgs from '../components/profile/PartOfOrgs';
 import HeaderVideo, { useHeaderVideo } from '../components/video/HeaderVideo';
 import ShareQR from '../components/ShareQR';
@@ -25,8 +26,12 @@ function pricingLabel(r: Resource) {
 }
 
 
-export default function ResourceProfile() {
-  const { id } = useParams<{ id: string }>();
+// embeddedId: shown as the Artist tab inside a person's combined profile (no back/follow/share of its own).
+// Opened on its own (/resources/:id), an individual's artist profile moves to their combined profile's Artist tab.
+export default function ResourceProfile({ embeddedId }: { embeddedId?: string } = {}) {
+  const params = useParams<{ id: string }>();
+  const id = embeddedId ?? params.id;
+  const embedded = !!embeddedId;
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
   const { user, isAdmin } = useAuth();
@@ -138,6 +143,11 @@ export default function ResourceProfile() {
   // Arriving from the feed's "Book [Name]" button (/resources/:id#book).
   // Declared before the early returns below: hooks must run on every render.
   const location = useLocation();
+  const goTo = useNavigate();
+  const ownerId = useProfileId(!embedded && resource && resource.kind !== 'group' ? resource.email : null);
+  useEffect(() => {
+    if (!embedded && ownerId) goTo(`/u/${ownerId}?tab=artist${location.hash}`, { replace: true });
+  }, [embedded, ownerId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (loading || !resource || location.hash !== '#book') return;
     setTimeout(() => document.getElementById('book')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
@@ -160,9 +170,9 @@ export default function ResourceProfile() {
   const averageRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <div className="mx-auto max-w-5xl px-4 py-10">
-        <BackButton fallback="/resources" fallbackLabel="Artists & vendors" />
+    <div className={embedded ? '' : 'min-h-screen bg-gradient-to-br from-indigo-50 to-white'}>
+      <div className={embedded ? '' : 'mx-auto max-w-5xl px-4 py-10'}>
+        {!embedded && <BackButton fallback="/resources" fallbackLabel="Artists & vendors" />}
 
         {headerVideo ? (
           <div className="relative mt-4 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-900"><HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? resource.cover_image ?? resource.profile_image ?? null} postId={headerVideo.id} /></div>
@@ -208,13 +218,13 @@ export default function ResourceProfile() {
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <FollowButton email={resource.email} />
+              {!embedded && <FollowButton email={resource.email} />}
               {user && user.email !== resource.email && <SaveToBoard resourceId={resource.id} name={resource.display_name} />}
               {shopCount > 0 && (
                 <button type="button" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   className="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm font-semibold text-gray-800 hover:border-marigold">🛍️ Shop ({shopCount})</button>
               )}
-              <ShareQR path={`/resources/${resource.id}`} title={resource.display_name} subtitle={isGroup ? 'Group on TapIN' : 'Artist & services on TapIN'} />
+              {!embedded && <ShareQR path={`/resources/${resource.id}`} title={resource.display_name} subtitle={isGroup ? 'Group on TapIN' : 'Artist & services on TapIN'} />}
             </div>
             {!isGroup && <GroupBadges email={resource.email} className="mt-3" />}
 
@@ -227,7 +237,7 @@ export default function ResourceProfile() {
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
 
-            {!isGroup && <PartOfOrgs resourceId={resource.id} className="mt-6 border-t border-gray-200 pt-6" />}
+            {!isGroup && !embedded && <PartOfOrgs resourceId={resource.id} className="mt-6 border-t border-gray-200 pt-6" />}
 
             <div id="shop" className="scroll-mt-24"><ShopSection ownerType="resource" ownerId={resource.id} /></div>
 
