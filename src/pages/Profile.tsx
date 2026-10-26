@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { loadMyOrgs, type MyOrg } from '../lib/business';
+import Sheet from '../components/scouting/Sheet';
 import ProfileLink from '../components/ProfileLink';
 import MyAffiliations from '../components/profile/MyAffiliations';
 import OtherEmailsSection from '../components/OtherEmailsSection';
@@ -173,6 +175,19 @@ export default function Profile() {
   const cleanup = useFeature('profile_cleanup');
   const [openKey, setOpenKey] = useState<string | null>(() => (typeof window !== 'undefined' ? window.location.hash.replace('#', '') || null : null));
   const toggleSection = (k: string) => setOpenKey((cur) => (cur === k ? null : k));
+  // "Edit profile" chooser: personal profile, artist profile (if any), and organizations they own or manage.
+  const [editChoices, setEditChoices] = useState<{ artist: { id: string; name: string; photo: string | null } | null; orgs: MyOrg[] }>({ artist: null, orgs: [] });
+  const [chooserOpen, setChooserOpen] = useState(false);
+  useEffect(() => {
+    if (!cleanup || !user?.email) return;
+    (async () => {
+      const [{ data: r }, orgs] = await Promise.all([
+        supabase.from('resources').select('id, display_name, profile_image, kind').eq('email', user.email!).neq('kind', 'group').maybeSingle(),
+        loadMyOrgs(),
+      ]);
+      setEditChoices({ artist: r ? { id: r.id, name: r.display_name, photo: r.profile_image } : null, orgs: orgs.filter((o) => o.role === 'owner' || o.role === 'admin') });
+    })();
+  }, [cleanup, user?.email]);
   const openSection = (k: string, scroll = false) => { setOpenKey(k); if (scroll) setTimeout(() => document.getElementById(k)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); };
   useEffect(() => { if (cleanup && openKey) setTimeout(() => document.getElementById(openKey)?.scrollIntoView({ block: 'start' }), 300); }, [cleanup]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -506,7 +521,7 @@ export default function Profile() {
       </div>
 
       <div className="mt-4 flex gap-2">
-        <button onClick={() => openSection('basic', true)} className="min-h-[44px] flex-1 whitespace-nowrap rounded-full bg-marigold px-4 text-sm font-semibold text-white">Edit profile</button>
+        <button onClick={() => (editChoices.artist || editChoices.orgs.length ? setChooserOpen(true) : openSection('basic', true))} className="min-h-[44px] flex-1 whitespace-nowrap rounded-full bg-marigold px-4 text-sm font-semibold text-white">Edit profile</button>
         {user?.email && <ProfileLink email={user.email} className="min-h-[44px] flex-1 whitespace-nowrap rounded-full border border-gray-300 px-4 text-center text-sm font-medium leading-[44px] text-bone">View public profile</ProfileLink>}
       </div>
 
@@ -551,6 +566,33 @@ export default function Profile() {
       </SettingsGroup>
 
       <div className="mt-8"><DeleteAccountSection /></div>
+
+      {chooserOpen && (
+        <Sheet title="What would you like to edit?" onClose={() => setChooserOpen(false)}>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => { setChooserOpen(false); openSection('basic', true); }} className="flex min-h-[60px] items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 text-left hover:border-marigold">
+              {profile.profile_photo ? <img src={profile.profile_photo} alt="" className="h-10 w-10 rounded-full object-cover" /> : <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100" aria-hidden="true">👤</span>}
+              <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">Personal profile</span><span className="block text-xs text-gray-500">Name, bio, location, and photo</span></span>
+              <span className="text-gray-400" aria-hidden="true">›</span>
+            </button>
+            {editChoices.artist && (
+              <Link to="/resources/dashboard" onClick={() => setChooserOpen(false)} className="flex min-h-[60px] items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 hover:border-marigold">
+                {editChoices.artist.photo ? <img src={editChoices.artist.photo} alt="" className="h-10 w-10 rounded-full object-cover" /> : <span className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100" aria-hidden="true">🎤</span>}
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{editChoices.artist.name}</span><span className="block text-xs text-gray-500">Artist profile, bookings, and shop</span></span>
+                <span className="text-gray-400" aria-hidden="true">›</span>
+              </Link>
+            )}
+            {editChoices.orgs.length > 0 && <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Your organizations</p>}
+            {editChoices.orgs.map((o) => (
+              <Link key={o.id} to={`/business/${o.slug}/manage`} onClick={() => setChooserOpen(false)} className="flex min-h-[60px] items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 hover:border-marigold">
+                {o.logo_url ? <img src={o.logo_url} alt="" className="h-10 w-10 rounded-xl object-cover" /> : <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100" aria-hidden="true">🏢</span>}
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{o.name}</span><span className="block text-xs text-gray-500">{o.role === 'owner' ? 'Owner' : 'Admin'} · page, team, and settings</span></span>
+                <span className="text-gray-400" aria-hidden="true">›</span>
+              </Link>
+            ))}
+          </div>
+        </Sheet>
+      )}
 
       </>)}
 
