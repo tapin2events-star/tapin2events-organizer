@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { prefetchFrames } from '../../lib/externalLink';
 import ExternalLink from '../ExternalLink';
 import PremiumBadge from '../business/PremiumBadge';
 import { supabase } from '../../lib/supabaseClient';
@@ -37,10 +36,6 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
       if (r && !r.fetched) { await supabase.functions.invoke('nearby-places', { body: { event_id: eventId } }); load(); }
     })();
   }, [eventId, load]);
-  // Check the places' websites ahead of time (before any early return: hooks run every render), so tapping
-  // Website goes the right way instantly.
-  const siteList = (d?.places ?? []).map((p) => p.website).filter(Boolean).join('|');
-  useEffect(() => { if (siteList) prefetchFrames(siteList.split('|')); }, [siteList]);
   if (!d || (!d.enabled && !d.can_manage)) return null;
   const places = d.places ?? [];
   const cats = CATS.filter((c) => places.some((p) => p.category === c.id && (!p.hidden || d.can_manage)));
