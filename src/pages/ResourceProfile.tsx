@@ -174,6 +174,7 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
       <div className={embedded ? '' : 'mx-auto max-w-5xl px-4 py-10'}>
         {!embedded && <BackButton fallback="/resources" fallbackLabel="Artists & vendors" />}
 
+        {!embedded && (<>
         {headerVideo ? (
           <div className="relative mt-4 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-900"><HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? resource.cover_image ?? resource.profile_image ?? null} postId={headerVideo.id} /></div>
         ) : (resource.cover_image || resource.profile_image) ? (
@@ -183,11 +184,13 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
             <span className="font-display text-6xl font-extrabold text-indigo-300">{resource.display_name.charAt(0)}</span>
           </div>
         )}
+        </>)}
 
-        <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-3">
-          <div className="md:col-span-2">
+        <div className={embedded ? 'flex flex-col' : 'mt-6 grid grid-cols-1 gap-8 md:grid-cols-3'}>
+          <div className={embedded ? 'contents' : 'md:col-span-2'}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
+{!embedded && (<>
                 <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl font-bold text-gray-900">
                   {isGroup && resource.cover_image && resource.profile_image && <img src={resource.profile_image} alt="" className="h-10 w-10 rounded-full object-cover" />}
                   {resource.display_name}
@@ -197,6 +200,7 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
                 <p className="mt-1 text-sm text-gray-500">
                   {[resource.city, resource.state].filter(Boolean).join(', ') || resource.location || 'Location not listed'}
                 </p>
+                </>)}
               </div>
               <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">
                 {pricingLabel(resource)}
@@ -232,30 +236,30 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
               {reviews.length > 0 ? `\u2605 ${averageRating.toFixed(1)} average (${reviews.length} review${reviews.length === 1 ? '' : 's'})` : 'No reviews yet'}
             </p>
 
-            <div className="mt-6 border-t border-gray-200 pt-6">
+            <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-2' : ''}`}>
               <h2 className="font-display text-lg font-semibold text-gray-900">About</h2>
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
 
             {!isGroup && !embedded && <PartOfOrgs resourceId={resource.id} className="mt-6 border-t border-gray-200 pt-6" />}
 
-            <div id="shop" className="scroll-mt-24"><ShopSection ownerType="resource" ownerId={resource.id} /></div>
+            <div id="shop" className={`scroll-mt-24 ${embedded ? 'order-5' : ''}`}><ShopSection ownerType="resource" ownerId={resource.id} /></div>
 
-            <UpcomingAppearances resourceId={resource.id} name={resource.display_name} />
+            <div className={embedded ? 'order-6' : ''}><UpcomingAppearances resourceId={resource.id} name={resource.display_name} /></div>
 
             {isGroup && <GroupMembersSection groupId={resource.id} />}
 
-            <ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} groupId={isGroup ? resource.id : undefined} />
+            <div className={embedded ? 'order-8' : ''}><ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} groupId={isGroup ? resource.id : undefined} hideFeedVideos={embedded} /></div>
 
             {resource.pricing_details && (
-              <div className="mt-6 border-t border-gray-200 pt-6">
+              <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-1' : ''}`}>
                 <h2 className="font-display text-lg font-semibold text-gray-900">Pricing details</h2>
                 <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.pricing_details}</p>
               </div>
             )}
 
             {visibleLinks({ instagram: resource.instagram_url, facebook: resource.facebook_url, youtube: resource.youtube_url, website: resource.website_url }).length > 0 && (
-              <div className="mt-6 border-t border-gray-200 pt-6">
+              <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-7' : ''}`}>
                 <EventLinks
                   title="Links"
                   links={{ instagram: resource.instagram_url, facebook: resource.facebook_url, youtube: resource.youtube_url, website: resource.website_url }}
@@ -264,7 +268,7 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
             )}
 
             {reviews.length > 0 && (
-              <div className="mt-6 border-t border-gray-200 pt-6">
+              <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-4' : ''}`}>
                 <h2 className="font-display text-lg font-semibold text-gray-900">Reviews</h2>
                 <div className="mt-3 flex flex-col gap-3">
                   {reviews.map((r) => (
@@ -279,7 +283,7 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
 
           </div>
 
-          <div className="md:sticky md:top-6 md:self-start">
+          <div className={embedded ? 'order-3 mt-6' : 'md:sticky md:top-6 md:self-start'}>
             <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs uppercase tracking-widest text-gray-400">{isGroup ? 'Book this group' : 'Book this resource'}</p>
               <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
