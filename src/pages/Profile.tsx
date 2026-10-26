@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ProfileLink from '../components/ProfileLink';
 import MyAffiliations from '../components/profile/MyAffiliations';
 import OtherEmailsSection from '../components/OtherEmailsSection';
 import PhotoCropper from '../components/PhotoCropper';
@@ -168,6 +169,13 @@ export default function Profile() {
     }
   }
 
+  // Profile cleanup (preview): which settings row is open (deep links like /profile#payouts open theirs).
+  const cleanup = useFeature('profile_cleanup');
+  const [openKey, setOpenKey] = useState<string | null>(() => (typeof window !== 'undefined' ? window.location.hash.replace('#', '') || null : null));
+  const toggleSection = (k: string) => setOpenKey((cur) => (cur === k ? null : k));
+  const openSection = (k: string, scroll = false) => { setOpenKey(k); if (scroll) setTimeout(() => document.getElementById(k)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); };
+  useEffect(() => { if (cleanup && openKey) setTimeout(() => document.getElementById(openKey)?.scrollIntoView({ block: 'start' }), 300); }, [cleanup]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function togglePrivate() {
     if (!user || !profile) return;
     const next = !profile.is_profile_private;
@@ -192,8 +200,114 @@ export default function Profile() {
     .filter((e) => !e.start_date || new Date(e.end_date ?? e.start_date).getTime() >= Date.now())
     .sort((a, b) => (a.start_date ?? '9999').localeCompare(b.start_date ?? '9999'));
 
+  // Settings pieces shared by both layouts (the current one and the Profile cleanup preview).
+  const basicForm = (
+          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted">Full name</span>
+              <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted">Bio</span>
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-muted">City</span>
+                <input value={city} onChange={(e) => setCity(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-muted">State</span>
+                <input value={state} onChange={(e) => setState(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted">Phone</span>
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
+            </label>
+            <button
+              onClick={saveBasicInfo}
+              disabled={saving}
+              className="self-start rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : savedMessage ? 'Saved!' : 'Save changes'}
+            </button>
+          </div>
+  );
+  const prefsForm = (
+          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
+            <label className="flex items-center justify-between gap-3">
+              <span>
+                <span className="block text-sm font-medium text-bone">Private profile</span>
+                <span className="block text-xs text-muted">Only you can see your saved events and activity</span>
+              </span>
+              <input type="checkbox" checked={!!profile.is_profile_private} onChange={togglePrivate} className="h-5 w-5 accent-marigold" />
+            </label>
+            <div className="border-t border-gray-200 pt-3">
+              <span className="block text-sm font-medium text-bone">Your interests</span>
+              <span className="mb-2 block text-xs text-muted">Used for "Picked for you" on Discover</span>
+              <InterestPicker
+                key={(profile.interests ?? []).join('|')}
+                initial={normalizeInterests(profile.interests)}
+                saveLabel={interestsSaved ? 'Saved ✓' : 'Save interests'}
+                onSave={async (groups: InterestGroup[]) => {
+                  await supabase.from('profiles').update({ interests: groups }).eq('id', user!.id);
+                  setProfile({ ...profile, interests: groups });
+                  setInterestsSaved(true);
+                  setTimeout(() => setInterestsSaved(false), 2000);
+                }}
+              />
+            </div>
+          </div>
+  );
+  const notifsForm = (
+          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
+            {([
+              { key: 'event_updates', label: 'Event reminders & updates', desc: "Reminders the day before, and changes to events you're attending" },
+              { key: 'ticket_sales', label: 'Ticket sales on my events', desc: 'An email each time someone buys or registers (you always see them in your notifications)' },
+              { key: 'followed_new_events', label: 'New events from people and organizations you follow', desc: 'When an organizer or organization you follow posts a new event' },
+              { key: 'followed_gigs', label: 'Gigs from artists & resources you follow', desc: "When someone you follow is added to an event's lineup" },
+              { key: 'new_followers', label: 'New followers', desc: 'When someone follows your profile' },
+              { key: 'product_updates', label: 'TapIN news & feature announcements', desc: 'Occasional emails about new features and offers' },
+              { key: 'email_notifications', label: 'Email notifications', desc: 'Receive these updates by email' },
+              { key: 'collaboration_invites', label: 'Collaboration invites', desc: "When you're invited to help manage an event" },
+            ] as const).map((n) => (
+              <label key={n.key} className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-sm font-medium text-bone">{n.label}</span>
+                  <span className="block text-xs text-muted">{n.desc}</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={notifs[n.key] ?? true}
+                  onChange={() => toggleNotification(n.key)}
+                  className="h-5 w-5 accent-marigold"
+                />
+              </label>
+            ))}
+          </div>
+  );
+  const interestsForm = (
+          <div>
+              <span className="block text-sm font-medium text-bone">Your interests</span>
+              <span className="mb-2 block text-xs text-muted">Used for "Picked for you" on Discover</span>
+              <InterestPicker
+                key={(profile.interests ?? []).join('|')}
+                initial={normalizeInterests(profile.interests)}
+                saveLabel={interestsSaved ? 'Saved ✓' : 'Save interests'}
+                onSave={async (groups: InterestGroup[]) => {
+                  await supabase.from('profiles').update({ interests: groups }).eq('id', user!.id);
+                  setProfile({ ...profile, interests: groups });
+                  setInterestsSaved(true);
+                  setTimeout(() => setInterestsSaved(false), 2000);
+                }}
+              />
+            </div>
+  );
+
   return (
     <div className="mx-auto max-w-3xl">
+      {!cleanup ? (<>
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
           {profile.profile_photo ? (
@@ -302,94 +416,11 @@ export default function Profile() {
           ))}
         </div>
 
-        {tab === 'basic' && (
-          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted">Full name</span>
-              <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted">Bio</span>
-              <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-muted">City</span>
-                <input value={city} onChange={(e) => setCity(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-muted">State</span>
-                <input value={state} onChange={(e) => setState(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
-              </label>
-            </div>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted">Phone</span>
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} className="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-bone outline-none focus-visible:border-marigold" />
-            </label>
-            <button
-              onClick={saveBasicInfo}
-              disabled={saving}
-              className="self-start rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : savedMessage ? 'Saved!' : 'Save changes'}
-            </button>
-          </div>
-        )}
+        {tab === 'basic' && basicForm}
 
-        {tab === 'prefs' && (
-          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
-            <label className="flex items-center justify-between gap-3">
-              <span>
-                <span className="block text-sm font-medium text-bone">Private profile</span>
-                <span className="block text-xs text-muted">Only you can see your saved events and activity</span>
-              </span>
-              <input type="checkbox" checked={!!profile.is_profile_private} onChange={togglePrivate} className="h-5 w-5 accent-marigold" />
-            </label>
-            <div className="border-t border-gray-200 pt-3">
-              <span className="block text-sm font-medium text-bone">Your interests</span>
-              <span className="mb-2 block text-xs text-muted">Used for "Picked for you" on Discover</span>
-              <InterestPicker
-                key={(profile.interests ?? []).join('|')}
-                initial={normalizeInterests(profile.interests)}
-                saveLabel={interestsSaved ? 'Saved ✓' : 'Save interests'}
-                onSave={async (groups: InterestGroup[]) => {
-                  await supabase.from('profiles').update({ interests: groups }).eq('id', user!.id);
-                  setProfile({ ...profile, interests: groups });
-                  setInterestsSaved(true);
-                  setTimeout(() => setInterestsSaved(false), 2000);
-                }}
-              />
-            </div>
-          </div>
-        )}
+        {tab === 'prefs' && prefsForm}
 
-        {tab === 'notifs' && (
-          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-surface2 p-4">
-            {([
-              { key: 'event_updates', label: 'Event reminders & updates', desc: "Reminders the day before, and changes to events you're attending" },
-              { key: 'ticket_sales', label: 'Ticket sales on my events', desc: 'An email each time someone buys or registers (you always see them in your notifications)' },
-              { key: 'followed_new_events', label: 'New events from people and organizations you follow', desc: 'When an organizer or organization you follow posts a new event' },
-              { key: 'followed_gigs', label: 'Gigs from artists & resources you follow', desc: "When someone you follow is added to an event's lineup" },
-              { key: 'new_followers', label: 'New followers', desc: 'When someone follows your profile' },
-              { key: 'product_updates', label: 'TapIN news & feature announcements', desc: 'Occasional emails about new features and offers' },
-              { key: 'email_notifications', label: 'Email notifications', desc: 'Receive these updates by email' },
-              { key: 'collaboration_invites', label: 'Collaboration invites', desc: "When you're invited to help manage an event" },
-            ] as const).map((n) => (
-              <label key={n.key} className="flex items-center justify-between gap-3">
-                <span>
-                  <span className="block text-sm font-medium text-bone">{n.label}</span>
-                  <span className="block text-xs text-muted">{n.desc}</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={notifs[n.key] ?? true}
-                  onChange={() => toggleNotification(n.key)}
-                  className="h-5 w-5 accent-marigold"
-                />
-              </label>
-            ))}
-          </div>
-        )}
+        {tab === 'notifs' && notifsForm}
       </div>
 
       <div className="mt-10">
@@ -435,6 +466,113 @@ export default function Profile() {
 
       <DeleteAccountSection />
 
+      </>) : (<>
+      {/* Profile cleanup (preview): Edit / View buttons up top, stat cards, saved events first, and settings grouped
+          into short lists whose rows open in place (deep links like /profile#payouts open their row). */}
+      <div className="flex items-center gap-4">
+        <div className="relative shrink-0">
+          {profile.profile_photo ? (
+            <img src={profile.profile_photo} alt="" className="h-20 w-20 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal font-display text-2xl font-bold text-white">
+              {(profile.full_name || profile.email).charAt(0).toUpperCase()}
+            </div>
+          )}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            aria-label="Change profile photo"
+            className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-ink bg-surface2 text-muted shadow-sm hover:text-marigold"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" strokeLinejoin="round" />
+              <circle cx="12" cy="13" r="3.5" />
+            </svg>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
+          {profile.profile_photo && !uploadingPhoto && (
+            <button type="button" onClick={() => setCropSrc(profile.profile_photo)} className="mt-1 block w-20 text-center text-[11px] font-medium text-marigold">Adjust</button>
+          )}
+          {cropSrc && <PhotoCropper src={cropSrc} shape="round" onCancel={() => { if (cropSrc.startsWith('blob:')) URL.revokeObjectURL(cropSrc); setCropSrc(null); }} onDone={savePhoto} />}
+        </div>
+        <div className="min-w-0">
+          <h1 className="truncate font-display text-2xl font-extrabold text-bone">{profile.full_name || 'Your profile'}</h1>
+          <p className="truncate text-sm text-muted">{profile.email}</p>
+          <div className="mt-1.5 flex flex-nowrap gap-1.5">
+            {profile.is_organizer && <span className="whitespace-nowrap rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-marigold">💼 Organizer</span>}
+            {profile.is_resource && <span className="whitespace-nowrap rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple">🎤 Artist</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <button onClick={() => openSection('basic', true)} className="min-h-[44px] flex-1 whitespace-nowrap rounded-full bg-marigold px-4 text-sm font-semibold text-white">Edit profile</button>
+        {user?.email && <ProfileLink email={user.email} className="min-h-[44px] flex-1 whitespace-nowrap rounded-full border border-gray-300 px-4 text-center text-sm font-medium leading-[44px] text-bone">View public profile</ProfileLink>}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Link to="/me/stats" className="flex items-center justify-between rounded-2xl border border-gray-200 bg-surface px-3 py-2.5 hover:border-marigold">
+          <span className="text-sm text-muted">Posts and stats</span><span className="font-display font-bold text-bone">{postCount ?? '–'} <span className="text-muted" aria-hidden="true">›</span></span>
+        </Link>
+        <button onClick={() => setOpenList('followers')} className="flex items-center justify-between rounded-2xl border border-gray-200 bg-surface px-3 py-2.5 text-left hover:border-marigold">
+          <span className="text-sm text-muted">Followers</span><span className="font-display font-bold text-bone">{profile.followers_count ?? 0}</span>
+        </button>
+      </div>
+      <button onClick={() => setOpenList('following')} className="mt-1.5 text-xs font-medium text-muted hover:text-bone">Following {profile.following_count ?? 0} ›</button>
+
+      <section className="mt-6" aria-label="Saved events">
+        <div className="flex items-baseline justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saved events</p>
+          {savedEvents.length > 0 && <Link to="/saved" className="text-sm font-medium text-marigold">See all {savedEvents.length} ›</Link>}
+        </div>
+        {upcomingSaved.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">{savedEvents.length ? <>None of your saved events are coming up. <Link to="/saved" className="font-medium text-marigold">See past ones</Link></> : 'Tap the bookmark on any event to keep track of it here.'}</p>
+        ) : (
+          <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
+            {upcomingSaved.slice(0, 8).map((e) => (
+              <Link key={e.id} to={`/events/${e.id}`} className="flex w-48 shrink-0 items-center gap-2.5 rounded-2xl border border-gray-200 bg-surface p-2 hover:border-marigold">
+                {e.poster_url ? <img src={e.poster_url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" /> : <div className="h-12 w-12 shrink-0 rounded-lg bg-gradient-to-br from-indigo-200 to-teal-200" />}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-bone">{e.title}</span>
+                  {e.start_date && <span className="block text-xs text-muted">{new Date(e.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {user?.id && user.email && <YourProfile userId={user.id} email={user.email} savedCount={savedEvents.length} vendorAppCounts={vendorAppCounts} networkingOn={networkingOn} />}
+
+      <SettingsGroup title="Profile">
+        <SettingsRow id="basic" icon="👤" label="Name, bio, and location" open={openKey === 'basic'} onToggle={() => toggleSection('basic')}>{basicForm}</SettingsRow>
+        <SettingsRow id="interests" icon="✨" label="Interests" open={openKey === 'interests'} onToggle={() => toggleSection('interests')}>{interestsForm}</SettingsRow>
+      </SettingsGroup>
+      <SettingsGroup title="Account">
+        <SettingsRow id="payouts" icon="🏦" label="Payouts" meta={profile.stripe_charges_enabled ? <span className="text-green-700">Connected</span> : <span className="text-amber-700">Not connected</span>} open={openKey === 'payouts'} onToggle={() => toggleSection('payouts')}>
+          <div data-tour="payouts"><PayoutsCard hasAccount={!!profile.stripe_account_id} chargesEnabled={!!profile.stripe_charges_enabled} variant="creator" /></div>
+        </SettingsRow>
+        <SettingsRow id="password" icon="🔒" label="Password" open={openKey === 'password'} onToggle={() => toggleSection('password')}><PasswordSection email={user?.email ?? ''} /></SettingsRow>
+        <SettingsRow id="other-emails" icon="✉️" label="Other emails" open={openKey === 'other-emails'} onToggle={() => toggleSection('other-emails')}><OtherEmailsSection /></SettingsRow>
+      </SettingsGroup>
+      <SettingsGroup title="Notifications and display">
+        <SettingsRow id="notifications" icon="🔔" label="Email notifications" open={openKey === 'notifications'} onToggle={() => toggleSection('notifications')}>{notifsForm}</SettingsRow>
+        <SettingsRow id="appearance" icon="🌗" label="Appearance" open={openKey === 'appearance'} onToggle={() => toggleSection('appearance')}><DisplaySettings /></SettingsRow>
+      </SettingsGroup>
+      <SettingsGroup title="Privacy">
+        <label className="flex min-h-[52px] items-center gap-3 border-b border-gray-200 px-4 py-2">
+          <span className="w-6 text-center" aria-hidden="true">🙈</span>
+          <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-bone">Private profile</span><span className="block text-xs text-muted">Only you see your saved events and activity</span></span>
+          <input type="checkbox" checked={!!profile.is_profile_private} onChange={togglePrivate} className="h-5 w-5 accent-marigold" />
+        </label>
+        <SettingsRow id="affiliations" icon="🏢" label="Organizations on your profile" open={openKey === 'affiliations'} onToggle={() => toggleSection('affiliations')}><MyAffiliations bare /></SettingsRow>
+        <SettingsRow id="blocked" icon="🚫" label="Blocked accounts" last open={openKey === 'blocked'} onToggle={() => toggleSection('blocked')}><BlockedAccounts /></SettingsRow>
+      </SettingsGroup>
+
+      <div className="mt-8"><DeleteAccountSection /></div>
+
+      </>)}
+
       {openList && (
         <FollowListModal
           email={profile.email}
@@ -449,3 +587,26 @@ export default function Profile() {
 }
 
 // Shows only for people who've been given promoter links.
+
+// Profile cleanup (preview): a labeled group of settings rows, and a row that opens in place.
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-6" aria-label={title}>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</p>
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-surface">{children}</div>
+    </section>
+  );
+}
+function SettingsRow({ id, icon, label, meta, open, onToggle, last, children }: { id: string; icon: string; label: string; meta?: React.ReactNode; open: boolean; onToggle: () => void; last?: boolean; children: React.ReactNode }) {
+  return (
+    <div id={id} className={`scroll-mt-20 ${last ? '' : 'border-b border-gray-200'}`}>
+      <button onClick={onToggle} aria-expanded={open} className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left">
+        <span className="w-6 text-center" aria-hidden="true">{icon}</span>
+        <span className="min-w-0 flex-1 text-sm font-medium text-bone">{label}</span>
+        {meta && <span className="shrink-0 text-xs font-medium">{meta}</span>}
+        <span className={`shrink-0 text-muted transition ${open ? 'rotate-180' : ''}`} aria-hidden="true">⌄</span>
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  );
+}

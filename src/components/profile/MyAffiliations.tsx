@@ -5,11 +5,12 @@ import { toast, toastError } from '../../lib/toast';
 // Profile > Organizations on your profile: featured affiliations show automatically (hide any you like);
 // team memberships are hidden unless you switch them on.
 interface Row { org_id: string; name: string; logo: string | null; kind: 'featured' | 'team'; title: string | null; role: string | null; show_team: boolean | null; hidden: boolean }
-export default function MyAffiliations() {
+export default function MyAffiliations({ bare = false }: { bare?: boolean } = {}) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const load = useCallback(() => { supabase.rpc('my_affiliations').then(({ data }) => setRows((data ?? []) as Row[])); }, []);
   useEffect(() => { load(); }, [load]);
-  if (!rows || rows.length === 0) return null;
+  if (!rows) return null;
+  if (rows.length === 0) return bare ? <p className="text-sm text-muted">Organizations that feature you, or that you're on the team of, show up here.</p> : null;
   // One line per organization: featured wins over team.
   const byOrg = new Map<string, { featured?: Row; team?: Row }>();
   for (const r of rows) { const e = byOrg.get(r.org_id) ?? {}; e[r.kind] = r; byOrg.set(r.org_id, e); }
@@ -19,8 +20,8 @@ export default function MyAffiliations() {
     toast(msg); load();
   }
   return (
-    <div id="affiliations" className="mt-8 scroll-mt-20">
-      <h2 className="mb-2 font-display text-lg font-semibold text-bone">Organizations on your profile</h2>
+    <div id={bare ? undefined : 'affiliations'} className={bare ? '' : 'mt-8 scroll-mt-20'}>
+      {!bare && <h2 className="mb-2 font-display text-lg font-semibold text-bone">Organizations on your profile</h2>}
       <p className="text-sm text-muted">Organizations that feature you show on your profile automatically. Team memberships stay private unless you switch them on.</p>
       <ul className="mt-3 flex flex-col gap-2">
         {[...byOrg.entries()].map(([orgId, { featured, team }]) => {
