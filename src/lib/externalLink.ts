@@ -11,6 +11,7 @@ export function openExternal(url: string, title?: string) {
   const cap = (window as unknown as { Capacitor?: { Plugins?: { Browser?: CapBrowser } } }).Capacitor?.Plugins?.Browser;
   if (cap) { cap.open({ url: href }).catch(() => window.open(href, '_blank', 'noopener')); return; }
   try { if (SOCIAL_HOST.test(new URL(href).hostname)) { openSocial(href); return; } } catch { /* not a valid address */ }
+  if (frameKnown(href)?.ok === false) { openInBrowser(href); return; }
   window.dispatchEvent(new CustomEvent('tapin-open-link', { detail: { url: href, title } }));
 }
 
@@ -63,4 +64,41 @@ export function openSocial(url: string) {
     }
   }
   window.open(href, '_blank', 'noopener');
+}
+
+// Which websites can be shown inside TapIN's viewer (from /frame-check), remembered for an hour, so a tap can go
+// the right way instantly: the viewer for sites that allow it, straight to the browser for sites that don't.
+const FRAME_KEY = 'tapin-frame-check';
+const HOUR = 3600_000;
+type FrameEntry = { ok: boolean; src: string; at: number };
+const frameCache = new Map<string, FrameEntry>();
+try {
+  const saved = JSON.parse(localStorage.getItem(FRAME_KEY) || '{}') as Record<string, FrameEntry>;
+  for (const [k, v] of Object.entries(saved)) if (Date.now() - v.at < HOUR) frameCache.set(k, v);
+} catch { /* private mode */ }
+const saveFrames = () => { try { localStorage.setItem(FRAME_KEY, JSON.stringify(Object.fromEntries([...frameCache].slice(-200)))); } catch { /* full or private */ } };
+const pending = new Map<string, Promise<FrameEntry>>();
+export function frameKnown(url: string): FrameEntry | null {
+  const e = frameCache.get(normalizeUrl(url));
+  return e && Date.now() - e.at < HOUR ? e : null;
+}
+export function checkFrame(url: string): Promise<FrameEntry> {
+  const href = normalizeUrl(url);
+  const known = frameKnown(href);
+  if (known) return Promise.resolve(known);
+  if (!pending.has(href)) {
+    pending.set(href, fetch(`/frame-check?url=${encodeURIComponent(href)}`).then((r) => r.json())
+      .then((j: { embeddable?: boolean; url?: string }) => ({ ok: !!j.embeddable, src: j.url || href, at: Date.now() }))
+      .catch(() => ({ ok: false, src: href, at: Date.now() }))
+      .then((e) => { frameCache.set(href, e); saveFrames(); pending.delete(href); return e; }));
+  }
+  return pending.get(href)!;
+}
+/** Check websites ahead of time (e.g. the places in Make a night of it). */
+export function prefetchFrames(urls: (string | null | undefined)[]) {
+  for (const u of urls) {
+    if (!u) continue;
+    try { if (SOCIAL_HOST.test(new URL(normalizeUrl(u)).hostname)) continue; } catch { continue; }
+    checkFrame(u);
+  }
 }

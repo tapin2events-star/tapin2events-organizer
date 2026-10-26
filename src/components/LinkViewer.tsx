@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { openInBrowser, openSocial, SOCIAL_HOST } from '../lib/externalLink';
+import { openInBrowser, openSocial, SOCIAL_HOST, checkFrame, frameKnown } from '../lib/externalLink';
+import { isNativeApp } from '../lib/displayMode';
 
 // The website viewer: an outside site in a sheet over TapIN, with Close and Open in browser. TapIN first checks
 // (frame-check) whether the site allows being shown inside other sites; if not, it offers Open in browser instead
@@ -30,6 +31,7 @@ export default function LinkViewer() {
       e.preventDefault();
       // Social links: straight to the social app (or its website).
       if (SOCIAL_HOST.test(u.hostname)) { openSocial(u.href); return; }
+      if (frameKnown(u.href)?.ok === false) { openInBrowser(u.href); return; }
       const label = (a.getAttribute('aria-label') || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60);
       setLink({ url: u.href, title: label && !/^(website|link|open|visit)/i.test(label) ? label : undefined });
     };
@@ -39,11 +41,15 @@ export default function LinkViewer() {
   useEffect(() => {
     if (!link) return;
     let alive = true;
-    setState('checking'); setSrc('');
-    fetch(`/frame-check?url=${encodeURIComponent(link.url)}`).then((r) => r.json()).then((j: { embeddable?: boolean; url?: string }) => {
+    const known = frameKnown(link.url);
+    if (known?.ok) { setSrc(known.src); setState('show'); } else { setState('checking'); setSrc(''); }
+    if (!known) checkFrame(link.url).then((r) => {
       if (!alive) return;
-      if (j.embeddable) { setSrc(j.url || link.url); setState('show'); } else setState('blocked');
-    }).catch(() => { if (alive) setState('blocked'); });
+      if (r.ok) { setSrc(r.src); setState('show'); return; }
+      // Inside the TapIN app, skip the extra screen: open the phone's browser right away.
+      if (isNativeApp()) { openInBrowser(link.url); setLink(null); return; }
+      setState('blocked');
+    });
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setLink(null); };
     window.addEventListener('keydown', esc);
     return () => { alive = false; window.removeEventListener('keydown', esc); };
