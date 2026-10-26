@@ -467,7 +467,7 @@ export default function Profile() {
       <DeleteAccountSection />
 
       </>) : (<>
-      {/* Profile cleanup (preview): Edit / View buttons up top, stat cards, saved events first, and settings grouped
+      {/* Profile cleanup (preview): Edit / View buttons up top, stat cards, and settings grouped
           into short lists whose rows open in place (deep links like /profile#payouts open their row). */}
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
@@ -510,37 +510,18 @@ export default function Profile() {
         {user?.email && <ProfileLink email={user.email} className="min-h-[44px] flex-1 whitespace-nowrap rounded-full border border-gray-300 px-4 text-center text-sm font-medium leading-[44px] text-bone">View public profile</ProfileLink>}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link to="/me/stats" className="flex items-center justify-between rounded-2xl border border-gray-200 bg-surface px-3 py-2.5 hover:border-marigold">
-          <span className="text-sm text-muted">Posts and stats</span><span className="font-display font-bold text-bone">{postCount ?? '–'} <span className="text-muted" aria-hidden="true">›</span></span>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <Link to="/me/stats" aria-label="Your posts and stats" className="rounded-2xl border border-gray-200 bg-surface px-3 py-2.5 text-center hover:border-marigold">
+          <span className="block font-display text-lg font-bold text-bone">{postCount ?? '–'}</span><span className="block text-xs text-muted">Posts ›</span>
         </Link>
-        <button onClick={() => setOpenList('followers')} className="flex items-center justify-between rounded-2xl border border-gray-200 bg-surface px-3 py-2.5 text-left hover:border-marigold">
-          <span className="text-sm text-muted">Followers</span><span className="font-display font-bold text-bone">{profile.followers_count ?? 0}</span>
+        <button onClick={() => setOpenList('followers')} className="rounded-2xl border border-gray-200 bg-surface px-3 py-2.5 text-center hover:border-marigold">
+          <span className="block font-display text-lg font-bold text-bone">{profile.followers_count ?? 0}</span><span className="block text-xs text-muted">Followers</span>
+        </button>
+        <button onClick={() => setOpenList('following')} className="rounded-2xl border border-gray-200 bg-surface px-3 py-2.5 text-center hover:border-marigold">
+          <span className="block font-display text-lg font-bold text-bone">{profile.following_count ?? 0}</span><span className="block text-xs text-muted">Following</span>
         </button>
       </div>
-      <button onClick={() => setOpenList('following')} className="mt-1.5 text-xs font-medium text-muted hover:text-bone">Following {profile.following_count ?? 0} ›</button>
 
-      <section className="mt-6" aria-label="Saved events">
-        <div className="flex items-baseline justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saved events</p>
-          {savedEvents.length > 0 && <Link to="/saved" className="text-sm font-medium text-marigold">See all {savedEvents.length} ›</Link>}
-        </div>
-        {upcomingSaved.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">{savedEvents.length ? <>None of your saved events are coming up. <Link to="/saved" className="font-medium text-marigold">See past ones</Link></> : 'Tap the bookmark on any event to keep track of it here.'}</p>
-        ) : (
-          <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
-            {upcomingSaved.slice(0, 8).map((e) => (
-              <Link key={e.id} to={`/events/${e.id}`} className="flex w-48 shrink-0 items-center gap-2.5 rounded-2xl border border-gray-200 bg-surface p-2 hover:border-marigold">
-                {e.poster_url ? <img src={e.poster_url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" /> : <div className="h-12 w-12 shrink-0 rounded-lg bg-gradient-to-br from-indigo-200 to-teal-200" />}
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-bone">{e.title}</span>
-                  {e.start_date && <span className="block text-xs text-muted">{new Date(e.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
 
       {user?.id && user.email && <YourProfile userId={user.id} email={user.email} savedCount={savedEvents.length} vendorAppCounts={vendorAppCounts} networkingOn={networkingOn} />}
 
