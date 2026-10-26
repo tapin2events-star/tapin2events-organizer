@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { openInBrowser } from '../lib/externalLink';
 
 // The website viewer: an outside site in a sheet over TapIN, with Close and Open in browser. TapIN first checks
 // (frame-check) whether the site allows being shown inside other sites; if not, it offers Open in browser instead
@@ -38,7 +39,7 @@ export default function LinkViewer() {
             {link.title && <p className="truncate text-sm font-semibold text-gray-900">{link.title}</p>}
             <p className="truncate text-xs text-gray-500">🔒 {host}</p>
           </div>
-          <a href={link.url} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-full border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-gray-400">Open in browser ↗</a>
+          <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); openInBrowser(link.url); }} className="shrink-0 rounded-full border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-gray-400">Open in browser ↗</a>
         </div>
         <div className="relative min-h-0 flex-1 bg-gray-50">
           {state === 'checking' && <div className="flex h-full items-center justify-center text-sm text-gray-500">Loading {host}…</div>}
@@ -51,7 +52,7 @@ export default function LinkViewer() {
               <p className="text-3xl" aria-hidden="true">🌐</p>
               <p className="mt-2 font-semibold text-gray-900">{host} can&apos;t be shown inside TapIN</p>
               <p className="mt-1 max-w-xs text-sm text-gray-600">Some websites only open in a browser. You&apos;ll come right back to TapIN when you return.</p>
-              <a href={link.url} target="_blank" rel="noopener noreferrer" className="mt-4 rounded-full bg-[#0F1B3D] px-5 py-3 text-sm font-semibold text-white">Open {host} ↗</a>
+              <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.preventDefault(); openInBrowser(link.url); }} className="mt-4 rounded-full bg-[#0F1B3D] px-5 py-3 text-sm font-semibold text-white">Open {host} in your browser ↗</a>
               <button onClick={() => setLink(null)} className="mt-2 px-4 py-2 text-sm text-gray-500">Back to TapIN</button>
             </div>
           )}
