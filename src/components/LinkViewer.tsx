@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { openInBrowser, openSocial, SOCIAL_HOST, checkFrame, frameKnown } from '../lib/externalLink';
-import { isNativeApp } from '../lib/displayMode';
+import { isIOS, isNativeApp } from '../lib/displayMode';
 
 // The website viewer: an outside site in a sheet over TapIN, with Close and Open in browser. TapIN first checks
 // (frame-check) whether the site allows being shown inside other sites; if not, it offers Open in browser instead
@@ -31,8 +31,9 @@ export default function LinkViewer() {
       e.preventDefault();
       // Social links: straight to the social app (or its website).
       if (SOCIAL_HOST.test(u.hostname)) { openSocial(u.href); return; }
-      // Inside the TapIN app the wrapper takes over pages loaded in the viewer: use the phone's browser.
-      if (isNativeApp() || frameKnown(u.href)?.ok === false) { openInBrowser(u.href); return; }
+      // Android app: the phone's browser. iPhone app and web browsers: the viewer (known-blocked sites go straight to
+      // a new tab in web browsers; the iPhone app shows the viewer's explanation screen instead).
+      if ((isNativeApp() && !isIOS()) || (!isNativeApp() && frameKnown(u.href)?.ok === false)) { openInBrowser(u.href); return; }
       const label = (a.getAttribute('aria-label') || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60);
       setLink({ url: u.href, title: label && !/^(website|link|open|visit)/i.test(label) ? label : undefined });
     };
@@ -43,12 +44,12 @@ export default function LinkViewer() {
     if (!link) return;
     let alive = true;
     const known = frameKnown(link.url);
-    if (known?.ok) { setSrc(known.src); setState('show'); } else { setState('checking'); setSrc(''); }
+    if (known?.ok) { setSrc(known.src); setState('show'); } else if (known) { setSrc(''); setState('blocked'); } else { setState('checking'); setSrc(''); }
     if (!known) checkFrame(link.url).then((r) => {
       if (!alive) return;
       if (r.ok) { setSrc(r.src); setState('show'); return; }
-      // Inside the TapIN app, skip the extra screen: open the phone's browser right away.
-      if (isNativeApp()) { openInBrowser(link.url); setLink(null); return; }
+      // Android app: skip the extra screen and open the phone's browser right away.
+      if (isNativeApp() && !isIOS()) { openInBrowser(link.url); setLink(null); return; }
       setState('blocked');
     });
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setLink(null); };
