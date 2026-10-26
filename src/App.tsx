@@ -57,6 +57,7 @@ const TransferAccept = lazyWithRetry(() => import('./pages/TransferAccept'));
 const EmbedPage = lazyWithRetry(() => import('./pages/EmbedPage'));
 const MyPostStats = lazyWithRetry(() => import('./pages/MyPostStats'));
 const UserProfileById = lazyWithRetry(() => import('./pages/UserProfileById'));
+const ShortEventLink = lazyWithRetry(() => import('./pages/ShortEventLink'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
 const MyGroups = lazyWithRetry(() => import('./pages/MyGroups'));
@@ -138,6 +139,7 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/creator/:email" element={<CreatorProfile />} />
             <Route path="/u/:id" element={<UserProfileById />} />
+            <Route path="/e/:code" element={<ShortEventLink />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/vendor-applications" element={<MyVendorApplicationsPage />} />
             <Route path="/resources" element={<ResourceDiscovery />} />

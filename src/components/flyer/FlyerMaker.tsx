@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { eventShortCode } from '../../lib/shortLink';
 import { getShareBase } from '../../lib/shareBase';
 import QRCode from 'qrcode';
 import { supabase } from '../../lib/supabaseClient';
@@ -104,7 +105,7 @@ export default function FlyerMaker({ event, onClose, onUseAsPoster }: { event: F
   // QR code to the event page -- only once the event exists (has been saved).
   useEffect(() => {
     if (!event.id) return;
-    getShareBase(event.id).then((base) => QRCode.toDataURL(`${base}events/${event.id}`, { margin: 1, width: 512 })).then(loadImage).then(setQr).catch(() => setQr(null));
+    Promise.all([getShareBase(event.id), eventShortCode(event.id)]).then(([base, code]) => QRCode.toDataURL(code ? `${base}e/${code}` : `${base}events/${event.id}`, { margin: 1, width: 512 })).then(loadImage).then(setQr).catch(() => setQr(null));
   }, [event.id]);
 
   async function suggest(hasPhoto: boolean) {

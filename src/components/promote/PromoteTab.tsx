@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ShortLinkCard from './ShortLinkCard';
 import CreatorProgramCard from './CreatorProgramCard';
 import { useShareBase } from '../../lib/shareBase';
 import PeopleInput from '../PeopleInput';
@@ -67,6 +68,7 @@ export default function PromoteTab({ eventId }: { eventId: string }) {
   const linkRevenue = allLinks.reduce((n, l) => n + l.revenue, 0);
   return (
     <div>
+      <ShortLinkCard eventId={eventId} />
       <BoostCard eventId={eventId} />
       <CreatorProgramCard eventId={eventId} />
       <div className="flex flex-wrap items-start justify-between gap-2">
