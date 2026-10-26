@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PartOfOrgs from '../components/profile/PartOfOrgs';
 import { useProfileId } from '../lib/profileLinks';
 import ProfileExtras from '../components/profile/ProfileExtras';
 import Sheet from '../components/scouting/Sheet';
@@ -308,6 +309,7 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
       )}
 
       {!blocked && <ProfileExtras email={decodedEmail} />}
+      {!blocked && accountId && <PartOfOrgs userId={accountId} className="mt-6" />}
 
       <div className="mt-8">
         <div className="flex gap-1 border-b border-gray-200">

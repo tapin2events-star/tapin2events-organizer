@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PartOfOrgs from '../components/profile/PartOfOrgs';
 import HeaderVideo, { useHeaderVideo } from '../components/video/HeaderVideo';
 import ShareQR from '../components/ShareQR';
 import SaveToBoard from '../components/scouting/SaveToBoard';
@@ -225,6 +226,8 @@ export default function ResourceProfile() {
               <h2 className="font-display text-lg font-semibold text-gray-900">About</h2>
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
+
+            {!isGroup && <PartOfOrgs resourceId={resource.id} className="mt-6 border-t border-gray-200 pt-6" />}
 
             <div id="shop" className="scroll-mt-24"><ShopSection ownerType="resource" ownerId={resource.id} /></div>
 

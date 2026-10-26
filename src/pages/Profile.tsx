@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import MyAffiliations from '../components/profile/MyAffiliations';
 import OtherEmailsSection from '../components/OtherEmailsSection';
 import PhotoCropper from '../components/PhotoCropper';
 import { webSafeImage } from '../lib/webImage';
@@ -269,6 +270,8 @@ export default function Profile() {
         <PasswordSection email={user?.email ?? ''} />
       </div>
 
+
+      <MyAffiliations />
 
       <div id="other-emails" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 font-display text-lg font-semibold text-bone">Other emails</h2>
