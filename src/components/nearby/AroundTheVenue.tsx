@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ExternalLink from '../ExternalLink';
 import PremiumBadge from '../business/PremiumBadge';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -85,7 +86,7 @@ export default function AroundTheVenue({ eventId }: { eventId: string }) {
                 </div>
                 {(p.website || d.can_manage || user) && (
                   <div className="mt-1.5 flex flex-wrap gap-x-4 text-xs">
-                    {p.website && <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noopener" className="font-medium text-marigold">Website</a>}
+                    {p.website && <ExternalLink href={p.website} title={p.name} className="font-medium text-marigold">Website</ExternalLink>}
                     {user && <button onClick={() => save(p)} className={`font-medium ${p.saved ? 'text-amber-700' : 'text-gray-600'}`} aria-pressed={!!p.saved}>{p.saved ? '★ Saved' : '☆ Save'}</button>}
                     {d.can_recommend && <button onClick={() => pin(p)} className="font-medium text-gray-600">{p.pinned ? 'Stop recommending' : '📌 Recommend to everyone'}</button>}
                     {d.can_manage && <button onClick={() => hide(p)} className="text-gray-500">{p.hidden ? 'Show' : 'Hide'}</button>}

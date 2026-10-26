@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import ExternalLink from '../ExternalLink';
 import { MySessions, SessionSignupControl, useSessionSignups } from './SessionSignups';
 import { useFeature } from '../../lib/preview';
 import { Link } from 'react-router-dom';
@@ -150,7 +151,7 @@ export default function BusinessEventSections({ event, data }: { event: TapEvent
                     const size = i === 0 ? 'h-16 w-40' : i === 1 ? 'h-12 w-32' : 'h-10 w-24';
                     const inner = s.logo_url ? <img src={s.logo_url} alt={s.name} className={`${size} object-contain`} /> : <span className="px-3 py-2 text-sm font-semibold text-gray-700">{s.name}</span>;
                     return s.website
-                      ? <a key={s.id} href={s.website} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-gray-100 bg-white p-3 hover:border-gray-300" title={s.name}>{inner}</a>
+                      ? <ExternalLink key={s.id} href={s.website} className="rounded-xl border border-gray-100 bg-white p-3 hover:border-gray-300" title={s.name}>{inner}</ExternalLink>
                       : <span key={s.id} className="rounded-xl border border-gray-100 bg-white p-3" title={s.name}>{inner}</span>;
                   })}
                 </div>

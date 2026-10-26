@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import LinkViewer from './components/LinkViewer';
 import Toaster from './components/Toaster';
 import MeetingRedirect from './components/MeetingRedirect';
 import DomainGate from './components/DomainGate';
@@ -85,6 +86,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Toaster />
+        <LinkViewer />
         <AppErrorBoundary><TourProvider><DomainGate><Routes>
           <Route path="/login" element={<Login />} />
           <Route

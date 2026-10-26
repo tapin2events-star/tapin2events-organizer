@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ExternalLink from '../components/ExternalLink';
 import GiftAddOn from '../components/business/GiftAddOn';
 import EventPerks from '../components/nearby/EventPerks';
 import AroundTheVenue from '../components/nearby/AroundTheVenue';
@@ -999,9 +1000,9 @@ export default function PublicEventDetail() {
                     <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{tier.tier_name}</span>
                     {tier.sponsors.map((s) => (
                       s.website ? (
-                        <a key={s.name} href={s.website} target="_blank" rel="noopener noreferrer" className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+                        <ExternalLink key={s.name} href={s.website} title={s.name} className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
                           {s.name}
-                        </a>
+                        </ExternalLink>
                       ) : (
                         <span key={s.name} className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700">{s.name}</span>
                       )

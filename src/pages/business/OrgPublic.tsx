@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ExternalLink from '../../components/ExternalLink';
 import { OrgAlbumsSection } from '../../components/business/OrgAlbums';
 import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing } from '../../components/video/HeaderVideo';
 import { cachedRole, loadRole } from '../../lib/orgFollows';
@@ -84,7 +85,7 @@ function OrgPublicInner({ slugOverride, embedded = false }: { slugOverride?: str
         {org.tagline && <p className="mt-5 text-lg font-medium">{org.tagline}</p>}
         {org.description && <p className="mt-3 whitespace-pre-wrap leading-relaxed opacity-80">{org.description}</p>}
         <div className="mt-3 flex flex-wrap gap-4 text-sm">
-          {org.website && <a href={org.website} target="_blank" rel="noopener noreferrer" className="font-medium" style={{ color: b.accent }}>Website ↗</a>}
+          {org.website && <ExternalLink href={org.website} title={org.name} className="font-medium" style={{ color: b.accent }}>Website ↗</ExternalLink>}
           {org.contact_email && <a href={`mailto:${org.contact_email}`} className="font-medium" style={{ color: b.accent }}>Contact</a>}
         </div>
 
