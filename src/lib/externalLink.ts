@@ -24,7 +24,13 @@ export function openInBrowser(url: string) {
       window.location.href = `intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=${u.protocol.replace(':', '')};action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeURIComponent(href)};end`;
       return;
     }
-    if (isIOS()) { window.location.href = href.replace(/^https?:\/\//i, (m) => `x-safari-${m.toLowerCase()}`); return; }
+    if (isIOS()) {
+      // Older iPhones (before iOS 17) ignore x-safari links: if TapIN is still showing a moment later, open it normally.
+      const fallback = window.setTimeout(() => { if (document.visibilityState === 'visible') window.open(href, '_blank', 'noopener'); }, 1200);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') window.clearTimeout(fallback); }, { once: true });
+      window.location.href = href.replace(/^https?:\/\//i, (m) => `x-safari-${m.toLowerCase()}`);
+      return;
+    }
   }
   window.open(href, '_blank', 'noopener');
 }
