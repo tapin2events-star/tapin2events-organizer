@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import ResourceProfile from './ResourceProfile';
 import PartOfOrgs from '../components/profile/PartOfOrgs';
 import { useProfileId } from '../lib/profileLinks';
+import ProfileExtras from '../components/profile/ProfileExtras';
 import Sheet from '../components/scouting/Sheet';
 import ShareQR from '../components/ShareQR';
 import NetCard from '../components/networking/NetCard';
@@ -35,7 +35,6 @@ interface Post {
   id: string;
   thumbnail_url: string | null;
   caption: string | null;
-  view_count?: number | null;
 }
 
 // A post someone else tagged this person in.
@@ -68,12 +67,7 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
   const [events, setEvents] = useState<CreatorEvent[]>([]);
   const [products, setProducts] = useState<CreatorProduct[]>([]);
   const [resourceId, setResourceId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'artist' | 'posts' | 'tagged' | 'events' | 'shop'>(() => {
-    const q = new URLSearchParams(window.location.search).get('tab');
-    return q === 'artist' || window.location.hash === '#book' ? 'artist' : 'posts';
-  });
-  // Opens on a tab with something in it (unless the address asked for one).
-  const [tabChosen, setTabChosen] = useState(() => !!new URLSearchParams(window.location.search).get('tab') || window.location.hash === '#book');
+  const [tab, setTab] = useState<'posts' | 'tagged' | 'events' | 'shop'>('posts');
   const [tagged, setTagged] = useState<TaggedTile[]>([]);
   const [removingTagId, setRemovingTagId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -120,7 +114,7 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
           .single(),
         supabase
           .from('posts')
-          .select('id, thumbnail_url, caption, view_count')
+          .select('id, thumbnail_url, caption')
           .eq('author_email', decodedEmail)
           .eq('status', 'active').eq('feed_visible', true)
           .order('created_at', { ascending: false }),
@@ -165,6 +159,7 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
       const authorName = new Map((authors ?? []).map((a) => [a.email as string, (a.full_name as string | null)?.trim() || 'Creator']));
       setTagged(rows.map((r) => ({ post_id: r.post_id, thumbnail_url: r.post.thumbnail_url, caption: r.post.caption, author_name: authorName.get(r.post.author_email) ?? 'Creator' })));
       // Open on whichever tab has something to show.
+      setTab((postRows ?? []).length > 0 ? 'posts' : (eventRows ?? []).length > 0 ? 'events' : (productRows ?? []).length > 0 ? 'shop' : 'posts');
       setIsFollowing(!!followRow);
       setLoading(false);
     })();
@@ -185,22 +180,6 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
     setFollowBusy(false);
   }
 
-  // Open on a tab with something in it: videos, else the artist tab, else events, else the shop.
-  useEffect(() => {
-    if (loading || tabChosen) return;
-    setTab(posts.length ? 'posts' : resourceId ? 'artist' : events.length ? 'events' : products.length ? 'shop' : 'posts');
-  }, [loading, tabChosen, posts.length, resourceId, events.length, products.length]);
-  // Coming up: their next events (hosting), soonest first.
-  const upcoming = events
-    .filter((e) => !e.parent_event_id && (e.end_date || e.start_date) && new Date((e.end_date || e.start_date) as string).getTime() > Date.now())
-    .sort((a, b) => +new Date(a.start_date ?? 0) - +new Date(b.start_date ?? 0)).slice(0, 8);
-  const checklist = profile ? [
-    { label: 'Add a profile photo', done: !!profile.profile_photo, to: '/profile' },
-    { label: 'Write a short bio', done: !!profile.bio, to: '/profile' },
-    { label: 'Share your first video', done: posts.length > 0, to: '/feed' },
-    { label: 'Create an artist profile to get booked', done: !!resourceId, to: '/resources/new' },
-  ] : [];
-
   if (loading) return <ProfileSkeleton />;
   if (!profile) return <p className="p-6 text-muted">This profile could not be found.</p>;
 
@@ -210,18 +189,32 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="flex items-center justify-between gap-3">
         <BackButton fallback="/feed" fallbackLabel="Feed" />
+        {profileQrOn && (
+          <ShareQR path={accountId ? `/u/${accountId}` : '/'} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile"
+            label={isOwnProfile ? 'Share my profile' : 'Share'} track="profile_qr"
+            className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm" />
+        )}
       </div>
 
       <div className="mt-4 flex items-center gap-4">
         {profile.profile_photo ? (
-          <img src={profile.profile_photo} alt="" className="h-24 w-24 shrink-0 rounded-full object-cover ring-4 ring-white shadow-md sm:h-28 sm:w-28" />
+          <img src={profile.profile_photo} alt="" className="h-20 w-20 rounded-full object-cover" />
         ) : (
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal font-display text-3xl font-bold text-white ring-4 ring-white shadow-md sm:h-28 sm:w-28">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal font-display text-2xl font-bold text-white">
             {(profile.full_name || profile.email).charAt(0).toUpperCase()}
           </div>
         )}
         <div>
-          <h1 className="font-display text-2xl font-bold leading-tight text-bone">{profile.full_name || 'TapIN member'}</h1>
+          <p className="font-display text-xl font-bold text-bone">{profile.full_name || profile.email}</p>
+          {shared.filter((x) => !x.connected).slice(0, 1).map((x) => (
+            <div key={x.event_id} className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm">
+              <p className="text-gray-800">🤝 You're both going to <strong>{x.title}</strong></p>
+              {x.i_joined
+                ? <button onClick={async () => { const { error } = await supabase.rpc('connect_in_person', { p_event_id: x.event_id, p_email: email }); setConnMsg(error ? "Couldn't connect." : "You're connected! Their contact info is in your connections."); if (!error) setShared((l) => l.map((y) => (y.event_id === x.event_id ? { ...y, connected: true } : y))); }} className="mt-1.5 rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Connect</button>
+                : <Link to={`/events/${x.event_id}/network?connect=${encodeURIComponent(email ?? '')}`} className="mt-1.5 inline-block rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Join networking & connect</Link>}
+            </div>
+          ))}
+          {connMsg && <p className="mt-1 text-sm text-green-700">{connMsg}</p>}
           {pro && (pro.title || pro.company) && (
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-muted">
               {(pro.title || pro.company) && <span>{[pro.title, pro.company].filter(Boolean).join(' · ')}</span>}
@@ -229,116 +222,14 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
           )}
           <div className="mt-1 flex gap-2">
             {profile.is_organizer && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-marigold">💼 Organizer</span>}
-            {(resourceId || profile.is_resource) && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple">🎤 Artist</span>}
-          </div>
-          <div className="mt-2 flex items-center gap-5">
-            <div><p className="font-display text-base font-bold leading-tight text-bone">{posts.length}</p><p className="text-[11px] text-muted">{posts.length === 1 ? 'Video' : 'Videos'}</p></div>
-            <button onClick={() => setOpenList('followers')} className="text-left"><p className="font-display text-base font-bold leading-tight text-bone">{profile.followers_count ?? 0}</p><p className="text-[11px] text-muted">Followers</p></button>
-            <button onClick={() => setOpenList('following')} className="text-left"><p className="font-display text-base font-bold leading-tight text-bone">{profile.following_count ?? 0}</p><p className="text-[11px] text-muted">Following</p></button>
+            {profile.is_resource && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple">🎤 Artist & services</span>}
           </div>
         </div>
       </div>
 
       {profile.bio && <p className="mt-3 text-sm text-muted">{profile.bio}</p>}
-
-
-      <div className="mt-4 flex gap-2">
-        {!isOwnProfile && user && !blocked && (
-          <button onClick={toggleFollow} disabled={followBusy}
-            className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-full px-3 text-sm font-semibold disabled:opacity-50 sm:flex-none sm:px-5 ${isFollowing ? 'border border-gray-300 text-bone' : 'bg-marigold text-white'}`}>
-            {isFollowing ? 'Following' : 'Follow'}
-          </button>
-        )}
-        {!isOwnProfile && !user && (
-          <Link to="/login" state={{ from: window.location.pathname }} className="min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-full bg-marigold px-3 text-center text-sm font-semibold leading-[44px] text-white sm:flex-none sm:px-5">Follow</Link>
-        )}
-        {resourceId && !isOwnProfile && (
-          <button onClick={() => { setTab('artist'); setTabChosen(true); window.history.replaceState(null, '', `${window.location.pathname}?tab=artist#book`); setTimeout(() => document.getElementById('book')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350); }}
-            className="min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-full border border-purple-300 bg-purple-50 px-3 text-sm font-semibold text-purple sm:flex-none sm:px-5">🎤 Book</button>
-        )}
-        {isOwnProfile && (
-          <Link to="/profile" className="min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-full border border-gray-300 px-3 text-center text-sm font-semibold leading-[44px] text-bone sm:flex-none sm:px-5">Edit profile</Link>
-        )}
-        {profileQrOn && (
-          <ShareQR path={accountId ? `/u/${accountId}` : '/'} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile"
-            label="Share" track="profile_qr"
-            className="inline-flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-gray-300 px-3 text-sm font-semibold text-bone sm:flex-none sm:px-5" />
-        )}
-        {!isOwnProfile && user && !blocked && !showBlock && (
-          <button onClick={() => setShowBlock(true)} aria-label="More options" title="More options" className="min-h-[44px] w-11 shrink-0 rounded-full border border-gray-300 text-lg font-bold leading-none text-muted">⋯</button>
-        )}
-      </div>
-
-      {!isOwnProfile && user && (
-        blocked ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-            <span>You blocked {profile.full_name || 'this person'}. You won't see their posts or comments.</span>
-            <button onClick={async () => { if (user?.email && await unblockUser(user.email, profile.email)) { setBlocked(false); window.location.reload(); } }} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold">Unblock</button>
-          </div>
-        ) : showBlock ? (
-          <div className="mt-4 max-w-sm">
-            <BlockConfirm name={profile.full_name || 'this person'} onBlock={async () => {
-              if (user?.email && await blockUser(user.email, profile.email)) { setBlocked(true); setIsFollowing(false); setPosts([]); setShowBlock(false); }
-            }} />
-            <button onClick={() => setShowBlock(false)} className="mt-1 text-xs text-muted">Never mind</button>
-          </div>
-        ) : (
-          null
-        )
-      )}
-
-
-      {isOwnProfile && checklist.some((c) => !c.done) && (
-        <section className="mt-6 rounded-2xl border border-dashed border-gray-300 p-4" aria-label="Finish your profile">
-          <p className="text-sm font-semibold text-bone">✨ Finish your profile <span className="font-normal text-muted">(only you see this)</span></p>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {checklist.map((c) => (
-              <li key={c.label}>
-                <Link to={c.to} className={`flex items-center gap-2 text-sm ${c.done ? 'text-muted line-through' : 'text-bone hover:text-marigold'}`}>
-                  <span aria-hidden="true">{c.done ? '✅' : '⬜'}</span>{c.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {!blocked && shared.some((x) => !x.connected) && (
-        <div className="mt-4">
-        {shared.filter((x) => !x.connected).slice(0, 1).map((x) => (
-          <div key={x.event_id} className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm">
-            <p className="text-gray-800">🤝 You're both going to <strong>{x.title}</strong></p>
-            {x.i_joined
-              ? <button onClick={async () => { const { error } = await supabase.rpc('connect_in_person', { p_event_id: x.event_id, p_email: email }); setConnMsg(error ? "Couldn't connect." : "You're connected! Their contact info is in your connections."); if (!error) setShared((l) => l.map((y) => (y.event_id === x.event_id ? { ...y, connected: true } : y))); }} className="mt-1.5 rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Connect</button>
-              : <Link to={`/events/${x.event_id}/network?connect=${encodeURIComponent(email ?? '')}`} className="mt-1.5 inline-block rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Join networking & connect</Link>}
-          </div>
-        ))}
-        </div>
-      )}
-      {connMsg && <p className="mt-2 text-sm text-green-700">{connMsg}</p>}
-
-      {!blocked && upcoming.length > 0 && (
-        <section className="mt-6" aria-label="Coming up">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Coming up</p>
-          <div className="-mx-1 mt-2 flex gap-3 overflow-x-auto px-1 pb-1">
-            {upcoming.map((e) => (
-              <Link key={e.id} to={`/events/${e.id}`} className="w-44 shrink-0 overflow-hidden rounded-2xl border border-gray-200 bg-white hover:border-marigold">
-                {e.poster_url ? <img src={e.poster_url} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-indigo-100 to-teal-100 text-2xl" aria-hidden="true">🎟️</div>}
-                <span className="block p-2.5">
-                  <span className="block text-[11px] font-bold uppercase text-marigold">{e.start_date ? new Date(e.start_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA'}</span>
-                  <span className="mt-0.5 line-clamp-2 block text-sm font-semibold text-gray-900">{e.title}</span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {!blocked && accountId && <PartOfOrgs userId={accountId} className="mt-6" />}
-      {!blocked && <GroupBadges email={profile.email} className="mt-3" />}
-
       {pro && (pro.title || pro.company || pro.intro || (pro.looking_for ?? []).length > 0 || pro.linkedin) && (
-        <button onClick={() => setCardOpen(true)} className="mt-5 flex w-full max-w-sm items-center gap-3 rounded-2xl border border-gray-200 bg-surface p-3 text-left hover:border-marigold">
+        <button onClick={() => setCardOpen(true)} className="mt-3 flex w-full max-w-sm items-center gap-3 rounded-2xl border border-gray-200 bg-surface p-3 text-left hover:border-marigold">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 text-sm" aria-hidden="true">🤝</span>
           <span className="min-w-0 flex-1">
             <span className="block text-[11px] font-bold uppercase tracking-wide text-muted">Networking card</span>
@@ -361,10 +252,68 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
         </Sheet>
       )}
 
+      <GroupBadges email={profile.email} className="mt-3" />
+
+      {resourceId && (
+        <Link
+          to={`/resources/${resourceId}`}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple hover:border-purple-300"
+        >
+          🎤 See their artist profile, bookings & shop &rarr;
+        </Link>
+      )}
+
+      <div className="mt-4 flex items-center gap-6">
+        <div>
+          <p className="text-center font-display text-lg font-bold text-bone">{posts.length}</p>
+          <p className="text-xs text-muted">{posts.length === 1 ? 'Video' : 'Videos'}</p>
+        </div>
+        <button onClick={() => setOpenList('followers')} className="text-left">
+          <p className="text-center font-display text-lg font-bold text-bone">{profile.followers_count ?? 0}</p>
+          <p className="text-xs text-muted">Followers</p>
+        </button>
+        <button onClick={() => setOpenList('following')} className="text-left">
+          <p className="text-center font-display text-lg font-bold text-bone">{profile.following_count ?? 0}</p>
+          <p className="text-xs text-muted">Following</p>
+        </button>
+
+        {!isOwnProfile && user && !blocked && (
+          <button
+            onClick={toggleFollow}
+            disabled={followBusy}
+            className={`ml-auto rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-50 ${
+              isFollowing ? 'border border-gray-300 text-bone' : 'bg-marigold text-white'
+            }`}
+          >
+            {isFollowing ? 'Following' : 'Follow'}
+          </button>
+        )}
+      </div>
+
+      {!isOwnProfile && user && (
+        blocked ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            <span>You blocked {profile.full_name || 'this person'}. You won't see their posts or comments.</span>
+            <button onClick={async () => { if (user?.email && await unblockUser(user.email, profile.email)) { setBlocked(false); window.location.reload(); } }} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold">Unblock</button>
+          </div>
+        ) : showBlock ? (
+          <div className="mt-4 max-w-sm">
+            <BlockConfirm name={profile.full_name || 'this person'} onBlock={async () => {
+              if (user?.email && await blockUser(user.email, profile.email)) { setBlocked(true); setIsFollowing(false); setPosts([]); setShowBlock(false); }
+            }} />
+            <button onClick={() => setShowBlock(false)} className="mt-1 text-xs text-muted">Never mind</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowBlock(true)} className="mt-3 text-xs text-muted hover:text-red-600">Block</button>
+        )
+      )}
+
+      {!blocked && <ProfileExtras email={decodedEmail} />}
+      {!blocked && accountId && <PartOfOrgs userId={accountId} className="mt-6" />}
+
       <div className="mt-8">
-        <div className="sticky top-0 z-10 -mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 bg-surface/95 px-4 backdrop-blur">
+        <div className="flex gap-1 border-b border-gray-200">
           {([
-            ...(resourceId ? [{ id: 'artist' as const, label: '🎤 Artist' }] : []),
             { id: 'posts', label: `Videos (${posts.length})` },
             ...(tagged.length > 0 ? [{ id: 'tagged' as const, label: `Tagged (${tagged.length})` }] : []),
             { id: 'events', label: `Events (${new Set(events.map((e) => e.parent_event_id ?? e.id)).size})` },
@@ -372,8 +321,8 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
           ] as const).map((t) => (
             <button
               key={t.id}
-              onClick={() => { setTab(t.id); setTabChosen(true); }}
-              className={`min-h-[44px] shrink-0 whitespace-nowrap px-4 text-sm font-medium ${tab === t.id ? 'border-b-2 border-marigold text-marigold' : 'text-muted hover:text-bone'}`}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 text-sm font-medium ${tab === t.id ? 'border-b-2 border-marigold text-marigold' : 'text-muted hover:text-bone'}`}
             >
               {t.label}
             </button>
@@ -409,24 +358,20 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
             ))}
           </div>
         )}
-        {tab === 'artist' && resourceId && <div className="mt-4"><ResourceProfile embeddedId={resourceId} /></div>}
-        {tab === 'events' && (events.length ? <CreatorEvents events={events} /> : <p className="mt-6 text-center text-sm text-muted">No events yet.</p>)}
+        {tab === 'events' && <CreatorEvents events={events} />}
         {tab === 'shop' && <CreatorProducts products={products} />}
         {tab === 'posts' && (posts.length === 0 ? (
-          <p className="mt-6 text-center text-sm text-muted">{isOwnProfile ? 'Share your first video on the Feed and it will show up here.' : 'No videos yet.'}</p>
+          <p className="mt-2 text-sm text-muted">No videos yet.</p>
         ) : isOwnProfile ? (
           <MyPostsManager posts={posts} onPostsChange={setPosts} />
         ) : (
           <div className="mt-3 grid grid-cols-3 gap-1">
             {posts.map((post) => (
-              <Link key={post.id} to={`/feed?post=${post.id}`} className="relative block aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
+              <Link key={post.id} to={`/feed?post=${post.id}`} className="block aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
                 {post.thumbnail_url ? (
                   <img src={post.thumbnail_url} alt={post.caption ?? ''} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-2xl">🎥</div>
-                )}
-                {(post.view_count ?? 0) >= 100 && (
-                  <span className="absolute bottom-1 left-1.5 text-[11px] font-semibold text-white drop-shadow">▶ {(post.view_count ?? 0) >= 1000 ? `${((post.view_count ?? 0) / 1000).toFixed(1).replace(/\.0$/, '')}K` : post.view_count}</span>
                 )}
               </Link>
             ))}

@@ -16,7 +16,7 @@ const FEED_PREVIEW = 6;
 
 // Public "Media" section on a resource profile: music and video players from
 // links, the creator's TapIN feed videos, and photo albums.
-export default function ResourceMediaSection({ resourceId, resourceEmail, groupId, hideFeedVideos = false }: { resourceId: string; resourceEmail: string; groupId?: string; hideFeedVideos?: boolean }) {
+export default function ResourceMediaSection({ resourceId, resourceEmail, groupId }: { resourceId: string; resourceEmail: string; groupId?: string }) {
   const [items, setItems] = useState<ResourceMedia[]>([]);
   const [albums, setAlbums] = useState<ResourceAlbum[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -93,7 +93,7 @@ export default function ResourceMediaSection({ resourceId, resourceEmail, groupI
         </div>
       )}
 
-      {!hideFeedVideos && posts.length > 0 && (
+      {posts.length > 0 && (
         <div>
           <div className="flex items-baseline justify-between">
             {heading(`Videos on TapIN · ${videoCount}`)}

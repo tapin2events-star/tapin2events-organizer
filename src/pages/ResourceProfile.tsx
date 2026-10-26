@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useProfileId } from '../lib/profileLinks';
 import PartOfOrgs from '../components/profile/PartOfOrgs';
 import HeaderVideo, { useHeaderVideo } from '../components/video/HeaderVideo';
 import ShareQR from '../components/ShareQR';
@@ -26,12 +25,8 @@ function pricingLabel(r: Resource) {
 }
 
 
-// embeddedId: shown as the Artist tab inside a person's combined profile (no back/follow/share of its own).
-// Opened on its own (/resources/:id), an individual's artist profile moves to their combined profile's Artist tab.
-export default function ResourceProfile({ embeddedId }: { embeddedId?: string } = {}) {
-  const params = useParams<{ id: string }>();
-  const id = embeddedId ?? params.id;
-  const embedded = !!embeddedId;
+export default function ResourceProfile() {
+  const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
   const { user, isAdmin } = useAuth();
@@ -143,11 +138,6 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
   // Arriving from the feed's "Book [Name]" button (/resources/:id#book).
   // Declared before the early returns below: hooks must run on every render.
   const location = useLocation();
-  const goTo = useNavigate();
-  const ownerId = useProfileId(!embedded && resource && resource.kind !== 'group' ? resource.email : null);
-  useEffect(() => {
-    if (!embedded && ownerId) goTo(`/u/${ownerId}?tab=artist${location.hash}`, { replace: true });
-  }, [embedded, ownerId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (loading || !resource || location.hash !== '#book') return;
     setTimeout(() => document.getElementById('book')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
@@ -170,11 +160,10 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
   const averageRating = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
   return (
-    <div className={embedded ? '' : 'min-h-screen bg-gradient-to-br from-indigo-50 to-white'}>
-      <div className={embedded ? '' : 'mx-auto max-w-5xl px-4 py-10'}>
-        {!embedded && <BackButton fallback="/resources" fallbackLabel="Artists & vendors" />}
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+      <div className="mx-auto max-w-5xl px-4 py-10">
+        <BackButton fallback="/resources" fallbackLabel="Artists & vendors" />
 
-        {!embedded && (<>
         {headerVideo ? (
           <div className="relative mt-4 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-gray-900"><HeaderVideo src={headerVideo.src} poster={headerVideo.poster ?? resource.cover_image ?? resource.profile_image ?? null} postId={headerVideo.id} /></div>
         ) : (resource.cover_image || resource.profile_image) ? (
@@ -184,13 +173,11 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
             <span className="font-display text-6xl font-extrabold text-indigo-300">{resource.display_name.charAt(0)}</span>
           </div>
         )}
-        </>)}
 
-        <div className={embedded ? 'flex flex-col' : 'mt-6 grid grid-cols-1 gap-8 md:grid-cols-3'}>
-          <div className={embedded ? 'contents' : 'md:col-span-2'}>
+        <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="md:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-{!embedded && (<>
                 <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl font-bold text-gray-900">
                   {isGroup && resource.cover_image && resource.profile_image && <img src={resource.profile_image} alt="" className="h-10 w-10 rounded-full object-cover" />}
                   {resource.display_name}
@@ -200,7 +187,6 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
                 <p className="mt-1 text-sm text-gray-500">
                   {[resource.city, resource.state].filter(Boolean).join(', ') || resource.location || 'Location not listed'}
                 </p>
-                </>)}
               </div>
               <span className="rounded-full border border-green-600 px-3 py-1 text-sm font-medium text-green-600">
                 {pricingLabel(resource)}
@@ -222,13 +208,13 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              {!embedded && <FollowButton email={resource.email} />}
+              <FollowButton email={resource.email} />
               {user && user.email !== resource.email && <SaveToBoard resourceId={resource.id} name={resource.display_name} />}
               {shopCount > 0 && (
                 <button type="button" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   className="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm font-semibold text-gray-800 hover:border-marigold">🛍️ Shop ({shopCount})</button>
               )}
-              {!embedded && <ShareQR path={`/resources/${resource.id}`} title={resource.display_name} subtitle={isGroup ? 'Group on TapIN' : 'Artist & services on TapIN'} />}
+              <ShareQR path={`/resources/${resource.id}`} title={resource.display_name} subtitle={isGroup ? 'Group on TapIN' : 'Artist & services on TapIN'} />
             </div>
             {!isGroup && <GroupBadges email={resource.email} className="mt-3" />}
 
@@ -236,30 +222,30 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
               {reviews.length > 0 ? `\u2605 ${averageRating.toFixed(1)} average (${reviews.length} review${reviews.length === 1 ? '' : 's'})` : 'No reviews yet'}
             </p>
 
-            <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-2' : ''}`}>
+            <div className="mt-6 border-t border-gray-200 pt-6">
               <h2 className="font-display text-lg font-semibold text-gray-900">About</h2>
               <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.bio}</p>
             </div>
 
-            {!isGroup && !embedded && <PartOfOrgs resourceId={resource.id} className="mt-6 border-t border-gray-200 pt-6" />}
+            {!isGroup && <PartOfOrgs resourceId={resource.id} className="mt-6 border-t border-gray-200 pt-6" />}
 
-            <div id="shop" className={`scroll-mt-24 ${embedded ? 'order-5' : ''}`}><ShopSection ownerType="resource" ownerId={resource.id} /></div>
+            <div id="shop" className="scroll-mt-24"><ShopSection ownerType="resource" ownerId={resource.id} /></div>
 
-            <div className={embedded ? 'order-6' : ''}><UpcomingAppearances resourceId={resource.id} name={resource.display_name} /></div>
+            <UpcomingAppearances resourceId={resource.id} name={resource.display_name} />
 
             {isGroup && <GroupMembersSection groupId={resource.id} />}
 
-            <div className={embedded ? 'order-8' : ''}><ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} groupId={isGroup ? resource.id : undefined} hideFeedVideos={embedded} /></div>
+            <ResourceMediaSection resourceId={resource.id} resourceEmail={resource.email} groupId={isGroup ? resource.id : undefined} />
 
             {resource.pricing_details && (
-              <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-1' : ''}`}>
+              <div className="mt-6 border-t border-gray-200 pt-6">
                 <h2 className="font-display text-lg font-semibold text-gray-900">Pricing details</h2>
                 <p className="mt-2 whitespace-pre-wrap text-gray-600">{resource.pricing_details}</p>
               </div>
             )}
 
             {visibleLinks({ instagram: resource.instagram_url, facebook: resource.facebook_url, youtube: resource.youtube_url, website: resource.website_url }).length > 0 && (
-              <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-7' : ''}`}>
+              <div className="mt-6 border-t border-gray-200 pt-6">
                 <EventLinks
                   title="Links"
                   links={{ instagram: resource.instagram_url, facebook: resource.facebook_url, youtube: resource.youtube_url, website: resource.website_url }}
@@ -268,7 +254,7 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
             )}
 
             {reviews.length > 0 && (
-              <div className={`mt-6 border-t border-gray-200 pt-6 ${embedded ? 'order-4' : ''}`}>
+              <div className="mt-6 border-t border-gray-200 pt-6">
                 <h2 className="font-display text-lg font-semibold text-gray-900">Reviews</h2>
                 <div className="mt-3 flex flex-col gap-3">
                   {reviews.map((r) => (
@@ -283,7 +269,7 @@ export default function ResourceProfile({ embeddedId }: { embeddedId?: string } 
 
           </div>
 
-          <div className={embedded ? 'order-3 mt-6' : 'md:sticky md:top-6 md:self-start'}>
+          <div className="md:sticky md:top-6 md:self-start">
             <div id="book" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-xs uppercase tracking-widest text-gray-400">{isGroup ? 'Book this group' : 'Book this resource'}</p>
               <p className="mt-1 font-display text-lg font-bold text-gray-900">{resource.display_name}</p>
