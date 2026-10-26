@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import OrgsAndGroups from '../components/profile/OrgsAndGroups';
 import PartOfOrgs from '../components/profile/PartOfOrgs';
 import { useProfileId } from '../lib/profileLinks';
 import ProfileExtras from '../components/profile/ProfileExtras';
@@ -67,6 +68,7 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
   const [events, setEvents] = useState<CreatorEvent[]>([]);
   const [products, setProducts] = useState<CreatorProduct[]>([]);
   const [resourceId, setResourceId] = useState<string | null>(null);
+  const cleanup = useFeature('profile_cleanup');
   const [tab, setTab] = useState<'posts' | 'tagged' | 'events' | 'shop'>('posts');
   const [tagged, setTagged] = useState<TaggedTile[]>([]);
   const [removingTagId, setRemovingTagId] = useState<string | null>(null);
@@ -187,6 +189,7 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
+      {!cleanup ? (<>
       <div className="flex items-center justify-between gap-3">
         <BackButton fallback="/feed" fallbackLabel="Feed" />
         {profileQrOn && (
@@ -310,6 +313,113 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
 
       {!blocked && <ProfileExtras email={decodedEmail} />}
       {!blocked && accountId && <PartOfOrgs userId={accountId} className="mt-6" />}
+      </>) : (<>
+      {/* Profile cleanup (preview): small Share, name + title once, one-line badges, stats under the name, Follow and
+          Networking card side by side, a slim artist-profile link, and one Organizations and groups row. */}
+      <div className="flex items-center justify-between gap-3">
+        <BackButton fallback="/feed" fallbackLabel="Feed" />
+        {profileQrOn && (
+          <ShareQR path={accountId ? `/u/${accountId}` : '/'} title={profile.full_name || 'TapIN profile'} subtitle="Scan to see my TapIN profile"
+            label="Share" track="profile_qr"
+            className="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-300 px-3 text-sm font-medium text-bone" />
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center gap-4">
+        {profile.profile_photo ? (
+          <img src={profile.profile_photo} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-marigold to-teal font-display text-2xl font-bold text-white">
+            {(profile.full_name || profile.email).charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="font-display text-xl font-bold leading-tight text-bone">{profile.full_name || 'TapIN member'}</p>
+          {pro && (pro.title || pro.company) && <p className="mt-0.5 truncate text-sm text-muted">{[pro.title, pro.company].filter(Boolean).join(' · ')}</p>}
+          <div className="mt-1.5 flex flex-nowrap gap-1.5">
+            {profile.is_organizer && <span className="whitespace-nowrap rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-marigold">💼 Organizer</span>}
+            {profile.is_resource && <span className="whitespace-nowrap rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple">🎤 Artist</span>}
+          </div>
+        </div>
+      </div>
+
+      {shared.filter((x) => !x.connected).slice(0, 1).map((x) => (
+        <div key={x.event_id} className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm">
+          <p className="text-gray-800">🤝 You're both going to <strong>{x.title}</strong></p>
+          {x.i_joined
+            ? <button onClick={async () => { const { error } = await supabase.rpc('connect_in_person', { p_event_id: x.event_id, p_email: email }); setConnMsg(error ? "Couldn't connect." : "You're connected! Their contact info is in your connections."); if (!error) setShared((l) => l.map((y) => (y.event_id === x.event_id ? { ...y, connected: true } : y))); }} className="mt-1.5 rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Connect</button>
+            : <Link to={`/events/${x.event_id}/network?connect=${encodeURIComponent(email ?? '')}`} className="mt-1.5 inline-block rounded-lg bg-marigold px-3 py-1.5 text-sm font-semibold text-white">Join networking & connect</Link>}
+        </div>
+      ))}
+      {connMsg && <p className="mt-1 text-sm text-green-700">{connMsg}</p>}
+
+      {profile.bio && <p className="mt-3 text-sm text-muted">{profile.bio}</p>}
+
+      <div className="mt-3 flex items-center gap-6">
+        <div><p className="font-display text-base font-bold leading-tight text-bone">{posts.length}</p><p className="text-xs text-muted">{posts.length === 1 ? 'Video' : 'Videos'}</p></div>
+        <button onClick={() => setOpenList('followers')} className="text-left"><p className="font-display text-base font-bold leading-tight text-bone">{profile.followers_count ?? 0}</p><p className="text-xs text-muted">Followers</p></button>
+        <button onClick={() => setOpenList('following')} className="text-left"><p className="font-display text-base font-bold leading-tight text-bone">{profile.following_count ?? 0}</p><p className="text-xs text-muted">Following</p></button>
+      </div>
+
+      {(() => {
+        const hasCard = !!(pro && (pro.title || pro.company || pro.intro || (pro.looking_for ?? []).length > 0 || pro.linkedin));
+        const canFollow = !isOwnProfile && !!user && !blocked;
+        if (!hasCard && !canFollow) return null;
+        return (
+          <div className="mt-4 flex gap-2">
+            {canFollow && (
+              <button onClick={toggleFollow} disabled={followBusy}
+                className={`min-h-[44px] flex-1 whitespace-nowrap rounded-full px-4 text-sm font-semibold disabled:opacity-50 ${isFollowing ? 'border border-gray-300 text-bone' : 'bg-marigold text-white'}`}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
+            {hasCard && (
+              <button onClick={() => setCardOpen(true)} className="min-h-[44px] flex-1 whitespace-nowrap rounded-full border border-gray-300 px-4 text-sm font-medium text-bone">🤝 Networking card</button>
+            )}
+          </div>
+        );
+      })()}
+
+      {resourceId && (
+        <Link to={`/resources/${resourceId}`} className="mt-3 flex items-center justify-between rounded-xl bg-purple-50 px-3 py-2.5 text-sm font-medium text-purple hover:bg-purple-100">
+          <span>🎤 Artist profile, bookings and shop</span><span aria-hidden="true">›</span>
+        </Link>
+      )}
+
+      {cardOpen && pro && (
+        <Sheet title="Networking card" onClose={() => setCardOpen(false)}>
+          <NetCard seed={email ?? 'card'} name={profile.full_name} photo={profile.profile_photo} title={pro.title} company={pro.company} lookingFor={pro.looking_for ?? []} intro={pro.intro ?? null}>
+            <div className="flex flex-col gap-2">
+              {connected && !isOwnProfile && (
+                <a href={`mailto:${profile.email}`} className="block w-full rounded-xl bg-marigold py-2.5 text-center text-sm font-semibold text-white">✉️ Message {profile.full_name?.split(' ')[0] || ''}</a>
+              )}
+              {pro.linkedin && <a href={pro.linkedin} target="_blank" rel="noopener noreferrer" className="block w-full rounded-xl border border-gray-300 py-2.5 text-center text-sm font-semibold text-gray-800">LinkedIn ↗</a>}
+              {connected && !isOwnProfile && <p className="text-center text-xs text-muted">✓ You're connected</p>}
+            </div>
+          </NetCard>
+        </Sheet>
+      )}
+
+      {!isOwnProfile && user && (
+        blocked ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            <span>You blocked {profile.full_name || 'this person'}. You won't see their posts or comments.</span>
+            <button onClick={async () => { if (user?.email && await unblockUser(user.email, profile.email)) { setBlocked(false); window.location.reload(); } }} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-marigold">Unblock</button>
+          </div>
+        ) : showBlock ? (
+          <div className="mt-4 max-w-sm">
+            <BlockConfirm name={profile.full_name || 'this person'} onBlock={async () => {
+              if (user?.email && await blockUser(user.email, profile.email)) { setBlocked(true); setIsFollowing(false); setPosts([]); setShowBlock(false); }
+            }} />
+            <button onClick={() => setShowBlock(false)} className="mt-1 text-xs text-muted">Never mind</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowBlock(true)} className="mt-3 text-xs text-muted hover:text-red-600">Block</button>
+        )
+      )}
+
+      {!blocked && <OrgsAndGroups email={profile.email} userId={accountId} className="mt-6" />}
+      </>)}
 
       <div className="mt-8">
         <div className="flex gap-1 border-b border-gray-200">
