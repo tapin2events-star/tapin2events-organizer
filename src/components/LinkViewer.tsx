@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { openInBrowser } from '../lib/externalLink';
+import { openInBrowser, openSocial, SOCIAL_HOST } from '../lib/externalLink';
 
 // The website viewer: an outside site in a sheet over TapIN, with Close and Open in browser. TapIN first checks
 // (frame-check) whether the site allows being shown inside other sites; if not, it offers Open in browser instead
@@ -28,6 +28,8 @@ export default function LinkViewer() {
       try { u = new URL(a.href, window.location.href); } catch { return; }
       if (!/^https?:$/.test(u.protocol) || u.origin === window.location.origin || SKIP_HOST.test(u.hostname) || SKIP_PATH.test(u.href)) return;
       e.preventDefault();
+      // Social links: straight to the social app (or its website).
+      if (SOCIAL_HOST.test(u.hostname)) { openSocial(u.href); return; }
       const label = (a.getAttribute('aria-label') || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60);
       setLink({ url: u.href, title: label && !/^(website|link|open|visit)/i.test(label) ? label : undefined });
     };
