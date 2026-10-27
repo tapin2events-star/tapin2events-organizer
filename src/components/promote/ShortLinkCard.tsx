@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useShareBase } from '../../lib/shareBase';
-import { eventShortCode, forgetShortCode } from '../../lib/shortLink';
+import { eventShortCode, forgetShortCode, cleanForBase } from '../../lib/shortLink';
 import { toast, toastError } from '../../lib/toast';
 
 // Promote tab: the event's short link (/e/<code>), easy to paste on Instagram, flyers or texts. The organizer can
@@ -14,7 +14,8 @@ export default function ShortLinkCard({ eventId }: { eventId: string }) {
   const [busy, setBusy] = useState(false);
   useEffect(() => { eventShortCode(eventId).then((c) => { setCode(c); setDraft(c ?? ''); }); }, [eventId]);
   if (!code) return null;
-  const url = `${base}e/${code}`;
+  // Branded addresses use clean links (domain/<short name>).
+  const url = `${base}${cleanForBase(`/e/${code}`, base).replace(/^\//, '')}`;
   const shown = url.replace(/^https?:\/\//, '');
   async function save() {
     setBusy(true);
@@ -39,7 +40,7 @@ export default function ShortLinkCard({ eventId }: { eventId: string }) {
         <div className="mt-3">
           <label className="text-xs font-semibold text-gray-600" htmlFor="short-name">Custom name</label>
           <div className="mt-1 flex items-center gap-1 rounded-xl border border-gray-300 bg-white pl-3 text-sm">
-            <span className="shrink-0 text-gray-500">…/e/</span>
+            <span className="shrink-0 text-gray-500">{cleanForBase('/e/', base) === '/' ? '…/' : '…/e/'}</span>
             <input id="short-name" value={draft} onChange={(e) => setDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40))}
               placeholder="throughhervoice" className="min-h-[44px] min-w-0 flex-1 rounded-r-xl bg-transparent pr-3 text-base text-gray-900 outline-none sm:text-sm" />
           </div>

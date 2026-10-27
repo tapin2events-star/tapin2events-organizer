@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useEventSharePath } from '../lib/shortLink';
+import { useEventSharePath, cleanForBase } from '../lib/shortLink';
 import { useShareBase } from '../lib/shareBase';
 import { supabase } from '../lib/supabaseClient';
 import QRCode from 'qrcode';
@@ -18,7 +18,7 @@ export default function ShareQR({ path, title, subtitle, label = 'QR code', clas
   const [copied, setCopied] = useState(false);
   // An event's own page is shared as its short link (/e/<code>).
   const shortPath = useEventSharePath(eventId && path === `/events/${eventId}` ? eventId : null);
-  const url = `${base}${(shortPath ?? path).replace(/^\//, '')}`;
+  const url = `${base}${(shortPath ? cleanForBase(shortPath, base) : path).replace(/^\//, '')}`;
   const fileName = `tapin-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'qr'}.png`;
 
   useEffect(() => {

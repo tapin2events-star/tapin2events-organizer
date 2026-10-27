@@ -22,3 +22,8 @@ export function useEventSharePath(eventId: string | null | undefined): string | 
   }, [eventId]);
   return path;
 }
+
+/** On a branded address (an organization's domain), event links drop the /e/: domain/<short name>. */
+export function cleanForBase(path: string, base: string): string {
+  return /^https:\/\/app\.tapin2events\.com\//.test(base) || /pages\.dev\//.test(base) ? path : path.replace(/^\/e\//, '/');
+}
