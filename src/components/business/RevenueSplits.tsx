@@ -103,7 +103,7 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
         <ul className="mt-3 flex flex-col gap-1.5 text-sm">
           {o.rows.map((r, i) => (
             <li key={r.user_id ?? r.email ?? i} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
-              <span className="flex min-w-0 items-center gap-2">{r.photo ? <img src={r.photo} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" /> : null}<span className="min-w-0"><span className="block truncate font-medium text-gray-900">{r.name || r.email} · {Number(r.percent)}%</span>
+              <span className="flex min-w-0 items-center gap-2">{r.photo ? <img src={r.photo} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" /> : r.has_account ? <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{(r.name || r.email_hint || r.email || '?').charAt(0).toUpperCase()}</span> : null}<span className="min-w-0"><span className="block truncate font-medium text-gray-900">{rowName(r)} · {Number(r.percent)}%</span>
                 <span className="block text-xs">{r.ready ? <span className="text-green-700">✓ Payouts connected</span> : r.has_account ? <span className="text-amber-700">Needs to connect payouts in Earnings (their share is held until then)</span> : <span className="text-amber-700">Not on TapIN yet: they'll need to sign up with this email and connect payouts</span>}</span></span></span>
               <span className="shrink-0 text-right text-xs text-gray-600">{money(r.sent ?? 0)} sent{(r.waiting ?? 0) > 0 ? ` · ${money(r.waiting ?? 0)} waiting` : ''}</span>
             </li>
