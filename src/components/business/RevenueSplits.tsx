@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 interface Row { user_id?: string | null; email?: string | null; percent: number; label: string | null; name?: string | null; email_hint?: string | null; photo?: string | null; ready?: boolean; has_account?: boolean; sent?: number; waiting?: number }
-interface Overview { can_edit: boolean; starts_at?: string | null; rows: Row[]; main_sent: number; main_waiting: number }
+interface Overview { can_edit: boolean; starts_at?: string | null; seating?: boolean; rows: Row[]; main_sent: number; main_waiting: number }
 const money = (cents: number) => `$${(Number(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const field = 'block w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 sm:text-sm';
 
@@ -45,6 +45,9 @@ export default function RevenueSplits({ eventId, hostName }: { eventId: string; 
         {o.can_edit && !editing && <button onClick={() => setEditing(true)} className="rounded-xl bg-[#0F1B3D] px-3 py-2 text-sm font-semibold text-white">{rows.length ? 'Edit split' : 'Set up a split'}</button>}
       </div>
       {msg && <p role="status" className={`mt-3 rounded-xl px-3 py-2 text-sm ${msg.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{msg.text}</p>}
+      {o.seating && (
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">⚠️ This event uses reserved seating. Seated ticket sales aren&apos;t split yet, so they go to the main account.</p>
+      )}
 
       {editing ? (
         <div className="mt-3">
