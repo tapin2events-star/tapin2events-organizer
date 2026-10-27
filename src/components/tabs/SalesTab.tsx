@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ReserveCard from '../payouts/ReserveCard';
 import RevenueSplits from '../business/RevenueSplits';
 import { useFeature } from '../../lib/preview';
 import { ListSkeleton } from '../ui/Skeleton';
@@ -37,6 +38,7 @@ export default function SalesTab({ eventId, onGoAttendees, hostName = 'You' }: {
 
   return (
     <div className="flex flex-col gap-6">
+      <ReserveCard eventId={eventId} />
       {splitsOn && <RevenueSplits eventId={eventId} hostName={hostName} />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-surface border border-gray-200 p-5">

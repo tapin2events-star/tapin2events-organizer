@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import NewOrganizerNote from '../components/payouts/NewOrganizerNote';
 import HostAsPicker from '../components/business/HostAsPicker';
 import { webSafeImage } from '../lib/webImage';
 import { DetailSkeleton } from '../components/ui/Skeleton';
@@ -959,6 +960,7 @@ export default function EventForm() {
               </div>
             </div>
 
+            {eventType !== 'free' && <NewOrganizerNote orgId={orgId} />}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {sellMode === 'single' && eventType !== 'free' && (
                 <Field label="Ticket price ($)">
