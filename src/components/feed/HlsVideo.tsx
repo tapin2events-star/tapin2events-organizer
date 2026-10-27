@@ -34,7 +34,7 @@ function prefersNativeHls(video: HTMLVideoElement): boolean {
   return (isIOS || isDesktopSafari) && !!video.canPlayType('application/vnd.apple.mpegurl');
 }
 
-export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted, ...rest }: HlsVideoProps) {
+export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted, onAutoMuted, ...rest }: HlsVideoProps & { onAutoMuted?: () => void }) {
   const internalRef = useRef<HTMLVideoElement | null>(null);
   const [needsTap, setNeedsTap] = useState(false);
   // Stream failed even after automatic recovery: offer a retry.
@@ -140,7 +140,11 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
         })
         .catch((err) => {
           if (cancelled) return;
-          if (err?.name === 'NotAllowedError') setNeedsTap(true);
+          if (err?.name === 'NotAllowedError' && !video.muted && onAutoMuted) {
+            // Starting with sound needs a tap first (browser rule): play muted instead, and let the page offer sound.
+            video.muted = true;
+            video.play().then(() => { if (!cancelled) { setNeedsTap(false); onAutoMuted(); } }, () => { if (!cancelled) setNeedsTap(true); });
+          } else if (err?.name === 'NotAllowedError') setNeedsTap(true);
           else if (err?.name !== 'AbortError') { console.error('[HlsVideo] play() rejected:', err?.name, err?.message); report('video_play_rejected', { name: err?.name, message: String(err?.message ?? '').slice(0, 200), src }); }
           // AbortError = a newer load interrupted this attempt; the next
           // `canplay` event retries automatically.
