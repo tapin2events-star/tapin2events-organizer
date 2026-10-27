@@ -1,26 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { WhiteLabelBrand } from '../lib/whiteLabel';
 
-// White-labeled events: sign in (or create an account) right on the event page, in the organization's colors.
-// Just an email and a 6-digit code; a TapIN account is created quietly so tickets, QR codes and transfers work.
-export default function BrandedSignIn({ brand, eventId, onClose, onDone }: { brand: WhiteLabelBrand; eventId?: string | null; onClose: () => void; onDone: () => void }) {
+// Quick checkout: sign in (or create an account) right on the event page with just an email and a 6-digit code
+// (no password, no sign-up form). A TapIN account is created quietly so tickets, QR codes, transfers and refunds
+// work, and confirming the email protects against fraud. White-labeled events show the organization's colors and
+// send the code in its branding; other events use TapIN's.
+export const TAPIN_BRAND: WhiteLabelBrand = { name: 'TapIN', logo: '/icon-192.png', primary: '#4F46E5', accent: '#14B8A6', slug: null };
+export default function BrandedSignIn({ brand, eventId, onClose, onDone, branded = true }: { brand: WhiteLabelBrand; eventId?: string | null; onClose: () => void; onDone: () => void; branded?: boolean }) {
   const { sendCode, verifyCode, user } = useAuth();
   const [email, setEmail] = useState('');
+  // Optional name, saved on new accounts so they aren't nameless.
+  const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const codeRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (user) onDone(); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!user) return;
+    const n = name.trim();
+    if (n && user.email) {
+      supabase.from('profiles').update({ full_name: n.slice(0, 80) }).eq('email', user.email).or('full_name.is.null,full_name.eq.').then(() => onDone());
+    } else onDone();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = ''; }; }, []);
   async function send() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setErr('Enter your email address.');
     setBusy(true); setErr(null);
     // The code email in the organization's branding; falls back to the regular sign-in email if that isn't possible.
     let sentBranded = false;
-    if (eventId) {
+    if (eventId && branded) {
       const { data, error: fnErr } = await supabase.functions.invoke('wl-signin-code', { body: { email: email.trim(), event_id: eventId } });
       if (data?.ok) sentBranded = true;
       else if (fnErr) {
@@ -57,9 +69,11 @@ export default function BrandedSignIn({ brand, eventId, onClose, onDone }: { bra
           {step === 'email' ? (
             <>
               <p className="text-xl font-bold text-gray-900">Get your tickets</p>
-              <p className="mt-1 text-sm text-gray-600">Enter your email. We'll send a 6-digit code to confirm it's you, and your tickets will go to this address.</p>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} type="email" autoComplete="email" inputMode="email" placeholder="you@email.com" aria-label="Email" autoFocus
+              <p className="mt-1 text-sm text-gray-600">No password needed. Enter your email and we'll send a 6-digit code to confirm it's you. Your tickets will go to this address.</p>
+              <input value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" placeholder="Your name (optional)" aria-label="Your name"
                 className="mt-4 block w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-base text-gray-900" />
+              <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} type="email" autoComplete="email" inputMode="email" placeholder="you@email.com" aria-label="Email" autoFocus
+                className="mt-3 block w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-base text-gray-900" />
               {err && <p role="alert" className="mt-2 text-sm text-red-600">{err}</p>}
               <button onClick={send} disabled={busy} className="mt-4 w-full rounded-xl py-3.5 text-base font-bold text-white disabled:opacity-60" style={{ background: brand.primary }}>{busy ? 'Sending…' : 'Continue'}</button>
             </>
@@ -74,6 +88,7 @@ export default function BrandedSignIn({ brand, eventId, onClose, onDone }: { bra
               <button onClick={() => { setStep('email'); setCode(''); setErr(null); }} className="mt-3 w-full text-sm font-medium text-gray-500">Use a different email</button>
             </>
           )}
+          {!branded && <p className="mt-4 text-center text-sm text-gray-500">Have a password? <Link to="/login" state={{ from: window.location.pathname }} onClick={onClose} className="font-medium text-indigo-600">Sign in</Link></p>}
           <p className="mt-5 text-center text-[11px] text-gray-400">By continuing you agree to the <a href="/terms" target="_blank" rel="noopener" className="underline">Terms</a> and <a href="/privacy" target="_blank" rel="noopener" className="underline">Privacy Policy</a>.</p>
         </div>
       </div>

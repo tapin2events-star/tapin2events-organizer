@@ -8,7 +8,7 @@ import HeaderVideo, { ProcessingLabel, useHeaderVideo, useHeaderVideoProcessing 
 import EmbeddedCheckoutSheet from '../components/events/EmbeddedCheckoutSheet';
 import { publishableKey } from '../lib/embeddedCheckout';
 import { useBrandedTab, useEventWhiteLabel } from '../lib/whiteLabel';
-import BrandedSignIn from '../components/BrandedSignIn';
+import BrandedSignIn, { TAPIN_BRAND } from '../components/BrandedSignIn';
 import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
 import MerchAddOns, { type AddOnPick } from '../components/events/MerchAddOns';
 import GalaGuestCard from '../components/events/GalaGuestCard';
@@ -30,7 +30,7 @@ import { isIOS } from '../lib/displayMode';
 import HostedBy from '../components/HostedBy';
 import CancelRegistration, { canCancelRegistration } from '../components/CancelRegistration';
 import BackButton from '../components/BackButton';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import type { TapEvent, Ticket } from '../lib/types';
@@ -64,7 +64,6 @@ export default function PublicEventDetail() {
     if (src) recordLinkVisit(src);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const networkingOn = useFeature('networking');
-  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { user, isAdmin } = useAuth();
   const businessOn = useFeature('business');
@@ -213,8 +212,7 @@ export default function PublicEventDetail() {
   async function toggleSave() {
     if (!id) return;
     if (!user?.email) {
-      if (whiteLabel) { setBrandedSignIn(true); return; }
-      navigate('/login', { state: { from: location.pathname } });
+      setBrandedSignIn(true);
       return;
     }
     const next = savedIds.includes(id) ? savedIds.filter((x) => x !== id) : [...savedIds, id];
@@ -383,7 +381,7 @@ export default function PublicEventDetail() {
   return (
     <div className="min-h-screen bg-ink">
       {whiteLabel && <WhiteLabelHeader brand={whiteLabel} />}
-      {whiteLabel && brandedSignIn && <BrandedSignIn brand={whiteLabel} eventId={event?.id} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
+      {brandedSignIn && <BrandedSignIn brand={whiteLabel ?? TAPIN_BRAND} branded={!!whiteLabel} eventId={event?.id} onClose={() => setBrandedSignIn(false)} onDone={() => setBrandedSignIn(false)} />}
       {embedSecret && <EmbeddedCheckoutSheet clientSecret={embedSecret} title={whiteLabel?.name ?? event?.title ?? 'Checkout'} accent={whiteLabel?.primary} onClose={() => setEmbedSecret(null)} />}
       {isPreview && (
         <div className="sticky top-0 z-40 border-b border-amber-300 bg-amber-100 px-4 py-2.5 sm:px-6">
@@ -614,10 +612,10 @@ export default function PublicEventDetail() {
               </div>
             ) : !user ? (
               <button
-                onClick={() => (whiteLabel ? setBrandedSignIn(true) : navigate('/login', { state: { from: location.pathname } }))}
+                onClick={() => setBrandedSignIn(true)}
                 className="mt-3 rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
               >
-                Sign in to choose seats
+                Choose seats
               </button>
             ) : (
               <>
@@ -747,10 +745,10 @@ export default function PublicEventDetail() {
               </div>
             ) : !user ? (
               <button
-                onClick={() => (whiteLabel ? setBrandedSignIn(true) : navigate('/login', { state: { from: location.pathname } }))}
+                onClick={() => setBrandedSignIn(true)}
                 className="rounded-xl bg-gradient-to-r from-marigold to-teal px-6 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
               >
-                Sign in to {isFree ? 'register' : 'buy a ticket'}
+                {isFree ? 'Register' : 'Get tickets'}
               </button>
             ) : hasEnded ? (
               <p className="text-sm font-medium text-gray-400">This event has ended.</p>
@@ -851,10 +849,10 @@ export default function PublicEventDetail() {
                   </div>
                   {!user ? (
                     <button
-                      onClick={() => (whiteLabel ? setBrandedSignIn(true) : navigate('/login', { state: { from: location.pathname } }))}
+                      onClick={() => setBrandedSignIn(true)}
                       className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90"
                     >
-                      Sign in to buy
+                      Get tickets
                     </button>
                   ) : (
                     <button
