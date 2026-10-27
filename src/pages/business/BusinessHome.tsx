@@ -168,13 +168,7 @@ function BusinessHomeInner() {
               <div key={t} className="rounded-2xl border border-gray-200 bg-surface p-4"><p className="font-semibold text-bone">{t}</p><p className="mt-1 text-sm text-muted">{d}</p></div>
             ))}
           </div>
-          <h3 className="mt-8 font-display text-lg font-bold text-bone">Coming soon</h3>
-          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-            {['Designed page templates', 'Networking directory', 'Invoices & pay-by-invoice', 'Analytics', 'Workshop sign-ups, gala tables & volunteer shifts', 'Boost credit for promoting your events', 'White-label pages (add-on)'].map((t) => (
-              <li key={t} className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-bone"><span className="text-[#C9A227]">★</span>{t}</li>
-            ))}
-          </ul>
-          <p className="mt-3 text-xs text-muted">Core tools (organization pages, business event pages, tickets, registration, donations) stay free. Premium tools will be part of the Business plan; founding members get 40% off for life.</p>
+          <p className="mt-6 text-xs text-muted">Core tools (organization pages, business event pages, tickets, registration, donations) are free. Premium tools are part of the Business plan; founding members get 40% off for life.</p>
         </section>
       </div>
     </div>
