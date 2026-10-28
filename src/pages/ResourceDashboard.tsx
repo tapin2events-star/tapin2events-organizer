@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import MusicManager from '../components/music/MusicManager';
 import VideoHeaderCard from '../components/video/VideoHeaderCard';
 import ArtistPlanCard from '../components/business/ArtistPlanCard';
 import ResourceEarningsOverview from '../components/resources/ResourceEarningsOverview';
@@ -58,7 +59,7 @@ const STATUS_LABELS: Record<string, string> = {
   deleted: 'Deleted',
 };
 
-const TABS = ['Overview', 'Bookings', 'Media', 'Products'] as const;
+const TABS = ['Overview', 'Bookings', 'Music', 'Media', 'Products'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ResourceDashboard() {
@@ -450,6 +451,7 @@ export default function ResourceDashboard() {
           </>
         )}
 
+        {tab === 'Music' && <MusicManager resourceId={resource.id} />}
         {tab === 'Media' && <ResourceMediaManager resourceId={resource.id} />}
 
         {tab === 'Products' && (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MusicUsage from './MusicUsage';
 import PayoutTrust from './PayoutTrust';
 import { toast, toastError } from '../../lib/toast';
 import PremiumUsagePanel from './PremiumUsagePanel';
@@ -30,6 +31,7 @@ export default function UsageTab() {
     <div className="flex flex-col gap-8">
       <ComplimentaryAccess />
       <PayoutTrust />
+      <MusicUsage />
       <DomainCount />
       <section>
         <h2 className="font-display text-xl font-bold text-bone">Feature usage</h2>
