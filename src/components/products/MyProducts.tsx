@@ -28,6 +28,8 @@ export default function MyProducts() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [hasAnyStorefront, setHasAnyStorefront] = useState(false);
+  // From "Sell something": the place to open, with its new-product form.
+  const [sellKey] = useState(() => new URLSearchParams(window.location.search).get('sell'));
 
   useEffect(() => {
     if (!user?.email) {
@@ -76,7 +78,13 @@ export default function MyProducts() {
         });
       });
 
-      const selling = owners.filter((o) => o.productCount > 0);
+      if (sellKey && !owners.some((o) => o.key === sellKey)) {
+        // An event they manage but didn't create (e.g. as a team member): add it so its form can open.
+        const { data: placesData } = await supabase.rpc('my_sell_places');
+        const pl = ((placesData ?? []) as { kind: 'event' | 'resource'; id: string; title: string; subtitle: string; seller_email?: string }[]).find((x) => `${x.kind}:${x.id}` === sellKey);
+        if (pl) owners.push({ key: sellKey, type: pl.kind, id: pl.id, title: pl.title, subtitle: pl.subtitle, sellerEmail: user.email!, productCount: 0, upcoming: true } as Owner);
+      }
+      const selling = owners.filter((o) => o.productCount > 0 || o.key === sellKey);
       // Places with no products yet: your resource profile, plus upcoming
       // events (past events with nothing to sell are left out to keep this short).
       const empty = owners.filter(
@@ -86,7 +94,7 @@ export default function MyProducts() {
       setHasAnyStorefront(owners.length > 0);
       setWithProducts(selling);
       setUpcomingEmpty(empty);
-      setExpanded(new Set(selling.map((o) => o.key)));
+      setExpanded(new Set(sellKey ? [sellKey] : selling.map((o) => o.key)));
       setLoading(false);
     })();
   }, [user]);
@@ -139,7 +147,7 @@ export default function MyProducts() {
       </button>
       {expanded.has(o.key) && (
         <div className="flex flex-col gap-4 border-t border-gray-200 p-4">
-          <ProductManager ownerType={o.type} ownerId={o.id} sellerEmail={o.sellerEmail} />
+          <ProductManager ownerType={o.type} ownerId={o.id} sellerEmail={o.sellerEmail} autoCreate={o.key === sellKey} />
           <ProductOrdersPanel ownerType={o.type} ownerId={o.id} />
         </div>
       )}

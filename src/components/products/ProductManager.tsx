@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
+import PlacementPicker, { placeKey } from './PlacementPicker';
 import { Link } from 'react-router-dom';
 import { ListSkeleton } from '../ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
@@ -31,7 +33,11 @@ const emptyForm = { name: '', description: '', price: '', category: 'other' as P
 const nice = (m?: string) => (m && !/function|permission|jwt|violates/i.test(m) ? m : null);
 
 // Add, edit, hide and delete products for an event or an artist & services profile.
-export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMine = false }: ProductManagerProps) {
+export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMine = false, autoCreate = false }: ProductManagerProps & { autoCreate?: boolean }) {
+  const sellAnywhere = useFeature('sell_anywhere');
+  const [placements, setPlacements] = useState<Set<string>>(new Set());
+  // How many other places each product also appears in (Sell anywhere).
+  const [alsoIn, setAlsoIn] = useState<Map<string, number>>(new Map());
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [variantStock, setVariantStock] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -54,6 +60,13 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
     if (loadError) console.error('Failed to load products:', loadError);
     const rows = (data ?? []) as ProductRow[];
     setProducts(rows);
+    if (sellAnywhere && rows.length) {
+      supabase.from('product_placements').select('product_id').in('product_id', rows.map((r) => r.id)).then(({ data: pl }) => {
+        const m = new Map<string, number>();
+        for (const r of pl ?? []) m.set(r.product_id, (m.get(r.product_id) ?? 0) + 1);
+        setAlsoIn(m);
+      });
+    }
     if (rows.length) {
       const { data: vs } = await supabase.from('product_variants').select('product_id, stock_quantity, sold_quantity').in('product_id', rows.map((p) => p.id));
       const totals = new Map<string, number>();
@@ -68,8 +81,9 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
   }, [ownerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function startCreate() {
-    setForm(emptyForm); setImageUrls([]); setEditingId(null); setVariants([]); setRemovedVariantIds([]); setError(null); setShowForm(true);
+    setForm(emptyForm); setImageUrls([]); setEditingId(null); setVariants([]); setRemovedVariantIds([]); setError(null); setPlacements(new Set()); setShowForm(true);
   }
+  useEffect(() => { if (autoCreate) startCreate(); }, [autoCreate]); // eslint-disable-line react-hooks/exhaustive-deps
   async function startEdit(p: ProductRow) {
     setForm({
       name: p.name, description: p.description ?? '', price: Number(p.price).toFixed(2), category: p.category,
@@ -77,6 +91,8 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
       shippingAvailable: p.shipping_available, shippingCost: p.shipping_available ? Number(p.shipping_cost).toFixed(2) : '',
     });
     setImageUrls(p.images ?? []); setEditingId(p.id); setRemovedVariantIds([]); setError(null);
+    setPlacements(new Set());
+    if (sellAnywhere) supabase.rpc('product_placements_for', { p_product_id: p.id }).then(({ data }) => setPlacements(new Set(((data ?? []) as { kind: string; id: string }[]).map(placeKey))));
     const { data: existing } = await supabase.from('product_variants').select('id, size, color, price_adjustment, stock_quantity, sold_quantity, image_url').eq('product_id', p.id);
     setVariants((existing ?? []).map((v) => ({ id: v.id, size: v.size ?? '', color: v.color ?? '', priceAdjustment: String(v.price_adjustment), stockQuantity: String(v.stock_quantity), soldQuantity: v.sold_quantity ?? 0, imageUrl: v.image_url ?? null })));
     setShowForm(true);
@@ -143,6 +159,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
     }
     window.dispatchEvent(new Event('tapin-products-changed'));
     setSaving(false);
+    if (sellAnywhere) await supabase.rpc('set_product_placements', { p_product_id: saved.id, p_places: [...placements].map((k) => ({ kind: k.split(':')[0], id: k.split(':')[1] })) });
     if (variantFailed) { setEditingId(saved.id); load(); return setError('The product saved, but some sizes/colors didn\u2019t. Please check them and save again.'); }
     setShowForm(false);
     load();
@@ -263,6 +280,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
             )}
           </div>
 
+          {sellAnywhere && <PlacementPicker homeKind={ownerType} homeId={ownerId} value={placements} onChange={setPlacements} />}
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={saving} className="rounded-lg bg-marigold px-4 py-2 text-sm font-semibold text-white hover:bg-marigold/90 disabled:opacity-50">{saving ? 'Saving…' : editingId ? 'Save changes' : 'Create product'}</button>
@@ -285,6 +303,7 @@ export default function ProductManager({ ownerType, ownerId, sellerEmail, onlyMi
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-gray-900">{p.name}{!p.is_active && <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 align-middle text-[10px] font-bold uppercase text-gray-600">Hidden</span>}</p>
                   <p className="text-sm text-gray-500">{money(Number(p.price))} · {left > 0 ? `${left} left` : 'Sold out'}{p.sold_quantity > 0 ? ` · ${p.sold_quantity} sold` : ''}</p>
+                  {(alsoIn.get(p.id) ?? 0) > 0 && <p className="text-xs font-medium text-indigo-700">Also in {alsoIn.get(p.id)} other place{alsoIn.get(p.id) === 1 ? '' : 's'} · shared stock</p>}
                   <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
                     <button onClick={() => startEdit(p)} className="py-1 font-medium text-marigold">Edit</button>
                     {p.is_active && <Link to={`/products/${p.id}`} className="py-1 font-medium text-gray-600">View</Link>}

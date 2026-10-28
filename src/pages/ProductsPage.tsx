@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFeature } from '../lib/preview';
+import SellSomething from '../components/products/SellSomething';
 import BackButton from '../components/BackButton';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -21,6 +23,7 @@ type Tab = (typeof TABS)[number];
 export default function ProductsPage() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
+  const sellAnywhere = useFeature('sell_anywhere');
   const [tab, setTab] = useState<Tab>(initialTab === 'orders' ? 'My Orders' : initialTab === 'products' ? 'My Products' : 'Browse');
   const [products, setProducts] = useState<ProductWithSeller[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,8 +95,13 @@ export default function ProductsPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-3"><BackButton fallback="/" fallbackLabel="Discover" /></div>
-      <h1 className="font-display text-4xl font-extrabold text-gray-900">Shop</h1>
-      <p className="mt-1 text-lg text-gray-500">Merch and products from events and artists on TapIN</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl font-extrabold text-gray-900">Shop</h1>
+          <p className="mt-1 text-lg text-gray-500">Merch and products from events and artists on TapIN</p>
+        </div>
+        {sellAnywhere && <SellSomething />}
+      </div>
 
       <div className="mt-6 flex gap-1 border-b border-gray-200">
         {TABS.map((t) => (

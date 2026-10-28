@@ -14,15 +14,10 @@ export default function ShopSection({ ownerType, ownerId }: ShopSectionProps) {
   const [variantAvailability, setVariantAvailability] = useState<Map<string, number>>(new Map());
   const [variantAdjustments, setVariantAdjustments] = useState<Map<string, number[]>>(new Map());
 
-  const ownerColumn = ownerType === 'event' ? 'event_id' : 'resource_id';
-
   useEffect(() => {
+    // Its own products plus products placed here from the seller's other places (shared stock).
     supabase
-      .from('products')
-      .select('*')
-      .eq(ownerColumn, ownerId)
-      .eq('is_active', true)
-      .eq('visibility', 'public')
+      .rpc('shop_products', { p_kind: ownerType, p_id: ownerId })
       .then(async ({ data }) => {
         const rows = (data ?? []) as Product[];
         setProducts(rows);
