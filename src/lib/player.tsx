@@ -5,7 +5,7 @@ import { supabase } from './supabaseClient';
 // that keeps playing while you browse. Plays are counted once per song per session.
 export interface PlayerTrack { id: string; title: string; url: string; duration_sec?: number | null; artist: string; artistId?: string; cover?: string | null; albumId?: string | null; albumTitle?: string | null; preview?: boolean }
 export const PREVIEW_SECONDS = 30;
-interface PlayerState { queue: PlayerTrack[]; index: number; playing: boolean; progress: number; duration: number; current: PlayerTrack | null; previewEnded: boolean }
+interface PlayerState { queue: PlayerTrack[]; index: number; playing: boolean; progress: number; duration: number; current: PlayerTrack | null; previewEnded: boolean; expanded: boolean }
 interface PlayerApi extends PlayerState {
   play: (queue: PlayerTrack[], index?: number) => void;
   toggle: () => void;
@@ -13,6 +13,8 @@ interface PlayerApi extends PlayerState {
   prev: () => void;
   seek: (fraction: number) => void;
   close: () => void;
+  expand: () => void;
+  minimize: () => void;
 }
 const Ctx = createContext<PlayerApi | null>(null);
 
@@ -25,6 +27,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [previewEnded, setPreviewEnded] = useState(false);
+  // The full-screen Now playing popup (minimized = the mini player).
+  const [expanded, setExpanded] = useState(false);
   const current = queue[index] ?? null;
   const currentRef = useRef<PlayerTrack | null>(null);
   currentRef.current = current;
@@ -54,12 +58,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }).catch(() => setPlaying(false));
   }, []);
 
-  const play = useCallback((q: PlayerTrack[], i = 0) => { if (!q.length) return; setQueue(q); setIndex(i); load(q[i]); }, [load]);
+  const play = useCallback((q: PlayerTrack[], i = 0) => { if (!q.length) return; setQueue(q); setIndex(i); load(q[i]); setExpanded(true); }, [load]);
   const toggle = useCallback(() => { const a = el(); if (!current) return; if (a.paused) { if (!a.src) load(current); else a.play().catch(() => undefined); } else a.pause(); }, [current, load]);
   const next = useCallback(() => { if (index + 1 < queue.length) { setIndex(index + 1); load(queue[index + 1]); } else { el().pause(); el().currentTime = 0; setProgress(0); } }, [index, queue, load]);
   const prev = useCallback(() => { const a = el(); if (a.currentTime > 3 || index === 0) { a.currentTime = 0; setProgress(0); return; } setIndex(index - 1); load(queue[index - 1]); }, [index, queue, load]);
   const seek = useCallback((f: number) => { const a = el(); if (!a.duration) return; let t = Math.max(0, Math.min(1, f)) * a.duration; if (currentRef.current?.preview) t = Math.min(t, PREVIEW_SECONDS - 1); a.currentTime = t; }, []);
-  const close = useCallback(() => { const a = el(); a.pause(); a.removeAttribute('src'); a.load(); setQueue([]); setIndex(0); setProgress(0); setDuration(0); setPlaying(false); setPreviewEnded(false); }, []);
+  const close = useCallback(() => { const a = el(); a.pause(); a.removeAttribute('src'); a.load(); setQueue([]); setIndex(0); setProgress(0); setDuration(0); setPlaying(false); setPreviewEnded(false); setExpanded(false); }, []);
+  const expand = useCallback(() => setExpanded(true), []);
+  const minimize = useCallback(() => setExpanded(false), []);
   // Go to the next song when one ends (reads the latest queue/index).
   useEffect(() => { const a = el(); a.onended = () => next(); }, [next]);
   // Lock-screen / headphone controls where supported.
@@ -74,7 +80,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } catch { /* unsupported */ }
   }, [current, next, prev]);
 
-  const value = useMemo<PlayerApi>(() => ({ queue, index, playing, progress, duration, current, previewEnded, play, toggle, next, prev, seek, close }), [queue, index, playing, progress, duration, current, previewEnded, play, toggle, next, prev, seek, close]);
+  const value = useMemo<PlayerApi>(() => ({ queue, index, playing, progress, duration, current, previewEnded, expanded, play, toggle, next, prev, seek, close, expand, minimize }), [queue, index, playing, progress, duration, current, previewEnded, expanded, play, toggle, next, prev, seek, close, expand, minimize]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 export function usePlayer() { const c = useContext(Ctx); if (!c) throw new Error('usePlayer outside PlayerProvider'); return c; }
