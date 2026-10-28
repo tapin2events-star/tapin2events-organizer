@@ -9,7 +9,7 @@ import CdDisc from './CdDisc';
 // play it (opens Now playing); the name links to the album or the artist profile.
 interface T { id: string; title: string; url: string; duration_sec: number | null; price?: number | null; preview_only?: boolean }
 interface Album { id: string; title: string; cover_url: string | null; price?: number | null; preview_only?: boolean; tracks: T[] }
-interface Music { artist: { id: string; name: string; photo: string | null; can_sell?: boolean } | null; albums: Album[]; singles: (T & { cover_url?: string | null })[] }
+interface Music { artist: { id: string; name: string; photo: string | null; can_sell?: boolean; mine?: boolean } | null; albums: Album[]; singles: (T & { cover_url?: string | null })[] }
 
 export default function PersonMusicStrip({ resourceId }: { resourceId: string }) {
   const on = useFeature('music_uploads');
@@ -18,7 +18,7 @@ export default function PersonMusicStrip({ resourceId }: { resourceId: string })
   useEffect(() => { if (on) supabase.rpc('artist_music', { p_resource_id: resourceId }).then(({ data }) => setM((data ?? null) as Music | null)); }, [on, resourceId]);
   if (!on || !m?.artist || (m.albums.length === 0 && m.singles.length === 0)) return null;
   const artist = m.artist;
-  const canSell = !!artist.can_sell;
+  const canSell = !!artist.can_sell && !artist.mine;
   const toTracks = (ts: T[], album?: Album): PlayerTrack[] => ts.map((t) => ({ id: t.id, title: t.title, url: t.url, duration_sec: t.duration_sec, artist: artist.name, artistId: artist.id,
     cover: album?.cover_url ?? artist.photo, albumId: album?.id ?? null, albumTitle: album?.title ?? null, preview: canSell && (((album?.preview_only && album?.price) || (t.preview_only && t.price)) ? true : false) }));
   const items = [

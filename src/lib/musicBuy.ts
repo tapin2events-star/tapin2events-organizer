@@ -10,6 +10,13 @@ import { openInBrowser } from './externalLink';
 export const money = (n: number) => `$${Number(n).toFixed(2)}`;
 export const musicPrice = (price: number) => { const c = Math.round(price * 100); return { price, service: (Math.round(c * 0.037) + 179) / 100, processing: Math.round(c * 0.029) / 100, total: (c + Math.round(c * 0.037) + 179 + Math.round(c * 0.029)) / 100 }; };
 
+// The reason a function gave when it refused (it answers with { error } and a 4xx status).
+export async function errorReason(error: unknown): Promise<string | null> {
+  const ctx = (error as { context?: Response } | null)?.context;
+  if (!ctx || typeof ctx.json !== 'function') return null;
+  try { const j = await ctx.clone().json(); return typeof j?.error === 'string' ? j.error : null; } catch { return null; }
+}
+
 export async function buyMusic(kind: 'album' | 'track', id: string, pagePath: string): Promise<string | null> {
   const next = `${pagePath}${pagePath.includes('?') ? '&' : '?'}buy=${kind}:${id}`;
   if (isNativeApp()) {
@@ -25,7 +32,7 @@ export async function buyMusic(kind: 'album' | 'track', id: string, pagePath: st
   const back = `${window.location.origin}${pagePath}`;
   const { data, error } = await supabase.functions.invoke('create-music-checkout', { body: { kind, id, successUrl: `${window.location.origin}/my-music?purchased=1`, cancelUrl: back } });
   const url = (data as { url?: string; error?: string } | null)?.url;
-  if (error || !url) return (data as { error?: string } | null)?.error ?? 'Couldn\u2019t start checkout. Please try again.';
+  if (error || !url) return (data as { error?: string } | null)?.error ?? (await errorReason(error)) ?? 'Couldn\u2019t start checkout. Please try again.';
   window.location.href = url;
   return null;
 }

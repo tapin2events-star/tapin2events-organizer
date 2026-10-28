@@ -7,7 +7,8 @@ import { buyMusic, money, musicPrice } from '../../lib/musicBuy';
 // The spinning CD player for an album (or a single): disc, play/pause, previous/next, a progress bar you can drag, and
 // the track list. Everything plays through the app-wide player, so it keeps going in the mini player while browsing.
 export interface Sale { kind: 'album' | 'track'; id: string; price: number; owned: boolean }
-export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, compact = false, sale, trackSales, canSell = true, pagePath }: { title: string; subtitle?: string; cover?: string | null; tracks: PlayerTrack[]; link?: string; compact?: boolean; sale?: Sale | null; trackSales?: Record<string, Sale>; canSell?: boolean; pagePath?: string }) {
+export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, compact = false, sale, trackSales, canSell: canSellIn = true, pagePath, mine: ownMusic = false }: { title: string; subtitle?: string; cover?: string | null; tracks: PlayerTrack[]; link?: string; compact?: boolean; sale?: Sale | null; trackSales?: Record<string, Sale>; canSell?: boolean; pagePath?: string; mine?: boolean }) {
+  const canSell = canSellIn && !ownMusic;
   const p = usePlayer();
   const [err, setErr] = useState<string | null>(null);
   async function buy(sl: Sale) {
@@ -30,6 +31,7 @@ export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, 
           {link ? <Link to={link} className="block truncate font-display text-lg font-bold text-gray-900 hover:underline">{title}</Link> : <p className="truncate font-display text-lg font-bold text-gray-900">{title}</p>}
           {subtitle && <p className="truncate text-sm text-gray-500">{subtitle}</p>}
           {active && p.current && <p className="mt-1 truncate text-xs font-medium text-marigold">▶ {p.current.title}</p>}
+          {ownMusic && sale && sale.price > 0 && <p className="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">Your music · {money(sale.price)}</p>}
           {sale && sale.price > 0 && canSell && (
             <button onClick={() => !sale.owned && buy(sale)} disabled={sale.owned} className={`mt-2 inline-flex min-h-[36px] items-center rounded-full px-4 text-xs font-semibold ${sale.owned ? 'bg-green-100 text-green-800' : 'bg-marigold text-white hover:bg-marigold/90'}`}>{buyLabel(sale)}</button>
           )}
