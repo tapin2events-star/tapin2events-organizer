@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { PlayerProvider } from './lib/player';
 import LinkViewer from './components/LinkViewer';
 import Toaster from './components/Toaster';
 import MeetingRedirect from './components/MeetingRedirect';
@@ -58,6 +59,7 @@ const EmbedPage = lazyWithRetry(() => import('./pages/EmbedPage'));
 const MyPostStats = lazyWithRetry(() => import('./pages/MyPostStats'));
 const UserProfileById = lazyWithRetry(() => import('./pages/UserProfileById'));
 const CopyrightPolicy = lazyWithRetry(() => import('./pages/CopyrightPolicy'));
+const AlbumPage = lazyWithRetry(() => import('./pages/AlbumPage'));
 const ShortEventLink = lazyWithRetry(() => import('./pages/ShortEventLink'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
@@ -86,6 +88,7 @@ const Feed = lazyWithRetry(() => import('./pages/Feed'));
 export default function App() {
   return (
     <AuthProvider>
+      <PlayerProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Toaster />
         <LinkViewer />
@@ -136,6 +139,7 @@ export default function App() {
             <Route path="/saved" element={<SavedEvents />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/dmca" element={<CopyrightPolicy />} />
+            <Route path="/albums/:id" element={<AlbumPage />} />
             <Route path="/copyright" element={<CopyrightPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -189,6 +193,7 @@ export default function App() {
           </Route>
         </Routes></DomainGate></TourProvider></AppErrorBoundary>
       </BrowserRouter>
+      </PlayerProvider>
     </AuthProvider>
   );
 }

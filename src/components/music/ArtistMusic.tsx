@@ -1,59 +1,33 @@
-import { useEffect, useRef, useState } from 'react';
-import { useFeature } from '../../lib/preview';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { useFeature } from '../../lib/preview';
+import MusicPlayerCard from './MusicPlayerCard';
+import type { PlayerTrack } from '../../lib/player';
 
-// Artist profile: the artist's songs, with one player (one song at a time). Plays are counted on first play.
-interface Track { id: string; title: string; url: string; duration_sec: number | null }
-const fmt = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '');
+// Artist profile: albums (each a spinning CD player) and singles. Everything plays through the app-wide player.
+interface T { id: string; title: string; url: string; duration_sec: number | null; cover_url?: string | null }
+interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; tracks: T[] }
+interface Music { artist: { id: string; name: string; photo: string | null } | null; albums: Album[]; singles: T[] }
 
 export default function ArtistMusic({ resourceId, artistName }: { resourceId: string; artistName: string }) {
   const on = useFeature('music_uploads');
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [playing, setPlaying] = useState<string | null>(null);
-  const [pos, setPos] = useState(0);
-  const audio = useRef<HTMLAudioElement | null>(null);
-  const counted = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    supabase.from('resource_tracks').select('id, title, url, duration_sec').eq('resource_id', resourceId).eq('status', 'active').order('sort_order').order('created_at')
-      .then(({ data }) => setTracks(((data ?? []) as Track[]).filter((t) => t.url)));
-    return () => { audio.current?.pause(); };
-  }, [resourceId]);
-  if (!on || tracks.length === 0) return null;
-
-  function toggle(t: Track) {
-    if (!audio.current) {
-      audio.current = new Audio();
-      audio.current.ontimeupdate = () => { const a = audio.current!; setPos(a.duration ? a.currentTime / a.duration : 0); };
-      audio.current.onended = () => { setPlaying(null); setPos(0); };
-    }
-    const a = audio.current;
-    if (playing === t.id) { a.pause(); setPlaying(null); return; }
-    a.src = t.url; setPos(0);
-    a.play().then(() => {
-      setPlaying(t.id);
-      if (!counted.current.has(t.id)) { counted.current.add(t.id); supabase.rpc('record_track_play', { p_track_id: t.id }); }
-    }).catch(() => setPlaying(null));
-  }
-
+  const [m, setM] = useState<Music | null>(null);
+  useEffect(() => { if (on) supabase.rpc('artist_music', { p_resource_id: resourceId }).then(({ data }) => setM((data ?? null) as Music | null)); }, [on, resourceId]);
+  if (!on || !m || (m.albums.length === 0 && m.singles.length === 0)) return null;
+  const toTrack = (t: T, album?: Album): PlayerTrack => ({ id: t.id, title: t.title, url: t.url, duration_sec: t.duration_sec, artist: artistName, artistId: resourceId, cover: album?.cover_url ?? t.cover_url ?? m.artist?.photo ?? null, albumId: album?.id ?? null, albumTitle: album?.title ?? null });
   return (
     <section className="mt-6 border-t border-gray-200 pt-6" aria-label={`Music by ${artistName}`}>
       <h2 className="font-display text-lg font-semibold text-gray-900">🎵 Music</h2>
-      <ul className="mt-3 flex flex-col gap-2">
-        {tracks.map((t) => {
-          const on = playing === t.id;
-          return (
-            <li key={t.id} className={`overflow-hidden rounded-xl border ${on ? 'border-marigold bg-orange-50' : 'border-gray-200 bg-white'}`}>
-              <button onClick={() => toggle(t)} className="flex w-full items-center gap-3 p-3 text-left" aria-label={`${on ? 'Pause' : 'Play'} ${t.title}`}>
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white ${on ? 'bg-marigold' : 'bg-[#0F1B3D]'}`} aria-hidden="true">{on ? '❚❚' : '▶'}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{t.title}</span><span className="block truncate text-xs text-gray-500">{artistName}</span></span>
-                {t.duration_sec ? <span className="shrink-0 text-xs text-gray-500">{fmt(t.duration_sec)}</span> : null}
-              </button>
-              {on && <div className="h-1 bg-orange-100"><div className="h-full bg-marigold transition-all" style={{ width: `${Math.round(pos * 100)}%` }} /></div>}
-            </li>
-          );
-        })}
-      </ul>
+      <div className="mt-3 flex flex-col gap-4">
+        {m.albums.map((a) => (
+          <MusicPlayerCard key={a.id} title={a.title} subtitle={[artistName, a.release_date ? new Date(a.release_date + 'T00:00:00').getFullYear() : null, `${a.tracks.length} song${a.tracks.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
+            cover={a.cover_url ?? m.artist?.photo} tracks={a.tracks.map((t) => toTrack(t, a))} link={`/albums/${a.id}`} />
+        ))}
+        {m.singles.length > 0 && (
+          <MusicPlayerCard title={m.albums.length ? 'Singles' : artistName} subtitle={m.albums.length ? artistName : `${m.singles.length} song${m.singles.length === 1 ? '' : 's'}`} cover={m.singles[0].cover_url ?? m.artist?.photo} tracks={m.singles.map((t) => toTrack(t))} compact={m.albums.length > 0} />
+        )}
+      </div>
       <p className="mt-2 text-xs text-gray-400"><Link to="/dmca" className="hover:underline">Report a copyright problem</Link></p>
     </section>
   );

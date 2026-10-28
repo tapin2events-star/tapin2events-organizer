@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
+import MiniPlayer from './music/MiniPlayer';
 import { onNavigate } from '../lib/appUpdate';
 import GetAppBanner from './GetAppBanner';
 import UpgradePrompt from './business/UpgradePrompt';
@@ -233,6 +234,7 @@ export default function Layout() {
       </main>
 
       {!whiteLabel && <BottomTabBar />}
+      <MiniPlayer />
       <UpgradePrompt />
     </div>
   );

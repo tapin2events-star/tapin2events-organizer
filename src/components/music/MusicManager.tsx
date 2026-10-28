@@ -2,11 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { toast, toastError } from '../../lib/toast';
+import { useAuth } from '../../context/AuthContext';
+import { uploadImage } from '../../lib/business';
 
 // Artist dashboard: upload and manage songs (Cloudflare R2 via the music-upload function). The file goes straight from
 // the browser to storage with a one-time address. MP3, M4A or WAV, up to 25 MB each, 30 songs per profile; each upload
 // confirms the artist owns the rights.
-interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number }
+interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null }
+interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null }
 const MAX = 25 * 1024 * 1024;
 const fmt = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '');
 const mimeOf = (f: File) => f.type || (/\.mp3$/i.test(f.name) ? 'audio/mpeg' : /\.m4a$/i.test(f.name) ? 'audio/mp4' : /\.wav$/i.test(f.name) ? 'audio/wav' : '');
@@ -24,13 +27,17 @@ function durationOf(file: File): Promise<number | null> {
 
 export default function MusicManager({ resourceId }: { resourceId: string }) {
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const { user } = useAuth();
+  const [albumForm, setAlbumForm] = useState<{ id: string | null; title: string; description: string; cover_url: string; release_date: string } | null>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [rights, setRights] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => setTracks(((data ?? []) as Track[]).filter((t) => t.status === 'active'))); }, [resourceId]);
+  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => { const d = (data ?? { tracks: [], albums: [] }) as { tracks: Track[]; albums: Album[] }; setTracks((d.tracks ?? []).filter((t) => t.status === 'active')); setAlbums(d.albums ?? []); }); }, [resourceId]);
   useEffect(() => { load(); }, [load]);
 
   function pick(f: File | null) {
@@ -88,6 +95,31 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
     load();
   }
 
+  async function saveAlbum() {
+    if (!albumForm || !albumForm.title.trim()) return;
+    const { error } = await supabase.rpc('save_album', { p_resource_id: resourceId, p_album_id: albumForm.id, p_title: albumForm.title.trim(), p_description: albumForm.description, p_cover_url: albumForm.cover_url || null, p_release_date: albumForm.release_date || null });
+    if (error) return toastError(error.message);
+    toast(albumForm.id ? 'Album updated' : '💿 Album created'); setAlbumForm(null); load();
+  }
+  async function deleteAlbum(a: Album) {
+    if (!window.confirm(`Delete the album \u201c${a.title}\u201d? Its songs stay on your profile as singles.`)) return;
+    const { error } = await supabase.rpc('delete_album', { p_album_id: a.id });
+    if (error) return toastError(error.message);
+    toast('Album deleted'); load();
+  }
+  async function pickCover(f: File | null) {
+    if (!f || !user || !albumForm) return;
+    setCoverBusy(true);
+    const r = await uploadImage(user.id, f, 'album-cover');
+    setCoverBusy(false);
+    if (r.error || !r.url) return toastError(r.error ?? 'Couldn\u2019t upload the cover.');
+    setAlbumForm({ ...albumForm, cover_url: r.url });
+  }
+  async function setAlbum(t: Track, albumId: string | null) {
+    const { error } = await supabase.rpc('set_track_album', { p_track_id: t.id, p_album_id: albumId });
+    if (error) return toastError(error.message);
+    load();
+  }
   const full = tracks.length >= 30;
   return (
     <div className="mt-4 flex flex-col gap-4">
@@ -116,6 +148,41 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
           </div>
         )}
       </section>
+      <section className="rounded-2xl border border-gray-200 bg-surface p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-display text-lg font-bold text-bone">💿 Albums</p>
+          {!albumForm && <button onClick={() => setAlbumForm({ id: null, title: '', description: '', cover_url: '', release_date: '' })} className="rounded-full bg-[#0F1B3D] px-4 py-2 text-sm font-semibold text-white">+ New album</button>}
+        </div>
+        <p className="mt-0.5 text-sm text-muted">Group songs with cover art. Each album gets its own page to share, and a spinning CD player on your profile.</p>
+        {albumForm && (
+          <div className="mt-3 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3">
+            <input value={albumForm.title} onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value.slice(0, 120) })} placeholder="Album title" aria-label="Album title" className="min-h-[44px] rounded-xl border border-gray-300 px-3 text-base text-gray-900 sm:text-sm" />
+            <div className="flex items-center gap-3">
+              {albumForm.cover_url ? <img src={albumForm.cover_url} alt="" className="h-16 w-16 rounded-lg object-cover" /> : <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100 text-2xl" aria-hidden="true">💿</span>}
+              <label className="text-sm text-gray-700"><span className="block font-medium">Cover art</span><input type="file" accept="image/*" onChange={(e) => pickCover(e.target.files?.[0] ?? null)} className="mt-1 block text-xs" />{coverBusy && <span className="text-xs text-muted">Uploading…</span>}</label>
+            </div>
+            <label className="text-sm text-gray-700">Release date<input type="date" value={albumForm.release_date} onChange={(e) => setAlbumForm({ ...albumForm, release_date: e.target.value })} className="mt-1 block min-h-[44px] w-full rounded-xl border border-gray-300 px-3 text-base text-gray-900 sm:text-sm" /></label>
+            <textarea value={albumForm.description} onChange={(e) => setAlbumForm({ ...albumForm, description: e.target.value.slice(0, 1000) })} rows={2} placeholder="About this album (optional)" className="rounded-xl border border-gray-300 px-3 py-2 text-base text-gray-900 sm:text-sm" />
+            <div className="flex gap-2">
+              <button onClick={saveAlbum} disabled={!albumForm.title.trim() || coverBusy} className="min-h-[44px] rounded-full bg-marigold px-5 text-sm font-semibold text-white disabled:opacity-50">{albumForm.id ? 'Save album' : 'Create album'}</button>
+              <button onClick={() => setAlbumForm(null)} className="min-h-[44px] rounded-full border border-gray-300 px-5 text-sm font-medium text-gray-700">Cancel</button>
+            </div>
+          </div>
+        )}
+        {albums.length > 0 && (
+          <ul className="mt-3 flex flex-col gap-2">
+            {albums.map((a) => (
+              <li key={a.id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-2.5">
+                {a.cover_url ? <img src={a.cover_url} alt="" className="h-12 w-12 rounded-lg object-cover" /> : <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xl" aria-hidden="true">💿</span>}
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{a.title}</span><span className="block text-xs text-gray-500">{tracks.filter((t) => t.album_id === a.id).length} song{tracks.filter((t) => t.album_id === a.id).length === 1 ? '' : 's'}{a.release_date ? ` · ${a.release_date}` : ''}</span></span>
+                <Link to={`/albums/${a.id}`} className="px-2 text-xs font-medium text-indigo-600">View</Link>
+                <button onClick={() => setAlbumForm({ id: a.id, title: a.title, description: a.description ?? '', cover_url: a.cover_url ?? '', release_date: a.release_date ?? '' })} className="px-2 text-xs font-medium text-indigo-600">Edit</button>
+                <button onClick={() => deleteAlbum(a)} className="px-2 text-xs font-medium text-red-600">Delete</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       {tracks.length > 0 && (
         <section className="rounded-2xl border border-gray-200 bg-surface p-4">
           <p className="font-display text-lg font-bold text-bone">Your songs</p>
@@ -131,6 +198,14 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
                     <button onClick={() => remove(t)} className="px-2 text-xs font-medium text-red-600">Remove</button>
                   </span>
                 </div>
+                {albums.length > 0 && (
+                  <label className="mt-2 flex items-center gap-2 text-xs text-gray-600">Album
+                    <select value={t.album_id ?? ''} onChange={(e) => setAlbum(t, e.target.value || null)} className="min-h-[36px] rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900">
+                      <option value="">Single (no album)</option>
+                      {albums.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
+                    </select>
+                  </label>
+                )}
                 {t.url && <audio controls preload="none" src={t.url} className="mt-2 w-full" />}
               </li>
             ))}
