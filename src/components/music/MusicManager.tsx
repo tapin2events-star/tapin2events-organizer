@@ -83,10 +83,11 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   }
 
   async function remove(t: Track) {
-    if (!window.confirm(`Remove \u201c${t.title}\u201d from your profile?`)) return;
+    if (!window.confirm(`Remove \u201c${t.title}\u201d from your profile? (Anyone who bought or donated for it keeps it in their My music.)`)) return;
     const { data, error } = await supabase.functions.invoke('music-upload', { body: { action: 'delete', track_id: t.id } });
     if (error || (data as { error?: string } | null)?.error) return toastError('Couldn\u2019t remove it. Please try again.');
-    toast('Removed'); load();
+    // Someone bought or donated for it: it's off your profile, but kept in their My music.
+    toast((data as { kept_for_buyers?: boolean } | null)?.kept_for_buyers ? 'Removed from your profile. People who bought or donated for it keep it in My music.' : 'Removed'); load();
   }
   async function move(i: number, dir: -1 | 1) {
     const j = i + dir; if (j < 0 || j >= tracks.length) return;
