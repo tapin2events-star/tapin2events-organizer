@@ -230,7 +230,7 @@ function ComplimentaryAccess() {
   return (
     <section>
       <h2 className="font-display text-xl font-bold text-bone">🎁 Complimentary access</h2>
-      <p className="mt-1 text-sm text-muted">These people get every premium feature free, for their own events and up to 5 organizations they own (the first 5), even after billing turns on. Further organizations need a plan. TapIN admins always have everything.</p>
+      <p className="mt-1 text-sm text-muted">These people get every premium feature free, for their own events and up to 3 organizations they own (the first 3), even after billing turns on. Further organizations need a plan. TapIN admins always have everything.</p>
       {rows && rows.length > 0 && (
         <ul className="mt-3 flex flex-col gap-2">
           {rows.map((r) => (
