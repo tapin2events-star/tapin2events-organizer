@@ -217,6 +217,7 @@ export default function Layout() {
               <Link to="/terms" onClick={close} className="py-1 hover:text-gray-700">Terms</Link>
               <Link to="/privacy" onClick={close} className="py-1 hover:text-gray-700">Privacy</Link>
               <Link to="/refund-policy" onClick={close} className="py-1 hover:text-gray-700">Refunds</Link>
+              <Link to="/dmca" onClick={close} className="py-1 hover:text-gray-700">Copyright</Link>
             </div>
           </div>
         </div>

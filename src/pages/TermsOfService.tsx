@@ -7,7 +7,7 @@ export default function TermsOfService() {
   return (
     <LegalPage
       title="Terms of Service"
-      updated="October 25, 2026"
+      updated="October 28, 2026"
       intro={
         <p>
           These terms are an agreement between you and <strong>TapIN LLC</strong> ("TapIN," "we," "us"), a North Carolina company, covering your use of the TapIN2Events website and apps
@@ -75,7 +75,7 @@ export default function TermsOfService() {
       </LegalSection>
 
       <LegalSection title="9. Copyright complaints">
-        <p>If you believe content on TapIN infringes your copyright, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> with: your contact information; a description of the copyrighted work; the link to the content you believe infringes; a statement that you have a good-faith belief the use isn't authorized; a statement, under penalty of perjury, that your notice is accurate and that you're the owner or authorized to act for the owner; and your physical or electronic signature. We'll respond and may remove the content. We may disable accounts of repeat infringers.</p>
+        <p>If you believe content on TapIN infringes your copyright, send a notice to our designated agent: Copyright Agent, TapIN LLC, 6134 Rogers Rd., Rolesville, NC 27571; phone (919) 594-2700; email <a href="mailto:dmca@tapin2events.com">dmca@tapin2events.com</a>. Your notice should include: your contact information; a description of the copyrighted work; the link to the content you believe infringes; a statement that you have a good-faith belief the use isn't authorized; a statement, under penalty of perjury, that your notice is accurate and that you're the owner or authorized to act for the owner; and your physical or electronic signature. We'll respond and may remove the content. If your content was removed by mistake, you can send a counter-notice. We may disable accounts of repeat infringers. See our full <Link to="/dmca">Copyright &amp; DMCA Policy</Link>.</p>
       </LegalSection>
 
       <LegalSection title="10. AI features">

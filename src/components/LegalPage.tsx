@@ -22,6 +22,7 @@ export function LegalPage({ title, updated, intro, children }: { title: string; 
         <Link to="/terms" className="font-medium text-marigold hover:underline">Terms of Service</Link>
         <Link to="/privacy" className="font-medium text-marigold hover:underline">Privacy Policy</Link>
         <Link to="/refund-policy" className="font-medium text-marigold hover:underline">Refund Policy</Link>
+        <Link to="/dmca" className="font-medium text-marigold hover:underline">Copyright &amp; DMCA</Link>
       </p>
     </div>
   );
