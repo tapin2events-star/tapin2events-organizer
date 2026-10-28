@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useFeature } from '../lib/preview';
 import MusicManager from '../components/music/MusicManager';
 import VideoHeaderCard from '../components/video/VideoHeaderCard';
 import ArtistPlanCard from '../components/business/ArtistPlanCard';
@@ -63,6 +64,7 @@ const TABS = ['Overview', 'Bookings', 'Music', 'Media', 'Products'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ResourceDashboard() {
+  const musicOn = useFeature('music_uploads');
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -263,7 +265,7 @@ export default function ResourceDashboard() {
         {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
         <div className="mt-6 flex gap-1 border-b border-gray-200">
-          {TABS.map((t) => (
+          {TABS.filter((t) => t !== 'Music' || musicOn).map((t) => (
             <button
               key={t}
               data-tour={`rtab-${t}`}
@@ -451,7 +453,7 @@ export default function ResourceDashboard() {
           </>
         )}
 
-        {tab === 'Music' && <MusicManager resourceId={resource.id} />}
+        {tab === 'Music' && musicOn && <MusicManager resourceId={resource.id} />}
         {tab === 'Media' && <ResourceMediaManager resourceId={resource.id} />}
 
         {tab === 'Products' && (

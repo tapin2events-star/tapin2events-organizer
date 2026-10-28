@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useFeature } from '../../lib/preview';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -7,6 +8,7 @@ interface Track { id: string; title: string; url: string; duration_sec: number |
 const fmt = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '');
 
 export default function ArtistMusic({ resourceId, artistName }: { resourceId: string; artistName: string }) {
+  const on = useFeature('music_uploads');
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playing, setPlaying] = useState<string | null>(null);
   const [pos, setPos] = useState(0);
@@ -17,7 +19,7 @@ export default function ArtistMusic({ resourceId, artistName }: { resourceId: st
       .then(({ data }) => setTracks(((data ?? []) as Track[]).filter((t) => t.url)));
     return () => { audio.current?.pause(); };
   }, [resourceId]);
-  if (tracks.length === 0) return null;
+  if (!on || tracks.length === 0) return null;
 
   function toggle(t: Track) {
     if (!audio.current) {
