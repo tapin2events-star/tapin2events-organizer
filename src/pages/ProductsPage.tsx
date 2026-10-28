@@ -25,6 +25,12 @@ export default function ProductsPage() {
   const initialTab = searchParams.get('tab');
   const sellAnywhere = useFeature('sell_anywhere');
   const [tab, setTab] = useState<Tab>(initialTab === 'orders' ? 'My Orders' : initialTab === 'products' ? 'My Products' : 'Browse');
+  // Follow the address while on the page (e.g. Sell something opens My Products for the chosen place).
+  const sellKey = searchParams.get('sell');
+  useEffect(() => {
+    if (initialTab === 'products') setTab('My Products');
+    else if (initialTab === 'orders') setTab('My Orders');
+  }, [initialTab, sellKey]);
   const [products, setProducts] = useState<ProductWithSeller[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -178,7 +184,7 @@ export default function ProductsPage() {
       )}
 
       {tab === 'My Orders' && <MyProductOrders title="My Orders" />}
-      {tab === 'My Products' && <MyProducts />}
+      {tab === 'My Products' && <MyProducts key={sellKey ?? 'all'} sellKey={sellKey} />}
     </div>
   );
 }

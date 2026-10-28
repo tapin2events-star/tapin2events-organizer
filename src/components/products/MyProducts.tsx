@@ -21,15 +21,14 @@ interface Owner {
 // products and each of their events' products. Each section reuses the same
 // ProductManager + ProductOrdersPanel found on the event page and Resource
 // Dashboard, so adding, editing, stock, and fulfillment all work identically.
-export default function MyProducts() {
+export default function MyProducts({ sellKey = null }: { sellKey?: string | null } = {}) {
   const { user } = useAuth();
   const [withProducts, setWithProducts] = useState<Owner[]>([]);
   const [upcomingEmpty, setUpcomingEmpty] = useState<Owner[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [hasAnyStorefront, setHasAnyStorefront] = useState(false);
-  // From "Sell something": the place to open, with its new-product form.
-  const [sellKey] = useState(() => new URLSearchParams(window.location.search).get('sell'));
+  // sellKey (from "Sell something"): the place to open, with its new-product form.
 
   useEffect(() => {
     if (!user?.email) {
