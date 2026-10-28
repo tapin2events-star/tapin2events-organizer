@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ArtistHome, { type QuickAdd } from '../components/resource/ArtistHome';
 import { useFeature } from '../lib/preview';
 import MusicManager from '../components/music/MusicManager';
 import VideoHeaderCard from '../components/video/VideoHeaderCard';
@@ -65,6 +66,9 @@ type Tab = (typeof TABS)[number];
 
 export default function ResourceDashboard() {
   const musicOn = useFeature('music_uploads');
+  const dashV2 = useFeature('artist_dashboard_v2');
+  // New dashboard (preview): the quick-add that opened an area (e.g. + Song opens Music with the Add a song sheet).
+  const [quick, setQuick] = useState<QuickAdd | null>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -255,16 +259,26 @@ export default function ResourceDashboard() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl font-extrabold text-gray-900">Artist & vendor dashboard</h1>
-            <p className="mt-1 text-gray-500">Booking requests for {resource.display_name}</p>
+            {!dashV2 && <p className="mt-1 text-gray-500">Booking requests for {resource.display_name}</p>}
+            {dashV2 && tab !== 'Overview' && <p className="mt-1 text-gray-500">{({ Bookings: 'Bookings', Music: 'Music', Media: 'Photos & videos', Products: 'Shop' } as Record<string, string>)[tab] ?? ''}</p>}
           </div>
-          <Link to="/resources/new" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
+          {!dashV2 && <Link to="/resources/new" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
             Edit profile
-          </Link>
+          </Link>}
         </div>
 
         {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
-        <div className="mt-6 flex gap-1 border-b border-gray-200">
+        {dashV2 && tab !== 'Overview' && (
+          <button onClick={() => { setTab('Overview'); setQuick(null); }} className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-medium text-marigold">‹ Dashboard</button>
+        )}
+        {dashV2 && tab === 'Overview' && (
+          <ArtistHome resource={resource} pendingBookings={bookings.filter((b) => b.status === 'pending').length}
+            upcomingBookings={bookings.filter((b) => (b.status === 'accepted' || b.status === 'confirmed') && (!b.event_start_date || new Date(b.event_start_date) >= new Date())).length}
+            unreadMessages={unreadTotal} payoutsReady={payouts ? payouts.chargesEnabled : null} musicOn={musicOn}
+            onOpen={(area, q) => { if (area === 'Stats') { navigate(`/resources/${resource.id}/stats`); return; } setQuick(q ?? null); setTab(area); window.scrollTo({ top: 0 }); }} />
+        )}
+        {!dashV2 && <div className="mt-6 flex gap-1 border-b border-gray-200">
           {TABS.filter((t) => t !== 'Music' || musicOn).map((t) => (
             <button
               key={t}
@@ -280,9 +294,9 @@ export default function ResourceDashboard() {
               )}
             </button>
           ))}
-        </div>
+        </div>}
 
-        {tab === 'Overview' && <><ArtistPlanCard compact /><Link to={`/resources/${resource.id}/stats`} className="mt-4 flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold"><span><span className="block font-semibold text-gray-900">📊 Post stats</span><span className="block text-xs text-gray-500">Views, likes, comments and tips on posts made as this profile</span></span><span className="text-marigold" aria-hidden="true">›</span></Link><VideoHeaderCard resourceId={resource.id} what="your artist profile" /><ResourceEarningsOverview resourceId={resource.id} /></>}
+        {tab === 'Overview' && !dashV2 && <><ArtistPlanCard compact /><Link to={`/resources/${resource.id}/stats`} className="mt-4 flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold"><span><span className="block font-semibold text-gray-900">📊 Post stats</span><span className="block text-xs text-gray-500">Views, likes, comments and tips on posts made as this profile</span></span><span className="text-marigold" aria-hidden="true">›</span></Link><VideoHeaderCard resourceId={resource.id} what="your artist profile" /><ResourceEarningsOverview resourceId={resource.id} /></>}
 
         {tab === 'Bookings' && (
           <>
@@ -453,12 +467,12 @@ export default function ResourceDashboard() {
           </>
         )}
 
-        {tab === 'Music' && musicOn && <MusicManager resourceId={resource.id} />}
+        {tab === 'Music' && musicOn && <MusicManager key={quick ?? 'm'} resourceId={resource.id} v2={dashV2} autoAdd={quick === 'song'} autoAlbum={quick === 'album'} />}
         {tab === 'Media' && <ResourceMediaManager resourceId={resource.id} />}
 
         {tab === 'Products' && (
           <>
-            <ProductManager ownerType="resource" ownerId={resource.id} sellerEmail={resource.email} />
+            <ProductManager ownerType="resource" ownerId={resource.id} sellerEmail={resource.email} autoCreate={dashV2 && quick === 'product'} />
             <ProductOrdersPanel ownerType="resource" ownerId={resource.id} />
           </>
         )}

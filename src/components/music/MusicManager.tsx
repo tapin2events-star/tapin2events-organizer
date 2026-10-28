@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { toast, toastError } from '../../lib/toast';
+import Sheet from '../scouting/Sheet';
+import AddSongSheet from './AddSongSheet';
 import { useAuth } from '../../context/AuthContext';
 import { uploadImage } from '../../lib/business';
 
@@ -25,13 +27,16 @@ function durationOf(file: File): Promise<number | null> {
   });
 }
 
-export default function MusicManager({ resourceId }: { resourceId: string }) {
+export default function MusicManager({ resourceId, v2 = false, autoAdd = false, autoAlbum = false }: { resourceId: string; v2?: boolean; autoAdd?: boolean; autoAlbum?: boolean }) {
+  // v2 (dashboard preview): album cover tiles, compact song rows that open an edit sheet, and the step-by-step Add a song sheet.
+  const [adding, setAdding] = useState(autoAdd);
+  const [editing, setEditing] = useState<string | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [canSell, setCanSell] = useState(true);
   const [sales, setSales] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
   const { user } = useAuth();
-  const [albumForm, setAlbumForm] = useState<{ id: string | null; title: string; description: string; cover_url: string; release_date: string } | null>(null);
+  const [albumForm, setAlbumForm] = useState<{ id: string | null; title: string; description: string; cover_url: string; release_date: string } | null>(autoAlbum ? { id: null, title: '', description: '', cover_url: '', release_date: '' } : null);
   const [coverBusy, setCoverBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
@@ -130,9 +135,17 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
     toast(n ? `Price set: $${n.toFixed(2)}` : 'Free to stream'); load();
   }
   const full = tracks.length >= 30;
+  const ed = editing ? tracks.find((t) => t.id === editing) ?? null : null;
+  const edIndex = ed ? tracks.indexOf(ed) : -1;
   return (
     <div className="mt-4 flex flex-col gap-4">
-      <section className="rounded-2xl border border-gray-200 bg-surface p-4">
+      {v2 && (
+        <button onClick={() => setAdding(true)} disabled={full} className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-marigold text-base font-semibold text-white shadow-sm disabled:opacity-50">
+          <span aria-hidden="true">＋</span> Add a song <span className="text-sm font-normal opacity-80">({tracks.length}/30)</span>
+        </button>
+      )}
+      {adding && <AddSongSheet resourceId={resourceId} albums={albums} canSell={canSell} onClose={() => setAdding(false)} onDone={() => { setAdding(false); toast('🎵 Song added to your profile'); load(); }} />}
+      {!v2 && <section className="rounded-2xl border border-gray-200 bg-surface p-4">
         <p className="font-display text-lg font-bold text-bone">🎵 Add a song</p>
         <p className="mt-0.5 text-sm text-muted">MP3, M4A or WAV, up to 25 MB. Songs play right on your profile. {tracks.length}/30 used.</p>
         {full ? <p className="mt-3 text-sm text-amber-800">You&apos;ve reached 30 songs. Remove one to add another.</p> : (
@@ -156,7 +169,7 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
             {err && <p role="alert" className="text-sm text-red-600">{err}</p>}
           </div>
         )}
-      </section>
+      </section>}
       <section className="rounded-2xl border border-gray-200 bg-surface p-4">
         <div className="flex items-center justify-between gap-2">
           <p className="font-display text-lg font-bold text-bone">💿 Albums</p>
@@ -174,13 +187,33 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
             </div>
             <label className="text-sm text-gray-700">Release date<input type="date" value={albumForm.release_date} onChange={(e) => setAlbumForm({ ...albumForm, release_date: e.target.value })} className="mt-1 block min-h-[44px] w-full rounded-xl border border-gray-300 px-3 text-base text-gray-900 sm:text-sm" /></label>
             <textarea value={albumForm.description} onChange={(e) => setAlbumForm({ ...albumForm, description: e.target.value.slice(0, 1000) })} rows={2} placeholder="About this album (optional)" className="rounded-xl border border-gray-300 px-3 py-2 text-base text-gray-900 sm:text-sm" />
+            {v2 && albumForm.id && (() => { const a = albums.find((x) => x.id === albumForm.id); return a ? (
+              <div className="rounded-xl bg-gray-50 p-2">
+                <PriceRow kind="album" id={a.id} price={a.price} previewOnly={a.preview_only} setPrice={setPrice} />
+                <div className="mt-2 flex gap-3 text-xs"><Link to={`/albums/${a.id}`} className="font-medium text-indigo-600">View album page</Link><button onClick={() => { setAlbumForm(null); deleteAlbum(a); }} className="font-medium text-red-600">Delete album</button></div>
+              </div>
+            ) : null; })()}
             <div className="flex gap-2">
               <button onClick={saveAlbum} disabled={!albumForm.title.trim() || coverBusy} className="min-h-[44px] rounded-full bg-marigold px-5 text-sm font-semibold text-white disabled:opacity-50">{albumForm.id ? 'Save album' : 'Create album'}</button>
               <button onClick={() => setAlbumForm(null)} className="min-h-[44px] rounded-full border border-gray-300 px-5 text-sm font-medium text-gray-700">Cancel</button>
             </div>
           </div>
         )}
-        {albums.length > 0 && (
+        {v2 && albums.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {albums.map((a) => {
+              const n = tracks.filter((t) => t.album_id === a.id).length;
+              return (
+                <button key={a.id} onClick={() => setAlbumForm({ id: a.id, title: a.title, description: a.description ?? '', cover_url: a.cover_url ?? '', release_date: a.release_date ?? '' })} className="text-left">
+                  {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-square w-full rounded-xl object-cover shadow-sm" /> : <span className="flex aspect-square w-full items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-teal-400 text-4xl shadow-sm" aria-hidden="true">💿</span>}
+                  <span className="mt-1.5 block truncate text-sm font-semibold text-gray-900">{a.title}</span>
+                  <span className="block text-xs text-gray-500">{n} song{n === 1 ? '' : 's'}{a.price ? ` · $${Number(a.price).toFixed(2)}` : ''}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {!v2 && albums.length > 0 && (
           <ul className="mt-3 flex flex-col gap-2">
             {albums.map((a) => (
               <li key={a.id} className="rounded-xl border border-gray-200 bg-white p-2.5">
@@ -200,6 +233,20 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
       {tracks.length > 0 && (
         <section className="rounded-2xl border border-gray-200 bg-surface p-4">
           <p className="font-display text-lg font-bold text-bone">Your songs</p>
+          {v2 ? (
+            <ul className="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+              {tracks.map((t) => (
+                <li key={t.id}>
+                  <button onClick={() => setEditing(t.id)} className="flex w-full items-center gap-3 px-3 py-3 text-left">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100" aria-hidden="true">🎵</span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{t.title}</span>
+                      <span className="block truncate text-xs text-gray-500">{[t.album_id ? albums.find((a) => a.id === t.album_id)?.title : 'Single', fmt(t.duration_sec), `${t.plays} play${t.plays === 1 ? '' : 's'}`, !t.album_id && t.price ? `$${Number(t.price).toFixed(2)}` : null].filter(Boolean).join(' · ')}</span></span>
+                    <span className="text-gray-400" aria-hidden="true">›</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
           <ul className="mt-2 flex flex-col gap-2">
             {tracks.map((t, i) => (
               <li key={t.id} className="rounded-xl border border-gray-200 bg-white p-3">
@@ -225,8 +272,41 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
               </li>
             ))}
           </ul>
+          )}
         </section>
       )}
+      {ed && (
+        <Sheet title="Edit song" onClose={() => setEditing(null)}>
+          <SongTitle key={ed.id} title={ed.title} onSave={async (n) => { const { error } = await supabase.rpc('update_track', { p_track_id: ed.id, p_title: n }); if (error) toastError(error.message); else { toast('Saved'); load(); } }} />
+          {albums.length > 0 && (
+            <label className="mt-3 block text-sm text-gray-700">Album
+              <select value={ed.album_id ?? ''} onChange={(e) => setAlbum(ed, e.target.value || null)} className="mt-1 block min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900">
+                <option value="">Single (no album)</option>
+                {albums.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
+              </select>
+            </label>
+          )}
+          {!ed.album_id && canSell && <PriceRow key={`p-${ed.id}`} kind="track" id={ed.id} price={ed.price} previewOnly={ed.preview_only} setPrice={setPrice} />}
+          {ed.url && <audio controls preload="none" src={ed.url} className="mt-3 w-full" />}
+          <p className="mt-2 text-xs text-gray-500">{[fmt(ed.duration_sec), `${ed.plays} play${ed.plays === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={() => move(edIndex, -1)} disabled={edIndex <= 0} className="min-h-[44px] rounded-full border border-gray-300 px-4 text-sm font-medium text-gray-700 disabled:opacity-40">↑ Move up</button>
+            <button onClick={() => move(edIndex, 1)} disabled={edIndex < 0 || edIndex >= tracks.length - 1} className="min-h-[44px] rounded-full border border-gray-300 px-4 text-sm font-medium text-gray-700 disabled:opacity-40">↓ Move down</button>
+            <button onClick={async () => { const t = ed; setEditing(null); await remove(t); }} className="min-h-[44px] rounded-full border border-red-200 px-4 text-sm font-medium text-red-700">Remove song</button>
+          </div>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+// Song title editor for the edit sheet (saves on Save).
+function SongTitle({ title, onSave }: { title: string; onSave: (t: string) => void }) {
+  const [v, setV] = useState(title);
+  return (
+    <div className="flex gap-2">
+      <input value={v} onChange={(e) => setV(e.target.value.slice(0, 120))} aria-label="Song title" className="min-h-[48px] min-w-0 flex-1 rounded-xl border border-gray-300 px-3 text-base text-gray-900" />
+      <button onClick={() => v.trim() && v.trim() !== title && onSave(v.trim())} disabled={!v.trim() || v.trim() === title} className="min-h-[48px] shrink-0 rounded-xl bg-[#0F1B3D] px-4 text-sm font-semibold text-white disabled:opacity-40">Save</button>
     </div>
   );
 }
