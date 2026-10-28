@@ -60,6 +60,7 @@ const MyPostStats = lazyWithRetry(() => import('./pages/MyPostStats'));
 const UserProfileById = lazyWithRetry(() => import('./pages/UserProfileById'));
 const CopyrightPolicy = lazyWithRetry(() => import('./pages/CopyrightPolicy'));
 const AlbumPage = lazyWithRetry(() => import('./pages/AlbumPage'));
+const MyMusic = lazyWithRetry(() => import('./pages/MyMusic'));
 const ShortEventLink = lazyWithRetry(() => import('./pages/ShortEventLink'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
@@ -140,6 +141,7 @@ export default function App() {
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/dmca" element={<CopyrightPolicy />} />
             <Route path="/albums/:id" element={<AlbumPage />} />
+            <Route path="/my-music" element={<MyMusic />} />
             <Route path="/copyright" element={<CopyrightPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />

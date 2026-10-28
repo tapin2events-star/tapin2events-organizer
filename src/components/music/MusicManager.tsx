@@ -8,8 +8,8 @@ import { uploadImage } from '../../lib/business';
 // Artist dashboard: upload and manage songs (Cloudflare R2 via the music-upload function). The file goes straight from
 // the browser to storage with a one-time address. MP3, M4A or WAV, up to 25 MB each, 30 songs per profile; each upload
 // confirms the artist owns the rights.
-interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null }
-interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null }
+interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null; price: number | null; preview_only: boolean }
+interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price: number | null; preview_only: boolean }
 const MAX = 25 * 1024 * 1024;
 const fmt = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '');
 const mimeOf = (f: File) => f.type || (/\.mp3$/i.test(f.name) ? 'audio/mpeg' : /\.m4a$/i.test(f.name) ? 'audio/mp4' : /\.wav$/i.test(f.name) ? 'audio/wav' : '');
@@ -28,6 +28,8 @@ function durationOf(file: File): Promise<number | null> {
 export default function MusicManager({ resourceId }: { resourceId: string }) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
+  const [canSell, setCanSell] = useState(true);
+  const [sales, setSales] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
   const { user } = useAuth();
   const [albumForm, setAlbumForm] = useState<{ id: string | null; title: string; description: string; cover_url: string; release_date: string } | null>(null);
   const [coverBusy, setCoverBusy] = useState(false);
@@ -37,7 +39,7 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
   const [progress, setProgress] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => { const d = (data ?? { tracks: [], albums: [] }) as { tracks: Track[]; albums: Album[] }; setTracks((d.tracks ?? []).filter((t) => t.status === 'active')); setAlbums(d.albums ?? []); }); }, [resourceId]);
+  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => { const d = (data ?? { tracks: [], albums: [] }) as { tracks: Track[]; albums: Album[]; can_sell?: boolean; sales?: { count: number; total: number } }; setTracks((d.tracks ?? []).filter((t) => t.status === 'active')); setAlbums(d.albums ?? []); setCanSell(d.can_sell !== false); setSales(d.sales ?? { count: 0, total: 0 }); }); }, [resourceId]);
   useEffect(() => { load(); }, [load]);
 
   function pick(f: File | null) {
@@ -120,6 +122,13 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
     if (error) return toastError(error.message);
     load();
   }
+  async function setPrice(kind: 'album' | 'track', id: string, price: string, previewOnly: boolean) {
+    const n = price.trim() ? Number(price) : null;
+    if (n !== null && (!Number.isFinite(n) || n < 0.99 || n > (kind === 'album' ? 500 : 100))) return toastError(kind === 'album' ? 'Album prices can be $0.99 to $500.' : 'Song prices can be $0.99 to $100.');
+    const { error } = await supabase.rpc('set_music_price', { p_kind: kind, p_id: id, p_price: n, p_preview_only: previewOnly });
+    if (error) return toastError(error.message);
+    toast(n ? `Price set: $${n.toFixed(2)}` : 'Free to stream'); load();
+  }
   const full = tracks.length >= 30;
   return (
     <div className="mt-4 flex flex-col gap-4">
@@ -154,6 +163,8 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
           {!albumForm && <button onClick={() => setAlbumForm({ id: null, title: '', description: '', cover_url: '', release_date: '' })} className="rounded-full bg-[#0F1B3D] px-4 py-2 text-sm font-semibold text-white">+ New album</button>}
         </div>
         <p className="mt-0.5 text-sm text-muted">Group songs with cover art. Each album gets its own page to share, and a spinning CD player on your profile.</p>
+        {sales.count > 0 && <p className="mt-2 text-sm font-semibold text-emerald-700">{sales.count} sale{sales.count === 1 ? '' : 's'} · ${Number(sales.total).toFixed(2)} earned (you keep 100%)</p>}
+        {!canSell && <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">To sell your music, <Link to="/profile#payouts" className="font-semibold underline">connect payouts</Link> first. Until then, priced items show without a Buy button.</p>}
         {albumForm && (
           <div className="mt-3 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3">
             <input value={albumForm.title} onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value.slice(0, 120) })} placeholder="Album title" aria-label="Album title" className="min-h-[44px] rounded-xl border border-gray-300 px-3 text-base text-gray-900 sm:text-sm" />
@@ -172,12 +183,15 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
         {albums.length > 0 && (
           <ul className="mt-3 flex flex-col gap-2">
             {albums.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-2.5">
+              <li key={a.id} className="rounded-xl border border-gray-200 bg-white p-2.5">
+                <div className="flex items-center gap-3">
                 {a.cover_url ? <img src={a.cover_url} alt="" className="h-12 w-12 rounded-lg object-cover" /> : <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xl" aria-hidden="true">💿</span>}
                 <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{a.title}</span><span className="block text-xs text-gray-500">{tracks.filter((t) => t.album_id === a.id).length} song{tracks.filter((t) => t.album_id === a.id).length === 1 ? '' : 's'}{a.release_date ? ` · ${a.release_date}` : ''}</span></span>
                 <Link to={`/albums/${a.id}`} className="px-2 text-xs font-medium text-indigo-600">View</Link>
                 <button onClick={() => setAlbumForm({ id: a.id, title: a.title, description: a.description ?? '', cover_url: a.cover_url ?? '', release_date: a.release_date ?? '' })} className="px-2 text-xs font-medium text-indigo-600">Edit</button>
                 <button onClick={() => deleteAlbum(a)} className="px-2 text-xs font-medium text-red-600">Delete</button>
+                </div>
+                <PriceRow kind="album" id={a.id} price={a.price} previewOnly={a.preview_only} setPrice={setPrice} />
               </li>
             ))}
           </ul>
@@ -206,6 +220,7 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
                     </select>
                   </label>
                 )}
+                {!t.album_id && <PriceRow kind="track" id={t.id} price={t.price} previewOnly={t.preview_only} setPrice={setPrice} />}
                 {t.url && <audio controls preload="none" src={t.url} className="mt-2 w-full" />}
               </li>
             ))}
@@ -215,3 +230,22 @@ export default function MusicManager({ resourceId }: { resourceId: string }) {
     </div>
   );
 }
+
+// Price and the full-song / 30-second-preview choice for an album or a single (saved when you leave the field).
+function PriceRow({ kind, id, price, previewOnly, setPrice }: { kind: 'album' | 'track'; id: string; price: number | null; previewOnly: boolean; setPrice: (kind: 'album' | 'track', id: string, price: string, previewOnly: boolean) => void }) {
+    const [v, setV] = useState(price ? String(price) : '');
+    const [prev, setPrev] = useState(previewOnly);
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+        <label className="flex items-center gap-1">Price $<input value={v} onChange={(e) => setV(e.target.value.replace(/[^0-9.]/g, ''))} onBlur={() => setPrice(kind, id, v, prev)} inputMode="decimal" placeholder="free" aria-label={`${kind} price`} className="min-h-[32px] w-16 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900" /></label>
+        {v.trim() !== '' && (
+          <label className="flex items-center gap-1">Listeners hear
+            <select value={prev ? 'preview' : 'full'} onChange={(e) => { const p2 = e.target.value === 'preview'; setPrev(p2); setPrice(kind, id, v, p2); }} className="min-h-[32px] rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900">
+              <option value="full">full songs</option>
+              <option value="preview">30-second previews</option>
+            </select>
+          </label>
+        )}
+      </div>
+    );
+  }

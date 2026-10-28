@@ -3,8 +3,9 @@ import { supabase } from './supabaseClient';
 
 // The app-wide music player: one audio source, a queue (an album, a single, or an artist's songs), and the mini player
 // that keeps playing while you browse. Plays are counted once per song per session.
-export interface PlayerTrack { id: string; title: string; url: string; duration_sec?: number | null; artist: string; artistId?: string; cover?: string | null; albumId?: string | null; albumTitle?: string | null }
-interface PlayerState { queue: PlayerTrack[]; index: number; playing: boolean; progress: number; duration: number; current: PlayerTrack | null }
+export interface PlayerTrack { id: string; title: string; url: string; duration_sec?: number | null; artist: string; artistId?: string; cover?: string | null; albumId?: string | null; albumTitle?: string | null; preview?: boolean }
+export const PREVIEW_SECONDS = 30;
+interface PlayerState { queue: PlayerTrack[]; index: number; playing: boolean; progress: number; duration: number; current: PlayerTrack | null; previewEnded: boolean }
 interface PlayerApi extends PlayerState {
   play: (queue: PlayerTrack[], index?: number) => void;
   toggle: () => void;
@@ -23,13 +24,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [previewEnded, setPreviewEnded] = useState(false);
   const current = queue[index] ?? null;
+  const currentRef = useRef<PlayerTrack | null>(null);
+  currentRef.current = current;
 
   const el = () => {
     if (!audio.current) {
       const a = new Audio();
       a.preload = 'metadata';
-      a.ontimeupdate = () => { setProgress(a.currentTime); setDuration(a.duration || 0); };
+      a.ontimeupdate = () => {
+        setProgress(a.currentTime); setDuration(a.duration || 0);
+        // A 30-second preview: stop there until it's bought.
+        if (currentRef.current?.preview && a.currentTime >= PREVIEW_SECONDS) { a.pause(); a.currentTime = 0; setProgress(0); setPreviewEnded(true); }
+      };
       a.onloadedmetadata = () => setDuration(a.duration || 0);
       a.onplay = () => setPlaying(true);
       a.onpause = () => setPlaying(false);
@@ -39,6 +47,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
   const load = useCallback((t: PlayerTrack) => {
     const a = el();
+    setPreviewEnded(false);
     if (a.src !== t.url) { a.src = t.url; setProgress(0); setDuration(t.duration_sec ?? 0); }
     a.play().then(() => {
       if (!counted.current.has(t.id)) { counted.current.add(t.id); supabase.rpc('record_track_play', { p_track_id: t.id }); }
@@ -49,8 +58,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback(() => { const a = el(); if (!current) return; if (a.paused) { if (!a.src) load(current); else a.play().catch(() => undefined); } else a.pause(); }, [current, load]);
   const next = useCallback(() => { if (index + 1 < queue.length) { setIndex(index + 1); load(queue[index + 1]); } else { el().pause(); el().currentTime = 0; setProgress(0); } }, [index, queue, load]);
   const prev = useCallback(() => { const a = el(); if (a.currentTime > 3 || index === 0) { a.currentTime = 0; setProgress(0); return; } setIndex(index - 1); load(queue[index - 1]); }, [index, queue, load]);
-  const seek = useCallback((f: number) => { const a = el(); if (a.duration) a.currentTime = Math.max(0, Math.min(1, f)) * a.duration; }, []);
-  const close = useCallback(() => { const a = el(); a.pause(); a.removeAttribute('src'); a.load(); setQueue([]); setIndex(0); setProgress(0); setDuration(0); setPlaying(false); }, []);
+  const seek = useCallback((f: number) => { const a = el(); if (!a.duration) return; let t = Math.max(0, Math.min(1, f)) * a.duration; if (currentRef.current?.preview) t = Math.min(t, PREVIEW_SECONDS - 1); a.currentTime = t; }, []);
+  const close = useCallback(() => { const a = el(); a.pause(); a.removeAttribute('src'); a.load(); setQueue([]); setIndex(0); setProgress(0); setDuration(0); setPlaying(false); setPreviewEnded(false); }, []);
   // Go to the next song when one ends (reads the latest queue/index).
   useEffect(() => { const a = el(); a.onended = () => next(); }, [next]);
   // Lock-screen / headphone controls where supported.
@@ -65,7 +74,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } catch { /* unsupported */ }
   }, [current, next, prev]);
 
-  const value = useMemo<PlayerApi>(() => ({ queue, index, playing, progress, duration, current, play, toggle, next, prev, seek, close }), [queue, index, playing, progress, duration, current, play, toggle, next, prev, seek, close]);
+  const value = useMemo<PlayerApi>(() => ({ queue, index, playing, progress, duration, current, previewEnded, play, toggle, next, prev, seek, close }), [queue, index, playing, progress, duration, current, previewEnded, play, toggle, next, prev, seek, close]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 export function usePlayer() { const c = useContext(Ctx); if (!c) throw new Error('usePlayer outside PlayerProvider'); return c; }

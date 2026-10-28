@@ -1,11 +1,26 @@
 import { Link } from 'react-router-dom';
 import CdDisc from './CdDisc';
+import { useState } from 'react';
 import { fmtTime, usePlayer, type PlayerTrack } from '../../lib/player';
+import { buyMusic, money, musicPrice } from '../../lib/musicBuy';
+import BrandedSignIn, { TAPIN_BRAND } from '../BrandedSignIn';
+import { useAuth } from '../../context/AuthContext';
 
 // The spinning CD player for an album (or a single): disc, play/pause, previous/next, a progress bar you can drag, and
 // the track list. Everything plays through the app-wide player, so it keeps going in the mini player while browsing.
-export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, compact = false }: { title: string; subtitle?: string; cover?: string | null; tracks: PlayerTrack[]; link?: string; compact?: boolean }) {
+export interface Sale { kind: 'album' | 'track'; id: string; price: number; owned: boolean }
+export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, compact = false, sale, trackSales, canSell = true, pagePath }: { title: string; subtitle?: string; cover?: string | null; tracks: PlayerTrack[]; link?: string; compact?: boolean; sale?: Sale | null; trackSales?: Record<string, Sale>; canSell?: boolean; pagePath?: string }) {
   const p = usePlayer();
+  const { user } = useAuth();
+  const [err, setErr] = useState<string | null>(null);
+  const [signIn, setSignIn] = useState<Sale | null>(null);
+  async function buy(sl: Sale) {
+    if (!user) { setSignIn(sl); return; }
+    setErr(null);
+    const e = await buyMusic(sl.kind, sl.id, pagePath ?? window.location.pathname);
+    if (e) setErr(e);
+  }
+  const buyLabel = (sl: Sale) => sl.owned ? '✓ Yours' : `Buy ${sl.kind === 'album' ? 'album' : ''} ${money(sl.price)}`.replace(/\s+/g, ' ');
   const mine = p.current ? tracks.findIndex((t) => t.id === p.current!.id) : -1;
   const active = mine >= 0;
   const spinning = active && p.playing;
@@ -19,6 +34,10 @@ export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, 
           {link ? <Link to={link} className="block truncate font-display text-lg font-bold text-gray-900 hover:underline">{title}</Link> : <p className="truncate font-display text-lg font-bold text-gray-900">{title}</p>}
           {subtitle && <p className="truncate text-sm text-gray-500">{subtitle}</p>}
           {active && p.current && <p className="mt-1 truncate text-xs font-medium text-marigold">▶ {p.current.title}</p>}
+          {sale && sale.price > 0 && canSell && (
+            <button onClick={() => !sale.owned && buy(sale)} disabled={sale.owned} className={`mt-2 inline-flex min-h-[36px] items-center rounded-full px-4 text-xs font-semibold ${sale.owned ? 'bg-green-100 text-green-800' : 'bg-marigold text-white hover:bg-marigold/90'}`}>{buyLabel(sale)}</button>
+          )}
+          {sale && sale.price > 0 && !sale.owned && canSell && <p className="mt-1 text-[11px] text-gray-500">+ {money(musicPrice(sale.price).total - sale.price)} fees · artist gets 100% of the price · downloads included</p>}
           <div className="mt-3 flex items-center gap-2">
             <button onClick={() => (active ? p.prev() : start(0))} aria-label="Previous" className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200">⏮</button>
             <button onClick={() => (active ? p.toggle() : start(0))} aria-label={spinning ? 'Pause' : 'Play'} className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0F1B3D] text-lg text-white hover:bg-[#1a2a5a]">{spinning ? '❚❚' : '▶'}</button>
@@ -26,6 +45,10 @@ export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, 
           </div>
         </div>
       </div>
+      {active && p.current?.preview && (
+        <p className="mt-2 text-xs font-medium text-amber-800">{p.previewEnded ? 'That was a 30-second preview. Buy it to hear the full song.' : '30-second preview'}</p>
+      )}
+      {err && <p role="alert" className="mt-2 text-sm text-red-600">{err}</p>}
       {active && (
         <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
           <span className="w-9 text-right">{fmtTime(p.progress)}</span>
@@ -40,13 +63,17 @@ export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, 
             <li key={t.id}>
               <button onClick={() => (on ? p.toggle() : start(i))} className={`flex w-full items-center gap-3 py-2 text-left ${on ? 'text-marigold' : 'text-gray-800'}`} aria-label={`${on && p.playing ? 'Pause' : 'Play'} ${t.title}`}>
                 <span className="w-5 text-center text-xs text-gray-400">{on && p.playing ? '▶' : i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{t.title}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{t.title}{t.preview ? <span className="ml-1 text-[10px] font-normal text-amber-700">preview</span> : null}</span>
                 {t.duration_sec ? <span className="text-xs text-gray-400">{fmtTime(t.duration_sec)}</span> : null}
               </button>
+              {trackSales?.[t.id] && trackSales[t.id].price > 0 && canSell && (
+                <button onClick={() => !trackSales[t.id].owned && buy(trackSales[t.id])} disabled={trackSales[t.id].owned} className={`mb-1 ml-8 inline-flex min-h-[28px] items-center rounded-full px-3 text-[11px] font-semibold ${trackSales[t.id].owned ? 'bg-green-100 text-green-800' : 'border border-marigold text-marigold hover:bg-orange-50'}`}>{trackSales[t.id].owned ? '✓ Yours' : `Buy ${money(trackSales[t.id].price)}`}</button>
+              )}
             </li>
           );
         })}
       </ol>
+      {signIn && <BrandedSignIn brand={TAPIN_BRAND} branded={false} onClose={() => setSignIn(null)} onDone={() => { const sl = signIn; setSignIn(null); buy(sl); }} />}
     </div>
   );
 }

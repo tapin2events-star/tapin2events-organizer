@@ -40,6 +40,7 @@ const MY_STUFF: Item[] = [
   { to: '/activity', label: 'My Activity', icon: 'activity', end: true, desktopOnly: true },
   { to: '/resources/dashboard', label: 'Artist & vendor dashboard', icon: 'resourceDash', end: true, badge: 'resourceRequests' },
   { to: '/groups', label: 'Artist groups', icon: 'groups', badge: 'groupInvites' },
+  { to: '/my-music', label: 'My music', icon: 'music', end: true },
 ];
 const ORGANIZER: Item[] = [
   { to: '/organizer', label: 'Organizer Dashboard', icon: 'dashboard', end: true },

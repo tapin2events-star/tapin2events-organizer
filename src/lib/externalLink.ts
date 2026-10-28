@@ -10,7 +10,7 @@ export const SOCIAL_HOST = /(^|\.)(instagram\.com|tiktok\.com|facebook\.com|fb\.
 
 // The phone's browser from inside the TapIN app (Safari via x-safari-https on iPhone, default browser via intent on
 // Android); a normal new tab elsewhere. Used as the fallback when a social app isn't installed.
-function openInBrowser(href: string) {
+export function openInBrowser(href: string) {
   if (isNativeApp()) {
     if (isAndroid()) {
       const u = new URL(href);
