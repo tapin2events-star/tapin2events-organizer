@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import MusicTab from '../components/admin/MusicTab';
 import UsageTab from '../components/admin/UsageTab';
 import ImportsTab from '../components/admin/ImportsTab';
 import OrganizationsTab from '../components/admin/OrganizationsTab';
@@ -14,7 +15,7 @@ import PaymentsTab from '../components/admin/PaymentsTab';
 import ReportsTab from '../components/admin/ReportsTab';
 import ActivityTab from '../components/admin/ActivityTab';
 
-const TABS = ['Overview', 'Events', 'Resources', 'Products', 'Users', 'Organizations', 'Payments', 'Reports', 'Activity', 'Imports', 'Usage', 'Preview'] as const;
+const TABS = ['Overview', 'Events', 'Resources', 'Products', 'Music', 'Users', 'Organizations', 'Payments', 'Reports', 'Activity', 'Imports', 'Usage', 'Preview'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminDashboard() {
@@ -87,6 +88,7 @@ export default function AdminDashboard() {
       {tab === 'Activity' && <ActivityTab notify={notify} />}
       {tab === 'Organizations' && <OrganizationsTab notify={notify} />}
       {tab === 'Imports' && <ImportsTab notify={notify} />}
+      {tab === 'Music' && <MusicTab />}
       {tab === 'Usage' && <UsageTab />}
       {tab === 'Preview' && <PreviewTab />}
     </div>
