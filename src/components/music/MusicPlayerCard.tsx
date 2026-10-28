@@ -3,19 +3,15 @@ import CdDisc from './CdDisc';
 import { useState } from 'react';
 import { fmtTime, usePlayer, type PlayerTrack } from '../../lib/player';
 import { buyMusic, money, musicPrice } from '../../lib/musicBuy';
-import BrandedSignIn, { TAPIN_BRAND } from '../BrandedSignIn';
-import { useAuth } from '../../context/AuthContext';
 
 // The spinning CD player for an album (or a single): disc, play/pause, previous/next, a progress bar you can drag, and
 // the track list. Everything plays through the app-wide player, so it keeps going in the mini player while browsing.
 export interface Sale { kind: 'album' | 'track'; id: string; price: number; owned: boolean }
 export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, compact = false, sale, trackSales, canSell = true, pagePath }: { title: string; subtitle?: string; cover?: string | null; tracks: PlayerTrack[]; link?: string; compact?: boolean; sale?: Sale | null; trackSales?: Record<string, Sale>; canSell?: boolean; pagePath?: string }) {
   const p = usePlayer();
-  const { user } = useAuth();
   const [err, setErr] = useState<string | null>(null);
-  const [signIn, setSignIn] = useState<Sale | null>(null);
   async function buy(sl: Sale) {
-    if (!user) { setSignIn(sl); return; }
+    // Signed out on the web: guest checkout. In the phone app: the purchase continues on the web, signed in.
     setErr(null);
     const e = await buyMusic(sl.kind, sl.id, pagePath ?? window.location.pathname);
     if (e) setErr(e);
@@ -73,7 +69,6 @@ export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, 
           );
         })}
       </ol>
-      {signIn && <BrandedSignIn brand={TAPIN_BRAND} branded={false} onClose={() => setSignIn(null)} onDone={() => { const sl = signIn; setSignIn(null); buy(sl); }} />}
     </div>
   );
 }

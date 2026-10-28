@@ -61,6 +61,7 @@ const UserProfileById = lazyWithRetry(() => import('./pages/UserProfileById'));
 const CopyrightPolicy = lazyWithRetry(() => import('./pages/CopyrightPolicy'));
 const AlbumPage = lazyWithRetry(() => import('./pages/AlbumPage'));
 const MyMusic = lazyWithRetry(() => import('./pages/MyMusic'));
+const Handoff = lazyWithRetry(() => import('./pages/Handoff'));
 const ShortEventLink = lazyWithRetry(() => import('./pages/ShortEventLink'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
@@ -95,6 +96,7 @@ export default function App() {
         <LinkViewer />
         <AppErrorBoundary><TourProvider><DomainGate><Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/handoff" element={<Handoff />} />
           <Route
             path="/feed"
             element={
