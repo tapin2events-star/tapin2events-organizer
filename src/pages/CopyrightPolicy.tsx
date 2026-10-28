@@ -8,7 +8,7 @@ import { LegalPage, LegalSection } from '../components/LegalPage';
 export const DMCA_AGENT = {
   name: 'Copyright Agent',
   company: 'TapIN LLC',
-  address: '6134 Rogers Rd., Rolesville, NC 27571',
+  address: '6134 Rogers Rd., Rolesville, NC 27571-9330',
   phone: '(919) 594-2700',
   email: 'dmca@tapin2events.com',
 };
