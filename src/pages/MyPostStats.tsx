@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MyTips from '../components/tips/MyTips';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -132,6 +133,7 @@ export default function MyPostStats() {
             <div className="mt-1 flex justify-between text-[10px] text-muted"><span>{shortDate(d.daily[0]?.day ?? '')}</span><span>Today</span></div>
           </section>
 
+          {scope === 'me' && <MyTips />}
           {/* Commissions from promoting events */}
           {earnings.length > 0 && (
             <section className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4">

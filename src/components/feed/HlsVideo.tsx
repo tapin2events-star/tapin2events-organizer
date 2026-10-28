@@ -59,7 +59,8 @@ export default function HlsVideo({ src, videoRef, shouldLoad, shouldPlay, muted,
 
   useEffect(() => {
     const video = internalRef.current;
-    if (!video || !shouldLoad) return;
+    // No video address (e.g. a record without a video yet): nothing to load, and never crash the page.
+    if (!video || !shouldLoad || !src) return;
 
     if (!forceHlsJs && prefersNativeHls(video)) {
       video.src = src;

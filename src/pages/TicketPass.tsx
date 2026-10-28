@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TipPerformers from '../components/tips/TipPerformers';
 import TicketPerks from '../components/nearby/TicketPerks';
 import { useBrandedTab, useEventWhiteLabel } from '../lib/whiteLabel';
 import WhiteLabelHeader from '../components/events/WhiteLabelHeader';
@@ -240,6 +241,7 @@ export default function TicketPass() {
           </div>
         )}
         {galaOn && <GalaInfo eventId={ticket.event_id} />}
+        <div className="mt-4"><TipPerformers eventId={ticket.event_id} eventTitle={event.title} compact /></div>
         <NetworkingButton on={networkingOn} eventId={ticket.event_id} net={net} setNet={setNet} />
         {invoicesOn && user?.email?.toLowerCase() === ticket.attendee_email.toLowerCase() && Number(ticket.price_paid ?? 0) > 0 && (
           <div className="mt-3 text-center print:hidden">

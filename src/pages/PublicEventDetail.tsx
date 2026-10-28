@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TipPerformers from '../components/tips/TipPerformers';
 import ExternalLink from '../components/ExternalLink';
 import GiftAddOn from '../components/business/GiftAddOn';
 import EventPerks from '../components/nearby/EventPerks';
@@ -913,6 +914,7 @@ export default function PublicEventDetail() {
             onDone={() => { askSheet.resolve(true); setAskSheet(null); }} />
         )}
         <EventProgram eventId={event.id} />
+        <TipPerformers eventId={event.id} eventTitle={event.title} />
 
         {!videoHeadersOn && <CommunityPosts eventId={event.id} />}
 
