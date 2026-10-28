@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PersonMusicStrip from '../components/music/PersonMusicStrip';
 import OrgsAndGroups from '../components/profile/OrgsAndGroups';
 import PartOfOrgs from '../components/profile/PartOfOrgs';
 import { useProfileId } from '../lib/profileLinks';
@@ -256,6 +257,8 @@ export default function CreatorProfile({ emailOverride }: { emailOverride?: stri
       )}
 
       <GroupBadges email={profile.email} className="mt-3" />
+
+      {resourceId && <PersonMusicStrip resourceId={resourceId} />}
 
       {resourceId && (
         <Link
