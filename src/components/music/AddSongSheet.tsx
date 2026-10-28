@@ -13,6 +13,7 @@ export default function AddSongSheet({ resourceId, albums, canSell, onClose, onD
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [albumId, setAlbumId] = useState('');
+  const [mode, setMode] = useState<'free' | 'paid' | 'donation'>('free');
   const [price, setPrice] = useState('');
   const [preview, setPreview] = useState(false);
   const [rights, setRights] = useState(false);
@@ -29,13 +30,13 @@ export default function AddSongSheet({ resourceId, albums, canSell, onClose, onD
   }
   async function upload() {
     if (!file || !rights) return;
-    const n = !albumId && price.trim() ? Number(price) : null;
-    if (n !== null && (!Number.isFinite(n) || n < 0.99 || n > 100)) return setErr('Song prices can be $0.99 to $100.');
+    const n = !albumId && mode === 'paid' && price.trim() ? Number(price) : null;
+    if (!albumId && mode === 'paid' && (n === null || !Number.isFinite(n) || n < 0.99 || n > 100)) return setErr('Song prices can be $0.99 to $100.');
     setErr(null); setProgress(0);
     const r = await uploadSong(resourceId, file, title, setProgress);
     if (r.error || !r.trackId) { setProgress(null); return setErr(r.error ?? 'Couldn\u2019t upload.'); }
     if (albumId) await supabase.rpc('set_track_album', { p_track_id: r.trackId, p_album_id: albumId });
-    if (n) await supabase.rpc('set_music_price', { p_kind: 'track', p_id: r.trackId, p_price: n, p_preview_only: preview });
+    if (!albumId && mode !== 'free') await supabase.rpc('set_music_sale', { p_kind: 'track', p_id: r.trackId, p_mode: mode, p_price: n, p_preview_only: preview, p_amounts: [5, 10, 20] });
     onDone();
   }
   const priceStep = canSell ? 3 : -1;
@@ -67,13 +68,19 @@ export default function AddSongSheet({ resourceId, albums, canSell, onClose, onD
       )}
       {step === priceStep && (
         <div className="flex flex-col gap-3">
-          <p className="font-semibold text-gray-900">Price</p>
-          {albumId ? <p className="text-sm text-gray-600">Songs on an album are sold with the album. Set the album&apos;s price on the album.</p> : (
+          <p className="font-semibold text-gray-900">How listeners get it</p>
+          {albumId ? <p className="text-sm text-gray-600">Songs on an album follow the album: set it to free, paid or donation-based on the album.</p> : (
             <>
-              <label className="text-sm text-gray-700">Price (leave blank for free streaming)
-                <input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" placeholder="$ free" className="mt-1 block min-h-[48px] w-full rounded-xl border border-gray-300 px-3 text-base text-gray-900" />
-              </label>
-              {price.trim() !== '' && (
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="How listeners get it">
+                {([['free', 'Free'], ['paid', 'Paid'], ['donation', 'Donation']] as const).map(([k, label]) => (
+                  <button key={k} type="button" role="radio" aria-checked={mode === k} onClick={() => setMode(k)} className={`min-h-[48px] rounded-xl border text-sm font-semibold ${mode === k ? 'border-marigold bg-marigold text-white' : 'border-gray-300 bg-white text-gray-800'}`}>{label}</button>
+                ))}
+              </div>
+              {mode === 'donation' && <p className="text-xs text-gray-500">Anyone can listen free. Donors choose any amount (suggested $5, $10, $20, which you can change later), you get 100%, and they get downloads.</p>}
+              {mode === 'paid' && <label className="text-sm text-gray-700">Price
+                <input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" placeholder="$ 0.99" className="mt-1 block min-h-[48px] w-full rounded-xl border border-gray-300 px-3 text-base text-gray-900" />
+              </label>}
+              {mode === 'paid' && price.trim() !== '' && (
                 <label className="text-sm text-gray-700">Listeners who haven&apos;t bought it hear
                   <select value={preview ? 'preview' : 'full'} onChange={(e) => setPreview(e.target.value === 'preview')} className="mt-1 block min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900">
                     <option value="full">the full song</option>
@@ -81,7 +88,7 @@ export default function AddSongSheet({ resourceId, albums, canSell, onClose, onD
                   </select>
                 </label>
               )}
-              <p className="text-xs text-gray-500">You keep 100% of the price. Buyers pay TapIN&apos;s service fee on top.</p>
+              {mode === 'paid' && <p className="text-xs text-gray-500">You keep 100% of the price. Buyers pay TapIN&apos;s service fee on top.</p>}
             </>
           )}
         </div>
@@ -89,7 +96,7 @@ export default function AddSongSheet({ resourceId, albums, canSell, onClose, onD
       {last && (
         <div className="flex flex-col gap-3">
           <p className="font-semibold text-gray-900">Confirm and upload</p>
-          <p className="text-sm text-gray-600"><strong>{title}</strong>{albumId ? ` · ${albums.find((a) => a.id === albumId)?.title}` : ' · single'}{!albumId && price ? ` · $${Number(price).toFixed(2)}` : ''}</p>
+          <p className="text-sm text-gray-600"><strong>{title}</strong>{albumId ? ` · ${albums.find((a) => a.id === albumId)?.title}` : ' · single'}{!albumId && mode === 'paid' && price ? ` · $${Number(price).toFixed(2)}` : ''}{!albumId && mode === 'donation' ? ' · donation-based' : ''}</p>
           <label className="flex items-start gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-marigold" />
             <span>I wrote and own this music, or I have permission to share it, and it doesn&apos;t infringe anyone&apos;s copyright. (<Link to="/dmca" className="text-marigold underline">Copyright policy</Link>)</span>

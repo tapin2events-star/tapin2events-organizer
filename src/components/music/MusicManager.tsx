@@ -10,8 +10,8 @@ import { uploadImage } from '../../lib/business';
 // Artist dashboard: upload and manage songs (Cloudflare R2 via the music-upload function). The file goes straight from
 // the browser to storage with a one-time address. MP3, M4A or WAV, up to 25 MB each, 30 songs per profile; each upload
 // confirms the artist owns the rights.
-interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null; price: number | null; preview_only: boolean }
-interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price: number | null; preview_only: boolean }
+interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null; price: number | null; preview_only: boolean; sale_mode?: string; donation_amounts?: number[] }
+interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price: number | null; preview_only: boolean; sale_mode?: string; donation_amounts?: number[] }
 const MAX = 25 * 1024 * 1024;
 const fmt = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '');
 const mimeOf = (f: File) => f.type || (/\.mp3$/i.test(f.name) ? 'audio/mpeg' : /\.m4a$/i.test(f.name) ? 'audio/mp4' : /\.wav$/i.test(f.name) ? 'audio/wav' : '');
@@ -127,12 +127,12 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
     if (error) return toastError(error.message);
     load();
   }
-  async function setPrice(kind: 'album' | 'track', id: string, price: string, previewOnly: boolean) {
+  async function setSale(kind: 'album' | 'track', id: string, mode: string, price: string, previewOnly: boolean, amounts: number[]) {
     const n = price.trim() ? Number(price) : null;
-    if (n !== null && (!Number.isFinite(n) || n < 0.99 || n > (kind === 'album' ? 500 : 100))) return toastError(kind === 'album' ? 'Album prices can be $0.99 to $500.' : 'Song prices can be $0.99 to $100.');
-    const { error } = await supabase.rpc('set_music_price', { p_kind: kind, p_id: id, p_price: n, p_preview_only: previewOnly });
+    if (mode === 'paid' && (n === null || !Number.isFinite(n) || n < 0.99 || n > (kind === 'album' ? 500 : 100))) return toastError(kind === 'album' ? 'Album prices can be $0.99 to $500.' : 'Song prices can be $0.99 to $100.');
+    const { error } = await supabase.rpc('set_music_sale', { p_kind: kind, p_id: id, p_mode: mode, p_price: mode === 'paid' ? n : null, p_preview_only: previewOnly, p_amounts: amounts });
     if (error) return toastError(error.message);
-    toast(n ? `Price set: $${n.toFixed(2)}` : 'Free to stream'); load();
+    toast(mode === 'paid' ? `Price set: $${(n ?? 0).toFixed(2)}` : mode === 'donation' ? 'Donation-based: free to listen, donors get downloads' : 'Free to listen'); load();
   }
   const full = tracks.length >= 30;
   const ed = editing ? tracks.find((t) => t.id === editing) ?? null : null;
@@ -189,7 +189,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
             <textarea value={albumForm.description} onChange={(e) => setAlbumForm({ ...albumForm, description: e.target.value.slice(0, 1000) })} rows={2} placeholder="About this album (optional)" className="rounded-xl border border-gray-300 px-3 py-2 text-base text-gray-900 sm:text-sm" />
             {v2 && albumForm.id && (() => { const a = albums.find((x) => x.id === albumForm.id); return a ? (
               <div className="rounded-xl bg-gray-50 p-2">
-                <PriceRow kind="album" id={a.id} price={a.price} previewOnly={a.preview_only} setPrice={setPrice} />
+                <PriceRow kind="album" id={a.id} price={a.price} previewOnly={a.preview_only} mode={a.sale_mode} amounts={a.donation_amounts} setSale={setSale} />
                 <div className="mt-2 flex gap-3 text-xs"><Link to={`/albums/${a.id}`} className="font-medium text-indigo-600">View album page</Link><button onClick={() => { setAlbumForm(null); deleteAlbum(a); }} className="font-medium text-red-600">Delete album</button></div>
               </div>
             ) : null; })()}
@@ -224,7 +224,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
                 <button onClick={() => setAlbumForm({ id: a.id, title: a.title, description: a.description ?? '', cover_url: a.cover_url ?? '', release_date: a.release_date ?? '' })} className="px-2 text-xs font-medium text-indigo-600">Edit</button>
                 <button onClick={() => deleteAlbum(a)} className="px-2 text-xs font-medium text-red-600">Delete</button>
                 </div>
-                <PriceRow kind="album" id={a.id} price={a.price} previewOnly={a.preview_only} setPrice={setPrice} />
+                <PriceRow kind="album" id={a.id} price={a.price} previewOnly={a.preview_only} mode={a.sale_mode} amounts={a.donation_amounts} setSale={setSale} />
               </li>
             ))}
           </ul>
@@ -267,7 +267,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
                     </select>
                   </label>
                 )}
-                {!t.album_id && <PriceRow kind="track" id={t.id} price={t.price} previewOnly={t.preview_only} setPrice={setPrice} />}
+                {!t.album_id && <PriceRow kind="track" id={t.id} price={t.price} previewOnly={t.preview_only} mode={t.sale_mode} amounts={t.donation_amounts} setSale={setSale} />}
                 {t.url && <audio controls preload="none" src={t.url} className="mt-2 w-full" />}
               </li>
             ))}
@@ -286,7 +286,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
               </select>
             </label>
           )}
-          {!ed.album_id && canSell && <PriceRow key={`p-${ed.id}`} kind="track" id={ed.id} price={ed.price} previewOnly={ed.preview_only} setPrice={setPrice} />}
+          {!ed.album_id && canSell && <PriceRow key={`p-${ed.id}`} kind="track" id={ed.id} price={ed.price} previewOnly={ed.preview_only} mode={ed.sale_mode} amounts={ed.donation_amounts} setSale={setSale} />}
           {ed.url && <audio controls preload="none" src={ed.url} className="mt-3 w-full" />}
           <p className="mt-2 text-xs text-gray-500">{[fmt(ed.duration_sec), `${ed.plays} play${ed.plays === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -311,21 +311,43 @@ function SongTitle({ title, onSave }: { title: string; onSave: (t: string) => vo
   );
 }
 
-// Price and the full-song / 30-second-preview choice for an album or a single (saved when you leave the field).
-function PriceRow({ kind, id, price, previewOnly, setPrice }: { kind: 'album' | 'track'; id: string; price: number | null; previewOnly: boolean; setPrice: (kind: 'album' | 'track', id: string, price: string, previewOnly: boolean) => void }) {
-    const [v, setV] = useState(price ? String(price) : '');
-    const [prev, setPrev] = useState(previewOnly);
-    return (
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-        <label className="flex items-center gap-1">Price $<input value={v} onChange={(e) => setV(e.target.value.replace(/[^0-9.]/g, ''))} onBlur={() => setPrice(kind, id, v, prev)} inputMode="decimal" placeholder="free" aria-label={`${kind} price`} className="min-h-[32px] w-16 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900" /></label>
-        {v.trim() !== '' && (
+// Free / paid / donation-based for an album or a single. Paid: price + full songs or 30-second previews. Donation:
+// suggested amounts (anyone listens free; donors get downloads). Saved when changed or when you leave a field.
+function PriceRow({ kind, id, price, previewOnly, mode: modeIn, amounts: amountsIn, setSale }: { kind: 'album' | 'track'; id: string; price: number | null; previewOnly: boolean; mode?: string; amounts?: number[]; setSale: (kind: 'album' | 'track', id: string, mode: string, price: string, previewOnly: boolean, amounts: number[]) => void }) {
+  const [mode, setMode] = useState(modeIn ?? (price ? 'paid' : 'free'));
+  const [v, setV] = useState(price ? String(price) : '');
+  const [prev, setPrev] = useState(previewOnly);
+  const [amts, setAmts] = useState<string[]>((amountsIn?.length ? amountsIn : [5, 10, 20]).slice(0, 3).map(String));
+  const nums = () => amts.map((x) => Math.round(Number(x))).filter((x) => x >= 1 && x <= 1000);
+  const save = (m = mode, p2 = prev) => { if (m === 'paid' && !v.trim()) return; setSale(kind, id, m, v, p2, nums()); };
+  return (
+    <div className="mt-2 flex flex-col gap-2 text-xs text-gray-600">
+      <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={`How listeners get this ${kind === 'album' ? 'album' : 'song'}`}>
+        {[['free', 'Free'], ['paid', 'Paid'], ['donation', 'Donation-based']].map(([k, label]) => (
+          <button key={k} type="button" role="radio" aria-checked={mode === k} onClick={() => { setMode(k); if (k !== 'paid') setSale(kind, id, k, '', false, nums()); }}
+            className={`min-h-[32px] rounded-full border px-3 text-xs font-semibold ${mode === k ? 'border-marigold bg-marigold text-white' : 'border-gray-300 bg-white text-gray-700'}`}>{label}</button>
+        ))}
+      </div>
+      {mode === 'paid' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1">Price $<input value={v} onChange={(e) => setV(e.target.value.replace(/[^0-9.]/g, ''))} onBlur={() => save()} inputMode="decimal" placeholder="9.99" aria-label={`${kind} price`} className="min-h-[32px] w-16 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900" /></label>
           <label className="flex items-center gap-1">Listeners hear
-            <select value={prev ? 'preview' : 'full'} onChange={(e) => { const p2 = e.target.value === 'preview'; setPrev(p2); setPrice(kind, id, v, p2); }} className="min-h-[32px] rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900">
+            <select value={prev ? 'preview' : 'full'} onChange={(e) => { const p2 = e.target.value === 'preview'; setPrev(p2); save('paid', p2); }} className="min-h-[32px] rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-900">
               <option value="full">full songs</option>
               <option value="preview">30-second previews</option>
             </select>
           </label>
-        )}
-      </div>
-    );
-  }
+        </div>
+      )}
+      {mode === 'donation' && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span>Suggested amounts $</span>
+          {amts.map((x, i) => (
+            <input key={i} value={x} onChange={(e) => setAmts(amts.map((y, j) => (j === i ? e.target.value.replace(/[^0-9]/g, '') : y)))} onBlur={() => save('donation')} inputMode="numeric" aria-label={`Suggested amount ${i + 1}`} className="min-h-[32px] w-12 rounded-lg border border-gray-300 bg-white px-2 text-center text-sm text-gray-900" />
+          ))}
+          <span className="w-full text-[11px] text-gray-500">Anyone can listen free. Donors choose any amount, you get 100%, and they get downloads.</span>
+        </div>
+      )}
+    </div>
+  );
+}

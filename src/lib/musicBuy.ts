@@ -17,6 +17,34 @@ export async function errorReason(error: unknown): Promise<string | null> {
   try { const j = await ctx.clone().json(); return typeof j?.error === 'string' ? j.error : null; } catch { return null; }
 }
 
+// Donation totals (TapIN's standard donation rules): the artist gets 100%; card processing (2.9% + $0.30 on the whole
+// payment, grossed up) and an optional tip to TapIN are added. Must match create-music-checkout.
+export function donationTotals(gift: number, tipPct: number) {
+  const g = Math.round(gift * 100), tip = Math.round(g * tipPct / 100);
+  const processing = Math.ceil((g + tip + 30) / (1 - 0.029)) - (g + tip);
+  return { gift: g / 100, tip: tip / 100, processing: processing / 100, total: (g + tip + processing) / 100 };
+}
+
+export async function donateMusic(kind: 'album' | 'track', id: string, amount: number, tipPct: number, pagePath: string): Promise<string | null> {
+  if (isNativeApp()) {
+    const next = `${pagePath}${pagePath.includes('?') ? '&' : '?'}donate=${kind}:${id}`;
+    const { data: s } = await supabase.auth.getSession();
+    if (s.session) {
+      const { data } = await supabase.functions.invoke('app-handoff', { body: { action: 'create', next } });
+      const url = (data as { url?: string } | null)?.url;
+      if (url) { openInBrowser(url); return null; }
+    }
+    openInBrowser(`https://app.tapin2events.com${next}`);
+    return null;
+  }
+  const back = `${window.location.origin}${pagePath}`;
+  const { data, error } = await supabase.functions.invoke('create-music-checkout', { body: { kind, id, donation: amount, tip_pct: tipPct, successUrl: `${window.location.origin}/my-music?purchased=1`, cancelUrl: back } });
+  const url = (data as { url?: string } | null)?.url;
+  if (error || !url) return (await errorReason(error)) ?? 'Couldn\u2019t start checkout. Please try again.';
+  window.location.href = url;
+  return null;
+}
+
 export async function buyMusic(kind: 'album' | 'track', id: string, pagePath: string): Promise<string | null> {
   const next = `${pagePath}${pagePath.includes('?') ? '&' : '?'}buy=${kind}:${id}`;
   if (isNativeApp()) {

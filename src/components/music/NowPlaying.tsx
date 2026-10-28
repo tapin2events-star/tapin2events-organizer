@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { shareMusic } from '../../lib/musicShare';
 import { Link } from 'react-router-dom';
 import CdDisc from './CdDisc';
 import { fmtTime, usePlayer, PREVIEW_SECONDS } from '../../lib/player';
@@ -27,7 +28,10 @@ export default function NowPlaying() {
       <div className="flex items-center justify-between px-4 py-3">
         <button onClick={p.minimize} aria-label="Minimize player" className="flex h-11 w-11 items-center justify-center rounded-full text-2xl hover:bg-white/10">⌄</button>
         <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Now playing</p>
+        <div className="flex items-center">
+        <button onClick={() => shareMusic('track', t.id, t.title, t.artist)} aria-label="Share this song" className="flex h-11 w-11 items-center justify-center rounded-full text-lg hover:bg-white/10">↗</button>
         <button onClick={p.close} aria-label="Close player" className="flex h-11 w-11 items-center justify-center rounded-full text-lg hover:bg-white/10">✕</button>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pb-6">
         <div className="mt-2 flex w-full justify-center"><CdDisc cover={t.cover} spinning={p.playing} size={Math.min(320, typeof window !== 'undefined' ? window.innerWidth - 80 : 280)} label={`${t.title} cover`} /></div>

@@ -13,9 +13,25 @@ export function useOwnedTracks(ids: string[], signedIn: boolean) {
   }, [key, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps
   return owned;
 }
-export const saleFor = (kind: 'album' | 'track', id: string, price: number | null | undefined, owned: boolean): Sale | null => (price && price > 0 ? { kind, id, price: Number(price), owned } : null);
-export const trackSalesFor = (tracks: { id: string; price?: number | null }[], owned: Set<string>): Record<string, Sale> =>
-  Object.fromEntries(tracks.filter((t) => t.price && t.price > 0).map((t) => [t.id, { kind: 'track' as const, id: t.id, price: Number(t.price), owned: owned.has(t.id) }]));
+type Sellable = { id: string; price?: number | null; sale_mode?: string | null; donation_amounts?: number[] | null };
+export const saleFor = (kind: 'album' | 'track', id: string, price: number | null | undefined, owned: boolean, mode?: string | null, amounts?: number[] | null): Sale | null =>
+  mode === 'donation' ? { kind, id, price: 0, owned, mode: 'donation', amounts: amounts?.length ? amounts : [5, 10, 20] }
+  : price && price > 0 ? { kind, id, price: Number(price), owned, mode: 'paid' } : null;
+export const trackSalesFor = (tracks: Sellable[], owned: Set<string>): Record<string, Sale> =>
+  Object.fromEntries(tracks.map((t) => [t.id, saleFor('track', t.id, t.price, owned.has(t.id), t.sale_mode, t.donation_amounts)]).filter(([, v]) => v) as [string, Sale][]);
+// Arriving with ?donate=<kind>:<id> (e.g. handed off from the phone app): which donate sheet to open.
+export function useDonateParam(): string | null {
+  const [target, setTarget] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const d = params.get('donate');
+    if (!d) return;
+    params.delete('donate');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`);
+    setTarget(d);
+  }, []);
+  return target;
+}
 // Arriving from the phone app with ?buy=<kind>:<id> (signed in by the handoff, or as a guest): start checkout on the
 // web. The parameter is removed first, so going back from checkout doesn't start it again.
 export function useBuyParam(pagePath: string) {
