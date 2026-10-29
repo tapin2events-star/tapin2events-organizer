@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useEventNumbers, usd } from '../../lib/eventNumbers';
 import ReserveCard from '../payouts/ReserveCard';
 import RevenueSplits from '../business/RevenueSplits';
 import { useFeature } from '../../lib/preview';
@@ -8,6 +9,7 @@ import type { Ticket } from '../../lib/types';
 
 export default function SalesTab({ eventId, onGoAttendees, hostName = 'You' }: { eventId: string; onGoAttendees?: () => void; hostName?: string }) {
   const splitsOn = useFeature('splits');
+  const n = useEventNumbers(eventId);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,9 +27,11 @@ export default function SalesTab({ eventId, onGoAttendees, hostName = 'You' }: {
 
   if (loading) return <ListSkeleton rows={4} className="mt-4" />;
 
-  const confirmed = tickets.filter((t) => t.status === 'confirmed');
-  const totalAttendees = confirmed.reduce((sum, t) => sum + (t.quantity || 1), 0);
-  const totalRevenue = confirmed.reduce((sum, t) => sum + (t.price_paid || 0) * (t.quantity || 1), 0);
+  // Active tickets: confirmed, or the older "used" status (checked in). Totals come from event_numbers (shared with
+  // the Overview and Attendees tabs).
+  const confirmed = tickets.filter((t) => t.status === 'confirmed' || String(t.status) === 'used');
+  const totalAttendees = n ? n.tickets_sold : confirmed.reduce((sum, t) => sum + (t.quantity || 1), 0);
+  const totalRevenue = n ? n.ticket_revenue : confirmed.reduce((sum, t) => sum + (t.price_paid || 0) * (t.quantity || 1), 0);
 
   // A single series pass purchase creates one ticket row per occurrence in
   // the series, so counting rows would overcount -- count distinct orders
@@ -44,10 +48,12 @@ export default function SalesTab({ eventId, onGoAttendees, hostName = 'You' }: {
         <div className="rounded-xl bg-surface border border-gray-200 p-5">
           <p className="text-xs uppercase tracking-widest text-muted">Tickets sold</p>
           <p className="mt-1 font-display text-3xl font-extrabold text-marigold">{totalAttendees}</p>
+          {n && <p className="mt-0.5 text-xs text-muted">{n.paid_tickets} paid{n.free_tickets ? ` · ${n.free_tickets} free` : ''} · {n.holders} {n.holders === 1 ? 'person' : 'people'}</p>}
         </div>
         <div className="rounded-xl bg-surface border border-gray-200 p-5">
           <p className="text-xs uppercase tracking-widest text-muted">Revenue</p>
           <p className="mt-1 font-display text-3xl font-extrabold text-mint">${totalRevenue.toFixed(2)}</p>
+          <p className="mt-0.5 text-xs text-muted">Ticket prices attendees paid, before fees{n && n.refunded > 0 ? ` · ${usd(n.refunded)} refunded` : ''}{n && n.cancelled_tickets > 0 ? ` · ${n.cancelled_tickets} cancelled` : ''}</p>
         </div>
         {seriesPassCount > 0 && (
           <div className="rounded-xl bg-surface border border-gray-200 p-5 sm:col-span-2">

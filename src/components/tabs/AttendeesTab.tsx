@@ -82,7 +82,8 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
   const shown = people.filter((p) => !q.trim() || p.email.includes(q.trim().toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.trim().toLowerCase())
     || p.tickets.some((t) => (t.guest_name ?? '').toLowerCase().includes(q.trim().toLowerCase())));
   const totalQty = people.reduce((n, p) => n + p.qty, 0);
-  const checkedIn = people.filter((p) => p.checkedIn).length;
+  const active = people.filter((p) => p.qty > 0);
+  const checkedIn = active.filter((p) => p.checkedIn).length;
 
   async function approveAll() {
     setBusy(true);
@@ -113,7 +114,7 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-xl border border-gray-200 bg-surface p-3"><p className="text-2xl font-extrabold text-marigold">{totalQty}</p><p className="text-xs text-muted">tickets</p></div>
         <div className="rounded-xl border border-gray-200 bg-surface p-3"><p className="text-2xl font-extrabold text-bone">{people.filter((p) => p.qty > 0).length}</p><p className="text-xs text-muted">people</p></div>
-        <div className="rounded-xl border border-gray-200 bg-surface p-3"><p className="text-2xl font-extrabold text-green-700">{checkedIn}</p><p className="text-xs text-muted">checked in</p></div>
+        <div className="rounded-xl border border-gray-200 bg-surface p-3"><p className="text-2xl font-extrabold text-green-700">{checkedIn}<span className="text-sm font-semibold text-muted"> / {active.length}</span></p><p className="text-xs text-muted">people checked in</p></div>
       </div>
 
       {pending.length > 0 && (
@@ -145,7 +146,7 @@ export default function AttendeesTab({ event }: { event: TapEvent }) {
 
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-display text-lg font-bold text-bone">Attendees <span className="text-sm font-normal text-muted">({people.length})</span></h3>
+          <h3 className="font-display text-lg font-bold text-bone">Attendees <span className="text-sm font-normal text-muted">({active.length}{people.length > active.length ? ` · ${people.length - active.length} cancelled or not attending` : ''})</span></h3>
           <div className="flex gap-2">
             <Link data-tour="checkin" to={`/organizer/events/${event.id}/checkin`} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Check-in</Link>
             {people.length > 0 && <button onClick={exportCsv} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">Download spreadsheet</button>}
