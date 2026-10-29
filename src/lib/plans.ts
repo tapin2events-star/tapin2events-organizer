@@ -51,6 +51,8 @@ export const money = (n: number) => `$${n % 1 ? n.toFixed(2) : n.toLocaleString(
 // Artist plan (for individuals, not organizations).
 export const ARTIST_PLAN = { month: 10, year: 100 };
 export const ARTIST_FEATURES: Feature[] = [
+  // Shown only while music is on (music_uploads); free profiles include 50 songs (music_song_limit).
+  { key: 'music_unlimited', icon: '🎵', name: 'Unlimited songs', desc: 'Upload all your music, and sell it or take donations. Free profiles include 50 songs.' },
   { key: 'artist_video', icon: '🎬', name: 'Video header on your artist profile', desc: 'A trailer at the top of your profile' },
   { key: 'featured_artist', icon: '⭐', name: 'Featured Artist', desc: 'Shown first in Artists & vendors, with a Featured badge' },
   { key: 'boost_credit', icon: '🚀', name: '$10 monthly Boost credit', desc: 'Toward boosting your shows in Discover\u2019s Promoted row' },

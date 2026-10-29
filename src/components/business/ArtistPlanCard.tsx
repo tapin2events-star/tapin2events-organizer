@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +15,7 @@ const day = (d: string | null) => (d ? new Date(d).toLocaleDateString('en-US', {
 
 // The Artist plan for individuals: status, checkout and billing. compact = small card for the artist dashboard.
 export default function ArtistPlanCard({ compact = false }: { compact?: boolean }) {
+  const musicOn = useFeature('music_uploads');
   const { user } = useAuth();
   const [p, setP] = useState<MyArtistPlan | null>(null);
   const [interval, setInterval] = useState<'month' | 'year'>('month');
@@ -52,9 +54,9 @@ export default function ArtistPlanCard({ compact = false }: { compact?: boolean 
     <section id="artist-plan" className="mt-10 scroll-mt-24 rounded-2xl border-2 border-purple-300 bg-purple-50/40 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.15em] text-purple-700">For artists & performers</p>
       <h2 className="mt-1 font-display text-2xl font-bold text-bone">🎤 Artist plan · {money(ARTIST_PLAN.month)}/month</h2>
-      <p className="mt-1 text-sm text-muted">For individual artists, no organization needed. Stand out to organizers and fans. Hosting your own shows? Add the Performers & Promotion pack (+$5/month) for promoter payouts and event video headers.</p>
+      <p className="mt-1 text-sm text-muted">For individual artists, no organization needed. {musicOn ? 'Share unlimited music, and stand out to organizers and fans.' : 'Stand out to organizers and fans.'} Hosting your own shows? Add the Performers & Promotion pack (+$5/month) for promoter payouts and event video headers.</p>
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-        {ARTIST_FEATURES.map((f) => (
+        {ARTIST_FEATURES.filter((f) => f.key !== 'music_unlimited' || musicOn).map((f) => (
           <li key={f.key} className="flex items-start gap-3 rounded-xl border border-gray-200 bg-surface p-3">
             <span className="text-xl" aria-hidden="true">{f.icon}</span>
             <span><span className="block text-sm font-semibold text-bone">{f.name}</span><span className="block text-xs text-muted">{f.desc}</span></span>
