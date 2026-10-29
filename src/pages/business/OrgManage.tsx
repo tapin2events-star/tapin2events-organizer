@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import OrgMusicTab from '../../components/business/OrgMusicTab';
 import PeopleInput, { type KnownPerson } from '../../components/PeopleInput';
 import { toast, toastSaved, toastError } from '../../lib/toast';
 import TransferOwnershipSheet from '../../components/TransferOwnershipSheet';
@@ -28,8 +29,8 @@ import BusinessGate from '../../components/business/BusinessGate';
 import ImagePicker from '../../components/business/ImagePicker';
 import { BRAND_FONTS, DEFAULT_BRAND, loadFont, type Brand, type Organization } from '../../lib/business';
 
-type Tab = 'Profile' | 'Brand kit' | 'Page' | 'Planning' | 'Team' | 'Events' | 'Audience' | 'Promote' | 'Payouts';
-const TAB_ICON: Record<Tab, string> = { Profile: '🏢', 'Brand kit': '🎨', Page: '🧩', Planning: '📋', Team: '👥', Events: '📅', Promote: '📣', Audience: '👥', Payouts: '💳' };
+type Tab = 'Profile' | 'Brand kit' | 'Page' | 'Planning' | 'Team' | 'Events' | 'Audience' | 'Promote' | 'Payouts' | 'Music';
+const TAB_ICON: Record<Tab, string> = { Music: '🎵', Profile: '🏢', 'Brand kit': '🎨', Page: '🧩', Planning: '📋', Team: '👥', Events: '📅', Promote: '📣', Audience: '👥', Payouts: '💳' };
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 export default function OrgManage() {
@@ -56,11 +57,12 @@ function OrgManageInner() {
   const promoterPayoutsOn = useFeature('promoter_payouts');
   const videoHeadersOn = useFeature('video_headers');
   const whiteLabelOn = useFeature('white_label');
+  const musicOn = useFeature('music_uploads');
   const isLead = role === 'owner' || role === 'admin';
   const canEditPage = role === 'owner' || role === 'admin' || role === 'editor';
-  const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : [])] as Tab[]);
+  const tabList = (['Profile', 'Brand kit', ...(canEditPage ? ['Page'] : []), 'Planning', 'Team', 'Events', ...(isLead && insightsOn ? ['Audience', 'Promote'] : []), ...(isLead ? ['Payouts'] : []), ...(isLead && musicOn ? ['Music'] : [])] as Tab[]);
   const tabLabel = (t: Tab) => (t === 'Payouts' && insightsOn ? 'Sales & payouts' : t);
-  const [tab, setTabState] = useState<Tab>(() => { const raw = new URLSearchParams(window.location.search).get('tab'); const t = raw === 'Photos' ? 'Page' : raw === 'Newsletter' ? 'Audience' : raw; return (['Profile', 'Brand kit', 'Page', 'Team', 'Events', 'Audience', 'Promote', 'Payouts'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
+  const [tab, setTabState] = useState<Tab>(() => { const raw = new URLSearchParams(window.location.search).get('tab'); const t = raw === 'Photos' ? 'Page' : raw === 'Newsletter' ? 'Audience' : raw; return (['Profile', 'Brand kit', 'Page', 'Team', 'Events', 'Audience', 'Promote', 'Payouts', 'Music'] as string[]).includes(t ?? '') ? (t as Tab) : 'Profile'; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -146,6 +148,7 @@ function OrgManageInner() {
         {tab === 'Team' && <Link to={`/team-chat/${org.id}`} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 text-sm"><span><strong className="text-gray-900">💬 Team chat</strong><span className="block text-gray-600">Message everyone on {org.name}'s team, share photos and files</span></span><span className="shrink-0 font-semibold text-indigo-700">Open ›</span></Link>}
         {tab === 'Team' && canEditPage && <TeamPeopleShortcut orgId={org.id} onManage={() => { setTab('Page'); setTimeout(() => document.getElementById('featured-people')?.scrollIntoView({ behavior: 'smooth' }), 300); }} />}
         {tab === 'Team' && <TeamTab orgId={org.id} canEdit={canEdit} me={user?.email ?? ''} />}
+        {tab === 'Music' && isLead && musicOn && <OrgMusicTab orgId={org.id} orgName={org.name} />}
         {tab === 'Team' && (role === 'owner' || isAdmin) && (
           <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-5">
             <h3 className="font-display text-lg font-bold text-gray-900">🔑 Transfer ownership</h3>

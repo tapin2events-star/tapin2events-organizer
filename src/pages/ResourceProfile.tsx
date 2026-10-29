@@ -40,6 +40,15 @@ export default function ResourceProfile() {
   const forEvent = searchParams.get('for_event');
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  // An organization's hidden music profile is never shown on its own: go to the organization's page instead.
+  useEffect(() => {
+    if (!id) return;
+    supabase.from('resources').select('org_id').eq('id', id).maybeSingle().then(async ({ data }) => {
+      if (!data?.org_id) return;
+      const { data: o } = await supabase.from('organizations').select('slug').eq('id', data.org_id).maybeSingle();
+      if (o?.slug) navigate(`/o/${o.slug}`, { replace: true });
+    });
+  }, [id, navigate]);
   const [resource, setResource] = useState<Resource | null>(null);
   const headerVideo = useHeaderVideo(null, null, resource?.id ?? null);
   const [shopCount, setShopCount] = useState(0);
