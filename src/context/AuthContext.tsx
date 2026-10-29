@@ -139,8 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: friendlyAuthError(error?.message) };
   }
 
+  // Sign out of this device only. (Supabase's default signs out every device the account is signed in on, so switching
+  // accounts on one device was signing people out of the phone app too.) Suspended accounts still end every session.
   async function signOut() {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
   }
 
   return (
