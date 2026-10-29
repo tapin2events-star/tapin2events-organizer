@@ -13,7 +13,13 @@ export default function MyMusic() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const purchased = new URLSearchParams(window.location.search).get('purchased') === '1';
-  useEffect(() => { if (user) supabase.rpc('my_music_library').then(({ data }) => setItems((data ?? []) as Item[])); }, [user]);
+  const load = () => supabase.rpc('my_music_library').then(({ data }) => setItems((data ?? []) as Item[]));
+  useEffect(() => { if (user) load(); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Just paid: confirm the purchase right away (the confirmation service also runs every 10 minutes), then refresh.
+  useEffect(() => {
+    if (!user || !purchased) return;
+    supabase.functions.invoke('music-sales', { body: {} }).then(() => load()).then(() => { setTimeout(load, 4000); });
+  }, [user, purchased]); // eslint-disable-line react-hooks/exhaustive-deps
   async function download(it: Item) {
     setBusy(it.id);
     const { data, error } = await supabase.functions.invoke('music-download', { body: it.album_id ? { album_id: it.album_id } : { track_id: it.track_id } });
@@ -28,7 +34,7 @@ export default function MyMusic() {
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-3xl font-extrabold text-bone">🎵 My music</h1>
       <p className="mt-1 text-sm text-muted">Albums and songs you bought on TapIN. Artists receive 100% of the price.</p>
-      {purchased && <p className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">Thank you! Your purchase shows up here within a few minutes of payment.</p>}
+      {purchased && <p className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-800">Thank you! Your purchase is being confirmed and will appear here in a moment.</p>}
       {items && items.length === 0 && <p className="mt-6 text-sm text-gray-600">Nothing here yet. Buy albums and songs from artists&apos; profiles, and they&apos;ll live here with downloads.</p>}
       <div className="mt-4 flex flex-col gap-4">
         {(items ?? []).map((it) => {
