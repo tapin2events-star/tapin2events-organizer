@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import MyMusicCard from '../components/music/MyMusicCard';
 import { useFeature } from '../lib/preview';
 import SellSomething from '../components/products/SellSomething';
 import BackButton from '../components/BackButton';
@@ -184,6 +185,7 @@ export default function ProductsPage() {
       )}
 
       {tab === 'My Orders' && <MyProductOrders title="My Orders" />}
+      {tab === 'My Orders' && <div className="mt-6"><MyMusicCard title="🎵 Music purchases" /></div>}
       {tab === 'My Products' && <MyProducts key={sellKey ?? 'all'} sellKey={sellKey} />}
     </div>
   );

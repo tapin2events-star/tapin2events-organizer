@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import MyMusicCard, { useMyMusicCount } from '../components/music/MyMusicCard';
 import { useFeature } from '../lib/preview';
 import TransferTicket, { canTransfer } from '../components/TransferTicket';
 import MyTasks, { loadMyTasks, type MyTask } from '../components/MyTasks';
@@ -64,6 +65,7 @@ async function downloadBlob(url: string, filename: string, init?: RequestInit) {
 
 
 export default function MyActivity() {
+  const musicCount = useMyMusicCount();
   // Networking (Preview): which of your events have it on.
   const networkingOn = useFeature('networking');
   const [netEvents, setNetEvents] = useState<Record<string, { members: number; requests: number; joined: boolean }>>({});
@@ -88,7 +90,7 @@ export default function MyActivity() {
   const [search, setSearch] = useState('');
   // One place for everything you've done on TapIN, filtered by chips. The view
   // lives in the URL hash so email links (e.g. /activity#orders) open it.
-  type View = 'all' | 'tickets' | 'tasks' | 'orders' | 'bookings' | 'vendor' | 'tips';
+  type View = 'all' | 'tickets' | 'tasks' | 'orders' | 'bookings' | 'vendor' | 'tips' | 'music';
   const viewFromHash = (): View => {
     const h = window.location.hash.replace('#', '');
     return (['tickets', 'tasks', 'orders', 'bookings', 'vendor', 'tips'] as string[]).includes(h) ? (h as View) : 'all';
@@ -256,6 +258,7 @@ export default function MyActivity() {
             { key: 'bookings', label: 'Bookings', count: counts?.bookings ?? 0 },
             { key: 'vendor', label: 'Vendor spots', count: counts?.vendor ?? 0 },
             { key: 'tips', label: 'Tips', count: counts?.tips ?? 0 },
+            ...(musicCount ? [{ key: 'music' as View, label: 'Music', count: musicCount }] : []),
           ];
           const shown = chips.filter((c) => c.key === 'tickets' || c.count > 0 || view === c.key || (c.key === 'tasks' && myTasks.length > 0));
           if (shown.length < 2) return null;
@@ -435,13 +438,14 @@ export default function MyActivity() {
         {!(holdTop && view === 'all') && (
           <>
             {(view === 'all' || view === 'orders') && <MyProductOrders title="Orders" />}
+            {(view === 'all' || view === 'music') && <MyMusicCard title="🎵 Music" />}
             {(view === 'all' || view === 'vendor') && <div id="vendor" className="scroll-mt-20"><MyVendorApplications title="Vendor Spots" /></div>}
             {(view === 'tasks' || (view === 'all' && openTaskCount > 0)) && <div id="tasks" className="scroll-mt-20"><MyTasks initial={myTasks} onChange={setOpenTaskCount} /></div>}
             {(view === 'all' || view === 'bookings') && <div id="bookings" className="scroll-mt-20"><BookingsSection mine={bookingSplit.mine} received={bookingSplit.received} pending={bookingSplit.pending} /></div>}
             {(view === 'all' || view === 'tips') && <MyTipsSent />}
           </>
         )}
-        {view !== 'all' && view !== 'tickets' && view !== 'tasks' && counts && counts[view] === 0 && (
+        {view !== 'all' && view !== 'tickets' && view !== 'tasks' && view !== 'music' && counts && counts[view] === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white/60 py-12 text-center text-gray-500">Nothing here yet.</div>
         )}
       </div>

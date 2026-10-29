@@ -28,7 +28,7 @@ type Item = { to: string; label: string; icon: string; end?: boolean; badge?: ke
 // Discover, Feed, Activity and Profile live in the bottom tab bar on phones,
 // so the phone menu only shows them on desktop (where there's no tab bar).
 // Simple mode: just the essentials.
-const SIMPLE_MENU = new Set(['/', '/activity', '/tutorials', '/organizations', '/products', '/resources/dashboard', '/organizer', '/business', '/admin']);
+const SIMPLE_MENU = new Set(['/', '/activity', '/my-music', '/tutorials', '/organizations', '/products', '/resources/dashboard', '/organizer', '/business', '/admin']);
 const EXPLORE: Item[] = [
   { to: '/', label: 'Discover', icon: 'discover', end: true, desktopOnly: true },
   { to: '/feed', label: 'Feed', icon: 'feed', desktopOnly: true },
@@ -61,6 +61,7 @@ export default function Layout() {
   const businessOn = useFeature('business');
   const networkingOn = useFeature('networking');
   const [menuOpen, setMenuOpen] = useState(false);
+  const musicMenuOn = useFeature('music_uploads');
   useEscapeKey(() => setMenuOpen(false), menuOpen);
   const location = useLocation();
   // A newer TapIN is live: switch to it when the person moves to another page.
@@ -178,7 +179,7 @@ export default function Layout() {
         {user && (
           <>
             {heading('My stuff')}
-            <nav className="flex flex-col gap-0.5" aria-label="My stuff">{renderItems([...MY_STUFF.filter((i) => isCreator || (i.to !== '/resources/dashboard' && i.to !== '/groups')), ...(networkingOn ? [{ to: '/network', label: 'Networking', icon: 'groups', end: true }] : [])])}</nav>
+            <nav className="flex flex-col gap-0.5" aria-label="My stuff">{renderItems([...MY_STUFF.filter((i) => (isCreator || (i.to !== '/resources/dashboard' && i.to !== '/groups')) && (i.to !== '/my-music' || musicMenuOn)), ...(networkingOn ? [{ to: '/network', label: 'Networking', icon: 'groups', end: true }] : [])])}</nav>
           </>
         )}
 

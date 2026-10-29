@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useMyMusicCount } from '../music/MyMusicCard';
 import ProfileLink from '../ProfileLink';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -17,6 +18,7 @@ const roleLabel: Record<string, string> = { owner: 'Owner', admin: 'Admin', edit
 export default function YourProfile({ userId, email, savedCount, vendorAppCounts, networkingOn }: {
   userId: string; email: string; savedCount: number; vendorAppCounts: { needsPayment: number; pending: number }; networkingOn: boolean;
 }) {
+  const musicCount = useMyMusicCount();
   const [p, setP] = useState<Parts | null>(null);
   const load = useCallback(async () => { const { data } = await supabase.rpc('my_profile_parts'); setP((data ?? null) as Parts | null); }, []);
   useEffect(() => { load(); }, [load]);
@@ -115,6 +117,7 @@ export default function YourProfile({ userId, email, savedCount, vendorAppCounts
             { to: '/activity', label: 'My tickets & activity' },
             { to: '/saved', label: 'Saved events', badge: savedCount ? String(savedCount) : '' },
             { to: '/products?tab=orders', label: 'My orders' },
+            ...(musicCount !== null ? [{ to: '/my-music', label: 'My music', badge: musicCount ? String(musicCount) : '' }] : []),
             { to: '/vendor-applications', label: 'My vendor applications', badge: vendorAppCounts.needsPayment ? `${vendorAppCounts.needsPayment} needs payment` : vendorAppCounts.pending ? `${vendorAppCounts.pending} pending` : '' },
           ].map((l) => (
             <li key={l.to}><Link to={l.to} className="flex items-center justify-between gap-2 px-4 py-3 text-sm text-bone hover:bg-gray-50">
