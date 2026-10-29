@@ -12,6 +12,7 @@
   "dependencies": {
     "@stripe/stripe-js": "^4.10.0",
     "@supabase/supabase-js": "^2.112.4",
+    "fflate": "^0.8.2",
     "heic2any": "0.0.4",
     "hls.js": "^1.7.3",
     "html5-qrcode": "^2.3.8",

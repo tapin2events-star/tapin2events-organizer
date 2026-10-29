@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { isNativeApp } from '../lib/displayMode';
+import { downloadMusic } from '../lib/musicDownload';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -20,15 +22,25 @@ export default function MyMusic() {
     if (!user || !purchased) return;
     supabase.functions.invoke('music-sales', { body: {} }).then(() => load()).then(() => { setTimeout(load, 4000); });
   }, [user, purchased]); // eslint-disable-line react-hooks/exhaustive-deps
-  async function download(it: Item) {
-    setBusy(it.id);
-    const { data, error } = await supabase.functions.invoke('music-download', { body: it.album_id ? { album_id: it.album_id } : { track_id: it.track_id } });
-    setBusy(null);
-    const files = (data as { files?: { url: string; filename: string }[]; error?: string } | null)?.files;
-    if (error || !files?.length) return toastError((data as { error?: string } | null)?.error ?? 'Couldn\u2019t prepare the download.');
-    for (const f of files) { const a = document.createElement('a'); a.href = f.url; a.download = f.filename; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); await new Promise((r) => setTimeout(r, 400)); }
-    toast(files.length === 1 ? 'Downloading your song' : `Downloading ${files.length} songs`);
+  const [progress, setProgress] = useState<string | null>(null);
+  async function download(target: { album_id: string } | { track_id: string }, key: string, albumTitle: string | null) {
+    setBusy(key); setProgress(null);
+    const err = await downloadMusic(target, albumTitle, setProgress);
+    setBusy(null); setProgress(null);
+    if (err) toastError(err); else if (!isNativeApp()) toast('Download started');
   }
+  // Handed off from the phone app with ?download=<album|track>:<id>: start that download here.
+  useEffect(() => {
+    if (!user || !items) return;
+    const params = new URLSearchParams(window.location.search);
+    const d = params.get('download');
+    if (!d) return;
+    params.delete('download');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.toString() ? `?${params}` : ''}`);
+    const [kind, id] = d.split(':');
+    if (kind === 'album' && id) download({ album_id: id }, `album:${id}`, items.find((x) => x.album_id === id)?.title ?? null);
+    if (kind === 'track' && id) download({ track_id: id }, `track:${id}`, null);
+  }, [user, items]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!user) return <div className="mx-auto max-w-2xl"><h1 className="font-display text-3xl font-extrabold text-bone">My music</h1><p className="mt-2 text-gray-600"><Link to="/login" className="text-marigold underline">Sign in</Link> to see the music you&apos;ve bought.</p></div>;
   return (
     <div className="mx-auto max-w-2xl">
@@ -42,7 +54,24 @@ export default function MyMusic() {
           return (
             <div key={it.id}>
               <MusicPlayerCard title={it.title} subtitle={`${it.artist.name} · bought ${new Date(it.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`} cover={it.cover} tracks={tracks} link={it.album_id ? `/albums/${it.album_id}` : `/resources/${it.artist.id}`} compact />
-              <button onClick={() => download(it)} disabled={busy === it.id} className="mt-2 inline-flex min-h-[40px] items-center rounded-full border border-gray-300 px-4 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-50">{busy === it.id ? 'Preparing…' : `⬇ Download ${it.album_id ? 'album' : 'song'}`}</button>
+              <div className="mt-2 flex flex-col gap-2">
+                {it.album_id && it.tracks.length > 1 && (
+                  <button onClick={() => download({ album_id: it.album_id! }, `album:${it.album_id}`, it.title)} disabled={!!busy}
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-[#0F1B3D] px-4 text-sm font-semibold text-white disabled:opacity-50">
+                    {busy === `album:${it.album_id}` ? (progress ?? 'Preparing…') : `⬇ Download album (.zip, ${it.tracks.length} songs)`}
+                  </button>
+                )}
+                <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+                  {it.tracks.map((t) => (
+                    <li key={t.id} className="flex items-center gap-2 px-3 py-2">
+                      <span className="min-w-0 flex-1 truncate text-sm text-gray-900">{t.title}</span>
+                      <button onClick={() => download({ track_id: t.id }, `track:${t.id}`, null)} disabled={!!busy} aria-label={`Download ${t.title}`}
+                        className="inline-flex min-h-[36px] shrink-0 items-center rounded-full border border-gray-300 px-3 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-50">{busy === `track:${t.id}` ? 'Preparing…' : '⬇ Download'}</button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-muted">Download as many times as you like{isNativeApp() ? ' (opens in your browser to save the file)' : ''}. On iPhone, files are saved to the Files app.</p>
+              </div>
             </div>
           );
         })}
