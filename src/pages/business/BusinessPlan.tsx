@@ -12,7 +12,7 @@ import { loadMyOrgs, type MyOrg } from '../../lib/business';
 const NAVY = '#0F1B3D';
 const GOLD = '#C9A227';
 // Planned premium features (also the "what matters most to you?" options on the reservation).
-const PREMIUM: { icon: string; name: string; desc: string }[] = [...ESSENTIALS, ...PACKS.flatMap((p) => p.features), ...BUSINESS_EXTRAS];
+const PREMIUM: { icon: string; name: string; desc: string }[] = [...ESSENTIALS.filter((f) => f.key !== 'music_unlimited'), ...PACKS.flatMap((p) => p.features), ...BUSINESS_EXTRAS];
 const FREE = ['Create events and sell tickets (buyers pay the fees)', 'Revenue splits: pay performers and partners automatically from ticket sales', 'Show your events on your website: paste one code and new events appear automatically', 'Make a night of it: nearby food, drinks, coffee, parking and places to stay on every event page', 'Local partners & perks for 2 businesses per event, with ready-made invitations and printable counter cards', 'Organization page with your brand', 'Team roles across all your events', 'Planning hub, tasks, meetings and polls',
   'Photo gallery (24 photos)', 'Promo codes', 'Donations and support', 'Payouts to your own bank', 'Personal TapIN QR and profile sharing', 'Feed videos, and featuring them on your organization page'];
 const PLANS = [
@@ -24,6 +24,7 @@ const PLANS = [
 
 // "Business plan, coming soon" (Preview): what's planned, what stays free, and a founding-price reservation.
 export default function BusinessPlan() {
+  const musicOn = useFeature('music_uploads');
   // People who told us they're an artist (and don't organize) see the Artist plan first.
   const setup = useSetup();
   const myRoles = effectiveRoles(setup);
@@ -93,7 +94,7 @@ export default function BusinessPlan() {
         <div id="plans" className="scroll-mt-24">
           <h2 className="font-display text-2xl font-bold text-bone">🌱 Essentials · ${PLAN_PRICES.essentials.month}/month</h2>
           <p className="mt-1 text-sm text-muted">The tools most organizers use, ready to grow with packs.</p>
-          <FeatureGrid features={ESSENTIALS} />
+          <FeatureGrid features={ESSENTIALS.filter((f) => f.key !== 'music_unlimited' || musicOn)} />
 
           <h2 className="mt-10 font-display text-2xl font-bold text-bone">Add packs to Essentials</h2>
           <p className="mt-1 text-sm text-muted">Pick only what fits the events you run.</p>

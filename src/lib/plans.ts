@@ -6,6 +6,8 @@ export const AGENCY_EXTRA = { month: 25, year: 250 };
 export const FOUNDING_PLANS: PlanId[] = ['business', 'agency'];
 export interface Feature { key: string; icon: string; name: string; desc: string }
 export const ESSENTIALS: Feature[] = [
+  // Shown only while music is on (music_uploads); free organizations include 50 songs (music_song_limit).
+  { key: 'music_unlimited', icon: '🎵', name: 'Unlimited songs', desc: 'Albums and songs on your organization\u2019s page, sold or for donations. Free organizations include 50 songs.' },
   { key: 'templates', icon: '✨', name: 'Event templates', desc: 'Conference, gala, summit and more, ready in minutes' },
   { key: 'insights', icon: '📈', name: 'Organization insights', desc: 'Sales across events, attendee list and exports' },
   { key: 'promotion_links', icon: '📣', name: 'Promotion links', desc: 'Track every link and promoter' },

@@ -37,6 +37,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   const [canSell, setCanSell] = useState(true);
   // Songs allowed on this profile (null = unlimited: artist plan, complimentary access or admin).
   const [songLimit, setSongLimit] = useState<number | null>(50);
+  const [isOrg, setIsOrg] = useState(false);
   // Who can be featured on this profile's songs (an artist group's members with artist profiles).
   // Groups the member can show the song being edited on (with its status there).
   const [groupOpts, setGroupOpts] = useState<{ group_id: string; name: string; status: string | null }[]>([]);
@@ -52,7 +53,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   const [progress, setProgress] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => { const d = (data ?? { tracks: [], albums: [] }) as { tracks: Track[]; albums: Album[]; can_sell?: boolean; sales?: { count: number; total: number }; song_limit?: number | null }; setSongLimit(d.song_limit === undefined ? 50 : d.song_limit); setTracks((d.tracks ?? []).filter((t) => t.status === 'active')); setAlbums(d.albums ?? []); setCanSell(d.can_sell !== false); setSales(d.sales ?? { count: 0, total: 0 }); }); }, [resourceId]);
+  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => { const d = (data ?? { tracks: [], albums: [] }) as { tracks: Track[]; albums: Album[]; can_sell?: boolean; sales?: { count: number; total: number }; song_limit?: number | null; is_org?: boolean }; setSongLimit(d.song_limit === undefined ? 50 : d.song_limit); setIsOrg(!!d.is_org); setTracks((d.tracks ?? []).filter((t) => t.status === 'active')); setAlbums(d.albums ?? []); setCanSell(d.can_sell !== false); setSales(d.sales ?? { count: 0, total: 0 }); }); }, [resourceId]);
   useEffect(() => { load(); }, [load]);
 
   function pick(f: File | null) {
@@ -157,13 +158,13 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
         </button>
       )}
       {v2 && full && (
-        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">You&apos;ve reached the {songLimit} songs included with free profiles. <Link to="/business/plan" className="font-semibold underline">Upgrade to an artist plan</Link> for unlimited songs, or remove one to add another.</p>
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">You&apos;ve reached the {songLimit} songs included {isOrg ? 'with free organizations' : 'with free profiles'}. <Link to="/business/plan" className="font-semibold underline">{isOrg ? 'Upgrade to a TapIN for Business plan' : 'Upgrade to an artist plan'}</Link> for unlimited songs, or remove one to add another.</p>
       )}
       {adding && <AddSongSheet resourceId={resourceId} albums={albums} canSell={canSell} onClose={() => setAdding(false)} onDone={() => { setAdding(false); toast('🎵 Song added to your profile'); load(); }} />}
       {!v2 && <section className="rounded-2xl border border-gray-200 bg-surface p-4">
         <p className="font-display text-lg font-bold text-bone">🎵 Add a song</p>
         <p className="mt-0.5 text-sm text-muted">MP3, M4A or WAV, up to 25 MB. Songs play right on your profile. {songLimit === null ? `${tracks.length} songs (unlimited with your plan).` : `${tracks.length}/${songLimit} used.`}</p>
-        {full ? <p className="mt-3 text-sm text-amber-800">You&apos;ve reached the {songLimit} songs included with free profiles. <Link to="/business/plan" className="font-semibold underline">Upgrade to an artist plan</Link> for unlimited songs, or remove one to add another.</p> : (
+        {full ? <p className="mt-3 text-sm text-amber-800">You&apos;ve reached the {songLimit} songs included {isOrg ? 'with free organizations' : 'with free profiles'}. <Link to="/business/plan" className="font-semibold underline">Upgrade to an artist plan</Link> for unlimited songs, or remove one to add another.</p> : (
           <div className="mt-3 flex flex-col gap-3">
             <input ref={input} type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav,.mp3,.m4a,.wav" onChange={(e) => pick(e.target.files?.[0] ?? null)} className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-full file:border-0 file:bg-[#0F1B3D] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
             {file && (
