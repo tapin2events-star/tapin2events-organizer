@@ -28,6 +28,13 @@ function pricingLabel(r: Resource) {
 
 export default function ResourceProfile() {
   const { id } = useParams<{ id: string }>();
+  // Count a profile view (one per visitor per day; the owner's own visits aren't counted), for the artist's dashboard.
+  useEffect(() => {
+    if (!id) return;
+    let key = '';
+    try { key = localStorage.getItem('tapin-viewer') || ''; if (!key) { key = crypto.randomUUID(); localStorage.setItem('tapin-viewer', key); } } catch { key = 'anon'; }
+    supabase.rpc('record_resource_view', { p_resource_id: id, p_viewer_key: key }).then(() => undefined);
+  }, [id]);
   const [searchParams] = useSearchParams();
   const forEvent = searchParams.get('for_event');
   const { user, isAdmin } = useAuth();

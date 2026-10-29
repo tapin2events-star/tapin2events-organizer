@@ -141,8 +141,9 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   return (
     <div className="mt-4 flex flex-col gap-4">
       {v2 && (
-        <button onClick={() => setAdding(true)} disabled={full} className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-marigold text-base font-semibold text-white shadow-sm disabled:opacity-50">
-          <span aria-hidden="true">＋</span> Add a song <span className="text-sm font-normal opacity-80">({tracks.length}/30)</span>
+        <button onClick={() => setAdding(true)} disabled={full} className="flex min-h-[60px] items-center justify-center gap-2.5 rounded-[18px] bg-gradient-to-br from-indigo-600 via-violet-600 to-teal-500 text-base font-extrabold text-white shadow-lg shadow-indigo-500/30 disabled:opacity-50">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          Add a song <span className="text-[13px] font-semibold opacity-85">{tracks.length}/30</span>
         </button>
       )}
       {adding && <AddSongSheet resourceId={resourceId} albums={albums} canSell={canSell} onClose={() => setAdding(false)} onDone={() => { setAdding(false); toast('🎵 Song added to your profile'); load(); }} />}
@@ -173,7 +174,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
       </section>}
       <section className="rounded-2xl border border-gray-200 bg-surface p-4">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-display text-lg font-bold text-bone">💿 Albums</p>
+          <p className="font-display text-lg font-bold text-bone">{v2 ? 'Albums' : '💿 Albums'}</p>
           {!albumForm && <button onClick={() => setAlbumForm({ id: null, title: '', description: '', cover_url: '', release_date: '' })} className="rounded-full bg-[#0F1B3D] px-4 py-2 text-sm font-semibold text-white">+ New album</button>}
         </div>
         <p className="mt-0.5 text-sm text-muted">Group songs with cover art. Each album gets its own page to share, and a spinning CD player on your profile.</p>
@@ -200,18 +201,25 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
             </div>
           </div>
         )}
-        {v2 && albums.length > 0 && (
+        {v2 && (
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {albums.map((a) => {
               const n = tracks.filter((t) => t.album_id === a.id).length;
               return (
                 <button key={a.id} onClick={() => setAlbumForm({ id: a.id, title: a.title, description: a.description ?? '', cover_url: a.cover_url ?? '', release_date: a.release_date ?? '' })} className="text-left">
-                  {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-square w-full rounded-xl object-cover shadow-sm" /> : <span className="flex aspect-square w-full items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-teal-400 text-4xl shadow-sm" aria-hidden="true">💿</span>}
+                  <span className="relative block">
+                    {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-square w-full rounded-[18px] object-cover shadow-[0_8px_20px_rgba(39,30,110,0.18)]" /> : <span className="flex aspect-square w-full items-center justify-center rounded-[18px] bg-gradient-to-br from-violet-600 to-teal-500 shadow-[0_8px_20px_rgba(39,30,110,0.18)]" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg></span>}
+                    {a.sale_mode && a.sale_mode !== 'free' && <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold text-indigo-800">{a.sale_mode === 'donation' ? 'Donation-based' : `$${Number(a.price ?? 0).toFixed(2)}`}</span>}
+                  </span>
                   <span className="mt-1.5 block truncate text-sm font-semibold text-gray-900">{a.title}</span>
-                  <span className="block text-xs text-gray-500">{n} song{n === 1 ? '' : 's'}{a.price ? ` · $${Number(a.price).toFixed(2)}` : ''}</span>
+                  <span className="block text-xs text-gray-500">{n} song{n === 1 ? '' : 's'}{a.release_date ? ` · ${a.release_date.slice(0, 4)}` : ''}</span>
                 </button>
               );
             })}
+            <button onClick={() => setAlbumForm({ id: null, title: '', description: '', cover_url: '', release_date: '' })} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-[18px] border-2 border-dashed border-gray-300 text-indigo-800 hover:border-indigo-400">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
+              <span className="text-[13px] font-bold">Create an album</span>
+            </button>
           </div>
         )}
         {!v2 && albums.length > 0 && (
@@ -239,7 +247,9 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
               {tracks.map((t) => (
                 <li key={t.id}>
                   <button onClick={() => setEditing(t.id)} className="flex w-full items-center gap-3 px-3 py-3 text-left">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100" aria-hidden="true">🎵</span>
+                    {(() => { const al = albums.find((a) => a.id === t.album_id); return al?.cover_url
+                      ? <img src={al.cover_url} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+                      : <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white ${t.album_id ? 'from-violet-600 to-teal-500' : 'from-orange-500 to-pink-500'}`} aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>; })()}
                     <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{t.title}</span>
                       <span className="block truncate text-xs text-gray-500">{[t.album_id ? albums.find((a) => a.id === t.album_id)?.title : 'Single', fmt(t.duration_sec), `${t.plays} play${t.plays === 1 ? '' : 's'}`, !t.album_id && t.price ? `$${Number(t.price).toFixed(2)}` : null].filter(Boolean).join(' · ')}</span></span>
                     <span className="text-gray-400" aria-hidden="true">›</span>

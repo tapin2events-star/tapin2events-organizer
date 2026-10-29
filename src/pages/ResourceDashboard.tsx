@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import ArtistHome, { type QuickAdd } from '../components/resource/ArtistHome';
+import ArtistHome, { AreaHeader, type QuickAdd } from '../components/resource/ArtistHome';
 import { useFeature } from '../lib/preview';
 import MusicManager from '../components/music/MusicManager';
 import VideoHeaderCard from '../components/video/VideoHeaderCard';
@@ -255,7 +255,7 @@ export default function ResourceDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <div className="mb-3"><BackButton fallback="/profile" fallbackLabel="Profile" /></div>
+        {!dashV2 && <><div className="mb-3"><BackButton fallback="/profile" fallbackLabel="Profile" /></div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl font-extrabold text-gray-900">Artist & vendor dashboard</h1>
@@ -265,16 +265,16 @@ export default function ResourceDashboard() {
           {!dashV2 && <Link to="/resources/new" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
             Edit profile
           </Link>}
-        </div>
+        </div></>}
 
         {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
         {dashV2 && tab !== 'Overview' && (
-          <button onClick={() => { setTab('Overview'); setQuick(null); }} className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-medium text-marigold">‹ Dashboard</button>
+          <AreaHeader title={({ Bookings: 'Bookings', Music: 'Music', Media: 'Photos & videos', Products: 'Shop' } as Record<string, string>)[tab] ?? tab}
+            onBack={() => { setTab('Overview'); setQuick(null); window.scrollTo({ top: 0 }); }} resourceId={resource.id} music={tab === 'Music'} />
         )}
         {dashV2 && tab === 'Overview' && (
-          <ArtistHome resource={resource} pendingBookings={bookings.filter((b) => b.status === 'pending').length}
-            upcomingBookings={bookings.filter((b) => (b.status === 'accepted' || b.status === 'confirmed') && (!b.event_start_date || new Date(b.event_start_date) >= new Date())).length}
+          <ArtistHome resource={resource}
             unreadMessages={unreadTotal} payoutsReady={payouts ? payouts.chargesEnabled : null} musicOn={musicOn}
             onOpen={(area, q) => { if (area === 'Stats') { navigate(`/resources/${resource.id}/stats`); return; } setQuick(q ?? null); setTab(area); window.scrollTo({ top: 0 }); }} />
         )}
