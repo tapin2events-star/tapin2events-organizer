@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import MemberSongsOnPage from '../components/music/MemberSongsOnPage';
 import AddMySongs from '../components/music/AddMySongs';
 import { AreaHeader } from '../components/resource/ArtistHome';
 import GroupHome, { type GroupArea, type GroupQuick } from '../components/groups/GroupHome';
@@ -272,6 +273,7 @@ export default function GroupManage() {
       )}
 
       {show('music') && isAdmin && <GroupSongRequests groupId={group.id} />}
+      {show('music') && musicOn && <MemberSongsOnPage targetId={group.id} name={group.display_name} canRemove={isAdmin} />}
       {show('music') && musicOn && <AddMySongs targetId={group.id} name={group.display_name} />}
       {show('music') && isAdmin && musicOn && (
         <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">

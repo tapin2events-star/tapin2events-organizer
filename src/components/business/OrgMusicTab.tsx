@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import MemberSongsOnPage from '../music/MemberSongsOnPage';
 import AddMySongs from '../music/AddMySongs';
 import { supabase } from '../../lib/supabaseClient';
 import MusicManager from '../music/MusicManager';
@@ -37,7 +38,7 @@ export default function OrgMusicTab({ orgId, orgName, isLead = true }: { orgId: 
   const total = (splits ?? []).reduce((n, s) => n + Number(s.percent), 0);
   if (err) return <p role="alert" className="text-sm text-red-600">{err}</p>;
   if (!rid) return <p className="text-sm text-gray-500">Loading…</p>;
-  if (!isLead) return <AddMySongs targetId={rid} name={orgName} />;
+  if (!isLead) return <><MemberSongsOnPage targetId={rid} name={orgName} canRemove={false} /><AddMySongs targetId={rid} name={orgName} /></>;
   return (
     <div className="flex flex-col gap-6">
       <AddMySongs targetId={rid} name={orgName} />
@@ -47,6 +48,7 @@ export default function OrgMusicTab({ orgId, orgName, isLead = true }: { orgId: 
         <MusicManager resourceId={rid} v2 />
       </section>
       <GroupSongRequests groupId={rid} />
+      <MemberSongsOnPage targetId={rid} name={orgName} canRemove />
       <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
         <h2 className="font-display text-lg font-semibold text-gray-900">💸 Split music earnings</h2>
         <p className="mt-1 text-xs text-gray-500">Give specific people a share of every music sale and donation (for example, the poets on an album). The rest goes to the organization. Each person is paid to their own payout account, or their share is held until they connect.</p>

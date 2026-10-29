@@ -20,7 +20,7 @@ export function OrgAlbumsSection({ orgId }: { orgId: string }) {
   if (albums.length === 0) return null;
   return (
     <section className="pb-10">
-      <h2 className="text-xl font-bold">Albums</h2>
+      <h2 className="text-xl font-bold">Photo albums</h2>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {albums.map((a) => (
           <button key={a.id} onClick={() => setOpen(a)} className="group text-left">

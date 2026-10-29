@@ -9,7 +9,7 @@ import { useOwnedTracks, trackSalesFor } from '../../lib/musicOwned';
 // Group page: "Music from our members": approved songs from members' own profiles. Each song stays the member's (plays
 // and earnings go to them), credited "by <member>".
 interface T { id: string; title: string; url: string; duration_sec: number | null; price: number | null; preview_only: boolean; sale_mode: string; donation_amounts: number[]; cover: string | null; artist: string; artist_id: string; can_sell: boolean; mine: boolean }
-export default function GroupMemberMusic({ groupId, groupName }: { groupId: string; groupName: string }) {
+export default function GroupMemberMusic({ groupId, groupName, bare = false }: { groupId: string; groupName: string; bare?: boolean }) {
   const on = useFeature('music_uploads');
   const { user } = useAuth();
   const [tracks, setTracks] = useState<T[]>([]);
@@ -21,7 +21,7 @@ export default function GroupMemberMusic({ groupId, groupName }: { groupId: stri
   // Buy/donate only where that member can take payments, and never on your own song.
   const sales = trackSalesFor(tracks.filter((t) => t.can_sell && !t.mine), owned);
   return (
-    <section className="mt-6" aria-label={`Music from ${groupName}'s members`}>
+    <section className={bare ? '' : 'mt-6'} aria-label={`Music from ${groupName}'s members`}>
       <MusicPlayerCard title="🎤 Music from our members" subtitle={`Solo music from ${groupName}'s members`} cover={tracks[0].cover} tracks={list} trackSales={sales} canSell showArtist pagePath={window.location.pathname} artist={groupName} />
     </section>
   );
