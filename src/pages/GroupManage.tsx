@@ -158,7 +158,7 @@ export default function GroupManage() {
       </div></>}
       {gv2 && !area && <GroupHome group={group} roleLabel={ROLE_LABELS[role]} isAdmin={isAdmin} isOwner={role === 'owner'} musicOn={musicOn} onOpen={(a, q) => openArea(a, q ?? null)} />}
       {gv2 && area && (
-        <AreaHeader title={({ bookings: 'Bookings', members: 'Members', payouts: 'Payouts & splits', music: 'Music', media: 'Photos & videos', posts: 'Posts', settings: isAdmin ? 'Settings' : 'My membership' } as Record<GroupArea, string>)[area]}
+        <AreaHeader title={({ bookings: 'Bookings', members: 'Members', payouts: 'Payouts & splits', music: 'Music', media: 'Media', posts: 'Posts', settings: isAdmin ? 'Settings' : 'My membership' } as Record<GroupArea, string>)[area]}
           onBack={() => openArea(null)} resourceId={group.id} music={area === 'music' && isAdmin} />
       )}
 
@@ -266,7 +266,7 @@ export default function GroupManage() {
 
       {show('media') && isAdmin && (
         <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
-          <h2 className="mb-1 font-display text-lg font-semibold text-bone">Photos, videos &amp; music</h2>
+          <h2 className="mb-1 font-display text-lg font-semibold text-bone">Media</h2>
           <p className="mb-3 text-xs text-muted">Shown on the group's page.</p>
           <ResourceMediaManager resourceId={group.id} />
         </section>

@@ -49,7 +49,7 @@ export default function GroupHome({ group, roleLabel, isAdmin, isOwner, musicOn,
     ...(musicOn ? [{ key: 'song' as const, label: 'Song', icon: ICONS.music, area: 'music' as const, grad: 'from-indigo-600 to-violet-600', glow: 'shadow-indigo-500/40' },
       { key: 'album' as const, label: 'Album', icon: ICONS.disc, area: 'music' as const, grad: 'from-teal-600 to-teal-400', glow: 'shadow-teal-500/40' }] : []),
     { key: 'invite', label: 'Invite', icon: ICONS.user, area: 'members', grad: 'from-amber-500 to-orange-500', glow: 'shadow-orange-500/40' },
-    { key: 'media', label: 'Photo', icon: ICONS.camera, area: 'media', grad: 'from-pink-500 to-pink-600', glow: 'shadow-pink-500/40' },
+    { key: 'media', label: 'Media', icon: ICONS.camera, area: 'media', grad: 'from-pink-500 to-pink-600', glow: 'shadow-pink-500/40' },
   ] : [];
   const tiles = s ? [
     { label: 'Earned', value: money(Number(s.earned_month)), t: trend(Number(s.earned_month), Number(s.earned_prev)), bg: 'bg-indigo-50', fg: 'text-indigo-700', val: 'text-indigo-950' },
@@ -150,8 +150,8 @@ export default function GroupHome({ group, roleLabel, isAdmin, isOwner, musicOn,
             <Card area="bookings" icon={ICONS.calendar} tone="bg-pink-100 text-pink-700" title="Bookings">
               <span className="text-xs leading-snug text-gray-600">{h?.next_booking ? <>Next: {h.next_booking.title}<br />{new Date(h.next_booking.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</> : 'No upcoming bookings'}</span>
             </Card>
-            <Card area="media" icon={ICONS.image} tone="bg-indigo-100 text-indigo-700" title="Photos & videos">
-              {h?.media.length ? <span className="grid grid-cols-3 gap-1">{h.media.map((u) => <img key={u} src={u} alt="" className="h-[30px] w-full rounded-md object-cover" />)}</span> : <span className="text-xs text-gray-600">Show off the group</span>}
+            <Card area="media" icon={ICONS.image} tone="bg-indigo-100 text-indigo-700" title="Media">
+              {h?.media.length ? <span className="grid grid-cols-3 gap-1">{h.media.map((u) => <img key={u} src={u} alt="" className="h-[30px] w-full rounded-md object-cover" />)}</span> : <span className="text-xs text-gray-600">Photos, videos, music &amp; links</span>}
             </Card>
             <Card area="posts" icon={POST} tone="bg-violet-100 text-violet-700" title="Posts">
               <span className="text-xs leading-snug text-gray-600">Updates on the group&apos;s page</span>

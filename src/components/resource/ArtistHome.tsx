@@ -86,7 +86,7 @@ export default function ArtistHome({ resource, unreadMessages, payoutsReady, mus
       { key: 'album' as const, label: 'Album', icon: ICONS.disc, area: 'Music' as const, grad: 'from-teal-600 to-teal-400', glow: 'shadow-teal-500/40' },
     ] : []),
     { key: 'product', label: 'Product', icon: ICONS.bag, area: 'Products', grad: 'from-amber-500 to-orange-500', glow: 'shadow-orange-500/40' },
-    { key: 'media', label: 'Photo', icon: ICONS.camera, area: 'Media', grad: 'from-pink-500 to-pink-600', glow: 'shadow-pink-500/40' },
+    { key: 'media', label: 'Media', icon: ICONS.camera, area: 'Media', grad: 'from-pink-500 to-pink-600', glow: 'shadow-pink-500/40' },
   ];
   const tiles: { label: string; value: string; t: ReturnType<typeof trend> | { text: string; tone: string }; bg: string; fg: string; val: string }[] = s ? [
     { label: 'Earned', value: money(Number(s.earned_month)), t: trend(Number(s.earned_month), Number(s.earned_prev)), bg: 'bg-indigo-50', fg: 'text-indigo-700', val: 'text-indigo-950' },
@@ -193,9 +193,9 @@ export default function ArtistHome({ resource, unreadMessages, payoutsReady, mus
             </Card>
             <Card area="Media">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700"><Icon d={ICONS.image} /></span>
-              <span className="text-[15px] font-extrabold">Photos &amp; videos</span>
+              <span className="text-[15px] font-extrabold">Media</span>
               {h?.media.length ? <span className="grid grid-cols-3 gap-1">{h.media.map((u) => <img key={u} src={u} alt="" className="h-[30px] w-full rounded-md object-cover" />)}</span>
-                : <span className="text-xs text-gray-600">Show off your work</span>}
+                : <span className="text-xs text-gray-600">Photos, videos, music &amp; links</span>}
             </Card>
             <Card area="Stats">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-100 text-green-700"><Icon d={ICONS.chart} /></span>

@@ -260,7 +260,7 @@ export default function ResourceDashboard() {
           <div>
             <h1 className="font-display text-3xl font-extrabold text-gray-900">Artist & vendor dashboard</h1>
             {!dashV2 && <p className="mt-1 text-gray-500">Booking requests for {resource.display_name}</p>}
-            {dashV2 && tab !== 'Overview' && <p className="mt-1 text-gray-500">{({ Bookings: 'Bookings', Music: 'Music', Media: 'Photos & videos', Products: 'Shop' } as Record<string, string>)[tab] ?? ''}</p>}
+            {dashV2 && tab !== 'Overview' && <p className="mt-1 text-gray-500">{({ Bookings: 'Bookings', Music: 'Music', Media: 'Media', Products: 'Shop' } as Record<string, string>)[tab] ?? ''}</p>}
           </div>
           {!dashV2 && <Link to="/resources/new" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-marigold hover:text-marigold">
             Edit profile
@@ -270,7 +270,7 @@ export default function ResourceDashboard() {
         {loadError && <p className="mt-4 text-sm text-magenta">{loadError}</p>}
 
         {dashV2 && tab !== 'Overview' && (
-          <AreaHeader title={({ Bookings: 'Bookings', Music: 'Music', Media: 'Photos & videos', Products: 'Shop' } as Record<string, string>)[tab] ?? tab}
+          <AreaHeader title={({ Bookings: 'Bookings', Music: 'Music', Media: 'Media', Products: 'Shop' } as Record<string, string>)[tab] ?? tab}
             onBack={() => { setTab('Overview'); setQuick(null); window.scrollTo({ top: 0 }); }} resourceId={resource.id} music={tab === 'Music'} />
         )}
         {dashV2 && tab === 'Overview' && (
