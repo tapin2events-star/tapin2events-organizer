@@ -38,6 +38,8 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   // Songs allowed on this profile (null = unlimited: artist plan, complimentary access or admin).
   const [songLimit, setSongLimit] = useState<number | null>(50);
   // Who can be featured on this profile's songs (an artist group's members with artist profiles).
+  // Groups the member can show the song being edited on (with its status there).
+  const [groupOpts, setGroupOpts] = useState<{ group_id: string; name: string; status: string | null }[]>([]);
   const [creditOptions, setCreditOptions] = useState<{ id: string; name: string; photo: string | null }[]>([]);
   useEffect(() => { supabase.rpc('track_credit_options', { p_resource_id: resourceId }).then(({ data }) => setCreditOptions((data ?? []) as { id: string; name: string; photo: string | null }[])); }, [resourceId]);
   const [sales, setSales] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
@@ -144,6 +146,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   const full = songLimit !== null && tracks.length >= songLimit;
   const used = songLimit === null ? `${tracks.length} · unlimited` : `${tracks.length}/${songLimit}`;
   const ed = editing ? tracks.find((t) => t.id === editing) ?? null : null;
+  useEffect(() => { if (!editing) { setGroupOpts([]); return; } supabase.rpc('track_group_options', { p_track_id: editing }).then(({ data }) => setGroupOpts((data ?? []) as { group_id: string; name: string; status: string | null }[])); }, [editing]);
   const edIndex = ed ? tracks.indexOf(ed) : -1;
   return (
     <div className="mt-4 flex flex-col gap-4">
@@ -323,6 +326,25 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
                 })}
               </div>
               <p className="mt-1 text-[11px] text-gray-500">Featured members are linked from the song, to their artist profiles.</p>
+            </fieldset>
+          )}
+          {groupOpts.length > 0 && (
+            <fieldset className="mt-3">
+              <legend className="text-sm text-gray-700">Also show on a group&apos;s page</legend>
+              <div className="mt-1 flex flex-col gap-1.5">
+                {groupOpts.map((g) => (
+                  <label key={g.group_id} className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                    <span className="min-w-0 truncate text-gray-900">{g.name}{g.status === 'pending' && <span className="ml-2 text-xs text-amber-700">Waiting for approval</span>}{g.status === 'approved' && <span className="ml-2 text-xs text-green-700">On the group&apos;s page</span>}</span>
+                    <input type="checkbox" checked={!!g.status} onChange={async (e) => {
+                      const { data, error } = await supabase.rpc('set_track_on_group', { p_track_id: ed.id, p_group_id: g.group_id, p_on: e.target.checked });
+                      if (error) return toastError(error.message);
+                      setGroupOpts(groupOpts.map((x) => (x.group_id === g.group_id ? { ...x, status: data === 'removed' ? null : String(data) } : x)));
+                      toast(data === 'pending' ? 'Sent to the group for approval' : data === 'approved' ? 'Added to the group\u2019s page' : 'Removed from the group\u2019s page');
+                    }} className="h-5 w-5 shrink-0 accent-indigo-600" />
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-500">The song stays yours: plays and earnings go to you. The group&apos;s owner or admins approve it first.</p>
             </fieldset>
           )}
           {!ed.album_id && canSell && <PriceRow key={`p-${ed.id}`} kind="track" id={ed.id} price={ed.price} previewOnly={ed.preview_only} mode={ed.sale_mode} amounts={ed.donation_amounts} setSale={setSale} />}

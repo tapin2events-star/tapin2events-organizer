@@ -9,7 +9,7 @@ import DonateSheet from './DonateSheet';
 // The spinning CD player for an album (or a single): disc, play/pause, previous/next, a progress bar you can drag, and
 // the track list. Everything plays through the app-wide player, so it keeps going in the mini player while browsing.
 export interface Sale { kind: 'album' | 'track'; id: string; price: number; owned: boolean; mode?: 'paid' | 'donation'; amounts?: number[] }
-export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, compact = false, sale, trackSales, canSell: canSellIn = true, pagePath, mine: ownMusic = false, share, artist, autoDonate }: { title: string; subtitle?: string; cover?: string | null; tracks: PlayerTrack[]; link?: string; compact?: boolean; sale?: Sale | null; trackSales?: Record<string, Sale>; canSell?: boolean; pagePath?: string; mine?: boolean; share?: { kind: 'album' | 'track'; id: string } | null; artist?: string; autoDonate?: string | null }) {
+export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, compact = false, sale, trackSales, canSell: canSellIn = true, pagePath, mine: ownMusic = false, share, artist, autoDonate, showArtist = false }: { title: string; subtitle?: string; cover?: string | null; tracks: PlayerTrack[]; link?: string; compact?: boolean; sale?: Sale | null; trackSales?: Record<string, Sale>; canSell?: boolean; pagePath?: string; mine?: boolean; share?: { kind: 'album' | 'track'; id: string } | null; artist?: string; autoDonate?: string | null; showArtist?: boolean }) {
   const canSell = canSellIn && !ownMusic;
   const p = usePlayer();
   const [err, setErr] = useState<string | null>(null);
@@ -72,6 +72,7 @@ export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, 
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{t.title}{t.preview ? <span className="ml-1 text-[10px] font-normal text-amber-700">preview</span> : null}</span>
                 {t.duration_sec ? <span className="text-xs text-gray-400">{fmtTime(t.duration_sec)}</span> : null}
               </button>
+              {showArtist && t.artistId && <p className="-mt-1 mb-1 ml-8 truncate text-[11px] text-gray-500">by <Link to={`/resources/${t.artistId}`} className="font-medium text-indigo-600 hover:underline">{t.artist}</Link></p>}
               {t.credits && t.credits.length > 0 && (
                 <p className="-mt-1 mb-1 ml-8 truncate text-[11px] text-gray-500">feat. {t.credits.map((c, i) => <span key={c.id}>{i ? ', ' : ''}<Link to={`/resources/${c.id}`} className="font-medium text-indigo-600 hover:underline">{c.name}</Link></span>)}</p>
               )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import GroupMemberMusic from '../components/music/GroupMemberMusic';
 import ArtistMusic from '../components/music/ArtistMusic';
 import PartOfOrgs from '../components/profile/PartOfOrgs';
 import HeaderVideo, { useHeaderVideo } from '../components/video/HeaderVideo';
@@ -238,6 +239,7 @@ export default function ResourceProfile() {
             {!isGroup && <PartOfOrgs resourceId={resource.id} className="mt-6 border-t border-gray-200 pt-6" />}
 
             <ArtistMusic resourceId={resource.id} artistName={resource.display_name} />
+            {isGroup && <GroupMemberMusic groupId={resource.id} groupName={resource.display_name} />}
 
             <div id="shop" className="scroll-mt-24"><ShopSection ownerType="resource" ownerId={resource.id} /></div>
 
