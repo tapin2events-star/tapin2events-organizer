@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useFeature } from '../lib/preview';
+import MusicManager from '../components/music/MusicManager';
 import { DetailSkeleton } from '../components/ui/Skeleton';
 import AnnounceLineupsToggle from '../components/resources/AnnounceLineupsToggle';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -43,6 +45,7 @@ export default function GroupManage() {
   const [titleFor, setTitleFor] = useState<ManagedMember | null>(null);
 
   const isAdmin = role === 'owner' || role === 'admin';
+  const musicOn = useFeature('music_uploads');
   const me = members.find((m) => m.user_email === user?.email);
   const say = (ok: boolean, text: string) => setNotice({ ok, text });
 
@@ -243,6 +246,14 @@ export default function GroupManage() {
           <h2 className="mb-1 font-display text-lg font-semibold text-bone">Photos, videos &amp; music</h2>
           <p className="mb-3 text-xs text-muted">Shown on the group's page.</p>
           <ResourceMediaManager resourceId={group.id} />
+        </section>
+      )}
+
+      {isAdmin && musicOn && (
+        <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
+          <h2 className="mb-1 font-display text-lg font-semibold text-bone">🎵 Music</h2>
+          <p className="text-xs text-muted">Upload the group&apos;s songs and albums. They play on the group&apos;s page, and can be free, paid or donation-based. The owner and admins can manage them.</p>
+          <MusicManager resourceId={group.id} v2 />
         </section>
       )}
 
