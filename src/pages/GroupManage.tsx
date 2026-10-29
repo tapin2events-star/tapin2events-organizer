@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AreaHeader } from '../components/resource/ArtistHome';
+import GroupHome, { type GroupArea, type GroupQuick } from '../components/groups/GroupHome';
 import GroupSongRequests from '../components/groups/GroupSongRequests';
 import GroupSplitSwitches from '../components/groups/GroupSplitSwitches';
 import { useFeature } from '../lib/preview';
@@ -48,6 +50,15 @@ export default function GroupManage() {
 
   const isAdmin = role === 'owner' || role === 'admin';
   const musicOn = useFeature('music_uploads');
+  // New group dashboard (preview): a home screen, with each area on its own (null = the home).
+  const gv2 = useFeature('group_dashboard_v2');
+  const [area, setArea] = useState<GroupArea | null>(null);
+  const [quick, setQuick] = useState<GroupQuick | null>(null);
+  const show = (a: GroupArea) => !gv2 || area === a;
+  const openArea = (a: GroupArea | null, q: GroupQuick | null = null) => {
+    setArea(a); setQuick(q); window.scrollTo({ top: 0 });
+    if (q === 'invite') setTimeout(() => (document.getElementById('group-invite-input') as HTMLInputElement | null)?.focus(), 150);
+  };
   const me = members.find((m) => m.user_email === user?.email);
   const say = (ok: boolean, text: string) => setNotice({ ok, text });
 
@@ -132,7 +143,7 @@ export default function GroupManage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-3"><BackButton fallback="/groups" fallbackLabel="Artist groups" /></div>
+      {!gv2 && <><div className="mb-3"><BackButton fallback="/groups" fallbackLabel="Artist groups" /></div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-widest text-muted">{ROLE_LABELS[role]}</p>
@@ -142,23 +153,29 @@ export default function GroupManage() {
           <Link to={`/groups/${group.id}/chat`} className="rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white hover:bg-marigold/90">Group chat</Link>
           <Link to={`/resources/${group.id}`} className={btn}>View group page</Link>
         </div>
-      </div>
+      </div></>}
+      {gv2 && !area && <GroupHome group={group} roleLabel={ROLE_LABELS[role]} isAdmin={isAdmin} isOwner={role === 'owner'} musicOn={musicOn} onOpen={(a, q) => openArea(a, q ?? null)} />}
+      {gv2 && area && (
+        <AreaHeader title={({ bookings: 'Bookings', members: 'Members', payouts: 'Payouts & splits', music: 'Music', media: 'Photos & videos', posts: 'Posts', settings: isAdmin ? 'Settings' : 'My membership' } as Record<GroupArea, string>)[area]}
+          onBack={() => openArea(null)} resourceId={group.id} music={area === 'music' && isAdmin} />
+      )}
 
       {notice && <p role={notice.ok ? 'status' : 'alert'} className={`mt-4 rounded-lg px-3 py-2 text-sm ${notice.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{notice.text}</p>}
 
-      <GroupBookings groupId={group.id} groupName={group.display_name} canRespond={isAdmin} />
-      <GroupPayments groupId={group.id} isOwner={role === 'owner'} />
-      {isAdmin && <GroupSplitSwitches groupId={group.id} isOwner={role === 'owner'} />}
-      {isAdmin && <div className="mt-6"><AnnounceLineupsToggle resourceId={group.id} isGroup /></div>}
-      <GroupContent groupId={group.id} groupName={group.display_name} isAdmin={isAdmin} />
+      {show('bookings') && <GroupBookings groupId={group.id} groupName={group.display_name} canRespond={isAdmin} />}
+      {show('payouts') && <GroupPayments groupId={group.id} isOwner={role === 'owner'} />}
+      {show('payouts') && isAdmin && <GroupSplitSwitches groupId={group.id} isOwner={role === 'owner'} />}
+      {show('settings') && isAdmin && <div className="mt-6"><AnnounceLineupsToggle resourceId={group.id} isGroup /></div>}
+      {show('posts') && <GroupContent groupId={group.id} groupName={group.display_name} isAdmin={isAdmin} />}
 
       {/* ---------- Members ---------- */}
+      {show('members') && <>
       <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
         <h2 className="font-display text-lg font-semibold text-bone">Members</h2>
         {isAdmin && (
           <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3">
             <label className="text-sm font-medium text-gray-700">Invite someone
-              <input className={input} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or enter their email" />
+              <input id="group-invite-input" className={input} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or enter their email" />
             </label>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-xs font-medium text-gray-600">Role
@@ -219,8 +236,9 @@ export default function GroupManage() {
         </ul>
       </section>
 
+      </>}
       {/* ---------- My membership ---------- */}
-      {me && (
+      {me && (!gv2 || area === 'members' || area === 'settings') && (
         <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
           <h2 className="font-display text-lg font-semibold text-bone">Your membership</h2>
           <label className="mt-3 flex items-start gap-3 text-sm text-gray-700">
@@ -235,7 +253,7 @@ export default function GroupManage() {
       )}
 
       {/* ---------- Profile ---------- */}
-      {isAdmin && fields && (
+      {show('settings') && isAdmin && fields && (
         <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
           <h2 className="mb-3 font-display text-lg font-semibold text-bone">Group profile</h2>
           <GroupProfileFields value={fields} onChange={setFields} />
@@ -244,7 +262,7 @@ export default function GroupManage() {
         </section>
       )}
 
-      {isAdmin && (
+      {show('media') && isAdmin && (
         <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
           <h2 className="mb-1 font-display text-lg font-semibold text-bone">Photos, videos &amp; music</h2>
           <p className="mb-3 text-xs text-muted">Shown on the group's page.</p>
@@ -252,16 +270,16 @@ export default function GroupManage() {
         </section>
       )}
 
-      {isAdmin && <GroupSongRequests groupId={group.id} />}
-      {isAdmin && musicOn && (
+      {show('music') && isAdmin && <GroupSongRequests groupId={group.id} />}
+      {show('music') && isAdmin && musicOn && (
         <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
           <h2 className="mb-1 font-display text-lg font-semibold text-bone">🎵 Music</h2>
           <p className="text-xs text-muted">Upload the group&apos;s songs and albums. They play on the group&apos;s page, and can be free, paid or donation-based. The owner and admins can manage them.</p>
-          <MusicManager resourceId={group.id} v2 />
+          <MusicManager key={quick ?? 'm'} resourceId={group.id} v2 autoAdd={gv2 && quick === 'song'} autoAlbum={gv2 && quick === 'album'} />
         </section>
       )}
 
-      {role === 'owner' && (
+      {show('settings') && role === 'owner' && (
         <section className="mt-6 rounded-2xl border border-red-200 bg-red-50/50 p-4 sm:p-5">
           <h2 className="font-display text-lg font-semibold text-red-800">Delete group</h2>
           <p className="mt-1 text-sm text-red-700">Removes the group page and all memberships. Members' own profiles aren't affected. To leave instead, make someone else the owner first.</p>

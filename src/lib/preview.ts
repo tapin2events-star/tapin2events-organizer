@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
+  group_dashboard_v2: { name: 'New group dashboard', description: 'The artist group Manage page as a home screen (bold hero, This month stats, needs attention, quick actions, area cards, recent activity), with each area on its own.', status: 'preview' },
   artist_dashboard_v2: { name: 'New artist dashboard', description: 'The artist & vendor dashboard as a home screen: needs your attention, quick-add buttons and a card for each area; music as cover-art tiles with a step-by-step Add a song sheet and tap-to-edit songs.', status: 'preview' },
   music_uploads: { name: 'Music uploads', description: 'Artists upload songs (MP3, M4A, WAV up to 25 MB, 30 per profile) in a Music tab, and they play in a Music section on their profile. Stored on Cloudflare R2.', status: 'preview' },
   performer_tips: { name: 'Tip the performers', description: 'Attendees tip an event\u2019s lineup performers (and opted-in revenue-split people): 100% to them, card processing on top. Organizer switch and tip QR in Promote, tips on the event page and ticket, a Thank the performers email after the event, and tips in performers\u2019 stats.', status: 'live' },
