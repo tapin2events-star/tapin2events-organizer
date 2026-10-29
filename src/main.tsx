@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { startUpdateChecks } from './lib/appUpdate';
+import { startUpdateChecks, safeReload } from './lib/appUpdate';
 import { applyCachedDisplay } from './lib/display';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -10,7 +10,8 @@ import { markDisplayMode } from './lib/displayMode';
 // page exactly as it was, including buttons stuck on "Opening checkout…". Reload so every page starts fresh.
 applyCachedDisplay();
 startUpdateChecks();
-window.addEventListener('pageshow', (e) => { if ((e as PageTransitionEvent).persisted) window.location.reload(); });
+// Restored from the browser's back/forward memory: reload, but only after any sign-in renewal is saved (see safeReload).
+window.addEventListener('pageshow', (e) => { if ((e as PageTransitionEvent).persisted) void safeReload(); });
 
 
 markDisplayMode();

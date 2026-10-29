@@ -1,6 +1,7 @@
 // Keeps everyone on the newest TapIN: checks /version.json (never cached) every 2 minutes and when the app comes
 // back to the screen. When a newer version is live, it refreshes at a safe moment: when the person opens a
 // different page, or when they come back to the app, never while they're typing.
+import { supabase } from './supabaseClient';
 declare const __TAPIN_BUILD__: string;
 const CURRENT = typeof __TAPIN_BUILD__ === 'string' ? __TAPIN_BUILD__ : 'dev';
 let updateReady = false;
@@ -21,15 +22,28 @@ const typing = () => {
   const el = document.activeElement as HTMLElement | null;
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 };
+// Reload safely: first let any sign-in renewal finish and be saved. Coming back to the app is exactly when Supabase
+// renews the sign-in token; reloading mid-renewal loses the new token, the reloaded page then uses the retired one,
+// and Supabase treats that as a stolen token and ends the session (signing the person out). getSession() waits for
+// any renewal in progress (it holds the same lock) and returns once the fresh session is stored.
+let reloading = false;
+export async function safeReload() {
+  if (reloading) return;
+  reloading = true;
+  try { await Promise.race([supabase.auth.getSession(), new Promise((r) => setTimeout(r, 8000))]); } catch { /* reload anyway */ }
+  await new Promise((r) => setTimeout(r, 300));
+  window.location.reload();
+}
+
 function refreshIfReady() {
-  if (!updateReady || typing()) return;
+  if (!updateReady || typing() || reloading) return;
   // Avoid a refresh loop if the new file is still propagating: at most once a minute.
   try {
     const last = Number(sessionStorage.getItem('tapin_update_reload') || 0);
     if (Date.now() - last < 60_000) return;
     sessionStorage.setItem('tapin_update_reload', String(Date.now()));
   } catch { /* private mode */ }
-  window.location.reload();
+  void safeReload();
 }
 
 export function startUpdateChecks() {
@@ -37,7 +51,7 @@ export function startUpdateChecks() {
   check();
   setInterval(check, 2 * 60_000);
   // Coming back to the tab or app (including Chrome restoring a tab from memory): check, and switch right away.
-  const onReturn = async () => { refreshIfReady(); await check(true); refreshIfReady(); };
+  const onReturn = async () => { await new Promise((r) => setTimeout(r, 1200)); await check(true); refreshIfReady(); };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onReturn(); });
   window.addEventListener('pageshow', (e) => { if ((e as PageTransitionEvent).persisted) onReturn(); });
   window.addEventListener('focus', () => check());

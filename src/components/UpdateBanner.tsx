@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { safeReload } from '../lib/appUpdate';
 
 // When a new version of TapIN is published, people who already have it open keep the old copy until it fully
 // restarts. Check for a new version when TapIN comes back on screen (and every 5 minutes while open), and offer a
@@ -34,7 +35,7 @@ export default function UpdateBanner() {
     <div className="fixed inset-x-0 z-[1400] flex justify-center px-4" style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }} role="status">
       <div className="flex items-center gap-3 rounded-full bg-[#0F1B3D] py-2 pl-4 pr-2 text-sm text-white shadow-xl">
         <span>✨ TapIN was updated</span>
-        <button onClick={() => window.location.reload()} className="rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#0F1B3D]">Refresh</button>
+        <button onClick={() => void safeReload()} className="rounded-full bg-white px-3 py-1.5 text-sm font-bold text-[#0F1B3D]">Refresh</button>
         <button onClick={() => setReady(false)} aria-label="Later" className="px-1 text-white/70">×</button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { lazy, type ComponentType } from 'react';
+import { safeReload } from './appUpdate';
 
 // Lazy-loaded pages: if a page's file can't be fetched (usually because TapIN was updated while the
 // app was open), reload once to pick up the new version instead of showing a blank screen.
@@ -19,7 +20,7 @@ export default function lazyWithRetry<T extends ComponentType<object>>(factory: 
         // Let any sign-in renewal in progress finish and be saved first (getSession waits for it), so the reloaded page
         // doesn't reuse a just-replaced token, which Supabase treats as theft and ends the session.
         try { const { supabase } = await import('./supabaseClient'); await Promise.race([supabase.auth.getSession(), new Promise((r) => setTimeout(r, 3000))]); } catch { /* reload anyway */ }
-        window.location.reload();
+        void safeReload();
         return new Promise<{ default: T }>(() => {});
       }
       throw err;
