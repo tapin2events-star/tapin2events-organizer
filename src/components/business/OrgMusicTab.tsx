@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AddMySongs from '../music/AddMySongs';
 import { supabase } from '../../lib/supabaseClient';
 import MusicManager from '../music/MusicManager';
 import GroupSongRequests from '../groups/GroupSongRequests';
@@ -9,7 +10,7 @@ import { toast, toastError } from '../../lib/toast';
 // the organization's payout account, held until it's connected).
 interface Split { key: string; percent: number; label: string | null; name?: string | null; photo?: string | null; on_tapin?: boolean; email_hint?: string; connected?: boolean }
 interface Person { id: string; full_name: string; profile_photo: string | null }
-export default function OrgMusicTab({ orgId, orgName }: { orgId: string; orgName: string }) {
+export default function OrgMusicTab({ orgId, orgName, isLead = true }: { orgId: string; orgName: string; isLead?: boolean }) {
   const [rid, setRid] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [splits, setSplits] = useState<Split[] | null>(null);
@@ -24,9 +25,9 @@ export default function OrgMusicTab({ orgId, orgName }: { orgId: string; orgName
     return () => clearTimeout(t);
   }, [draft.q, picked]);
   useEffect(() => {
-    supabase.rpc('org_music_resource', { p_org_id: orgId }).then(({ data, error }) => { if (error) setErr(error.message); else setRid(data as string); });
-    supabase.rpc('org_music_splits_get', { p_org_id: orgId }).then(({ data }) => setSplits((data ?? []) as Split[]));
-  }, [orgId]);
+    supabase.rpc(isLead ? 'org_music_resource' : 'org_music_target', { p_org_id: orgId }).then(({ data, error }) => { if (error) setErr(error.message); else setRid(data as string); });
+    if (isLead) supabase.rpc('org_music_splits_get', { p_org_id: orgId }).then(({ data }) => setSplits((data ?? []) as Split[]));
+  }, [orgId, isLead]);
   async function saveSplits(next: Split[]) {
     const { error } = await supabase.rpc('org_music_splits_set', { p_org_id: orgId, p_splits: next });
     if (error) return toastError(error.message);
@@ -36,8 +37,10 @@ export default function OrgMusicTab({ orgId, orgName }: { orgId: string; orgName
   const total = (splits ?? []).reduce((n, s) => n + Number(s.percent), 0);
   if (err) return <p role="alert" className="text-sm text-red-600">{err}</p>;
   if (!rid) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (!isLead) return <AddMySongs targetId={rid} name={orgName} />;
   return (
     <div className="flex flex-col gap-6">
+      <AddMySongs targetId={rid} name={orgName} />
       <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
         <h2 className="font-display text-lg font-semibold text-gray-900">🎵 {orgName}&apos;s music</h2>
         <p className="mt-1 text-xs text-gray-500">Albums and songs play on your organization&apos;s page, and can be free, paid or donation-based. Money goes to the organization&apos;s payout account (held until it&apos;s connected), minus any splits below.</p>

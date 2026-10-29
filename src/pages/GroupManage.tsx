@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import AddMySongs from '../components/music/AddMySongs';
 import { AreaHeader } from '../components/resource/ArtistHome';
 import GroupHome, { type GroupArea, type GroupQuick } from '../components/groups/GroupHome';
 import GroupSongRequests from '../components/groups/GroupSongRequests';
@@ -271,6 +272,7 @@ export default function GroupManage() {
       )}
 
       {show('music') && isAdmin && <GroupSongRequests groupId={group.id} />}
+      {show('music') && musicOn && <AddMySongs targetId={group.id} name={group.display_name} />}
       {show('music') && isAdmin && musicOn && (
         <section className="mt-6 rounded-2xl border border-gray-200 bg-surface p-4 sm:p-5">
           <h2 className="mb-1 font-display text-lg font-semibold text-bone">🎵 Music</h2>
