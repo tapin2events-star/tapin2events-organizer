@@ -75,6 +75,7 @@ const ScoutingBoard = lazyWithRetry(() => import('./pages/ScoutingBoard'));
 const SharedScoutBoard = lazyWithRetry(() => import('./pages/SharedScoutBoard'));
 const BusinessHome = lazyWithRetry(() => import('./pages/business/BusinessHome'));
 const OrgManage = lazyWithRetry(() => import('./pages/business/OrgManage'));
+const OrgIdRedirect = lazyWithRetry(() => import('./pages/business/OrgIdRedirect'));
 const OrgPublic = lazyWithRetry(() => import('./pages/business/OrgPublic'));
 const OrgDirectory = lazyWithRetry(() => import('./pages/business/OrgDirectory'));
 const ProductsPage = lazyWithRetry(() => import('./pages/ProductsPage'));
@@ -169,6 +170,7 @@ export default function App() {
             <Route path="/scout/:token" element={<SharedScoutBoard />} />
             <Route path="/business" element={<BusinessHome />} />
             <Route path="/business/plan" element={<BusinessPlanGate />} />
+            <Route path="/business/orgs/:id" element={<ProtectedRoute><OrgIdRedirect /></ProtectedRoute>} />
             <Route path="/business/:slug/manage" element={<ProtectedRoute><OrgManage /></ProtectedRoute>} />
             <Route path="/o/:slug" element={<OrgPublic />} />
             <Route path="/organizations" element={<OrgDirectory />} />
