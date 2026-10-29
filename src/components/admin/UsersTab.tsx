@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AdminDeleteAccount from './AdminDeleteAccount';
 import ProfileLink from '../ProfileLink';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -41,6 +42,7 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [banning, setBanning] = useState<UserRow | null>(null);
+  const [deleting, setDeleting] = useState<UserRow | null>(null);
   const [adminChange, setAdminChange] = useState<UserRow | null>(null);
   const q = useDebounced(safeSearch(search));
 
@@ -134,6 +136,7 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
                     ? <button className={actionBtn} onClick={() => setBanning(u)}>Unban</button>
                     : <button className={dangerBtn} onClick={() => setBanning(u)}>Ban</button>)}
                   {!me && <button className={actionBtn} onClick={() => setAdminChange(u)}>{u.is_admin ? 'Remove admin' : 'Make admin'}</button>}
+                  {!me && !u.is_admin && <button className={dangerBtn} onClick={() => setDeleting(u)}>Delete</button>}
                 </div>
               </Row>
             );
@@ -155,6 +158,8 @@ export default function UsersTab({ notify, initialSearch = '' }: { notify: Notif
             : "They'll be signed out and can't sign in. They also can't post, comment, follow, create events, list products, book resources, or buy tickets. Their existing content stays as it is."}
           onClose={() => setBanning(null)} onConfirm={async (reason) => setBanned(banning, !banning.is_banned, reason)} />
       )}
+      {deleting && <AdminDeleteAccount userId={deleting.id} label={deleting.full_name || deleting.email} onClose={() => setDeleting(null)}
+        onDeleted={() => { const gone = deleting; setDeleting(null); setRows((prev) => prev.filter((x) => x.id !== gone.id)); notify('ok', `Deleted ${gone.full_name || gone.email}`); }} />}
       {adminChange && (
         <ConfirmDialog
           title={adminChange.is_admin ? 'Remove admin access?' : 'Make this person an admin?'}
