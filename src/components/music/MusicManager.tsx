@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { errorReason } from '../../lib/musicBuy';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { toast, toastError } from '../../lib/toast';
@@ -8,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { uploadImage } from '../../lib/business';
 
 // Artist dashboard: upload and manage songs (Cloudflare R2 via the music-upload function). The file goes straight from
-// the browser to storage with a one-time address. MP3, M4A or WAV, up to 25 MB each, 30 songs per profile; each upload
+// the browser to storage with a one-time address. MP3, M4A or WAV, up to 25 MB each; 50 songs on free profiles, unlimited with an artist plan; each upload
 // confirms the artist owns the rights.
 interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null; price: number | null; preview_only: boolean; sale_mode?: string; donation_amounts?: number[] }
 interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price: number | null; preview_only: boolean; sale_mode?: string; donation_amounts?: number[] }
@@ -34,6 +35,8 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [canSell, setCanSell] = useState(true);
+  // Songs allowed on this profile (null = unlimited: artist plan, complimentary access or admin).
+  const [songLimit, setSongLimit] = useState<number | null>(50);
   const [sales, setSales] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
   const { user } = useAuth();
   const [albumForm, setAlbumForm] = useState<{ id: string | null; title: string; description: string; cover_url: string; release_date: string } | null>(autoAlbum ? { id: null, title: '', description: '', cover_url: '', release_date: '' } : null);
@@ -44,7 +47,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   const [progress, setProgress] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => { const d = (data ?? { tracks: [], albums: [] }) as { tracks: Track[]; albums: Album[]; can_sell?: boolean; sales?: { count: number; total: number } }; setTracks((d.tracks ?? []).filter((t) => t.status === 'active')); setAlbums(d.albums ?? []); setCanSell(d.can_sell !== false); setSales(d.sales ?? { count: 0, total: 0 }); }); }, [resourceId]);
+  const load = useCallback(() => { supabase.rpc('manage_tracks', { p_resource_id: resourceId }).then(({ data }) => { const d = (data ?? { tracks: [], albums: [] }) as { tracks: Track[]; albums: Album[]; can_sell?: boolean; sales?: { count: number; total: number }; song_limit?: number | null }; setSongLimit(d.song_limit === undefined ? 50 : d.song_limit); setTracks((d.tracks ?? []).filter((t) => t.status === 'active')); setAlbums(d.albums ?? []); setCanSell(d.can_sell !== false); setSales(d.sales ?? { count: 0, total: 0 }); }); }, [resourceId]);
   useEffect(() => { load(); }, [load]);
 
   function pick(f: File | null) {
@@ -62,7 +65,7 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
     const mime = mimeOf(file);
     const { data, error } = await supabase.functions.invoke('music-upload', { body: { action: 'start', resource_id: resourceId, title: title.trim(), mime, size: file.size, rights: true } });
     const start = data as { track_id?: string; upload_url?: string; error?: string } | null;
-    if (error || !start?.upload_url || !start.track_id) { setProgress(null); return setErr(start?.error ?? 'Couldn\u2019t start the upload. Please try again.'); }
+    if (error || !start?.upload_url || !start.track_id) { setProgress(null); return setErr(start?.error ?? (await errorReason(error)) ?? 'Couldn\u2019t start the upload. Please try again.'); }
     const ok = await new Promise<boolean>((resolve) => {
       const x = new XMLHttpRequest();
       x.open('PUT', start.upload_url!);
@@ -135,7 +138,8 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
     if (error) return toastError(error.message);
     toast(mode === 'paid' ? `Price set: $${(n ?? 0).toFixed(2)}` : mode === 'donation' ? 'Donation-based: free to listen, donors get downloads' : 'Free to listen'); load();
   }
-  const full = tracks.length >= 30;
+  const full = songLimit !== null && tracks.length >= songLimit;
+  const used = songLimit === null ? `${tracks.length} · unlimited` : `${tracks.length}/${songLimit}`;
   const ed = editing ? tracks.find((t) => t.id === editing) ?? null : null;
   const edIndex = ed ? tracks.indexOf(ed) : -1;
   return (
@@ -143,14 +147,17 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
       {v2 && (
         <button onClick={() => setAdding(true)} disabled={full} className="flex min-h-[60px] items-center justify-center gap-2.5 rounded-[18px] bg-gradient-to-br from-indigo-600 via-violet-600 to-teal-500 text-base font-extrabold text-white shadow-lg shadow-indigo-500/30 disabled:opacity-50">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          Add a song <span className="text-[13px] font-semibold opacity-85">{tracks.length}/30</span>
+          Add a song <span className="text-[13px] font-semibold opacity-85">{used}</span>
         </button>
+      )}
+      {v2 && full && (
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">You&apos;ve reached the {songLimit} songs included with free profiles. <Link to="/business/plan" className="font-semibold underline">Upgrade to an artist plan</Link> for unlimited songs, or remove one to add another.</p>
       )}
       {adding && <AddSongSheet resourceId={resourceId} albums={albums} canSell={canSell} onClose={() => setAdding(false)} onDone={() => { setAdding(false); toast('🎵 Song added to your profile'); load(); }} />}
       {!v2 && <section className="rounded-2xl border border-gray-200 bg-surface p-4">
         <p className="font-display text-lg font-bold text-bone">🎵 Add a song</p>
-        <p className="mt-0.5 text-sm text-muted">MP3, M4A or WAV, up to 25 MB. Songs play right on your profile. {tracks.length}/30 used.</p>
-        {full ? <p className="mt-3 text-sm text-amber-800">You&apos;ve reached 30 songs. Remove one to add another.</p> : (
+        <p className="mt-0.5 text-sm text-muted">MP3, M4A or WAV, up to 25 MB. Songs play right on your profile. {songLimit === null ? `${tracks.length} songs (unlimited with your plan).` : `${tracks.length}/${songLimit} used.`}</p>
+        {full ? <p className="mt-3 text-sm text-amber-800">You&apos;ve reached the {songLimit} songs included with free profiles. <Link to="/business/plan" className="font-semibold underline">Upgrade to an artist plan</Link> for unlimited songs, or remove one to add another.</p> : (
           <div className="mt-3 flex flex-col gap-3">
             <input ref={input} type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav,.mp3,.m4a,.wav" onChange={(e) => pick(e.target.files?.[0] ?? null)} className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-full file:border-0 file:bg-[#0F1B3D] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
             {file && (

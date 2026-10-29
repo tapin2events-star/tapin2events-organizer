@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { errorReason } from './musicBuy';
 
 // Upload one song to an artist profile (Cloudflare R2 via music-upload): start -> the browser sends the file straight to
 // storage -> confirm. Shared by the Music tab and the step-by-step Add a song sheet.
@@ -23,7 +24,7 @@ export async function uploadSong(resourceId: string, file: File, title: string, 
   if (file.size > MAX_SONG_BYTES) return { error: 'Songs can be up to 25 MB.' };
   const { data, error } = await supabase.functions.invoke('music-upload', { body: { action: 'start', resource_id: resourceId, title: title.trim(), mime, size: file.size, rights: true } });
   const start = data as { track_id?: string; upload_url?: string; error?: string } | null;
-  if (error || !start?.upload_url || !start.track_id) return { error: start?.error ?? 'Couldn\u2019t start the upload. Please try again.' };
+  if (error || !start?.upload_url || !start.track_id) return { error: start?.error ?? (await errorReason(error)) ?? 'Couldn\u2019t start the upload. Please try again.' };
   const ok = await new Promise<boolean>((resolve) => {
     const x = new XMLHttpRequest();
     x.open('PUT', start.upload_url!);
