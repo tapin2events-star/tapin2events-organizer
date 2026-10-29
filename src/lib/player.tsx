@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 
 // The app-wide music player: one audio source, a queue (an album, a single, or an artist's songs), and the mini player
 // that keeps playing while you browse. Plays are counted once per song per session.
-export interface PlayerTrack { id: string; title: string; url: string; duration_sec?: number | null; artist: string; artistId?: string; cover?: string | null; albumId?: string | null; albumTitle?: string | null; preview?: boolean }
+export interface PlayerTrack { id: string; title: string; url: string; duration_sec?: number | null; artist: string; artistId?: string; cover?: string | null; albumId?: string | null; albumTitle?: string | null; preview?: boolean; credits?: { id: string; name: string }[] }
 export const PREVIEW_SECONDS = 30;
 interface PlayerState { queue: PlayerTrack[]; index: number; playing: boolean; progress: number; duration: number; current: PlayerTrack | null; previewEnded: boolean; expanded: boolean }
 interface PlayerApi extends PlayerState {

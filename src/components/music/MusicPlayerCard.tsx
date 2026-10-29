@@ -72,6 +72,9 @@ export default function MusicPlayerCard({ title, subtitle, cover, tracks, link, 
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{t.title}{t.preview ? <span className="ml-1 text-[10px] font-normal text-amber-700">preview</span> : null}</span>
                 {t.duration_sec ? <span className="text-xs text-gray-400">{fmtTime(t.duration_sec)}</span> : null}
               </button>
+              {t.credits && t.credits.length > 0 && (
+                <p className="-mt-1 mb-1 ml-8 truncate text-[11px] text-gray-500">feat. {t.credits.map((c, i) => <span key={c.id}>{i ? ', ' : ''}<Link to={`/resources/${c.id}`} className="font-medium text-indigo-600 hover:underline">{c.name}</Link></span>)}</p>
+              )}
               {trackSales?.[t.id] && isBuyable(trackSales[t.id]) && canSell && (() => { const ts = trackSales[t.id]; const don = ts.mode === 'donation'; return (
                 <button onClick={() => (don || !ts.owned) && buy(ts)} disabled={!don && ts.owned} className={`mb-1 ml-8 inline-flex min-h-[28px] items-center rounded-full px-3 text-[11px] font-semibold ${!don && ts.owned ? 'bg-green-100 text-green-800' : 'border border-marigold text-marigold hover:bg-orange-50'}`}>{don ? '💛 Donate' : ts.owned ? '✓ Yours' : `Buy ${money(ts.price)}`}</button>
               ); })()}

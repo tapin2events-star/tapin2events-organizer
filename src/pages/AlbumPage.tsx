@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useOwnedTracks, saleFor, trackSalesFor, useBuyParam, useDonateParam } from '../lib/musicOwned';
 
 // An album's own page (shareable): the spinning CD player with its songs, and the artist.
-interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price?: number | null; preview_only?: boolean; sale_mode?: string; donation_amounts?: number[]; artist: { id: string; name: string; photo: string | null; can_sell?: boolean; mine?: boolean }; tracks: { id: string; title: string; url: string; duration_sec: number | null; price?: number | null; preview_only?: boolean; sale_mode?: string; donation_amounts?: number[] }[] }
+interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price?: number | null; preview_only?: boolean; sale_mode?: string; donation_amounts?: number[]; artist: { id: string; name: string; photo: string | null; can_sell?: boolean; mine?: boolean }; tracks: { id: string; title: string; url: string; duration_sec: number | null; price?: number | null; preview_only?: boolean; sale_mode?: string; donation_amounts?: number[]; credits?: { id: string; name: string }[] }[] }
 export default function AlbumPage() {
   const { id } = useParams<{ id: string }>();
   const [a, setA] = useState<Album | null | undefined>(undefined);
@@ -20,7 +20,7 @@ export default function AlbumPage() {
   if (a === undefined) return <div className="mx-auto max-w-2xl" />;
   if (!a) return <div className="mx-auto max-w-2xl"><BackButton fallback="/" /><p className="mt-4 text-gray-600">This album isn&apos;t available.</p></div>;
   const canSell = !!a.artist.can_sell && !a.artist.mine;
-  const tracks: PlayerTrack[] = a.tracks.map((t) => ({ id: t.id, title: t.title, url: t.url, duration_sec: t.duration_sec, artist: a.artist.name, artistId: a.artist.id, cover: a.cover_url ?? a.artist.photo, albumId: a.id, albumTitle: a.title,
+  const tracks: PlayerTrack[] = a.tracks.map((t) => ({ id: t.id, title: t.title, url: t.url, duration_sec: t.duration_sec, artist: a.artist.name, artistId: a.artist.id, cover: a.cover_url ?? a.artist.photo, albumId: a.id, albumTitle: a.title, credits: t.credits ?? [],
     preview: canSell && !owned.has(t.id) && (((a.sale_mode === 'paid' && a.preview_only && a.price) || (t.sale_mode === 'paid' && t.preview_only && t.price)) ? true : false) }));
   return (
     <div className="mx-auto max-w-2xl">

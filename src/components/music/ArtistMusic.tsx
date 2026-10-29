@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useOwnedTracks, saleFor, trackSalesFor, useBuyParam, useDonateParam } from '../../lib/musicOwned';
 
 // Artist profile: albums (each a spinning CD player) and singles. Everything plays through the app-wide player.
-interface T { id: string; title: string; url: string; duration_sec: number | null; cover_url?: string | null; price?: number | null; preview_only?: boolean; sale_mode?: string; donation_amounts?: number[] }
+interface T { id: string; title: string; url: string; duration_sec: number | null; cover_url?: string | null; price?: number | null; preview_only?: boolean; sale_mode?: string; donation_amounts?: number[]; credits?: { id: string; name: string }[] }
 interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price?: number | null; preview_only?: boolean; sale_mode?: string; donation_amounts?: number[]; tracks: T[] }
 interface Music { artist: { id: string; name: string; photo: string | null; can_sell?: boolean; mine?: boolean } | null; albums: Album[]; singles: T[] }
 
@@ -23,7 +23,7 @@ export default function ArtistMusic({ resourceId, artistName }: { resourceId: st
   useEffect(() => { if (on) supabase.rpc('artist_music', { p_resource_id: resourceId }).then(({ data }) => setM((data ?? null) as Music | null)); }, [on, resourceId]);
   if (!on || !m || (m.albums.length === 0 && m.singles.length === 0)) return null;
   const canSell = !!m.artist?.can_sell && !m.artist?.mine;
-  const toTrack = (t: T, album?: Album): PlayerTrack => ({ id: t.id, title: t.title, url: t.url, duration_sec: t.duration_sec, artist: artistName, artistId: resourceId, cover: album?.cover_url ?? t.cover_url ?? m.artist?.photo ?? null, albumId: album?.id ?? null, albumTitle: album?.title ?? null,
+  const toTrack = (t: T, album?: Album): PlayerTrack => ({ id: t.id, title: t.title, url: t.url, duration_sec: t.duration_sec, artist: artistName, artistId: resourceId, cover: album?.cover_url ?? t.cover_url ?? m.artist?.photo ?? null, albumId: album?.id ?? null, albumTitle: album?.title ?? null, credits: t.credits ?? [],
     preview: canSell && !owned.has(t.id) && (((album?.sale_mode === 'paid' && album?.preview_only && album?.price) || (t.sale_mode === 'paid' && t.preview_only && t.price)) ? true : false) });
   return (
     <section className="mt-6 border-t border-gray-200 pt-6" aria-label={`Music by ${artistName}`}>

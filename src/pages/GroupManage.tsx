@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import GroupSplitSwitches from '../components/groups/GroupSplitSwitches';
 import { useFeature } from '../lib/preview';
 import MusicManager from '../components/music/MusicManager';
 import { DetailSkeleton } from '../components/ui/Skeleton';
@@ -146,6 +147,7 @@ export default function GroupManage() {
 
       <GroupBookings groupId={group.id} groupName={group.display_name} canRespond={isAdmin} />
       <GroupPayments groupId={group.id} isOwner={role === 'owner'} />
+      {isAdmin && <GroupSplitSwitches groupId={group.id} isOwner={role === 'owner'} />}
       {isAdmin && <div className="mt-6"><AnnounceLineupsToggle resourceId={group.id} isGroup /></div>}
       <GroupContent groupId={group.id} groupName={group.display_name} isAdmin={isAdmin} />
 

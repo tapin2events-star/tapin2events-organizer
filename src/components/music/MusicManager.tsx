@@ -11,7 +11,7 @@ import { uploadImage } from '../../lib/business';
 // Artist dashboard: upload and manage songs (Cloudflare R2 via the music-upload function). The file goes straight from
 // the browser to storage with a one-time address. MP3, M4A or WAV, up to 25 MB each; 50 songs on free profiles, unlimited with an artist plan; each upload
 // confirms the artist owns the rights.
-interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null; price: number | null; preview_only: boolean; sale_mode?: string; donation_amounts?: number[] }
+interface Track { id: string; title: string; url: string | null; size_bytes: number; duration_sec: number | null; plays: number; status: string; sort_order: number; album_id: string | null; price: number | null; preview_only: boolean; sale_mode?: string; donation_amounts?: number[]; credit_ids?: string[] }
 interface Album { id: string; title: string; description: string | null; cover_url: string | null; release_date: string | null; price: number | null; preview_only: boolean; sale_mode?: string; donation_amounts?: number[] }
 const MAX = 25 * 1024 * 1024;
 const fmt = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '');
@@ -37,6 +37,9 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
   const [canSell, setCanSell] = useState(true);
   // Songs allowed on this profile (null = unlimited: artist plan, complimentary access or admin).
   const [songLimit, setSongLimit] = useState<number | null>(50);
+  // Who can be featured on this profile's songs (an artist group's members with artist profiles).
+  const [creditOptions, setCreditOptions] = useState<{ id: string; name: string; photo: string | null }[]>([]);
+  useEffect(() => { supabase.rpc('track_credit_options', { p_resource_id: resourceId }).then(({ data }) => setCreditOptions((data ?? []) as { id: string; name: string; photo: string | null }[])); }, [resourceId]);
   const [sales, setSales] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
   const { user } = useAuth();
   const [albumForm, setAlbumForm] = useState<{ id: string | null; title: string; description: string; cover_url: string; release_date: string } | null>(autoAlbum ? { id: null, title: '', description: '', cover_url: '', release_date: '' } : null);
@@ -303,6 +306,24 @@ export default function MusicManager({ resourceId, v2 = false, autoAdd = false, 
                 {albums.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
               </select>
             </label>
+          )}
+          {creditOptions.length > 0 && (
+            <fieldset className="mt-3">
+              <legend className="text-sm text-gray-700">Featuring</legend>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {creditOptions.map((c) => {
+                  const on = (ed.credit_ids ?? []).includes(c.id);
+                  return (
+                    <button key={c.id} type="button" aria-pressed={on} onClick={async () => {
+                      const next = on ? (ed.credit_ids ?? []).filter((x) => x !== c.id) : [...(ed.credit_ids ?? []), c.id];
+                      const { error } = await supabase.rpc('set_track_credits', { p_track_id: ed.id, p_resource_ids: next });
+                      if (error) toastError(error.message); else load();
+                    }} className={`min-h-[36px] rounded-full border px-3 text-xs font-semibold ${on ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>{on ? '✓ ' : ''}{c.name}</button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-500">Featured members are linked from the song, to their artist profiles.</p>
+            </fieldset>
           )}
           {!ed.album_id && canSell && <PriceRow key={`p-${ed.id}`} kind="track" id={ed.id} price={ed.price} previewOnly={ed.preview_only} mode={ed.sale_mode} amounts={ed.donation_amounts} setSale={setSale} />}
           {ed.url && <audio controls preload="none" src={ed.url} className="mt-3 w-full" />}
