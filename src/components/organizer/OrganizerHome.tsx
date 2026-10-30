@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
+import { EarningsSheet } from '../earnings/EarningsBreakdown';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { ICONS } from '../resource/ArtistHome';
@@ -67,6 +69,8 @@ export function OrganizerRecentActivity() {
 }
 
 export default function OrganizerHome({ payouts }: { payouts?: React.ReactNode }) {
+  const earningsOn = useFeature('earnings_v2');
+  const [earningsOpen, setEarningsOpen] = useState(false);
   const h = useOrganizerHome();
   const s = h?.stats;
   // One box per event that needs attention, each opening that event's dashboard on the right tab.
@@ -119,7 +123,7 @@ export default function OrganizerHome({ payouts }: { payouts?: React.ReactNode }
           <p className="text-[17px] font-extrabold text-gray-900">This month</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {(s ? tiles : Array.from({ length: 4 }, () => null)).map((t, i) => t ? (
-              <div key={t.label} className={`flex flex-col gap-1.5 rounded-[18px] px-3.5 py-4 ${t.bg}`}>
+              <div key={t.label} className={`flex flex-col gap-1.5 rounded-[18px] px-3.5 py-4 ${t.bg}`} onClick={earningsOn && t.label === 'Ticket revenue' ? () => setEarningsOpen(true) : undefined} role={earningsOn && t.label === 'Ticket revenue' ? 'button' : undefined} tabIndex={earningsOn && t.label === 'Ticket revenue' ? 0 : undefined} onKeyDown={(e) => { if (earningsOn && t.label === 'Ticket revenue' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEarningsOpen(true); } }}>
                 <span className={`text-xs font-bold ${t.fg}`}>{t.label}</span>
                 <span className={`text-2xl font-extrabold ${t.val}`}>{t.value}</span>
                 <span className={`text-xs font-semibold ${t.t?.tone ?? 'text-gray-600'}`}>{t.t?.text ?? '\u00a0'}</span>
@@ -191,6 +195,7 @@ export default function OrganizerHome({ payouts }: { payouts?: React.ReactNode }
           </section>
         )}
       </div>
+      {earningsOpen && <EarningsSheet scope="organizer" title="Event revenue" onClose={() => setEarningsOpen(false)} />}
     </div>
   );
 }

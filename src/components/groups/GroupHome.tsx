@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useFeature } from '../../lib/preview';
+import { EarningsSheet } from '../earnings/EarningsBreakdown';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { ICONS } from '../resource/ArtistHome';
@@ -37,6 +39,8 @@ const ago = (iso: string) => { const m = Math.round((Date.now() - Date.parse(iso
 export default function GroupHome({ group, roleLabel, isAdmin, isOwner, musicOn, onOpen }: {
   group: { id: string; display_name: string; profile_image?: string | null }; roleLabel: string; isAdmin: boolean; isOwner: boolean; musicOn: boolean; onOpen: (a: GroupArea, q?: GroupQuick) => void;
 }) {
+  const earningsOn = useFeature('earnings_v2');
+  const [earningsOpen, setEarningsOpen] = useState(false);
   const [h, setH] = useState<Home | null>(null);
   useEffect(() => { supabase.rpc('group_home', { p_group_id: group.id }).then(({ data }) => setH((data ?? null) as Home | null)); }, [group.id]);
   const s = h?.stats;
@@ -91,7 +95,7 @@ export default function GroupHome({ group, roleLabel, isAdmin, isOwner, musicOn,
           <p className="text-[15px] font-extrabold text-gray-900">This month</p>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             {(s ? tiles : Array.from({ length: 4 }, () => null)).map((t, i) => t ? (
-              <div key={t.label} className={`flex flex-col gap-1 rounded-2xl p-3 ${t.bg}`}>
+              <div key={t.label} className={`flex flex-col gap-1 rounded-2xl p-3 ${t.bg}`} onClick={earningsOn && t.label === 'Earned' ? () => setEarningsOpen(true) : undefined} role={earningsOn && t.label === 'Earned' ? 'button' : undefined} tabIndex={earningsOn && t.label === 'Earned' ? 0 : undefined} onKeyDown={(e) => { if (earningsOn && t.label === 'Earned' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEarningsOpen(true); } }}>
                 <span className={`text-xs font-bold ${t.fg}`}>{t.label}</span>
                 <span className={`text-2xl font-extrabold ${t.val}`}>{t.value}</span>
                 <span className={`text-xs font-semibold ${t.t?.tone ?? 'text-gray-600'}`}>{t.t?.text ?? '\u00a0'}</span>
@@ -176,6 +180,7 @@ export default function GroupHome({ group, roleLabel, isAdmin, isOwner, musicOn,
           </section>
         )}
       </div>
+      {earningsOpen && <EarningsSheet scope="group" scopeId={group.id} title="Group earnings" onClose={() => setEarningsOpen(false)} />}
     </div>
   );
 }

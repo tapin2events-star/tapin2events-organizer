@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import EarningsBreakdown from '../components/earnings/EarningsBreakdown';
 import { MySplitEarnings } from '../components/business/RevenueSplits';
 import { useFeature } from '../lib/preview';
 import BackButton from '../components/BackButton';
@@ -19,6 +20,7 @@ function Stat({ label, value, sub, big = false }: { label: string; value: string
 }
 
 export default function Earnings() {
+  const earningsOn = useFeature('earnings_v2');
   const splitsOn = useFeature('splits');
   const { user } = useAuth();
   const [data, setData] = useState<EarningsData | null>(null);
@@ -76,12 +78,19 @@ export default function Earnings() {
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-bone">Earnings</h1>
-          <p className="mt-1 text-muted">What you've earned on TapIN, from your events and from being booked.</p>
+          <p className="mt-1 text-muted">{earningsOn ? 'Everything you\u2019ve earned on TapIN, in one place.' : 'What you\'ve earned on TapIN, from your events and from being booked.'}</p>
         </div>
         <button type="button" onClick={exportCsv} disabled={!hasActivity} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-bone hover:border-marigold disabled:opacity-50">
           Download CSV
         </button>
       </div>
+      {earningsOn && (
+        <section className="mt-5 rounded-[24px] bg-white p-5 shadow-[0_2px_10px_rgba(39,30,110,0.06)]" aria-label="All your earnings">
+          <h2 className="mb-4 text-xl font-extrabold text-gray-900">All your earnings</h2>
+          <EarningsBreakdown scope="me" />
+          <p className="mt-4 text-xs text-gray-500">Bookings, music, tips, merch, shares from groups and organizations, ticket splits, promoter commissions and your events, in one place. Detailed reports for your events are below.</p>
+        </section>
+      )}
       {splitsOn && <MySplitEarnings />}
 
       <div className="mt-4 flex flex-wrap gap-1.5">
