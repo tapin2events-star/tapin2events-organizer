@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import GroupPayoutMode from '../components/groups/GroupPayoutMode';
 import PendingEmailInvites, { InviteByEmailForm } from '../components/invites/EmailInvites';
 import MemberSongsOnPage from '../components/music/MemberSongsOnPage';
 import AddMySongs from '../components/music/AddMySongs';
@@ -170,6 +171,7 @@ export default function GroupManage() {
       {notice && <p role={notice.ok ? 'status' : 'alert'} className={`mt-4 rounded-lg px-3 py-2 text-sm ${notice.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{notice.text}</p>}
 
       {show('bookings') && <GroupBookings groupId={group.id} groupName={group.display_name} canRespond={isAdmin} />}
+      {show('payouts') && <GroupPayoutMode groupId={group.id} isOwner={role === 'owner'} />}
       {show('payouts') && <GroupPayments groupId={group.id} isOwner={role === 'owner'} />}
       {show('payouts') && isAdmin && <GroupSplitSwitches groupId={group.id} isOwner={role === 'owner'} />}
       {show('settings') && isAdmin && <div className="mt-6"><AnnounceLineupsToggle resourceId={group.id} isGroup /></div>}
