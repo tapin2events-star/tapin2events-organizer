@@ -10,7 +10,7 @@ jobs:
   key:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -34,7 +34,7 @@ jobs:
              ANDROID_KEYSTORE_PASSWORD = the contents of ANDROID_KEYSTORE_PASSWORD.txt
           3. Keep tapin-upload-key.jks and the password together in your password manager.
           TXT
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: tapin-android-upload-key
           path: out/
