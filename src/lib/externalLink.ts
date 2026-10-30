@@ -1,4 +1,4 @@
-import { isAndroid, isIOS, isNativeApp } from './displayMode';
+import { isAndroid, isCapacitorApp, isIOS, isNativeApp } from './displayMode';
 
 // Social links open the social app itself (Instagram, TikTok, Facebook, X, YouTube, Threads, Snapchat, LinkedIn),
 // or its website when the app isn't installed.
@@ -11,6 +11,12 @@ export const SOCIAL_HOST = /(^|\.)(instagram\.com|tiktok\.com|facebook\.com|fb\.
 // The phone's browser from inside the TapIN app (Safari via x-safari-https on iPhone, default browser via intent on
 // Android); a normal new tab elsewhere. Used as the fallback when a social app isn't installed.
 export function openInBrowser(href: string) {
+  // Capacitor apps: Capacitor's browser (Safari's or Chrome's view, with its own sign-in, which the app-to-web
+  // handoff uses). Loaded only inside the app, so the website itself doesn't carry it.
+  if (isCapacitorApp()) {
+    import('@capacitor/browser').then(({ Browser }) => Browser.open({ url: href, presentationStyle: 'fullscreen' })).catch(() => { window.open(href, '_blank', 'noopener'); });
+    return;
+  }
   if (isNativeApp()) {
     if (isAndroid()) {
       const u = new URL(href);

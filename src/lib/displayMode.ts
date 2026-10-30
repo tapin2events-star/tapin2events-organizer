@@ -11,8 +11,17 @@ export function isStandalone(): boolean {
 // the reliable signal), a "TapINApp" marker if the wrapper adds one, or by
 // the WebView fingerprint: Android WebViews include "; wv)", and iOS app WebViews
 // lack the "Safari/" token every real iPhone browser sends.
+// The Capacitor phone apps (replacing the Twinr apps): Capacitor's native bridge is on the page.
+export function isCapacitorApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return !!cap?.isNativePlatform?.();
+}
+
+// Inside a TapIN phone app: the Capacitor apps, or the Twinr apps (still in use while people update).
 export function isNativeApp(): boolean {
   if (typeof navigator === 'undefined') return false;
+  if (isCapacitorApp()) return true;
   const ua = navigator.userAgent;
   if (/TapINApp|twnr_mobile_app_agent/i.test(ua)) return true;
   if (/Android/.test(ua) && /; wv\)/.test(ua)) return true;

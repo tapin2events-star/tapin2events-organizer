@@ -1,0 +1,39 @@
+# TapIN2Events phone apps (Capacitor): cloud builds on GitHub's computers, so no Mac or Android Studio is needed.
+# Runs on the capacitor branch (and on demand). Today it makes an Android test build to prove the project builds;
+# signed store builds (Google Play and TestFlight) are added once the signing keys are stored as GitHub secrets.
+name: Mobile apps
+
+on:
+  push:
+    branches: [capacitor]
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: Android test build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install
+        run: npm ci
+      - name: Web build
+        run: npm run build
+      - name: Sync Capacitor
+        run: npx cap sync android
+      - name: Build the Android app (test build)
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tapin-android-test-build
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
