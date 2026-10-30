@@ -33,8 +33,17 @@ export function ProfilesYouManage({ ownId }: { ownId: string | null }) {
 }
 
 // Shown when you're managing someone else's profile.
-export function ManagingBanner({ resource }: { resource: { id: string; display_name: string; email: string; claim_status?: string | null; status?: string | null } }) {
+export function ManagingBanner({ resource, myEmail }: { resource: { id: string; display_name: string; email: string; claim_status?: string | null; status?: string | null; created_by_email?: string | null }; myEmail: string }) {
   const unclaimed = resource.claim_status === 'unclaimed';
+  // The person who created it can delete it while it's unclaimed.
+  const canDelete = unclaimed && (resource.created_by_email ?? '').toLowerCase() === myEmail.toLowerCase();
+  async function del() {
+    if (!window.confirm(`Delete ${resource.display_name}'s profile? Its music, photos and products are removed, and the claim invite stops working. This can't be undone.`)) return;
+    const { error } = await supabase.rpc('delete_unclaimed_profile', { p_resource_id: resource.id });
+    if (error) return toastError(error.message);
+    toast('Profile deleted');
+    window.location.href = '/resources/dashboard#managers';
+  }
   async function resend() {
     const { data: pending } = await supabase.rpc('pending_email_invites', { p_kind: 'claim', p_target: resource.id });
     const p = ((pending ?? []) as { id: string }[])[0];
@@ -52,7 +61,8 @@ export function ManagingBanner({ resource }: { resource: { id: string; display_n
       <p><strong>You&apos;re managing {resource.display_name}.</strong> You can update the profile, music, products, media and bookings. Payouts always go to {resource.display_name}.{' '}<Link to="/resources/dashboard" className="font-semibold underline">Back to your profile</Link></p>
       {unclaimed && (
         <p className="mt-1">Not claimed yet{resource.status === 'hidden' ? ' (hidden until they claim it)' : ''}. Music sales and donations are held for them until they claim it and connect payouts.{' '}
-          <button onClick={resend} className="font-semibold underline">Resend claim invite</button></p>
+          <button onClick={resend} className="font-semibold underline">Resend claim invite</button>
+          {canDelete && <>{' · '}<button onClick={del} className="font-semibold text-red-700 underline">Delete this profile</button></>}</p>
       )}
     </div>
   );

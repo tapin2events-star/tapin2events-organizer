@@ -296,7 +296,7 @@ export default function ResourceDashboard() {
           <AreaHeader title={({ Bookings: 'Bookings', Music: 'Music', Media: 'Media', Products: 'Shop' } as Record<string, string>)[tab] ?? tab}
             onBack={() => { setTab('Overview'); setQuick(null); window.scrollTo({ top: 0 }); }} resourceId={resource.id} music={tab === 'Music'} />
         )}
-        {managing && <ManagingBanner resource={resource} />}
+        {managing && <ManagingBanner resource={resource as Resource & { claim_status?: string | null; created_by_email?: string | null }} myEmail={user?.email ?? ''} />}
         {dashV2 && tab === 'Overview' && (
           <ArtistHome resource={resource}
             unreadMessages={unreadTotal} payoutsReady={managing ? null : payouts ? payouts.chargesEnabled : null} musicOn={musicOn}
