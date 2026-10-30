@@ -1,0 +1,41 @@
+# One-time: create the Android upload key for the Capacitor app (run by hand from the Actions tab).
+# Produces a download (kept for 1 day) with: the key file, its password, the key as text for GitHub secrets, and the
+# certificate to give Google Play ("Request reset" under App signing -> Upload key). Nothing is printed to the log.
+name: Create Android upload key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Create the key
+        run: |
+          set -e
+          mkdir out
+          PASS=$(openssl rand -base64 30 | tr -dc 'A-Za-z0-9' | head -c 32)
+          keytool -genkeypair -v -keystore out/tapin-upload-key.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" -dname "CN=TapIN LLC, O=TapIN LLC, L=Rolesville, ST=North Carolina, C=US" > /dev/null 2>&1
+          keytool -export -rfc -keystore out/tapin-upload-key.jks -alias upload -storepass "$PASS" -file out/upload_certificate.pem > /dev/null 2>&1
+          base64 -w 0 out/tapin-upload-key.jks > out/ANDROID_KEYSTORE_BASE64.txt
+          printf '%s' "$PASS" > out/ANDROID_KEYSTORE_PASSWORD.txt
+          cat > out/README.txt <<'TXT'
+          TapIN Android upload key - keep these files safe (save them in your password manager).
+
+          1. Google Play: Play Console -> TapIN2Events -> App signing -> Upload key -> Request reset.
+             Upload upload_certificate.pem when it asks for the new upload key certificate.
+          2. GitHub: Settings -> Secrets and variables -> Actions -> New repository secret:
+             ANDROID_KEYSTORE_BASE64   = the contents of ANDROID_KEYSTORE_BASE64.txt
+             ANDROID_KEYSTORE_PASSWORD = the contents of ANDROID_KEYSTORE_PASSWORD.txt
+          3. Keep tapin-upload-key.jks and the password together in your password manager.
+          TXT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tapin-android-upload-key
+          path: out/
+          retention-days: 1
