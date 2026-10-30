@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useFeature } from '../lib/preview';
+import OrganizerHome from '../components/organizer/OrganizerHome';
 import { HeldPayoutsNotice } from '../components/HeldPayouts';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import NeedsAttention from '../components/dashboard/NeedsAttention';
@@ -14,6 +16,7 @@ import type { TapEvent } from '../lib/types';
 import { Skeleton, RowSkeleton, DashboardEventsSkeleton, NeedsAttentionSkeleton } from '../components/ui/Skeleton';
 
 export default function Dashboard() {
+  const orgDashV2 = useFeature('organizer_dashboard_v2');
   const { user } = useAuth();
   const [events, setEvents] = useState<TapEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,7 +233,9 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      {orgDashV2 && <OrganizerHome />}
+      {orgDashV2 && <h2 id="all-events" className="mb-4 mt-2 scroll-mt-24 font-display text-2xl font-extrabold text-bone">All your events</h2>}
+      <div className={`mb-6 flex items-center justify-between ${orgDashV2 ? 'hidden' : ''}`}>
         <div>
           <h1 className="font-display text-3xl font-extrabold text-bone">Organizer Dashboard</h1>
           <p className="text-sm text-muted">Everything you're organizing, in one place.</p>

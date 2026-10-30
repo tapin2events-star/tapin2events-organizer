@@ -12,7 +12,7 @@ export function HeldPayoutsNotice({ orgsOnly = false }: { orgsOnly?: boolean }) 
   if (!d) return null;
   const rows = [
     ...(!orgsOnly && d.personal_cents > 0 ? [{ key: 'me', text: `${dollars(d.personal_cents)} from your ticket sales is waiting for you.`, to: '/profile#payouts' }] : []),
-    ...d.orgs.map((o) => ({ key: o.org_id, text: `${dollars(o.cents)} from ticket sales is waiting for ${o.name}.`, to: o.slug ? `/business/${o.slug}/manage` : '/business' })),
+    ...(d.orgs ?? []).map((o) => ({ key: o.org_id, text: `${dollars(o.cents)} from ticket sales is waiting for ${o.name}.`, to: o.slug ? `/business/${o.slug}/manage` : '/business' })),
   ];
   if (!rows.length) return null;
   return (
