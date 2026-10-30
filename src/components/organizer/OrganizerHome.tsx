@@ -10,6 +10,7 @@ interface Home {
   name: string; upcoming_count: number; next_in_days: number | null;
   stats: { revenue_month: number; revenue_prev: number; tickets_month: number; tickets_prev: number; tickets_week: number; views_month: number; views_prev: number; checked_in_30d: number; tickets_30d: number };
   attention: { drafts: number; vendor_apps: number; held_cents: number; no_tickets_soon: number };
+  attention_items?: { kind: 'held' | 'vendor' | 'no_tickets' | 'draft'; event_id: string; title: string; tab: string; cents?: number; count?: number }[];
   upcoming: { id: string; title: string; start_date: string | null; location: string | null; poster: string | null; status: string; capacity: number | null; is_recurring: boolean; sold: number; revenue: number }[];
   activity: { kind: string; text: string; at: string }[];
 }
@@ -68,11 +69,15 @@ export function OrganizerRecentActivity() {
 export default function OrganizerHome({ payouts }: { payouts?: React.ReactNode }) {
   const h = useOrganizerHome();
   const s = h?.stats;
-  const attention: { key: string; text: string; cta: string; to: string; icon: string; tone: string }[] = [];
-  if (h?.attention.held_cents) attention.push({ key: 'h', text: `${money(h.attention.held_cents / 100)} in ticket sales held: connect payouts`, cta: 'Connect', to: '/profile#payouts', icon: ICONS.card, tone: 'bg-amber-100 text-amber-800' });
-  if (h?.attention.drafts) attention.push({ key: 'd', text: `${h.attention.drafts} draft event${h.attention.drafts === 1 ? ' isn\u2019t' : 's aren\u2019t'} published yet`, cta: 'Finish', to: '#all-events', icon: ICONS.edit, tone: 'bg-indigo-100 text-indigo-700' });
-  if (h?.attention.vendor_apps) attention.push({ key: 'v', text: `${h.attention.vendor_apps} vendor application${h.attention.vendor_apps === 1 ? '' : 's'} to review`, cta: 'Review', to: '#all-events', icon: ICONS.bag, tone: 'bg-orange-100 text-orange-700' });
-  if (h?.attention.no_tickets_soon) attention.push({ key: 'n', text: `${h.attention.no_tickets_soon} event${h.attention.no_tickets_soon === 1 ? '' : 's'} this week with no tickets yet`, cta: 'Promote', to: '#all-events', icon: SEND, tone: 'bg-pink-100 text-pink-700' });
+  // One box per event that needs attention, each opening that event's dashboard on the right tab.
+  const attention: { key: string; text: string; cta: string; to: string; icon: string; tone: string }[] = (h?.attention_items ?? []).map((i) => {
+    const to = `/organizer/events/${i.event_id}${i.tab && i.tab !== 'Overview' ? `?tab=${encodeURIComponent(i.tab)}` : ''}`;
+    if (i.kind === 'held') return { key: `h-${i.event_id}`, text: `${money((i.cents ?? 0) / 100)} in sales held for ${i.title}: connect payouts to receive it`, cta: 'Open', to, icon: ICONS.card, tone: 'bg-amber-100 text-amber-800' };
+    if (i.kind === 'vendor') return { key: `v-${i.event_id}`, text: `${i.count} vendor application${i.count === 1 ? '' : 's'} to review for ${i.title}`, cta: 'Review', to, icon: ICONS.bag, tone: 'bg-orange-100 text-orange-700' };
+    if (i.kind === 'no_tickets') return { key: `n-${i.event_id}`, text: `${i.title} is this week, with no tickets sold yet`, cta: 'Promote', to, icon: SEND, tone: 'bg-pink-100 text-pink-700' };
+    return { key: `d-${i.event_id}`, text: `${i.title} isn\u2019t published yet`, cta: 'Finish', to, icon: ICONS.edit, tone: 'bg-indigo-100 text-indigo-700' };
+  });
+  const moreAttention = Math.max(0, attention.length - 6);
   const tiles = s ? [
     { label: 'Ticket revenue', value: money(Number(s.revenue_month)), t: trend(Number(s.revenue_month), Number(s.revenue_prev)), bg: 'bg-indigo-50', fg: 'text-indigo-700', val: 'text-indigo-950' },
     { label: 'Tickets sold', value: Number(s.tickets_month).toLocaleString(), t: s.tickets_week ? { text: `▲ ${s.tickets_week} this week`, tone: 'text-emerald-700' } : trend(Number(s.tickets_month), Number(s.tickets_prev)), bg: 'bg-teal-50', fg: 'text-teal-800', val: 'text-teal-950' },
@@ -126,13 +131,14 @@ export default function OrganizerHome({ payouts }: { payouts?: React.ReactNode }
         {attention.length > 0 && (
           <section aria-label="Needs your attention" className="mt-9 flex flex-col gap-3.5">
             <p className="text-[17px] font-extrabold text-gray-900">Needs your attention</p>
-            {attention.map((a) => (
+            {attention.slice(0, 6).map((a) => (
               <Go key={a.key} to={a.to} className="flex min-h-[64px] items-center gap-3.5 rounded-[18px] bg-white px-4 py-3 text-gray-900 shadow-[0_2px_10px_rgba(39,30,110,0.06)]">
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.tone}`}><Icon d={a.icon} /></span>
                 <span className="flex-1 text-sm font-semibold leading-snug">{a.text}</span>
                 <span className="text-[13px] font-extrabold">{a.cta}</span>
               </Go>
             ))}
+            {moreAttention > 0 && <a href="#all-events" className="text-center text-sm font-semibold text-indigo-600">and {moreAttention} more in All your events</a>}
           </section>
         )}
         <section aria-label="Create" className="mt-9">
