@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFeature } from '../lib/preview';
-import OrganizerHome from '../components/organizer/OrganizerHome';
+import OrganizerHome, { OrganizerRecentActivity } from '../components/organizer/OrganizerHome';
 import { HeldPayoutsNotice } from '../components/HeldPayouts';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import NeedsAttention from '../components/dashboard/NeedsAttention';
@@ -260,7 +260,7 @@ export default function Dashboard() {
       {!revealed ? <Skeleton className="mb-4 h-12 w-full rounded-xl" /> : <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
       {!revealed && <RowSkeleton tall />}
-      {revealed && earnings && (
+      {revealed && earnings && !orgDashV2 && (
         <Link to="/organizer/earnings" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-marigold">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Earnings</p>
@@ -271,9 +271,9 @@ export default function Dashboard() {
         </Link>
       )}
 
-      <BookingsSummary show={revealed} onReady={() => setBookingsReady(true)} />
+      <div className={orgDashV2 ? 'hidden' : ''}><BookingsSummary show={revealed} onReady={() => setBookingsReady(true)} /></div>
 
-      {!revealed ? <RowSkeleton subtitle /> : (
+      {orgDashV2 ? null : !revealed ? <RowSkeleton subtitle /> : (
       <Link
         to="/organizer/vendor-applications"
         className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface2 px-4 py-3 hover:border-marigold"
@@ -463,6 +463,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      {orgDashV2 && <OrganizerRecentActivity />}
     </div>
   );
 }

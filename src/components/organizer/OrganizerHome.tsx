@@ -32,9 +32,41 @@ const ago = (iso: string) => { const m = Math.round((Date.now() - Date.parse(iso
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning,' : h < 18 ? 'Good afternoon,' : 'Good evening,'; };
 const GRADS = ['from-[#1E1B4B] to-violet-600', 'from-orange-500 to-pink-500', 'from-teal-600 to-indigo-600', 'from-pink-600 to-violet-700'];
 
-export default function OrganizerHome() {
+let homeLoad: Promise<Home | null> | null = null;
+function useOrganizerHome() {
   const [h, setH] = useState<Home | null>(null);
-  useEffect(() => { supabase.rpc('organizer_home').then(({ data }) => setH((data ?? null) as Home | null)); }, []);
+  useEffect(() => {
+    homeLoad ??= Promise.resolve(supabase.rpc('organizer_home')).then(({ data }) => (data ?? null) as Home | null);
+    let alive = true;
+    homeLoad.then((d) => { if (alive) setH(d); });
+    return () => { alive = false; homeLoad = null; };
+  }, []);
+  return h;
+}
+
+// Recent activity, shown at the bottom of the organizer dashboard.
+export function OrganizerRecentActivity() {
+  const h = useOrganizerHome();
+  if (!h || h.activity.length === 0) return null;
+  const actIcon: Record<string, [string, string]> = { tickets: [TICKET, 'bg-teal-100 text-teal-700'], donation: [ICONS.heart, 'bg-amber-100 text-amber-700'], vendor: [ICONS.bag, 'bg-orange-100 text-orange-700'] };
+  return (
+    <section id="recent-activity" aria-label="Recent activity" className="mb-10 mt-10 scroll-mt-24">
+      <p className="text-[17px] font-extrabold text-gray-900">Recent activity</p>
+      <ul className="mt-3.5 divide-y divide-[#EEEDF6] rounded-[20px] bg-white shadow-[0_2px_10px_rgba(39,30,110,0.06)]">
+        {h.activity.map((a, i) => { const [ic, tone] = actIcon[a.kind] ?? [ICONS.chart, 'bg-gray-100 text-gray-700']; return (
+          <li key={i} className="flex items-center gap-3.5 px-[18px] py-4">
+            <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full ${tone}`}><Icon d={ic} size={16} /></span>
+            <span className="flex-1 text-sm leading-snug text-gray-900">{a.text}</span>
+            <span className="text-xs text-gray-600">{ago(a.at)}</span>
+          </li>
+        ); })}
+      </ul>
+    </section>
+  );
+}
+
+export default function OrganizerHome() {
+  const h = useOrganizerHome();
   const s = h?.stats;
   const attention: { key: string; text: string; cta: string; to: string; icon: string; tone: string }[] = [];
   if (h?.attention.held_cents) attention.push({ key: 'h', text: `${money(h.attention.held_cents / 100)} in ticket sales held: connect payouts`, cta: 'Connect', to: '/profile#payouts', icon: ICONS.card, tone: 'bg-amber-100 text-amber-800' });
@@ -47,12 +79,17 @@ export default function OrganizerHome() {
     { label: 'Event page views', value: Number(s.views_month).toLocaleString(), t: s.views_month && s.tickets_month ? { text: `${((s.tickets_month / s.views_month) * 100).toFixed(1)}% bought tickets`, tone: 'text-gray-600' } : trend(s.views_month, s.views_prev), bg: 'bg-amber-50', fg: 'text-amber-800', val: 'text-amber-950' },
     { label: 'Checked in', value: Number(s.checked_in_30d).toLocaleString(), t: s.tickets_30d ? { text: `of ${s.tickets_30d} at recent events`, tone: 'text-gray-600' } : { text: 'Last 30 days', tone: 'text-gray-600' }, bg: 'bg-pink-50', fg: 'text-pink-800', val: 'text-pink-950' },
   ] : [];
-  const actIcon: Record<string, [string, string]> = { tickets: [TICKET, 'bg-teal-100 text-teal-700'], donation: [ICONS.heart, 'bg-amber-100 text-amber-700'], vendor: [ICONS.bag, 'bg-orange-100 text-orange-700'] };
   const create = [
     { label: 'Event', to: '/organizer/new', icon: ICONS.calendar, grad: 'from-indigo-600 to-violet-600', glow: 'shadow-indigo-500/40' },
     { label: 'Business', to: '/business', icon: BRIEF, grad: 'from-teal-600 to-teal-400', glow: 'shadow-teal-500/40' },
     { label: 'Promote', to: '#all-events', icon: SEND, grad: 'from-amber-500 to-orange-500', glow: 'shadow-orange-500/40' },
     { label: 'Book talent', to: '/resources', icon: PEOPLE, grad: 'from-pink-500 to-pink-600', glow: 'shadow-pink-500/40' },
+  ];
+  const manage = [
+    { label: 'Earnings', to: '/organizer/earnings', icon: ICONS.dollar, grad: 'from-emerald-600 to-teal-500', glow: 'shadow-emerald-500/40', badge: 0 },
+    { label: 'Bookings', to: '/organizer/bookings', icon: ICONS.calendar, grad: 'from-sky-600 to-indigo-500', glow: 'shadow-sky-500/40', badge: 0 },
+    { label: 'Vendor apps', to: '/organizer/vendor-applications', icon: ICONS.bag, grad: 'from-orange-500 to-red-500', glow: 'shadow-orange-500/40', badge: h?.attention.vendor_apps ?? 0 },
+    { label: 'Activity', to: '#recent-activity', icon: ICONS.chart, grad: 'from-violet-600 to-fuchsia-500', glow: 'shadow-violet-500/40', badge: 0 },
   ];
   const Go = ({ to, className, children, label }: { to: string; className: string; children: React.ReactNode; label?: string }) =>
     to.startsWith('#') ? <a href={to} className={className} aria-label={label}>{children}</a> : <Link to={to} className={className} aria-label={label}>{children}</Link>;
@@ -108,6 +145,20 @@ export default function OrganizerHome() {
             ))}
           </div>
         </section>
+        <section aria-label="Manage" className="mt-9">
+          <p className="text-[17px] font-extrabold text-gray-900">Manage</p>
+          <div className="mt-4 grid grid-cols-4 gap-3">
+            {manage.map((c) => (
+              <Go key={c.label} to={c.to} className="relative flex flex-col items-center gap-2.5 text-gray-900">
+                <span className={`relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br text-white shadow-lg ${c.grad} ${c.glow}`}>
+                  <Icon d={c.icon} size={26} />
+                  {c.badge ? <span className="absolute -right-1 -top-1 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white ring-2 ring-white" aria-label={`${c.badge} waiting`}>{c.badge}</span> : null}
+                </span>
+                <span className="text-center text-[13px] font-bold leading-tight">{c.label}</span>
+              </Go>
+            ))}
+          </div>
+        </section>
         {h && h.upcoming.length > 0 && (
           <section aria-label="Upcoming events" className="mt-9 flex flex-col gap-4">
             <div className="flex items-center justify-between"><p className="text-[17px] font-extrabold text-gray-900">Upcoming events</p><a href="#all-events" className="text-[13px] font-bold text-indigo-600">See all</a></div>
@@ -130,20 +181,6 @@ export default function OrganizerHome() {
                 </Link>
               );
             })}
-          </section>
-        )}
-        {h && h.activity.length > 0 && (
-          <section aria-label="Recent activity" className="mb-10 mt-9">
-            <p className="text-[17px] font-extrabold text-gray-900">Recent activity</p>
-            <ul className="mt-3.5 divide-y divide-[#EEEDF6] rounded-[20px] bg-white shadow-[0_2px_10px_rgba(39,30,110,0.06)]">
-              {h.activity.map((a, i) => { const [ic, tone] = actIcon[a.kind] ?? [ICONS.chart, 'bg-gray-100 text-gray-700']; return (
-                <li key={i} className="flex items-center gap-3.5 px-[18px] py-4">
-                  <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full ${tone}`}><Icon d={ic} size={16} /></span>
-                  <span className="flex-1 text-sm leading-snug text-gray-900">{a.text}</span>
-                  <span className="text-xs text-gray-600">{ago(a.at)}</span>
-                </li>
-              ); })}
-            </ul>
           </section>
         )}
       </div>
