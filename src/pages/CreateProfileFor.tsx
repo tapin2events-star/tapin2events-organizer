@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ImageUpload from '../components/ImageUpload';
 import { useFeature } from '../lib/preview';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -17,11 +18,13 @@ export default function CreateProfileFor() {
   const [bio, setBio] = useState('');
   const [visible, setVisible] = useState(true);
   const [note, setNote] = useState('');
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [cover, setCover] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   async function create() {
     setBusy(true); setErr(null);
-    const { data: id, error } = await supabase.rpc('create_profile_for', { p_name: name, p_email: email, p_category: cat, p_bio: bio, p_visible: visible });
+    const { data: id, error } = await supabase.rpc('create_profile_for', { p_name: name, p_email: email, p_category: cat, p_bio: bio, p_visible: visible, p_photo: photo, p_cover: cover });
     if (error || !id) { setBusy(false); return setErr(error?.message ?? 'Couldn\u2019t create the profile.'); }
     const inviteErr = await sendEmailInvite('claim', id as string, { email, name, role: 'member', note });
     setBusy(false);
@@ -38,6 +41,8 @@ export default function CreateProfileFor() {
         <label className="text-sm text-gray-700">Artist name<input value={name} onChange={(e) => setName(e.target.value)} className={input} /></label>
         <label className="text-sm text-gray-700">Their email<input value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" placeholder="We'll send them an invite to claim it" className={input} /></label>
         <label className="text-sm text-gray-700">What they do<select value={cat} onChange={(e) => setCat(e.target.value)} className={input}>{RESOURCE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
+        <ImageUpload currentUrl={photo} onUploaded={setPhoto} pathPrefix="resources" label="Profile photo (optional)" crop="round" />
+        <ImageUpload currentUrl={cover} onUploaded={setCover} pathPrefix="resources" label="Cover photo (optional, wide works best)" crop="cover" />
         <label className="text-sm text-gray-700">About them (optional)<textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={1000} className="mt-1 block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base text-gray-900" /></label>
         <fieldset>
           <legend className="text-sm text-gray-700">Who can see it before they claim it?</legend>

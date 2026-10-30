@@ -23,6 +23,7 @@ export default function ResourceSignup() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [profileImage, setProfileImage] = useState('');
+  const [coverImage, setCoverImage] = useState('');
   const [pricingType, setPricingType] = useState<PricingType>('contact_quote');
   const [baseRate, setBaseRate] = useState('');
   const [pricingDetails, setPricingDetails] = useState('');
@@ -48,6 +49,7 @@ export default function ResourceSignup() {
         setCity(r.city ?? '');
         setState(r.state ?? '');
         setProfileImage(r.profile_image ?? '');
+        setCoverImage((r as { cover_image?: string | null }).cover_image ?? '');
         setPricingType(r.pricing_type);
         setBaseRate(r.base_rate ? String(r.base_rate) : '');
         setPricingDetails(r.pricing_details ?? '');
@@ -109,6 +111,7 @@ export default function ResourceSignup() {
       latitude,
       longitude,
       profile_image: profileImage || null,
+      cover_image: coverImage || null,
       pricing_type: pricingType,
       base_rate: baseRate ? parseFloat(baseRate) : 0,
       pricing_details: pricingDetails || null,
@@ -197,6 +200,7 @@ export default function ResourceSignup() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-marigold">Photos</p>
             <div className="flex flex-col gap-4">
               <ImageUpload currentUrl={profileImage || null} onUploaded={setProfileImage} pathPrefix="resources" label="Profile photo" crop="round" />
+              <ImageUpload currentUrl={coverImage || null} onUploaded={setCoverImage} pathPrefix="resources" label="Cover photo (optional, wide works best)" crop="cover" />
 
           {existing && (
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
