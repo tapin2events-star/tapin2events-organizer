@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { GroupOrgLinks } from '../components/orggroups/OrgGroups';
 import GroupPayoutMode from '../components/groups/GroupPayoutMode';
 import PendingEmailInvites, { InviteByEmailForm } from '../components/invites/EmailInvites';
 import MemberSongsOnPage from '../components/music/MemberSongsOnPage';
@@ -248,6 +249,7 @@ export default function GroupManage() {
         </ul>
       </section>
 
+      <GroupOrgLinks groupId={group.id} canDecide={isAdmin} />
       </>}
       {/* ---------- My membership ---------- */}
       {me && (!gv2 || area === 'members' || area === 'settings') && (

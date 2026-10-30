@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { OrgGroupsManager } from '../../components/orggroups/OrgGroups';
 import PendingEmailInvites, { InviteByEmailForm } from '../../components/invites/EmailInvites';
 import OrgMusicTab from '../../components/business/OrgMusicTab';
 import PeopleInput, { type KnownPerson } from '../../components/PeopleInput';
@@ -262,7 +263,9 @@ function BrandTab({ org, canEdit, onSave }: { org: Organization; canEdit: boolea
 }
 
 function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: string }) {
-  const [members, setMembers] = useState<{ user_email: string; role: string; full_name?: string | null }[]>([]);
+  const [members, setMembers] = useState<{ user_email: string; role: string; full_name?: string | null; via_group_id?: string | null }[]>([]);
+  const [groupNames, setGroupNames] = useState<Record<string, string>>({});
+  useEffect(() => { supabase.rpc('org_group_links', { p_org: orgId }).then(({ data }) => setGroupNames(Object.fromEntries(((data ?? []) as { group_id: string; name: string }[]).map((g) => [g.group_id, g.name])))); }, [orgId, members.length]);
   const [email, setEmail] = useState('');
   const [picked, setPicked] = useState<KnownPerson | null>(null);
   const [inviteEmail, setInviteEmail] = useState<string | null>(null);
@@ -270,7 +273,7 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
   const [role, setRole] = useState('admin');
   const [msg, setMsg] = useState<string | null>(null);
   const load = useCallback(async () => {
-    const { data } = await supabase.from('organization_members').select('user_email, role').eq('org_id', orgId).order('created_at');
+    const { data } = await supabase.from('organization_members').select('user_email, role, via_group_id').eq('org_id', orgId).order('created_at');
     const list = (data ?? []) as { user_email: string; role: string }[];
     const { data: ppl } = list.length ? await supabase.from('public_profiles').select('email, full_name').in('email', list.map((m) => m.user_email)) : { data: [] };
     const names = new Map((ppl ?? []).map((p) => [p.email, p.full_name]));
@@ -311,12 +314,14 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
       {canEdit && (
         <PendingEmailInvites kind="org" targetId={orgId} refreshKey={invitesKey} />
       )}
+      <OrgGroupsManager orgId={orgId} canEdit={canEdit} />
       {msg && <p className="mt-2 text-sm text-gray-600">{msg}</p>}
       <ul className="mt-4 divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-surface">
         {members.map((m) => (
           <li key={m.user_email} className="flex items-center justify-between gap-3 px-4 py-3">
             <span className="min-w-0"><span className="block truncate text-sm font-medium text-bone">{m.full_name || m.user_email}</span><span className="block text-xs text-muted">{({ owner: 'Owner', admin: 'Admin', editor: 'Editor', viewer: 'Viewer', helper: 'Helper' } as Record<string, string>)[m.role] ?? m.role}{m.user_email === me ? ' · you' : ''}</span></span>
-            {canEdit && m.role !== 'owner' && (
+            {m.via_group_id ? <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700" title="Added through the group: change or remove it in Artist groups below">{m.role} · via {groupNames[m.via_group_id] ?? 'a group'}</span> : null}
+            {canEdit && m.role !== 'owner' && !m.via_group_id && (
               <span className="flex items-center gap-2">
                 <select value={m.role} onChange={async (e) => { const { error: rErr } = await supabase.from('organization_members').update({ role: e.target.value }).eq('org_id', orgId).eq('user_email', m.user_email); if (rErr) toastError("Couldn't change the role."); else toast('✓ Role updated'); load(); }} aria-label="Role" className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs">
                   <option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="helper">Helper</option>

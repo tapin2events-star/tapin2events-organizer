@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { OrgArtistsSection } from '../../components/orggroups/OrgGroups';
 import OrgMusicSection from '../../components/business/OrgMusicSection';
 import ExternalLink from '../../components/ExternalLink';
 import { OrgAlbumsSection } from '../../components/business/OrgAlbums';
@@ -109,6 +110,7 @@ function OrgPublicInner({ slugOverride, embedded = false }: { slugOverride?: str
         {volunteersOn && <OrgVolunteer orgId={org.id} accent={b.accent} dark={dark} />}
         {videoHeadersOn && <OrgHighlights orgId={org.id} />}
         <OrgGallery orgId={org.id} accent={b.accent} dark={dark} />
+        <OrgArtistsSection orgId={org.id} />
         <OrgMusicSection orgId={org.id} orgName={org.name} />
         {albumsOn && <OrgAlbumsSection orgId={org.id} />}
         <PastEvents orgId={org.id} accent={b.accent} dark={dark} />
