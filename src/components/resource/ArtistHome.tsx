@@ -22,6 +22,8 @@ interface Props {
   payoutsReady: boolean | null;
   musicOn: boolean;
   onOpen: (area: Area, quick?: QuickAdd) => void;
+  // The payouts card, shown on the home (connect Stripe right here).
+  payouts?: React.ReactNode;
 }
 
 const Icon = ({ d, size = 18, fill = false }: { d: string; size?: number; fill?: boolean }) => (
@@ -70,7 +72,7 @@ export function AreaHeader({ title, onBack, resourceId, music }: { title: string
   );
 }
 
-export default function ArtistHome({ resource, unreadMessages, payoutsReady, musicOn, onOpen }: Props) {
+export default function ArtistHome({ resource, unreadMessages, payoutsReady, musicOn, onOpen, payouts }: Props) {
   const [h, setH] = useState<Home | null>(null);
   useEffect(() => { supabase.rpc('artist_home', { p_resource_id: resource.id }).then(({ data }) => setH((data ?? null) as Home | null)); }, [resource.id]);
   const s = h?.stats;
@@ -78,7 +80,7 @@ export default function ArtistHome({ resource, unreadMessages, payoutsReady, mus
   const attention: { key: string; text: string; cta: string; icon: string; tone: string; go: () => void }[] = [];
   if (s?.pending) attention.push({ key: 'b', text: `${s.pending} booking request${s.pending === 1 ? '' : 's'} waiting for your answer`, cta: 'Review', icon: ICONS.calendar, tone: 'bg-orange-100 text-orange-700', go: () => onOpen('Bookings') });
   if (unreadMessages > 0) attention.push({ key: 'm', text: `${unreadMessages} unread booking message${unreadMessages === 1 ? '' : 's'}`, cta: 'Open', icon: ICONS.chat, tone: 'bg-indigo-100 text-indigo-700', go: () => onOpen('Bookings') });
-  if (payoutsReady === false) attention.push({ key: 'p', text: 'Connect payouts to get paid', cta: 'Connect', icon: ICONS.card, tone: 'bg-amber-100 text-amber-800', go: () => { window.location.href = '/profile#payouts'; } });
+  if (payoutsReady === false) attention.push({ key: 'p', text: 'Connect payouts to get paid', cta: 'Connect', icon: ICONS.card, tone: 'bg-amber-100 text-amber-800', go: () => { const el = document.getElementById('artist-payouts'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); else window.location.href = '/profile#payouts'; } });
 
   const quick: { key: QuickAdd; label: string; icon: string; area: Area; grad: string; glow: string }[] = [
     ...(musicOn ? [
@@ -138,6 +140,7 @@ export default function ArtistHome({ resource, unreadMessages, payoutsReady, mus
           </div>
         </section>
 
+        {payouts && <div id="artist-payouts" className="mt-5 scroll-mt-24 [&>*]:mb-0">{payouts}</div>}
         {attention.length > 0 && (
           <section aria-label="Needs your attention" className="mt-5 flex flex-col gap-2.5">
             <p className="text-[15px] font-extrabold text-gray-900">Needs your attention</p>

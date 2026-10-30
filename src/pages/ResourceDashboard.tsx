@@ -300,6 +300,7 @@ export default function ResourceDashboard() {
         {dashV2 && tab === 'Overview' && (
           <ArtistHome resource={resource}
             unreadMessages={unreadTotal} payoutsReady={managing ? null : payouts ? payouts.chargesEnabled : null} musicOn={musicOn}
+            payouts={!managing && payouts && !payouts.chargesEnabled ? <PayoutsCard hasAccount={payouts.hasAccount} chargesEnabled={payouts.chargesEnabled} variant="resource" /> : null}
             onOpen={(area, q) => { if (area === 'Stats') { navigate(`/resources/${resource.id}/stats`); return; } setQuick(q ?? null); setTab(area); window.scrollTo({ top: 0 }); }} />
         )}
         {dashV2 && managersOn && tab === 'Overview' && resource.kind !== 'group' && (
