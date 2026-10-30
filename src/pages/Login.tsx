@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import GetAppBanner from '../components/GetAppBanner';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, SUSPENDED_MESSAGE } from '../context/AuthContext';
@@ -11,7 +12,8 @@ export default function Login() {
   const [resetting, setResetting] = useState(false);
   const standalone = isAppMode();
   // Forgot password: sign in with an email code, then land on the password form.
-  const returnTo = resetting ? '/profile#password' : (location.state as { from?: string } | null)?.from || '/organizer';
+  // Where to go after signing in: the page they came from, if any (decided below otherwise).
+  const from = resetting ? '/profile#password' : (location.state as { from?: string } | null)?.from || null;
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   // Links from invite emails can pre-fill the address (?email=...).
   const [email, setEmail] = useState(() => { try { const e = new URLSearchParams(window.location.search).get('email') ?? ''; return /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(e) ? e : ''; } catch { return ''; } });
@@ -25,9 +27,24 @@ export default function Login() {
   // Once a session actually exists (password sign-in, OTP verify, or the
   // magic-link return), leave the login screen — heading back to wherever
   // the person was trying to go, not always the organizer dashboard.
+  // With no page to go back to: organizers who've created events (or are on an event's team) -> the organizer
+  // dashboard; new to TapIN (Welcome not finished) -> Welcome to TapIN; everyone else -> Discover.
   useEffect(() => {
-    if (user) navigate(returnTo, { replace: true });
-  }, [user, navigate, returnTo]);
+    if (!user) return;
+    if (from) { navigate(from, { replace: true }); return; }
+    let alive = true;
+    (async () => {
+      const [{ data: prof }, { count: own }, { count: team }] = await Promise.all([
+        supabase.from('profiles').select('onboarded_at').eq('id', user.id).maybeSingle(),
+        supabase.from('events').select('id', { count: 'exact', head: true }).eq('organizer_id', user.id),
+        supabase.from('event_collaborations').select('id', { count: 'exact', head: true }).ilike('collaborator_email', user.email ?? ''),
+      ]);
+      if (!alive) return;
+      const dest = (own ?? 0) + (team ?? 0) > 0 ? '/organizer' : !prof?.onboarded_at ? '/welcome' : '/';
+      navigate(dest, { replace: true });
+    })();
+    return () => { alive = false; };
+  }, [user, navigate, from]);
 
   async function handlePassword(e: FormEvent) {
     e.preventDefault();
