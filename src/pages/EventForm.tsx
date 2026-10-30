@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import SeriesPanel from '../components/series/SeriesPanel';
 import NewOrganizerNote from '../components/payouts/NewOrganizerNote';
 import HostAsPicker from '../components/business/HostAsPicker';
 import { webSafeImage } from '../lib/webImage';
@@ -123,7 +124,9 @@ export default function EventForm() {
   const [applyScope, setApplyScope] = useState<'one' | 'upcoming'>('upcoming');
   const [loadedStart, setLoadedStart] = useState<string | null>(null);
   const [loadedEnd, setLoadedEnd] = useState<string | null>(null);
-  const [recurFrequency, setRecurFrequency] = useState<'weekly' | 'monthly'>('weekly');
+  const [recurFrequency, setRecurFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
+  // Dates (by position, 1 = the second date) to skip when creating a series.
+  const [skipDates, setSkipDates] = useState<Set<number>>(new Set());
   const [recurCount, setRecurCount] = useState('4');
   const [seriesPassEnabled, setSeriesPassEnabled] = useState(false);
   const [seriesPassDiscount, setSeriesPassDiscount] = useState('10');
@@ -654,11 +657,13 @@ export default function EventForm() {
       for (let i = 1; i < count; i++) {
         let offsetStart: Date;
         let offsetEnd: Date | null;
-        if (recurFrequency === 'weekly') {
+        if (skipDates.has(i)) continue;
+        if (recurFrequency === 'weekly' || recurFrequency === 'biweekly') {
+          const days = (recurFrequency === 'biweekly' ? 14 : 7) * i;
           offsetStart = new Date(baseStart);
-          offsetStart.setDate(offsetStart.getDate() + 7 * i);
+          offsetStart.setDate(offsetStart.getDate() + days);
           offsetEnd = baseEnd ? new Date(baseEnd) : null;
-          if (offsetEnd) offsetEnd.setDate(offsetEnd.getDate() + 7 * i);
+          if (offsetEnd) offsetEnd.setDate(offsetEnd.getDate() + days);
         } else {
           offsetStart = addMonthsClamped(baseStart, i);
           offsetEnd = baseEnd ? addMonthsClamped(baseEnd, i) : null;
@@ -1219,31 +1224,52 @@ export default function EventForm() {
 
             {!wasAlreadyRecurring && (
               <div className="mt-2 border-t border-gray-200 pt-4">
-                <label className="flex items-center gap-2 text-sm text-muted">
-                  <input type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} />
-                  This event repeats
-                </label>
-
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="How often">
+                  {([[false, 'One date'], [true, 'Repeats']] as const).map(([v, label]) => (
+                    <button key={label} type="button" role="radio" aria-checked={isRecurring === v} onClick={() => { setIsRecurring(v); if (!v) setSeriesPassEnabled(false); }}
+                      className={`min-h-[44px] rounded-xl border text-sm font-semibold ${isRecurring === v ? 'border-marigold bg-marigold text-white' : 'border-gray-300 bg-white text-gray-800'}`}>{v ? '🔁 ' : ''}{label}</button>
+                  ))}
+                </div>
                 {isRecurring && (
                   <div className="mt-3 flex flex-col gap-3">
-                    <p className="text-xs text-muted">
-                      This creates {recurCount || 0} separate events, each with its own tickets and check-in, spaced by the interval below.
-                    </p>
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Repeats">
-                        <select value={recurFrequency} onChange={(e) => setRecurFrequency(e.target.value as 'weekly' | 'monthly')} className={inputClass}>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
+                        <select value={recurFrequency} onChange={(e) => setRecurFrequency(e.target.value as 'weekly' | 'biweekly' | 'monthly')} className={inputClass}>
+                          <option value="weekly">Every week</option>
+                          <option value="biweekly">Every 2 weeks</option>
+                          <option value="monthly">Every month</option>
                         </select>
                       </Field>
-                      <Field label="Number of occurrences">
-                        <input type="number" min="2" max="52" value={recurCount} onChange={(e) => setRecurCount(e.target.value)} className={inputClass} />
+                      <Field label="Number of dates">
+                        <input type="number" min="2" max="52" value={recurCount} onChange={(e) => { setRecurCount(e.target.value); setSkipDates(new Set()); }} className={inputClass} />
                       </Field>
                     </div>
+                    {startDate && Number(recurCount) >= 2 && (
+                      <div className="rounded-xl border border-gray-200 bg-white p-3">
+                        <p className="text-xs font-semibold text-gray-700">Dates ({Math.max(0, Math.min(52, Number(recurCount) || 0)) - skipDates.size}) · uncheck any to skip</p>
+                        <ul className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                          {Array.from({ length: Math.min(52, Number(recurCount) || 0) }, (_, i) => {
+                            const d = new Date(startDate);
+                            if (recurFrequency === 'monthly') d.setMonth(d.getMonth() + i); else d.setDate(d.getDate() + (recurFrequency === 'biweekly' ? 14 : 7) * i);
+                            return (
+                              <li key={i}>
+                                <label className="flex items-center gap-2 text-sm text-gray-800">
+                                  <input type="checkbox" checked={i === 0 || !skipDates.has(i)} disabled={i === 0} onChange={(e) => { const n = new Set(skipDates); if (e.target.checked) n.delete(i); else n.add(i); setSkipDates(n); }} className="h-4 w-4 accent-marigold" />
+                                  {d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                </label>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted">Each date becomes its own event, with its own tickets and check-in. You can add or remove dates later in Edit event.</p>
                   </div>
                 )}
               </div>
             )}
+
+            {isEdit && wasAlreadyRecurring && id && <SeriesPanel eventId={id} eventTitle={title} />}
 
             {(isRecurring || wasAlreadyRecurring) && (
               <div className="mt-2 border-t border-gray-200 pt-4">
@@ -1252,9 +1278,20 @@ export default function EventForm() {
                   Offer a discounted series pass covering every occurrence
                 </label>
                 {seriesPassEnabled && (
-                  <Field label="Series pass discount (% off buying all individually)">
-                    <input type="number" min="0" max="100" value={seriesPassDiscount} onChange={(e) => setSeriesPassDiscount(e.target.value)} className={`${inputClass} max-w-[160px]`} />
-                  </Field>
+                  <>
+                    <Field label="Series pass discount (% off buying all individually)">
+                      <input type="number" min="0" max="90" value={seriesPassDiscount} onChange={(e) => setSeriesPassDiscount(e.target.value)} className={`${inputClass} max-w-[160px]`} />
+                    </Field>
+                    {(() => {
+                      const n = wasAlreadyRecurring ? null : Math.max(0, Math.min(52, Number(recurCount) || 0)) - skipDates.size;
+                      const price = Number(ticketPrice) || 0;
+                      const pct = Math.min(90, Math.max(0, Number(seriesPassDiscount) || 0));
+                      if (!price) return <p className="text-xs text-muted">Set a ticket price to see what the series pass costs.</p>;
+                      if (n === null) return <p className="text-xs text-muted">Series pass: {pct}% off buying every date individually (${price.toFixed(2)} each).{' '}Turning it off later only stops new sales: passes already sold stay valid.</p>;
+                      const full = price * n, pass = full * (1 - pct / 100);
+                      return <p className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-950"><strong>{n} dates × ${price.toFixed(2)} = ${full.toFixed(2)}</strong> → Series pass <strong>${pass.toFixed(2)}</strong> ({pct}% off)</p>;
+                    })()}
+                  </>
                 )}
               </div>
             )}
