@@ -38,7 +38,7 @@ function whenLabel(days: number) {
 
 // Surfaces things organizers commonly miss, each with a button that goes
 // straight to the fix. Pure database checks -- no AI, so it costs nothing.
-export default function NeedsAttention({ events, userId, userEmail, onReady }: { events: TapEvent[]; userId: string; userEmail: string; onReady?: () => void }) {
+export default function NeedsAttention({ events, userId, userEmail, onReady, hideCaughtUp = false }: { events: TapEvent[]; userId: string; userEmail: string; onReady?: () => void; hideCaughtUp?: boolean }) {
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
   const onReadyRef = useRef(onReady);
   useEffect(() => { onReadyRef.current = onReady; });
@@ -243,6 +243,8 @@ export default function NeedsAttention({ events, userId, userEmail, onReady }: {
   );
 
   if (visible.length === 0) {
+    // The new organizer dashboard has its own Needs your attention section, so it skips this box.
+    if (hideCaughtUp) return hiddenKeys.length ? <div className="mb-4">{restoreLink}</div> : null;
     return (
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-1.5">
         <p className="py-1 text-sm font-medium text-green-800">✓ You're all caught up. Nothing needs your attention right now.</p>

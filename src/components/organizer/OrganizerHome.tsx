@@ -65,7 +65,7 @@ export function OrganizerRecentActivity() {
   );
 }
 
-export default function OrganizerHome() {
+export default function OrganizerHome({ payouts }: { payouts?: React.ReactNode }) {
   const h = useOrganizerHome();
   const s = h?.stats;
   const attention: { key: string; text: string; cta: string; to: string; icon: string; tone: string }[] = [];
@@ -122,6 +122,7 @@ export default function OrganizerHome() {
             ) : <div key={i} className="h-[100px] animate-pulse rounded-[18px] bg-gray-100" />)}
           </div>
         </section>
+        {payouts && <div className="mt-9 [&>*]:mb-0">{payouts}</div>}
         {attention.length > 0 && (
           <section aria-label="Needs your attention" className="mt-9 flex flex-col gap-3.5">
             <p className="text-[17px] font-extrabold text-gray-900">Needs your attention</p>
@@ -140,7 +141,7 @@ export default function OrganizerHome() {
             {create.map((c) => (
               <Go key={c.label} to={c.to} className="flex flex-col items-center gap-2.5 text-gray-900">
                 <span className={`flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br text-white shadow-lg ${c.grad} ${c.glow}`}><Icon d={c.icon} size={26} /></span>
-                <span className="text-[13px] font-bold">{c.label}</span>
+                <span className="whitespace-nowrap text-center text-[13px] font-bold">{c.label}</span>
               </Go>
             ))}
           </div>
@@ -154,7 +155,7 @@ export default function OrganizerHome() {
                   <Icon d={c.icon} size={26} />
                   {c.badge ? <span className="absolute -right-1 -top-1 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white ring-2 ring-white" aria-label={`${c.badge} waiting`}>{c.badge}</span> : null}
                 </span>
-                <span className="text-center text-[13px] font-bold leading-tight">{c.label}</span>
+                <span className="whitespace-nowrap text-center text-[13px] font-bold">{c.label}</span>
               </Go>
             ))}
           </div>

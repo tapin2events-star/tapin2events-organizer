@@ -233,7 +233,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      {orgDashV2 && <OrganizerHome />}
+      {orgDashV2 && <OrganizerHome payouts={revealed ? <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} /> : null} />}
       {orgDashV2 && <h2 id="all-events" className="mb-4 mt-2 scroll-mt-24 font-display text-2xl font-extrabold text-bone">All your events</h2>}
       <div className={`mb-6 flex items-center justify-between ${orgDashV2 ? 'hidden' : ''}`}>
         <div>
@@ -254,10 +254,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {!loading && user?.id && user.email ? <NeedsAttention events={events} userId={user.id} userEmail={user.email} onReady={() => setAlertsReady(true)} /> : <NeedsAttentionSkeleton />}
+      {!loading && user?.id && user.email ? <NeedsAttention events={events} userId={user.id} userEmail={user.email} onReady={() => setAlertsReady(true)} hideCaughtUp={orgDashV2} /> : <NeedsAttentionSkeleton />}
 
-      <HeldPayoutsNotice />
-      {!revealed ? <Skeleton className="mb-4 h-12 w-full rounded-xl" /> : <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
+      {/* New layout: the payout box sits above Needs your attention (which also flags held sales). */}
+      {!orgDashV2 && <HeldPayoutsNotice />}
+      {orgDashV2 ? null : !revealed ? <Skeleton className="mb-4 h-12 w-full rounded-xl" /> : <PayoutsCard hasAccount={!!stripeAccountId} chargesEnabled={chargesEnabled} />}
 
       {!revealed && <RowSkeleton tall />}
       {revealed && earnings && !orgDashV2 && (
