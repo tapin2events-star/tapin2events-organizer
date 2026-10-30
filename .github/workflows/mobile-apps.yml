@@ -1,6 +1,8 @@
 # TapIN2Events phone apps (Capacitor): cloud builds on GitHub's computers, so no Mac or Android Studio is needed.
-# Runs on the capacitor branch (and on demand). Today it makes an Android test build to prove the project builds;
-# signed store builds (Google Play and TestFlight) are added once the signing keys are stored as GitHub secrets.
+# Runs on the capacitor branch (and on demand).
+#  - Android: an app bundle (.aab) signed with TapIN's upload key (GitHub secrets ANDROID_KEYSTORE_BASE64 and
+#    ANDROID_KEYSTORE_PASSWORD), ready to upload to Google Play. The log shows the key's SHA-1 fingerprint (public), to
+#    match the one Google Play approved. Without the secrets, it makes a test build instead.
 name: Mobile apps
 
 on:
@@ -10,7 +12,7 @@ on:
 
 jobs:
   android:
-    name: Android test build
+    name: Android
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -29,11 +31,39 @@ jobs:
         run: npm run build
       - name: Sync Capacitor
         run: npx cap sync android
-      - name: Build the Android app (test build)
+      - name: Upload key
+        id: key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then echo "signed=false" >> "$GITHUB_OUTPUT"; echo "No signing secrets: making a test build."; exit 0; fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "Upload key SHA-1 (should match Google Play's): $(keytool -list -v -keystore "$RUNNER_TEMP/upload.jks" -alias upload -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | grep -m1 'SHA1:' | sed 's/.*SHA1: //')"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+      - name: Build the signed app bundle (Google Play)
+        if: steps.key.outputs.signed == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/upload.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: ./gradlew bundleRelease --no-daemon
+      - name: Build a test app (no signing secrets)
+        if: steps.key.outputs.signed != 'true'
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v5
+        if: steps.key.outputs.signed == 'true'
+        with:
+          name: tapin-android-app-bundle
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 14
+      - uses: actions/upload-artifact@v5
+        if: steps.key.outputs.signed != 'true'
         with:
           name: tapin-android-test-build
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 7
+      - name: Remove the key file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"

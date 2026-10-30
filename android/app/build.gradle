@@ -18,8 +18,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Store builds are signed with TapIN's upload key, provided by the cloud build from GitHub secrets
+    // (ANDROID_KEYSTORE_FILE / ANDROID_KEYSTORE_PASSWORD). Google Play re-signs with the app signing key it holds.
+    signingConfigs {
+        release {
+            def ks = System.getenv('ANDROID_KEYSTORE_FILE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias 'upload'
+                keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (System.getenv('ANDROID_KEYSTORE_FILE')) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
