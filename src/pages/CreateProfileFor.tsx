@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useFeature } from '../lib/preview';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { RESOURCE_CATEGORIES } from '../lib/types';
@@ -9,6 +10,7 @@ import BackButton from '../components/BackButton';
 // TapIN): it's theirs once they claim it (an email invite); until then you manage it. Visible now or hidden until claimed.
 export default function CreateProfileFor() {
   const navigate = useNavigate();
+  const on = useFeature('profile_managers');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [cat, setCat] = useState('Entertainment');
@@ -26,6 +28,7 @@ export default function CreateProfileFor() {
     navigate(`/resources/dashboard?profile=${id}${inviteErr ? '&invite=failed' : ''}`);
   }
   const input = 'mt-1 block min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-3 text-base text-gray-900';
+  if (!on) return <div className="mx-auto max-w-lg py-10 text-center text-gray-600">This feature is coming soon.</div>;
   return (
     <div className="mx-auto max-w-lg">
       <BackButton fallback="/resources/dashboard" fallbackLabel="Dashboard" />

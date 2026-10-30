@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useFeature } from '../../lib/preview';
 import { useMyMusicCount } from '../music/MyMusicCard';
 import ProfileLink from '../ProfileLink';
 import { Link } from 'react-router-dom';
@@ -18,6 +19,9 @@ const roleLabel: Record<string, string> = { owner: 'Owner', admin: 'Admin', edit
 export default function YourProfile({ userId, email, savedCount, vendorAppCounts, networkingOn }: {
   userId: string; email: string; savedCount: number; vendorAppCounts: { needsPayment: number; pending: number }; networkingOn: boolean;
 }) {
+  const managersOn = useFeature('profile_managers');
+  const [managedCount, setManagedCount] = useState(0);
+  useEffect(() => { if (managersOn) supabase.rpc('my_managed_profiles').then(({ data }) => setManagedCount(((data ?? []) as unknown[]).length)); }, [managersOn]);
   const musicCount = useMyMusicCount();
   const [p, setP] = useState<Parts | null>(null);
   const load = useCallback(async () => { const { data } = await supabase.rpc('my_profile_parts'); setP((data ?? null) as Parts | null); }, []);
@@ -60,6 +64,7 @@ export default function YourProfile({ userId, email, savedCount, vendorAppCounts
                 ? <Link data-tour="artist-edit" to="/resources/dashboard" className="rounded-xl bg-[#0F1B3D] px-3 py-2 font-semibold text-white">Bookings & edit</Link>
                 : <Link data-tour="artist-turn-on" to="/resources/new" className="rounded-xl bg-marigold px-3 py-2 font-semibold text-white">Turn on</Link>}
               {p.groups > 0 && <Link to="/groups" className="rounded-xl border border-gray-300 bg-white px-3 py-2 font-medium text-gray-700">Artist groups ({p.groups})</Link>}
+              {managersOn && <Link to="/resources/dashboard#managers" className="rounded-xl border border-gray-300 bg-white px-3 py-2 font-medium text-gray-700">Profiles I manage{managedCount ? ` (${managedCount})` : ''}</Link>}
             </div>
           </div>
 

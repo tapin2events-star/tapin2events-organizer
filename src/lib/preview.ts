@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // While a feature is listed here as 'preview', only admins with Preview mode on see it.
 // To launch it for everyone, change its status to 'live' (or remove the check).
 export const FEATURES: Record<string, { name: string; description: string; status: 'preview' | 'live' }> = {
+  profile_managers: { name: 'Profile managers', description: 'Create artist profiles for someone (they claim them), add managers to your artist profile, and manage profiles for others.', status: 'preview' },
   organizer_dashboard_v2: { name: 'New organizer dashboard', description: 'The organizer dashboard with a greeting hero, This month stats, what needs attention, Create buttons, upcoming events as cards with sales bars, and recent activity (all existing tools stay below).', status: 'live' },
   group_dashboard_v2: { name: 'New group dashboard', description: 'The artist group Manage page as a home screen (bold hero, This month stats, needs attention, quick actions, area cards, recent activity), with each area on its own.', status: 'live' },
   artist_dashboard_v2: { name: 'New artist dashboard', description: 'The artist & vendor dashboard as a home screen: needs your attention, quick-add buttons and a card for each area; music as cover-art tiles with a step-by-step Add a song sheet and tap-to-edit songs.', status: 'live' },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import ProfileManagersCard, { ManagingBanner, ProfileSwitcher } from '../components/managers/ProfileManagers';
+import ProfileManagersCard, { ManagingBanner, ProfilesYouManage } from '../components/managers/ProfileManagers';
 import ArtistHome, { AreaHeader, type QuickAdd } from '../components/resource/ArtistHome';
 import { useFeature } from '../lib/preview';
 import MusicManager from '../components/music/MusicManager';
@@ -67,6 +67,7 @@ type Tab = (typeof TABS)[number];
 
 export default function ResourceDashboard() {
   const musicOn = useFeature('music_uploads');
+  const managersOn = useFeature('profile_managers');
   const dashV2 = useFeature('artist_dashboard_v2');
   // New dashboard (preview): the quick-add that opened an area (e.g. + Song opens Music with the Add a song sheet).
   const [quick, setQuick] = useState<QuickAdd | null>(null);
@@ -80,6 +81,12 @@ export default function ResourceDashboard() {
   const [tab, setTab] = useState<Tab>(() => ({ media: 'Media', bookings: 'Bookings', products: 'Products' } as Record<string, Tab>)[searchParams.get('tab') ?? ''] ?? 'Overview');
   const [resource, setResource] = useState<Resource | null>(null);
   const [ownId, setOwnId] = useState<string | null>(null);
+  // Arriving with #managers (from the profile page): scroll to the Managers section once it's on the page.
+  useEffect(() => {
+    if (window.location.hash !== '#managers' || !resource) return;
+    const t = setTimeout(() => document.getElementById('managers')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+    return () => clearTimeout(t);
+  }, [resource]);
   // Managing someone else's profile (a manager): payouts and ownership stay with the owner.
   const managing = !!resource && !!user?.email && resource.email.toLowerCase() !== user.email.toLowerCase();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -289,20 +296,17 @@ export default function ResourceDashboard() {
           <AreaHeader title={({ Bookings: 'Bookings', Music: 'Music', Media: 'Media', Products: 'Shop' } as Record<string, string>)[tab] ?? tab}
             onBack={() => { setTab('Overview'); setQuick(null); window.scrollTo({ top: 0 }); }} resourceId={resource.id} music={tab === 'Music'} />
         )}
-        <ProfileSwitcher currentId={resource.id} ownId={ownId} />
         {managing && <ManagingBanner resource={resource} />}
         {dashV2 && tab === 'Overview' && (
           <ArtistHome resource={resource}
             unreadMessages={unreadTotal} payoutsReady={managing ? null : payouts ? payouts.chargesEnabled : null} musicOn={musicOn}
             onOpen={(area, q) => { if (area === 'Stats') { navigate(`/resources/${resource.id}/stats`); return; } setQuick(q ?? null); setTab(area); window.scrollTo({ top: 0 }); }} />
         )}
-        {dashV2 && tab === 'Overview' && resource.kind !== 'group' && (
-          <>
+        {dashV2 && managersOn && tab === 'Overview' && resource.kind !== 'group' && (
+          <div id="managers" className="scroll-mt-24">
             <ProfileManagersCard resourceId={resource.id} isOwner={!managing} myEmail={user?.email ?? ''} />
-            <Link to="/resources/create-for" className="mt-4 flex min-h-[56px] items-center justify-between gap-3 rounded-[20px] bg-white px-4 text-sm font-semibold text-gray-900 shadow-[0_2px_10px_rgba(39,30,110,0.06)]">
-              <span>➕ Create a profile for an artist you manage or book</span><span className="text-indigo-600">›</span>
-            </Link>
-          </>
+            {!managing && <ProfilesYouManage ownId={ownId} />}
+          </div>
         )}
         {!dashV2 && <div className="mt-6 flex gap-1 border-b border-gray-200">
           {TABS.filter((t) => t !== 'Music' || musicOn).map((t) => (

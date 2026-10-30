@@ -7,21 +7,28 @@ import PendingEmailInvites, { InviteByEmailForm, sendEmailInvite } from '../invi
 // Profile managers: people who run an artist profile for its owner (everything except payouts, ownership and deleting).
 interface Managed { id: string; name: string; photo: string | null; claimed: boolean }
 
-// Switch between your own profile and profiles you manage.
-export function ProfileSwitcher({ currentId, ownId }: { currentId: string | null; ownId: string | null }) {
+// Profiles you manage (in the Managers section), each opening that profile's dashboard.
+export function ProfilesYouManage({ ownId }: { ownId: string | null }) {
   const [list, setList] = useState<Managed[]>([]);
   useEffect(() => { supabase.rpc('my_managed_profiles').then(({ data }) => setList(((data ?? []) as Managed[]).filter((p) => p.id !== ownId))); }, [ownId]);
-  if (list.length === 0) return null;
-  const chip = (active: boolean) => `inline-flex min-h-[36px] shrink-0 items-center gap-2 rounded-full border px-3 text-sm font-semibold ${active ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-gray-800'}`;
   return (
-    <div className="mb-4 flex gap-2 overflow-x-auto pb-1" aria-label="Profiles you manage">
-      {ownId && <Link to="/resources/dashboard" className={chip(currentId === ownId)}>Your profile</Link>}
-      {list.map((p) => (
-        <Link key={p.id} to={`/resources/dashboard?profile=${p.id}`} className={chip(currentId === p.id)}>
-          {p.photo ? <img src={p.photo} alt="" className="h-6 w-6 rounded-full object-cover" /> : null}{p.name}{!p.claimed && <span className="text-[11px] font-normal opacity-80">· not claimed</span>}
-        </Link>
-      ))}
-    </div>
+    <section className="mt-6 rounded-[20px] bg-white p-4 shadow-[0_2px_10px_rgba(39,30,110,0.06)]">
+      <h2 className="text-[17px] font-extrabold text-gray-900">Profiles you manage</h2>
+      {list.length === 0 ? <p className="mt-1 text-sm text-gray-600">None yet. Create a profile for an artist you manage or book, or ask an artist to add you as a manager.</p> : (
+        <ul className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-200">
+          {list.map((p) => (
+            <li key={p.id}>
+              <Link to={`/resources/dashboard?profile=${p.id}`} className="flex min-h-[52px] items-center gap-3 px-3 py-2">
+                {p.photo ? <img src={p.photo} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">{p.name.charAt(0)}</span>}
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-900">{p.name}</span><span className="block text-xs text-gray-500">{p.claimed ? 'Claimed' : 'Not claimed yet'}</span></span>
+                <span className="text-indigo-600" aria-hidden="true">›</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link to="/resources/create-for" className="mt-3 inline-flex min-h-[44px] items-center rounded-full bg-[#0F1B3D] px-4 text-sm font-semibold text-white">➕ Create a profile for someone</Link>
+    </section>
   );
 }
 
@@ -42,7 +49,7 @@ export function ManagingBanner({ resource }: { resource: { id: string; display_n
   }
   return (
     <div className="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">
-      <p><strong>You&apos;re managing {resource.display_name}.</strong> You can update the profile, music, products, media and bookings. Payouts always go to {resource.display_name}.</p>
+      <p><strong>You&apos;re managing {resource.display_name}.</strong> You can update the profile, music, products, media and bookings. Payouts always go to {resource.display_name}.{' '}<Link to="/resources/dashboard" className="font-semibold underline">Back to your profile</Link></p>
       {unclaimed && (
         <p className="mt-1">Not claimed yet{resource.status === 'hidden' ? ' (hidden until they claim it)' : ''}. Music sales and donations are held for them until they claim it and connect payouts.{' '}
           <button onClick={resend} className="font-semibold underline">Resend claim invite</button></p>
