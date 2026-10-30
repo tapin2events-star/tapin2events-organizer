@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PendingEmailInvites, { InviteByEmailForm } from '../components/invites/EmailInvites';
 import MemberSongsOnPage from '../components/music/MemberSongsOnPage';
 import AddMySongs from '../components/music/AddMySongs';
 import { AreaHeader } from '../components/resource/ArtistHome';
@@ -47,6 +48,9 @@ export default function GroupManage() {
   const [results, setResults] = useState<Person[]>([]);
   const [inviteRole, setInviteRole] = useState<'member' | 'admin'>('member');
   const [inviteTitle, setInviteTitle] = useState('');
+  // Inviting an email that isn't on TapIN: an invite email instead.
+  const [emailInvite, setEmailInvite] = useState<string | null>(null);
+  const [invitesKey, setInvitesKey] = useState(0);
   const [confirm, setConfirm] = useState<null | { kind: 'remove' | 'leave' | 'delete' | 'owner'; member?: ManagedMember }>(null);
   const [titleFor, setTitleFor] = useState<ManagedMember | null>(null);
 
@@ -119,6 +123,7 @@ export default function GroupManage() {
 
   async function invite(email: string) {
     const { error } = await supabase.rpc('invite_to_group', { p_group: id, p_email: email, p_role: inviteRole, p_title: inviteTitle || null });
+    if (error && /No TapIN account/i.test(error.message)) { setEmailInvite(email.trim().toLowerCase()); return; }
     if (error) return say(false, rpcError(error));
     setQuery(''); setResults([]); setInviteTitle('');
     say(true, 'Invite sent. They\u2019ll get a notification to join.');
@@ -204,7 +209,10 @@ export default function GroupManage() {
             {query.includes('@') && results.length === 0 && query.trim().length > 5 && (
               <button onClick={() => invite(query.trim())} className="mt-2 rounded-lg bg-marigold px-3 py-2 text-sm font-semibold text-white">Invite {query.trim()}</button>
             )}
-            <p className="mt-2 text-xs text-muted">Anyone with a TapIN account can join, including managers and crew without a artist & services profile. They choose whether to accept.</p>
+            {emailInvite && group && <InviteByEmailForm kind="group" targetId={group.id} email={emailInvite} role={inviteRole} title={inviteTitle}
+              onSent={() => { setEmailInvite(null); setQuery(''); setResults([]); setInviteTitle(''); setInvitesKey((k) => k + 1); }} onCancel={() => setEmailInvite(null)} />}
+            <p className="mt-2 text-xs text-muted">Invite anyone by name or email, including managers and crew. Not on TapIN yet? We&apos;ll email them an invite to sign up and join.</p>
+            {group && <PendingEmailInvites kind="group" targetId={group.id} refreshKey={invitesKey} />}
           </div>
         )}
 

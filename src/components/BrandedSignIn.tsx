@@ -9,11 +9,12 @@ import type { WhiteLabelBrand } from '../lib/whiteLabel';
 // work, and confirming the email protects against fraud. White-labeled events show the organization's colors and
 // send the code in its branding; other events use TapIN's.
 export const TAPIN_BRAND: WhiteLabelBrand = { name: 'TapIN', logo: '/icon-192.png', primary: '#4F46E5', accent: '#14B8A6', slug: null };
-export default function BrandedSignIn({ brand, eventId, onClose, onDone, branded = true }: { brand: WhiteLabelBrand; eventId?: string | null; onClose: () => void; onDone: () => void; branded?: boolean }) {
+export default function BrandedSignIn({ brand, eventId, onClose, onDone, branded = true, lockedEmail, initialName }: { brand: WhiteLabelBrand; eventId?: string | null; onClose: () => void; onDone: () => void; branded?: boolean; lockedEmail?: string; initialName?: string }) {
   const { sendCode, verifyCode, user } = useAuth();
-  const [email, setEmail] = useState('');
+  // lockedEmail (an invite): the email is filled in and can't be changed.
+  const [email, setEmail] = useState(lockedEmail ?? '');
   // Optional name, saved on new accounts so they aren't nameless.
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName ?? '');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
@@ -72,7 +73,7 @@ export default function BrandedSignIn({ brand, eventId, onClose, onDone, branded
               <p className="mt-1 text-sm text-gray-600">No password needed. Enter your email and we'll send a 6-digit code to confirm it's you. Your tickets will go to this address.</p>
               <input value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" placeholder="Your name (optional)" aria-label="Your name"
                 className="mt-4 block w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-base text-gray-900" />
-              <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} type="email" autoComplete="email" inputMode="email" placeholder="you@email.com" aria-label="Email" autoFocus
+              <input value={email} readOnly={!!lockedEmail} onChange={(e) => { if (!lockedEmail) setEmail(e.target.value); }} onKeyDown={(e) => e.key === 'Enter' && send()} type="email" autoComplete="email" inputMode="email" placeholder="you@email.com" aria-label="Email" autoFocus
                 className="mt-3 block w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-base text-gray-900" />
               {err && <p role="alert" className="mt-2 text-sm text-red-600">{err}</p>}
               <button onClick={send} disabled={busy} className="mt-4 w-full rounded-xl py-3.5 text-base font-bold text-white disabled:opacity-60" style={{ background: brand.primary }}>{busy ? 'Sending…' : 'Continue'}</button>

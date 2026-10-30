@@ -63,6 +63,7 @@ const AlbumPage = lazyWithRetry(() => import('./pages/AlbumPage'));
 const SongPage = lazyWithRetry(() => import('./pages/SongPage'));
 const MyMusic = lazyWithRetry(() => import('./pages/MyMusic'));
 const Handoff = lazyWithRetry(() => import('./pages/Handoff'));
+const InviteJoin = lazyWithRetry(() => import('./pages/InviteJoin'));
 const ShortEventLink = lazyWithRetry(() => import('./pages/ShortEventLink'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
@@ -99,6 +100,7 @@ export default function App() {
         <AppErrorBoundary><TourProvider><DomainGate><Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/handoff" element={<Handoff />} />
+          <Route path="/invite/:id" element={<InviteJoin />} />
           <Route
             path="/feed"
             element={

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import PendingEmailInvites, { InviteByEmailForm } from '../../components/invites/EmailInvites';
 import OrgMusicTab from '../../components/business/OrgMusicTab';
 import PeopleInput, { type KnownPerson } from '../../components/PeopleInput';
 import { toast, toastSaved, toastError } from '../../lib/toast';
@@ -264,6 +265,8 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
   const [members, setMembers] = useState<{ user_email: string; role: string; full_name?: string | null }[]>([]);
   const [email, setEmail] = useState('');
   const [picked, setPicked] = useState<KnownPerson | null>(null);
+  const [inviteEmail, setInviteEmail] = useState<string | null>(null);
+  const [invitesKey, setInvitesKey] = useState(0);
   const [role, setRole] = useState('admin');
   const [msg, setMsg] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -284,6 +287,9 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
     }
     const e = email.trim().toLowerCase();
     if (!EMAIL_RE.test(e)) return setMsg('Enter a valid email, or pick someone from the list.');
+    // Not on TapIN yet: offer an invite email (they sign up and join) instead of adding them silently.
+    const { data: known } = await supabase.rpc('email_has_account', { p_email: e });
+    if (known === false) { setInviteEmail(e); setMsg(null); return; }
     const { error } = await supabase.from('organization_members').insert({ org_id: orgId, user_email: e, role, added_by: me });
     if (error) toastError(/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them."); else toast('✓ Added to the team');
     setMsg(error ? (/duplicate/i.test(error.message) ? 'Already on the team.' : "Couldn't add them.") : `Added. We've emailed ${e} to let them know${role === 'admin' ? ' they can now manage this organization' : ''}.`);
@@ -298,6 +304,12 @@ function TeamTab({ orgId, canEdit, me }: { orgId: string; canEdit: boolean; me: 
           <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role" className="rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm"><option value="admin">Admin: everything, including the team</option><option value="editor">Editor: edit events, lineups and tasks</option><option value="viewer">Viewer: see everything</option><option value="helper">Helper: their own tasks</option></select>
           <button onClick={add} className="rounded-xl bg-[#0F1B3D] px-4 py-2.5 text-sm font-bold text-white">Add</button>
         </div>
+      )}
+      {canEdit && inviteEmail && (
+        <InviteByEmailForm kind="org" targetId={orgId} email={inviteEmail} role={role} onSent={() => { setInviteEmail(null); setEmail(''); setInvitesKey((k) => k + 1); }} onCancel={() => setInviteEmail(null)} />
+      )}
+      {canEdit && (
+        <PendingEmailInvites kind="org" targetId={orgId} refreshKey={invitesKey} />
       )}
       {msg && <p className="mt-2 text-sm text-gray-600">{msg}</p>}
       <ul className="mt-4 divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-surface">
