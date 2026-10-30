@@ -54,7 +54,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPreviewEnded(false);
     if (a.src !== t.url) { a.src = t.url; setProgress(0); setDuration(t.duration_sec ?? 0); }
     a.play().then(() => {
-      if (!counted.current.has(t.id)) { counted.current.add(t.id); supabase.rpc('record_track_play', { p_track_id: t.id }); }
+      if (!counted.current.has(t.id)) { counted.current.add(t.id); void supabase.rpc('record_track_play', { p_track_id: t.id }).then(() => undefined); }
     }).catch(() => setPlaying(false));
   }, []);
 

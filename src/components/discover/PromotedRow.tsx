@@ -34,7 +34,7 @@ export default function PromotedRow({ promoted, events, savedIds, onToggleSave }
     try { seen = JSON.parse(sessionStorage.getItem('tapin_boost_seen') ?? '[]'); } catch { /* storage unavailable */ }
     const fresh = promoted.map((p) => p.boost_id).filter((id) => !seen.includes(id));
     if (!fresh.length) return;
-    supabase.rpc('record_boost_impressions', { p_boost_ids: fresh });
+    void supabase.rpc('record_boost_impressions', { p_boost_ids: fresh }).then(() => undefined);
     try { sessionStorage.setItem('tapin_boost_seen', JSON.stringify([...seen, ...fresh])); } catch { /* storage unavailable */ }
   }, [promoted.map((p) => p.boost_id).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
   const rows = promoted.map((p) => ({ p, event: events.find((e) => e.id === p.event_id) ?? extra.find((e) => e.id === p.event_id) })).filter((r) => r.event);

@@ -41,7 +41,7 @@ export default function TeamChat() {
         </div>
       </div>
       <ChatRoom table="org_messages" scopeColumn="org_id" scopeId={orgId} members={members} canModerate={role === 'owner' || role === 'admin'}
-        placeholder={`Message ${org.name}'s team (type @ to mention)`} onRead={() => { supabase.rpc('mark_org_chat_read', { p_org_id: orgId }); }} />
+        placeholder={`Message ${org.name}'s team (type @ to mention)`} onRead={() => { void supabase.rpc('mark_org_chat_read', { p_org_id: orgId }).then(() => undefined); }} />
     </div>
   );
 }

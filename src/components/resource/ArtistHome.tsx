@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import DetailSheet, { type DetailKind } from '../earnings/DetailSheet';
 import { useFeature } from '../../lib/preview';
 import { EarningsSheet } from '../earnings/EarningsBreakdown';
 import { Link } from 'react-router-dom';
@@ -77,6 +78,9 @@ export function AreaHeader({ title, onBack, resourceId, music }: { title: string
 export default function ArtistHome({ resource, unreadMessages, payoutsReady, musicOn, onOpen, payouts }: Props) {
   const earningsOn = useFeature('earnings_v2');
   const [earningsOpen, setEarningsOpen] = useState(false);
+  const [detail, setDetail] = useState<DetailKind | null>(null);
+  // Tapping a This month tile opens its details (preview).
+  const tileTap = (label: string): (() => void) | undefined => (earningsOn ? ({ 'Earned': () => setEarningsOpen(true), 'Plays': () => setDetail('plays'), 'Profile views': () => setDetail('views'), 'Bookings': () => onOpen('Bookings') } as Record<string, () => void>)[label] : undefined);
   const [h, setH] = useState<Home | null>(null);
   useEffect(() => { supabase.rpc('artist_home', { p_resource_id: resource.id }).then(({ data }) => setH((data ?? null) as Home | null)); }, [resource.id]);
   const s = h?.stats;
@@ -135,7 +139,7 @@ export default function ArtistHome({ resource, unreadMessages, payoutsReady, mus
           <p className="text-[15px] font-extrabold text-gray-900">This month</p>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             {(s ? tiles : Array.from({ length: 4 }, () => null)).map((t, i) => t ? (
-              <div key={t.label} className={`flex flex-col gap-1 rounded-2xl p-3 ${t.bg}`} onClick={earningsOn && t.label === 'Earned' ? () => setEarningsOpen(true) : undefined} role={earningsOn && t.label === 'Earned' ? 'button' : undefined} tabIndex={earningsOn && t.label === 'Earned' ? 0 : undefined} onKeyDown={(e) => { if (earningsOn && t.label === 'Earned' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEarningsOpen(true); } }}>
+              <div key={t.label} className={`flex flex-col gap-1 rounded-2xl p-3 ${t.bg}`} onClick={tileTap(t.label)} role={tileTap(t.label) ? 'button' : undefined} tabIndex={tileTap(t.label) ? 0 : undefined} onKeyDown={(e) => { const f = tileTap(t.label); if (f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); f(); } }}>
                 <span className={`text-xs font-bold ${t.fg}`}>{t.label}</span>
                 <span className={`text-2xl font-extrabold ${t.val}`}>{t.value}</span>
                 <span className={`text-xs font-semibold ${t.t?.tone ?? 'text-gray-600'}`}>{t.t?.text ?? '\u00a0'}</span>
@@ -230,6 +234,7 @@ export default function ArtistHome({ resource, unreadMessages, payoutsReady, mus
           </section>
         )}
       </div>
+      {detail && <DetailSheet kind={detail} scopeId={resource.id} onClose={() => setDetail(null)} />}
       {earningsOpen && <EarningsSheet scope="resource" scopeId={resource.id} title="Earnings" onClose={() => setEarningsOpen(false)} />}
     </div>
   );
