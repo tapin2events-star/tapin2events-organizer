@@ -64,6 +64,7 @@ const SongPage = lazyWithRetry(() => import('./pages/SongPage'));
 const MyMusic = lazyWithRetry(() => import('./pages/MyMusic'));
 const Handoff = lazyWithRetry(() => import('./pages/Handoff'));
 const InviteJoin = lazyWithRetry(() => import('./pages/InviteJoin'));
+const CreateProfileFor = lazyWithRetry(() => import('./pages/CreateProfileFor'));
 const ShortEventLink = lazyWithRetry(() => import('./pages/ShortEventLink'));
 const ResourceSignup = lazyWithRetry(() => import('./pages/ResourceSignup'));
 const ResourceDashboard = lazyWithRetry(() => import('./pages/ResourceDashboard'));
@@ -188,6 +189,7 @@ export default function App() {
             <Route path="/organizer/polls/:id" element={<ProtectedRoute><PollDetail /></ProtectedRoute>} />
             <Route path="/organizer/import" element={<ProtectedRoute><ImportEvents /></ProtectedRoute>} />
             <Route path="/organizer/earnings" element={<ProtectedRoute><Earnings /></ProtectedRoute>} />
+            <Route path="/resources/create-for" element={<ProtectedRoute><CreateProfileFor /></ProtectedRoute>} />
             <Route path="/organizer/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route
               path="/organizer/events/:id/checkin"

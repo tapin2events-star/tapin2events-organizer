@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+export type InviteKind = 'group' | 'org' | 'claim' | 'manager';
 import { supabase } from '../../lib/supabaseClient';
 import { toast, toastError } from '../../lib/toast';
 
@@ -10,7 +11,7 @@ const reason = async (error: unknown, fallback: string) => {
   return (error as { message?: string } | null)?.message ?? fallback;
 };
 
-export async function sendEmailInvite(kind: 'group' | 'org', targetId: string, p: { email: string; name?: string; role: string; title?: string; note?: string }): Promise<string | null> {
+export async function sendEmailInvite(kind: InviteKind, targetId: string, p: { email: string; name?: string; role: string; title?: string; note?: string }): Promise<string | null> {
   const { data: id, error } = await supabase.rpc('create_email_invite', { p_kind: kind, p_target: targetId, p_email: p.email, p_name: p.name || null, p_role: p.role, p_title: p.title || null, p_note: p.note || null });
   if (error || !id) return error?.message ?? 'Couldn\u2019t create the invite.';
   const { error: sErr } = await supabase.functions.invoke('email-invites', { body: { action: 'send', id } });
@@ -19,7 +20,7 @@ export async function sendEmailInvite(kind: 'group' | 'org', targetId: string, p
 }
 
 // "They're not on TapIN yet": name and an optional note, then send.
-export function InviteByEmailForm({ kind, targetId, email, role, title, onSent, onCancel }: { kind: 'group' | 'org'; targetId: string; email: string; role: string; title?: string; onSent: () => void; onCancel: () => void }) {
+export function InviteByEmailForm({ kind, targetId, email, role, title, onSent, onCancel }: { kind: InviteKind; targetId: string; email: string; role: string; title?: string; onSent: () => void; onCancel: () => void }) {
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -40,7 +41,7 @@ export function InviteByEmailForm({ kind, targetId, email, role, title, onSent, 
   );
 }
 
-export default function PendingEmailInvites({ kind, targetId, refreshKey }: { kind: 'group' | 'org'; targetId: string; refreshKey?: unknown }) {
+export default function PendingEmailInvites({ kind, targetId, refreshKey }: { kind: InviteKind; targetId: string; refreshKey?: unknown }) {
   const [list, setList] = useState<Pending[]>([]);
   const load = useCallback(() => { supabase.rpc('pending_email_invites', { p_kind: kind, p_target: targetId }).then(({ data }) => setList((data ?? []) as Pending[])); }, [kind, targetId]);
   useEffect(() => { load(); }, [load, refreshKey]);

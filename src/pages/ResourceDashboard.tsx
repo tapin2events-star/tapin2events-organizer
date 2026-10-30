@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ProfileManagersCard, { ManagingBanner, ProfileSwitcher } from '../components/managers/ProfileManagers';
 import ArtistHome, { AreaHeader, type QuickAdd } from '../components/resource/ArtistHome';
 import { useFeature } from '../lib/preview';
 import MusicManager from '../components/music/MusicManager';
@@ -78,6 +79,9 @@ export default function ResourceDashboard() {
   // Overview first; links like ?tab=bookings (from notifications) still open the right tab.
   const [tab, setTab] = useState<Tab>(() => ({ media: 'Media', bookings: 'Bookings', products: 'Products' } as Record<string, Tab>)[searchParams.get('tab') ?? ''] ?? 'Overview');
   const [resource, setResource] = useState<Resource | null>(null);
+  const [ownId, setOwnId] = useState<string | null>(null);
+  // Managing someone else's profile (a manager): payouts and ownership stay with the owner.
+  const managing = !!resource && !!user?.email && resource.email.toLowerCase() !== user.email.toLowerCase();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -106,7 +110,19 @@ export default function ResourceDashboard() {
     }
     if (!user.email) return;
     (async () => {
-      const { data: res, error: resError } = await supabase.from('resources').select('*').eq('email', user.email).maybeSingle();
+      // ?profile=<id>: a profile you manage (managers can open it); otherwise your own.
+      const profileParam = searchParams.get('profile');
+      const { data: own } = await supabase.from('resources').select('id').eq('email', user.email).maybeSingle();
+      setOwnId(own?.id ?? null);
+      // No profile of your own, but you manage one: open that.
+      if (!profileParam && !own) {
+        const { data: managed } = await supabase.rpc('my_managed_profiles');
+        const first = ((managed ?? []) as { id: string }[])[0];
+        if (first) { navigate(`/resources/dashboard?profile=${first.id}`, { replace: true }); return; }
+      }
+      const { data: res, error: resError } = profileParam && profileParam !== own?.id
+        ? await supabase.from('resources').select('*').eq('id', profileParam).maybeSingle()
+        : await supabase.from('resources').select('*').eq('email', user.email).maybeSingle();
       if (resError) console.error('Failed to load artist & services profile:', resError);
       setResource((res as Resource) ?? null);
       supabase.from('profiles').select('stripe_account_id, stripe_charges_enabled').eq('id', user.id).maybeSingle().then(({ data }) => {
@@ -165,7 +181,7 @@ export default function ResourceDashboard() {
 
       setLoading(false);
     })();
-  }, [user, authLoading, navigate, location.pathname]);
+  }, [user, authLoading, navigate, location.pathname, searchParams.get('profile')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (highlightId && itemRefs.current[highlightId]) {
@@ -273,10 +289,20 @@ export default function ResourceDashboard() {
           <AreaHeader title={({ Bookings: 'Bookings', Music: 'Music', Media: 'Media', Products: 'Shop' } as Record<string, string>)[tab] ?? tab}
             onBack={() => { setTab('Overview'); setQuick(null); window.scrollTo({ top: 0 }); }} resourceId={resource.id} music={tab === 'Music'} />
         )}
+        <ProfileSwitcher currentId={resource.id} ownId={ownId} />
+        {managing && <ManagingBanner resource={resource} />}
         {dashV2 && tab === 'Overview' && (
           <ArtistHome resource={resource}
-            unreadMessages={unreadTotal} payoutsReady={payouts ? payouts.chargesEnabled : null} musicOn={musicOn}
+            unreadMessages={unreadTotal} payoutsReady={managing ? null : payouts ? payouts.chargesEnabled : null} musicOn={musicOn}
             onOpen={(area, q) => { if (area === 'Stats') { navigate(`/resources/${resource.id}/stats`); return; } setQuick(q ?? null); setTab(area); window.scrollTo({ top: 0 }); }} />
+        )}
+        {dashV2 && tab === 'Overview' && resource.kind !== 'group' && (
+          <>
+            <ProfileManagersCard resourceId={resource.id} isOwner={!managing} myEmail={user?.email ?? ''} />
+            <Link to="/resources/create-for" className="mt-4 flex min-h-[56px] items-center justify-between gap-3 rounded-[20px] bg-white px-4 text-sm font-semibold text-gray-900 shadow-[0_2px_10px_rgba(39,30,110,0.06)]">
+              <span>➕ Create a profile for an artist you manage or book</span><span className="text-indigo-600">›</span>
+            </Link>
+          </>
         )}
         {!dashV2 && <div className="mt-6 flex gap-1 border-b border-gray-200">
           {TABS.filter((t) => t !== 'Music' || musicOn).map((t) => (
